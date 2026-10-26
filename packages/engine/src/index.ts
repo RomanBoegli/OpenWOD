@@ -142,9 +142,11 @@ export class WorkoutEngine {
     }
     if ((command.type === 'next' || command.type === 'previous') && (this.status === 'running' || (this.status === 'paused' && this.pausedFrom === 'running'))) {
       const nextIndex = this.index + (command.type === 'next' ? 1 : -1);
-      if (nextIndex < 0 || nextIndex >= this.plan.occurrences.length || this.plan.occurrences[nextIndex].sectionIndex !== this.occurrence.sectionIndex) return false;
+      const inSection = nextIndex >= 0 && nextIndex < this.plan.occurrences.length && this.plan.occurrences[nextIndex].sectionIndex === this.occurrence.sectionIndex;
+      if (command.type === 'next' && !inSection) return false;
       if (this.moving) this.freeze(at);
-      this.index = nextIndex;
+      // Previous at a section's first occurrence restarts that occurrence (ENG-05); navigation never leaves the section.
+      this.index = inSection ? nextIndex : this.index;
       this.phaseMs = 0;
       this.anchor = at;
       this.visit++;

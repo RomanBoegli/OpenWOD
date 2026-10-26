@@ -6,6 +6,19 @@
     <meta name="theme-color" content="#101714" />
     <meta name="description" content="Your space. Your pace. A workout player for training together." />
     <title>Wodva — Train together</title>
+    <script>
+      // Apply the saved or system theme before first paint to avoid a flash. Mirrors apps/web/src/theme.ts.
+      (function () {
+        var theme = 'dark';
+        try {
+          var stored = localStorage.getItem('wodva.theme');
+          theme = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+        } catch (error) { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+        document.documentElement.dataset.theme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#101613' : '#f3f5ee');
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>

@@ -11,3 +11,4 @@ coverage/
 *.log
 .DS_Store
 data/
+notes.md

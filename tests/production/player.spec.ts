@@ -12,7 +12,8 @@ test('the production container plays a real interval without test injection', as
     sections: [{ id: 'section', title: 'Smoke check', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'movement', type: 'timed', durationMs: 1000, assignments: { A: { name: 'Air squats' }, B: { name: 'March in place' } } } }],
   } };
   await page.locator('input[type=file]').setInputFiles({ name: 'production.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
-  await page.getByRole('button', { name: 'Load workout' }).click();
+  await page.getByRole('button', { name: 'Save to library' }).click();
+  await page.getByRole('link', { name: 'Start Production timing check' }).click();
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Workout complete', { timeout: 5000 });
   await expect(page.getByTestId('primary-timer')).toHaveText('00:01');

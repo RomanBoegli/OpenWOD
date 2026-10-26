@@ -1,13 +1,46 @@
 @font-face { font-family: 'system-workout'; src: local('Avenir Next'), local('Segoe UI'); font-display: swap; }
-:root { font-family: 'system-workout', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #edf1e9; background: #101613; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; color-scheme: dark; }
+
+/* Design tokens. Dark is the default; light overrides. index.html sets data-theme before first paint. */
+:root {
+  color-scheme: dark;
+  --bg: #101613; --bg-glow: #1b251b55;
+  --ink: #edf1e9; --ink-2: #c3cdb9; --ink-3: #a8b39f; --ink-4: #7c8a74;
+  --accent: #c8ee91; --accent-text: #c8ee91; --accent-fill: #c8ee91; --accent-fill-hover: #d6f5ad; --accent-ink: #172014; --accent-border: #d6f3b3;
+  --accent-soft: #c8ee9110; --accent-track: #c8ee911e; --focus: #d7f6a9;
+  --line: #ffffff0c; --line-2: #ffffff1a;
+  --surface-1: #192119; --surface-2: #20291e; --surface-3: #1c241c; --surface-4: #222c20; --surface-5: #35402f; --input-bg: #151e14; --hover: #ffffff08;
+  --lane-a: #d0ebaa; --lane-a-bg: #29332188; --lane-a-border: #c6dfac22;
+  --lane-b: #c9c0eb; --lane-b-bg: #2b2c2f77; --lane-b-border: #c9c0eb22;
+  --phase-work: #c8ee91; --phase-rest: #a3cbf0; --phase-paused: #d1ccb8; --phase-amber: #f4ca80; --phase-red: #ff998c;
+  --danger: #ffb0a4; --error-text: #ffc3b7; --modified: #f3cf9e;
+  --notice-bg: #f6c78a10; --notice-border: #f6c78a33; --notice-text: #edcda3;
+  --shadow: #0008; --backdrop: #060c08bd; --selection: #c8ee91; --selection-ink: #111a14;
+}
+:root[data-theme=light] {
+  color-scheme: light;
+  --bg: #f3f5ee; --bg-glow: #cfe3b955;
+  --ink: #141b16; --ink-2: #3a453a; --ink-3: #5a665a; --ink-4: #78857a;
+  --accent: #3f8313; --accent-text: #2f6b0f; --accent-fill: #2f6f0f; --accent-fill-hover: #3b8515; --accent-ink: #ffffff; --accent-border: #2f6f0f;
+  --accent-soft: #2f7a0f14; --accent-track: #2f7a0f22; --focus: #2f6f0f;
+  --line: #00000012; --line-2: #00000022;
+  --surface-1: #ffffff; --surface-2: #f8faf3; --surface-3: #e7ece1; --surface-4: #ffffff; --surface-5: #ffffff; --input-bg: #ffffff; --hover: #00000008;
+  --lane-a: #2f6b12; --lane-a-bg: #eef5e4; --lane-a-border: #2f6b1233;
+  --lane-b: #4b3fa3; --lane-b-bg: #efeef8; --lane-b-border: #4b3fa333;
+  --phase-work: #2f7a0f; --phase-rest: #1d5fa8; --phase-paused: #6a6355; --phase-amber: #a35f00; --phase-red: #c12b1e;
+  --danger: #b3261e; --error-text: #b3261e; --modified: #8a5a00;
+  --notice-bg: #fff3df; --notice-border: #e0a84a66; --notice-text: #6d4200;
+  --shadow: #0003; --backdrop: #1a221bb0; --selection: #c8ee91; --selection-ink: #111a14;
+}
+
+:root { font-family: 'system-workout', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--ink); background: var(--bg); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
+body { margin: 0; min-width: 320px; background: var(--bg); }
 button, input, select { font: inherit; }
 button, a, input, select { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { cursor: default; opacity: .35; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #d7f6a9; outline-offset: 5px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; }
 button { touch-action: manipulation; }
 a { color: inherit; }
-::selection { background: #c8ee91; color: #111a14; }
+::selection { background: var(--selection); color: var(--selection-ink); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

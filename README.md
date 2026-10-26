@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173** in Safari or Firefox. Try a full window, a half-width window, and a narrow phone viewport. Start workout enters a dedicated training layout with the countdown, athlete assignments, perimeter timer, and Pause control in view.
+Open **http://127.0.0.1:5173** in Safari or Firefox. The library lists every workout on this device; filter by text, athletes, equipment or duration, then press Start. Try a full window, a half-width window, and a narrow phone viewport. Start workout enters a dedicated training layout with the countdown, athlete assignments, perimeter timer, and Pause control in view.
 
 Dependencies are local to `node_modules/`. A pinned Node 24 runtime is installed there too; npm scripts use it automatically. npm's cache and downloaded test browsers live under the ignored `.cache/` directory. No global Node upgrade, Python environment, or global package installation is required. Vite serves and builds the frontend; npm provides dependency isolation.
 
@@ -17,12 +17,14 @@ Dependencies are local to `node_modules/`. A pinned Node 24 runtime is installed
 
 - The canonical **Partner circuit**: five rounds, 40-second work, 10-second station transitions, and 60-second round breaks. Exactly **19:50 active / 20:00 with prep**.
 - **Full body partner workout**, based on [example-wod.md](example-wod.md): warm-up, four blocks with alternating assignments, explicit trailing rests, and cooldown. **50:00 active**, excluding prep and Ready waits between sections.
-- Responsive paired Focus/Context views; stable A/B lanes; per-round assignment swaps; upcoming-work preview; accurate countdown/perimeter; pause/resume, previous/next interval, and confirmed stop.
+- A **library view** at `#/` with search over titles, descriptions, movements and equipment, plus athlete, equipment and duration filters and sorting. Each card starts, exports or removes a workout; the player lives at `#/wod/<id>` so reloads and the back button keep their place.
+- Responsive paired Focus/Context views; stable A/B lanes; per-round assignment swaps; upcoming-work preview; accurate countdown/perimeter; pause/resume, previous/next interval (Previous restarts the first interval of a section), and confirmed stop. Leaving the page mid-session asks first, since checkpoints are a later milestone.
+- **Light and dark themes** that follow the operating system by default, with an explicit Auto/Light/Dark choice in settings. The theme is applied before first paint to avoid a flash. Athlete names, sound, voice, speed, volume, view and theme are remembered on this device.
 - Voice plus local beeps, beeps only, or silent; voice/rate/volume settings and sound test. Audio is unlocked by a user gesture; voice availability depends on the browser/OS.
 - Screen wake lock where available. Hiding the tab pauses automatically; returning requires Resume. Network loss alone does not pause the timer.
-- Export one self-contained `.wod.json` file and preview/import a compatible timed workout for the current visit. Names and sound preferences are not exported. Schemas and examples are under [schemas/](schemas/) and [examples/workouts/](examples/workouts/).
+- Export one self-contained `.wod.json` file and preview/import a compatible timed workout into the device library, where it survives reloads (browser storage, up to 100 imports). An ID that collides with a saved workout offers Import as copy or Replace; a collision with a bundled workout is always saved as a copy. Names and sound preferences are not exported. Schemas and examples are under [schemas/](schemas/) and [examples/workouts/](examples/workouts/).
 
-This is the **first player milestone**, not the full application. Reload starts a fresh session. Saved workouts, SQLite persistence, checkpoint recovery, household login, the editor, program packs, and result history are subsequent milestones. There is no cloud account or runtime analytics requirement. Browser speech may use device-provided online voices; local beeps work without an external service.
+This is the **first player milestone**, not the full application. Reload starts a fresh session. The device library is browser storage, not the shared household library: SQLite persistence, checkpoint recovery, household login, the editor, program packs, and result history are subsequent milestones. There is no cloud account or runtime analytics requirement. Browser speech may use device-provided online voices; local beeps work without an external service.
 
 ## Run the container
 
@@ -101,9 +103,9 @@ If startup is unhealthy, inspect container logs and verify the image architectur
 
 | Path | Purpose |
 | --- | --- |
-| `apps/web/` | Responsive player, browser clock host, audio, wake lock. |
+| `apps/web/` | Library and player screens, hash routes, device preferences/library storage, theme sync, browser clock host, audio, wake lock. |
 | `apps/server/` | Fastify asset server and health API. |
-| `packages/domain/` | TypeBox schema source, validators, compiler, canonical fixtures. |
+| `packages/domain/` | TypeBox schema source, validators, compiler, library summaries/filters, canonical fixtures. |
 | `packages/engine/` | Pure session state machine with an injected clock. |
 | `schemas/`, `examples/workouts/` | Generated portable schemas and workout examples. |
 | `tests/` | Unit and browser acceptance checks. |

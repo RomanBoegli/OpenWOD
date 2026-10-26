@@ -759,3 +759,15 @@ Phase 0 implementation is underway: responsive timed player, pure engine/compile
 - Added SHR-01–06 and AT-25–28 for portable workout/pack files, browser export/import, self-contained prescriptions, privacy, attribution/provenance, versioned public schemas and cross-installation tests. Updated DAT-06/API-01 context; hosted public discovery remains deferred.
 - Added BLD-12 and AT-29 for explicit per-round assignment alternation, informed by example-wod.md. Recorded the example's unresolved duration/round/rest semantics without modifying the source document.
 - Preserved existing requirement IDs while clarifying ENG-05 scheduled-interval navigation, UI-12 warning thresholds, and DAT-04 outcome versus interruption flags. Updated AT-05/09/12 accordingly; clarified prep exclusion in AT-02.
+
+
+
+
+# Future Features Requests
+
+- [ ] a better preview of a workout, cuz maybe we want first read through /study it before actually starting it...
+- [ ] the workout files in yaml instead of json (cuz i think more natrual for human)
+- [ ] a workout creator/editor view, to define new workouts (also in different paradigms usch as i-go-you-go, AMRAP, EMOM, etc.)
+- [ ] a smoother/better / more natural soudning voice?
+- [ ] a projected 'difficutly' badge/chip per workout, that gets calculated/derived form the workout specs
+- [ ] more example data for workouts (like search in internet to find 2-3 additonal crossfit and 2-3 hyrox sessions to have in our app)

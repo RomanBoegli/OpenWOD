@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compileWorkout } from '../../../packages/domain/src/compiler';
 import type { Workout } from '../../../packages/domain/src';
 import { WorkoutEngine, type ClockValues, type CommandType } from '../../../packages/engine/src';
-import { WorkoutAudio, type SoundMode } from './audio';
+import type { WorkoutAudio } from './audio';
 
 declare const __WODVA_TEST__: boolean;
 declare global {
@@ -11,52 +11,46 @@ declare global {
   }
 }
 
-export function useWorkout(workout: Workout, mode: SoundMode) {
+/** Hosts one engine per session: schedules its next deadline, feeds audio and clock subscribers, and owns platform concerns. */
+export function useWorkout(workout: Workout, audio: WorkoutAudio) {
   const clockOffset = useRef(0);
-  const audio = useRef<WorkoutAudio | undefined>(undefined);
-  audio.current ??= new WorkoutAudio();
-  audio.current.mode = mode;
-  const [engine, setEngine] = useState(() => new WorkoutEngine(compileWorkout(workout), () => performance.now() + clockOffset.current, crypto.randomUUID()));
-  const [projection, setProjection] = useState(() => engine.project());
+  const [session, setSession] = useState(0);
+  // One engine per (workout, session). Compile and session identity happen exactly once per session.
+  const engine = useMemo(() => new WorkoutEngine(compileWorkout(workout), () => performance.now() + clockOffset.current, crypto.randomUUID()), [workout, session]);
+  const [projected, setProjected] = useState(() => ({ engine, projection: engine.project() }));
+  if (projected.engine !== engine) setProjected({ engine, projection: engine.project() });
+  const projection = projected.projection;
   const [soundError, setSoundError] = useState('');
   const [wakeStatus, setWakeStatus] = useState('Checking screen wake');
-  const [clockSignal, setClockSignal] = useState(0);
   const revision = useRef(-1);
   const listeners = useRef(new Set<(clocks: ClockValues) => void>());
   const scheduleRef = useRef<() => void>(() => {});
   const lastNavigation = useRef(-Infinity);
-  audio.current.onError = setSoundError;
-
-  useEffect(() => {
-    audio.current?.reset();
-    clockOffset.current = 0;
-    const next = new WorkoutEngine(compileWorkout(workout), () => performance.now() + clockOffset.current, crypto.randomUUID());
-    revision.current = -1;
-    setEngine(next);
-    setProjection(next.project());
-  }, [workout]);
+  audio.onError = setSoundError;
 
   const refresh = useCallback(() => {
     engine.tick();
     const next = engine.project();
     if (revision.current !== engine.revision) {
       revision.current = engine.revision;
-      setProjection(next);
+      setProjected({ engine, projection: next });
     }
     const clocks = engine.readClocks();
-    if (!__WODVA_TEST__) audio.current?.update(next, clocks);
+    if (!__WODVA_TEST__) audio.update(next, clocks);
     for (const listener of listeners.current) listener(clocks);
-  }, [engine]);
+  }, [engine, audio]);
 
   useEffect(() => {
     let frame = 0;
     let deadline: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
+    revision.current = -1;
     const schedule = () => {
       if (deadline) clearTimeout(deadline);
       if (frame) cancelAnimationFrame(frame);
       refresh();
       if (engine.nextDeadline !== undefined && !document.hidden && !disposed) {
+        // One timeout for the next semantic deadline; frames only repaint clocks in between.
         deadline = setTimeout(schedule, Math.max(1, engine.nextDeadline - (performance.now() + clockOffset.current)));
         const animate = () => {
           if (disposed || document.hidden) return;
@@ -71,17 +65,17 @@ export function useWorkout(workout: Workout, mode: SoundMode) {
     const hidden = () => {
       if (document.hidden) {
         engine.command({ id: crypto.randomUUID(), occurrenceId: engine.occurrenceId, type: 'pause', reason: 'hidden' });
-        audio.current?.cancel();
+        audio.cancel();
       }
       schedule();
     };
     document.addEventListener('visibilitychange', hidden);
     if (__WODVA_TEST__) window.__wodvaTest = {
-      advance(ms) { clockOffset.current += ms; schedule(); setClockSignal(value => value + 1); },
+      advance(ms) { clockOffset.current += ms; schedule(); },
       snapshot() { return { projection: engine.project(), clocks: engine.readClocks(), events: engine.events }; },
     };
     return () => { disposed = true; if (deadline) clearTimeout(deadline); cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); if (__WODVA_TEST__) delete window.__wodvaTest; };
-  }, [engine, refresh]);
+  }, [engine, refresh, audio]);
 
   useEffect(() => {
     let lock: WakeLockSentinel | undefined;
@@ -98,18 +92,19 @@ export function useWorkout(workout: Workout, mode: SoundMode) {
     return () => { disposed = true; void lock?.release(); };
   }, [projection.status]);
 
-  useEffect(() => { audio.current?.cancel(); scheduleRef.current(); }, [mode]);
-  useEffect(() => () => audio.current?.cancel(), []);
+  // A sound-mode change cancels queued cues and lets the next refresh schedule under the new mode.
+  useEffect(() => { audio.cancel(); scheduleRef.current(); }, [audio, audio.mode]);
+  useEffect(() => () => audio.cancel(), [audio]);
 
   const send = useCallback((type: CommandType, occurrenceId: string) => {
     if (type === 'next' || type === 'previous') {
       if (performance.now() - lastNavigation.current < 350) return;
       lastNavigation.current = performance.now();
     }
-    if (['play', 'resume', 'ready'].includes(type) && !__WODVA_TEST__) void audio.current?.unlock();
+    if (['play', 'resume', 'ready'].includes(type) && !__WODVA_TEST__) void audio.unlock();
     engine.command({ id: crypto.randomUUID(), occurrenceId, type });
     scheduleRef.current();
-  }, [engine]);
+  }, [engine, audio]);
 
   const subscribeClock = useCallback((listener: (clocks: ClockValues) => void) => {
     listeners.current.add(listener);
@@ -117,5 +112,7 @@ export function useWorkout(workout: Workout, mode: SoundMode) {
     return () => { listeners.current.delete(listener); };
   }, [engine]);
 
-  return { engine, plan: engine.plan, projection, send, subscribeClock, audio: audio.current, soundError, wakeStatus, clockSignal };
+  const restart = useCallback(() => { audio.reset(); clockOffset.current = 0; setSession(value => value + 1); }, [audio]);
+
+  return { engine, plan: engine.plan, projection, send, subscribeClock, soundError, wakeStatus, restart };
 }

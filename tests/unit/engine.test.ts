@@ -75,6 +75,13 @@ describe('deterministic workout engine', () => {
     command('previous');
     expect(engine.project().current.anchor).toBe('slot-1');
     expect(engine.project().occurrenceId).not.toBe(input.occurrenceId);
+    at(25_000);
+    const beforeRestart = engine.project().occurrenceId;
+    command('previous'); // At the section's first occurrence: restart it rather than leaving the section.
+    expect(engine.project().current.anchor).toBe('slot-1');
+    expect(engine.project().occurrenceId).not.toBe(beforeRestart);
+    expect(engine.readClocks().slotMs).toBe(0);
+    expect(engine.readClocks().sectionMs).toBe(15_000);
   });
 
   it('stops at a manual section gate even after a long callback delay and excludes readiness waits', () => {
