@@ -5,8 +5,8 @@ title: "OpenWOD: a workout player for training at home"
 authors:
   - family-names: Boegli
     given-names: Roman
-repository-code: https://github.com/RomanBoegli/wodva
-url: https://github.com/RomanBoegli/wodva
+repository-code: https://github.com/RomanBoegli/OpenWOD
+url: https://github.com/RomanBoegli/OpenWOD
 license: GPL-3.0
 version: 0.1.0
 date-released: "2026-10-26"

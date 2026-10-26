@@ -20,8 +20,8 @@ It runs as a single container on your own hardware and requires no account, clou
 
   </br>
 
-[![Check](https://github.com/RomanBoegli/wodva/actions/workflows/check.yml/badge.svg)](https://github.com/RomanBoegli/wodva/actions/workflows/check.yml)
-[![Release image](https://github.com/RomanBoegli/wodva/actions/workflows/release.yml/badge.svg)](https://github.com/RomanBoegli/wodva/actions/workflows/release.yml)
+[![Check](https://github.com/RomanBoegli/OpenWOD/actions/workflows/check.yml/badge.svg)](https://github.com/RomanBoegli/OpenWOD/actions/workflows/check.yml)
+[![Release image](https://github.com/RomanBoegli/OpenWOD/actions/workflows/release.yml/badge.svg)](https://github.com/RomanBoegli/OpenWOD/actions/workflows/release.yml)
 [![Licence: GPL v3](https://img.shields.io/badge/licence-GPLv3-2f7a0f.svg)](LICENSE)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
@@ -82,7 +82,7 @@ Pick a session from the library, press Start, and put the phone down.
 ### 1. Clone and install
 
 ```sh
-git clone https://github.com/RomanBoegli/wodva.git openwod
+git clone https://github.com/RomanBoegli/OpenWOD.git openwod
 cd openwod
 npm ci
 ```
@@ -221,7 +221,7 @@ If OpenWOD is useful in your work, cite it via the **Cite this repository** butt
   author  = {Boegli, Roman},
   title   = {{OpenWOD}},
   year    = {2026},
-  url     = {https://github.com/RomanBoegli/wodva},
+  url     = {https://github.com/RomanBoegli/OpenWOD},
   license = {GPL-3.0}
 }
 ```
