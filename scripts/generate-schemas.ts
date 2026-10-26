@@ -9,7 +9,7 @@ async function emit(filename: string, content: string) {
   if (await readFile(filename, 'utf8').catch(() => '') !== content) throw new Error(`${filename} is out of date. Run npm run schemas:generate.`);
 }
 
-// Earlier versions (workout.v1, workout-file.v1, workout-file.v2) stay committed as frozen artifacts; only current versions are generated.
+// Only the current versions are published. Older envelopes are refused by the parser with a message, not kept as schemas.
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({ 'workout.v2': WorkoutSchema, 'workout-file.v3': WorkoutFileSchemaV3, 'workout-pack.v1': WorkoutPackSchemaV1 })) {
   await emit(`schemas/${name}.schema.json`, canonicalJson({ $schema: 'http://json-schema.org/draft-07/schema#', ...schema }));

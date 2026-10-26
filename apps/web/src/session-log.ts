@@ -19,10 +19,6 @@ export function loadSessions(): SessionRecord[] {
   } catch { return []; }
 }
 
-export function persistSessions(sessions: SessionRecord[]): string | undefined {
-  try { localStorage.setItem(KEY, JSON.stringify(sessions)); return undefined; } catch { return 'This device could not save the session log.'; }
-}
-
 /** Does a session count as done? Completed always; an ended session when it covered enough of a known-length workout. */
 export function countsAsDone(outcome: SessionOutcome, activeMs: number, plannedMs: number, open: boolean): boolean {
   if (outcome === 'completed' || outcome === 'capped') return true;

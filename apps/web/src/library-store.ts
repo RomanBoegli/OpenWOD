@@ -4,7 +4,7 @@ import { compileWorkout } from '../../../packages/domain/src/compiler';
 const KEY = 'openwod.library.v1';
 export const SAVED_LIMIT = 100;
 
-/** Imported workouts kept on this device until server persistence arrives. Invalid entries are dropped, never approximated. */
+/** Workouts saved on this device before 1.0, read once so they can be moved to the household server. Invalid entries are dropped, never approximated. */
 export function loadSavedWorkouts(): Workout[] {
   try {
     const raw = localStorage.getItem(KEY);
@@ -16,16 +16,6 @@ export function loadSavedWorkouts(): Workout[] {
     }
     return valid;
   } catch { return []; }
-}
-
-/** Returns a user-facing message when the library could not be written. */
-export function persistSavedWorkouts(workouts: Workout[]): string | undefined {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(workouts));
-    return undefined;
-  } catch {
-    return 'This device could not save the library. Imported workouts will be gone after a reload.';
-  }
 }
 
 export { freeWorkoutId, slugify } from '../../../packages/domain/src/library';

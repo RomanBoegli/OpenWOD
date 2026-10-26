@@ -46,12 +46,6 @@ export function loadText(load: LoadValue | undefined, options: LoadOptions = {})
 }
 
 /** The load an athlete at `level` lifts: their level, else the nearest defined level, else the single value. */
-export function resolveLoad(load: Prescription['load'], level: LoadLevel = 'medium'): LoadValue | undefined {
-  if (!load) return undefined;
-  if ('value' in load) return load;
-  return load[level] ?? load.medium ?? load.light ?? load.heavy;
-}
-
 /** Every level on one line, the unit once: "L 15 (12) · M 25 (19) · H 34 (25) kg"; a single value as loadText. */
 export function levelsText(load: Prescription['load'], options: LoadOptions = {}): string {
   if (!load) return '';

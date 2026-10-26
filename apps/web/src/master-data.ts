@@ -29,10 +29,6 @@ export function loadMasterData(): MasterData {
   try { return sanitiseMasterData(JSON.parse(localStorage.getItem(KEY) ?? '{}')); } catch { return emptyMasterData(); }
 }
 
-export function persistMasterData(data: MasterData): string | undefined {
-  try { localStorage.setItem(KEY, JSON.stringify(data)); return undefined; } catch { return 'This device could not save your settings. They last for this visit only.'; }
-}
-
 // ---- Equipment -----------------------------------------------------------------------------------------------
 
 /** The canonical spelling for an equipment name after merges. */
@@ -176,9 +172,5 @@ export function collectionOf(collections: Collection[], workoutId: string): Coll
 
 export function removeCollection(data: MasterData, id: string): MasterData {
   return { ...data, collections: data.collections.filter(item => item.id !== id) };
-}
-
-export function collectionsOf(collections: Collection[], workoutId: string): Collection[] {
-  return collections.filter(collection => collection.workoutIds.includes(workoutId));
 }
 

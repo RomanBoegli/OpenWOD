@@ -1,7 +1,7 @@
 import type { Workout } from '../../../../packages/domain/src/schema';
 import type { EngineSnapshot, Status } from '../../../../packages/engine/src';
 import type { SessionRecord } from '../../../../packages/engine/src/records';
-import { idbDelete, idbGetAll, idbPut, transaction } from './idb';
+import { idbGetAll, idbPut, transaction } from './idb';
 import { outboxEvents, type OutboxItem } from './outbox';
 
 /**
@@ -76,7 +76,6 @@ export async function finishSession(sessionId: string, record?: SessionRecord): 
   if (record) outboxEvents.dispatchEvent(new Event('change'));
 }
 
-export const deleteCheckpoint = (sessionId: string) => idbDelete('checkpoints', sessionId).then(() => idbDelete('progress', sessionId));
 
 /** "just now", "4 min ago", "2 h ago", "3 days ago". */
 export function elapsedText(ms: number): string {

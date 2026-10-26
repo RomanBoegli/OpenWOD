@@ -61,5 +61,4 @@ export const idbGet = <T,>(store: StoreName, key: IDBValidKey): Promise<T | unde
 export const idbGetAll = <T,>(store: StoreName): Promise<T[]> => transaction([store], 'readonly', get => settle(get(store).getAll() as IDBRequest<T[]>));
 export const idbPut = (store: StoreName, value: unknown): Promise<void> => transaction([store], 'readwrite', get => { get(store).put(value); });
 export const idbDelete = (store: StoreName, key: IDBValidKey): Promise<void> => transaction([store], 'readwrite', get => { get(store).delete(key); });
-export const idbClear = (store: StoreName): Promise<void> => transaction([store], 'readwrite', get => { get(store).clear(); });
 export { settle };

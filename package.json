@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "license": "GPL-3.0-only",
+  "homepage": "https://github.com/RomanBoegli/OpenWOD",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RomanBoegli/OpenWOD.git"
+  },
   "description": "OpenWOD: a workout player for training at home, solo or in pairs. Not born. Made.",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

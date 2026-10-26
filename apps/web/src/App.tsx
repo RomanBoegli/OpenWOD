@@ -27,6 +27,10 @@ import { probeSessionLock, takeOverSession } from './data/session-lock';
 import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
 
+// Build-time constants from vite.config.ts: the package version and the repository URL.
+declare const __OPENWOD_VERSION__: string;
+declare const __OPENWOD_REPO__: string;
+
 export default function App() {
   const { route } = useRoute();
   const [preferences, setPreferences] = useState(loadPreferences);
@@ -171,6 +175,8 @@ export default function App() {
   const editingDraft = editing && drafts.find(draft => draft.id === editing.id);
   const notice = [data.notice, storageError, importReport].filter(Boolean).join(' ');
   const pendingCount = data.pendingIds.size;
+  // The running server's version when known (that is what is deployed), else the version this bundle was built from.
+  const appVersion = data.serverVersion ?? __OPENWOD_VERSION__;
   const backTarget = current && (route.name === 'play' || route.name === 'edit') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
 
   return <div className={styles.app} data-performing={performing}>
@@ -203,7 +209,7 @@ export default function App() {
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>
       </ConfirmDialog>
-      <footer className={styles.footer}><span>NOT BORN. MADE.</span><span>Household server{data.serverVersion ? ` ${data.serverVersion}` : ''} · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
+      <footer className={styles.footer}><span>NOT BORN. MADE.</span><span><a href={__OPENWOD_REPO__} target="_blank" rel="noreferrer">OpenWOD on GitHub</a> · <a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a> · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
     </main>
   </div>;
 }

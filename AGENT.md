@@ -223,7 +223,7 @@ The player SHALL identify which clock it displays. Paused or manually altered sc
 
 ## 6.4 Representative semantic fixture
 
-This Phase 0 data contract is formalised in schemas/workout.v1.schema.json and implemented as the canonical workout `workouts/default/partner-circuit.wod.yaml`. Identifiers are examples, not production records. Each slot lasts 40 seconds and contains simultaneous assignments. Additional workout capabilities extend the model in later milestones.
+This Phase 0 data contract was formalised in a version 1 schema, since superseded by schemas/workout.v2.schema.json, and implemented as the canonical workout `workouts/default/partner-circuit.wod.yaml`. Identifiers are examples, not production records. Each slot lasts 40 seconds and contains simultaneous assignments. Additional workout capabilities extend the model in later milestones.
 
 ```json
 {

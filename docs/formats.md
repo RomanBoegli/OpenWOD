@@ -123,4 +123,4 @@ The import preview shows every workout with its attribution and a state from its
 
 ## Examples and schemas
 
-`workouts/` holds every bundled workout as a file, one folder per collection, and is the best set of examples. `schemas/workout.v2.schema.json`, `schemas/workout-file.v3.schema.json` and `schemas/workout-pack.v1.schema.json` validate the model, the parsed file and the parsed pack. `schemas/workout.v1.schema.json` stays for reference.
+`workouts/` holds every bundled workout as a file, one folder per collection, and is the best set of examples. `schemas/workout.v2.schema.json`, `schemas/workout-file.v3.schema.json` and `schemas/workout-pack.v1.schema.json` validate the model, the parsed file and the parsed pack.
