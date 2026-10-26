@@ -284,7 +284,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     const target = item && primaryTarget(item);
     const state = laneState(role);
     const activeLane = format !== 'youGoIGo' || !turn || turn.athlete === role || isRest;
-    return <section className={`${styles.lane} ${own.lane}`} data-athlete={role} data-active={activeLane} key={role} aria-label={`Athlete ${role} station`}>
+    return <section className={`${styles.lane} ${own.lane}`} data-athlete={role} data-active={activeLane} data-block={isBlock && format === 'youGoIGo' ? 'turns' : undefined} key={role} aria-label={`Athlete ${role} station`}>
       <div className={styles.athleteLabel}><span className={styles.athleteBadge}>{role}</span><span>{names[role]}<small>{role === 'A' ? 'LEFT LANE' : 'RIGHT LANE'}</small></span>{timing !== 'manual' && <span className={styles.laneTime}>{Math.round((isRest ? nextWork?.durationMs ?? 0 : current.durationMs) / 1000)}s</span>}</div>
       {isBlock && format === 'youGoIGo' ? <>
         <h2 data-testid={`movement-${role}`}>{activeLane ? 'Your turn' : 'Rest'}</h2>
@@ -342,7 +342,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
           <p className={own.taskHint}>Tap a row to mark where you are. It never changes the clock.</p>
         </> : <div key={`${current.id}/${turn?.number ?? 0}`} className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}
 
-        {(can('done') || can('switch') || can('finish') || can('count:round')) && <div className={own.actionBar}>
+        {(can('done') || can('switch') || can('finish') || can('count:round')) && <div className={own.actionBar} data-counter={Boolean(can('count:round') && counter)}>
           {can('done') && <button className={own.bigAction} data-testid="done" onClick={() => send('done', projection.occurrenceId)}><Icon name="check" size={26} />{timing === 'interval' ? 'Done · rest until next' : format === 'strength' ? 'Set done' : 'Done'}</button>}
           {can('switch') && <button className={own.bigAction} data-testid="switch" onClick={() => send('switch', projection.occurrenceId)}><Icon name="switch" size={26} />Switch to {turn?.athlete === 'A' ? names.B : names.A}</button>}
           {can('count:round') && counter && <div className={own.counter} aria-label="Round counter">
@@ -355,7 +355,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
           {can('skipTurn') && <button className={own.secondaryAction} onClick={() => send('skipTurn', projection.occurrenceId)}><Icon name="skip" size={18} />Skip turn</button>}
           {can('finish') && <button className={own.secondaryAction} data-testid="finish" onClick={() => send('finish', projection.occurrenceId)}><Icon name="flag" size={18} />Finish section</button>}
         </div>}
-        <div className={styles.nextStrip}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next section, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B && nextWork.assignments.B.name !== nextWork.assignments.A.name ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>
+        <div className={styles.nextStrip} data-empty={!nextWork}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next section, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B && nextWork.assignments.B.name !== nextWork.assignments.A.name ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>
       </>}
 
       {view === 'context' && <section className={styles.contextSection} aria-label="Workout context">

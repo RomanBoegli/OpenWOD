@@ -6,3 +6,5 @@
 .levels { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .unit { color: var(--ink-3); font-size: .85em; margin-left: -2px; }
 .line .unit { margin-left: 0; }
+/* Performing on a phone: the three levels fit one line of a block row. */
+@media (max-width: 620px) { :global([data-performing=true]) .levels { gap: 6px; } :global([data-performing=true]) .chip { width: 18px; height: 18px; font-size: 10px; border-radius: 5px; } :global([data-performing=true]) .line { gap: 4px; } }

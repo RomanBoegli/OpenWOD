@@ -82,7 +82,7 @@ Tags do not trigger the Check workflow on their own.
 5. Watch the workflow.
    It validates, builds the image natively for amd64 and arm64 (the voice layer comes from the build cache unless a cue script or the catalogue changed), smoke-tests each architecture against a running container, and publishes the manifest `ghcr.io/<owner>/<repository>:vX.Y.Z`.
    The browser suite does not gate the release, but the smoke test does: every candidate image is tested in Chromium, Firefox and WebKit before it is pushed.
-   When one architecture's job fails or times out, use Re-run all jobs on that run: re-running only the failed job rebuilt and pushed the candidate but left the manifest job skipped, and the build cache makes a full re-run quick.
+   When one architecture's job fails or times out, re-run the failed jobs of that run: the other architecture's candidate is already pushed, and the manifest job runs once both image jobs have passed.
    The browser install of the image job is bounded to ten minutes because the apt mirror of a runner can stall; when it hits the bound, re-run all jobs and the job lands on another runner.
    When both candidates are already pushed and only the manifest is missing, it can be published from any machine logged into GHCR with a token that may write packages, with the same `docker buildx imagetools create` command the manifest job runs.
    The job summary of the manifest step prints the digest.

@@ -226,11 +226,12 @@
   .screen[data-performing=true] .timer { font-size: clamp(72px, 11vh, 112px); line-height: 1; margin: 4px 0 5px; }
   .screen[data-performing=true] .laneHeading { margin-bottom: 6px; }
   .screen[data-performing=true] .lanes { gap: 8px; }
-  .screen[data-performing=true] .lane { min-height: 0; padding: 8px 12px 10px; }
-  .screen[data-performing=true] .lane h2 { font-size: 28px; margin: 6px 0 2px; }
+  .screen[data-performing=true] .lane { min-height: 0; padding: 8px 12px 9px; }
+  .screen[data-performing=true] .lane h2 { font-size: 27px; line-height: 1.05; margin: 6px 0 2px; }
   .screen[data-performing=true] .athleteLabel { font-size: 14px; gap: 8px; }
   .screen[data-performing=true] .athleteBadge { min-width: 26px; height: 26px; font-size: 15px; }
   .screen[data-performing=true] .nextStrip { font-size: 12px; min-height: 0; padding: 8px 0; }
+  .screen[data-performing=true] .nextStrip[data-empty=true] { display: none; }
   .screen[data-performing=true] .controls { padding-top: 10px; }
   /* On a phone the transport row goes under the centre pair: three buttons on each side still fit beside each other. */
   .controls { grid-template-columns: 1fr 1fr; gap: 8px; }

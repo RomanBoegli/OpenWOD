@@ -63,7 +63,7 @@
   :global([data-performing=true]) .lane > * { flex: 0 0 100%; }
   :global([data-performing=true]) .lane > .target { flex: 0 0 auto; margin: 4px 0 0; }
   :global([data-performing=true]) .lane > h2 { flex: 1 1 0; min-width: 0; }
-  :global([data-performing=true]) .lane > .laneState { flex: 0 0 auto; margin-top: 6px; }
+  :global([data-performing=true]) .lane > .laneState { flex: 0 0 auto; margin-top: 4px; padding: 5px 9px; font-size: 11px; }
   :global([data-performing=true]) .target strong { font-size: 34px; letter-spacing: -1.5px; }
   :global([data-performing=true]) .target small { font-size: 12px; }
   :global([data-performing=true]) .loadLine { margin-top: 2px; font-size: 13px; }
@@ -71,5 +71,43 @@
   :global([data-performing=true]) .actionBar { gap: 8px; margin: 4px 0 6px; }
   :global([data-performing=true]) .bigAction { min-height: 54px; font-size: 17px; }
   :global([data-performing=true]) .secondaryAction { min-height: 42px; padding: 6px 16px; font-size: 14px; }
-  :global([data-performing=true]) .laneDone { margin-top: 8px; min-height: 56px; }
+  /* A lane's own Done button shares the label row, so the station keeps its height. */
+  :global([data-performing=true]) .lane > :first-child { order: -2; flex: 1 1 auto; }
+  :global([data-performing=true]) .laneDone { order: -1; flex: 0 0 auto; width: auto; margin: 0; min-height: 40px; padding: 6px 12px; font-size: 14px; }
+  /* You-go-I-go on a phone: the turn heading repeats the lane state and the phase label, and the resting lane keeps its label and state alone. */
+  :global([data-performing=true]) .lane[data-block=turns] > h2, :global([data-performing=true]) .lane[data-active=false] > .unit { display: none; }
+  :global([data-performing=true]) .lane > .unit { margin-top: 4px; gap: 2px; }
+  :global([data-performing=true]) .unit li { font-size: 17px; gap: 8px; }
+  :global([data-performing=true]) .unit li small { font-size: 11px; }
+  /* Done or Switch beside Finish section or Skip turn when both fit one row. */
+  :global([data-performing=true]) .actionBar[data-counter=false] { gap: 6px 8px; margin: 2px 0 4px; }
+  :global([data-performing=true]) .actionBar[data-counter=false] .bigAction { flex: 1 1 200px; min-height: 52px; }
+  :global([data-performing=true]) .actionBar[data-counter=false] .secondaryAction { flex: 0 1 auto; }
+  /* Two secondaries (Skip turn and Finish section) share the row under the big one. */
+  :global([data-performing=true]) .actionBar:has(.secondaryAction + .secondaryAction) .bigAction { flex-basis: 100%; }
+  :global([data-performing=true]) .actionBar:has(.secondaryAction + .secondaryAction) .secondaryAction { flex: 1 1 40%; min-height: 40px; }
+  /* Finish section alone, as with a lane's own Done buttons, is a small row. */
+  :global([data-performing=true]) .actionBar:not(:has(.bigAction, .counter)) { margin: 0; }
+  :global([data-performing=true]) .actionBar:not(:has(.bigAction, .counter)) .secondaryAction { min-height: 36px; padding: 4px 14px; font-size: 13px; }
+  /* The AMRAP block on a phone: shorter rows, a smaller counter, and the tap hint goes. */
+  :global([data-performing=true]) .taskList { gap: 3px; margin-bottom: 0; }
+  :global([data-performing=true]) .taskRow { padding: 5px 10px; gap: 8px; grid-template-columns: 24px 1fr; }
+  :global([data-performing=true]) .taskRow[data-pair=true] { grid-template-columns: 24px 1fr; }
+  :global([data-performing=true]) .taskIndex { width: 24px; height: 24px; font-size: 12px; border-radius: 7px; }
+  :global([data-performing=true]) .taskCell { gap: 2px 8px; }
+  :global([data-performing=true]) .taskCell strong { font-size: 20px; }
+  :global([data-performing=true]) .taskCell span { font-size: 15px; }
+  :global([data-performing=true]) .taskHint { display: none; }
+  /* The counter and Finish section as one two-row grid: the counts and undo above, the three buttons below. */
+  :global([data-performing=true]) .actionBar[data-counter=true] { display: grid; grid-template-columns: 1fr 1fr auto; grid-template-areas: "rounds reps undo" "round rep finish"; gap: 6px 8px; margin: 2px 0 4px; }
+  :global([data-performing=true]) .actionBar[data-counter=true] .counter { display: contents; }
+  :global([data-performing=true]) .counterValue { min-width: 0; gap: 4px; align-self: center; }
+  :global([data-performing=true]) .counterValue:nth-of-type(1) { grid-area: rounds; }
+  :global([data-performing=true]) .counterValue:nth-of-type(2) { grid-area: reps; }
+  :global([data-performing=true]) .counterValue strong { font-size: 28px; letter-spacing: -1px; }
+  :global([data-performing=true]) .counterButton { min-height: 44px; min-width: 44px; padding: 6px 10px; font-size: 14px; border-radius: 10px; }
+  :global([data-performing=true]) .counterButton:nth-of-type(1) { grid-area: round; }
+  :global([data-performing=true]) .counterButton:nth-of-type(2) { grid-area: rep; }
+  :global([data-performing=true]) .counterButton:last-of-type { grid-area: undo; justify-self: end; }
+  :global([data-performing=true]) .actionBar[data-counter=true] .secondaryAction { grid-area: finish; }
 }
