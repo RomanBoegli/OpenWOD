@@ -1,0 +1,326 @@
+format: wodva.workout
+formatVersion: 2
+workout:
+  schemaVersion: 1
+  id: full-body-partner
+  revision: 1
+  title: Full body partner workout
+  description: Bodyweight meets dumbbells. Switch task columns each round, then take two minutes to recover before the next block.
+  equipment:
+    - Dumbbells
+    - Exercise mat
+  participants: 2
+  prep: 10s
+  sections:
+    - id: warm-up
+      title: Warm-up
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: warm-up-sequence
+        type: sequence
+        children:
+          - id: warm-up-1
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Jumping jacks
+              B:
+                name: Jumping jacks
+          - id: warm-up-2
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Air squats
+              B:
+                name: Air squats
+          - id: warm-up-3
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Arm circles & shoulder mobility
+              B:
+                name: Arm circles & shoulder mobility
+          - id: warm-up-4
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Alternating lunges
+              B:
+                name: Alternating lunges
+          - id: warm-up-5
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Inchworms
+              B:
+                name: Inchworms
+    - id: block-1
+      title: Legs & strength
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: block-1-body
+        type: sequence
+        children:
+          - id: block-1-rounds
+            type: repeat
+            count: 2
+            assignmentPolicy: alternate
+            body:
+              id: block-1-stations
+              type: sequence
+              betweenChildrenRest: 20s
+              trailingRest: 20s
+              children:
+                - id: block-1-slot-1
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Air squats
+                    B:
+                      name: Dumbbell thrusters
+                - id: block-1-slot-2
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Jump squats
+                    B:
+                      name: Goblet squats
+                - id: block-1-slot-3
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Mountain climbers
+                    B:
+                      name: Romanian deadlifts
+                - id: block-1-slot-4
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Burpees
+                    B:
+                      name: Alternating lunges
+          - id: block-1-rest
+            type: rest
+            duration: 2m
+            kind: blockRest
+    - id: block-2
+      title: Upper body & arms
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: block-2-body
+        type: sequence
+        children:
+          - id: block-2-rounds
+            type: repeat
+            count: 2
+            assignmentPolicy: alternate
+            body:
+              id: block-2-stations
+              type: sequence
+              betweenChildrenRest: 20s
+              trailingRest: 20s
+              children:
+                - id: block-2-slot-1
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Push-ups
+                    B:
+                      name: Bent-over rows
+                - id: block-2-slot-2
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Plank shoulder taps
+                    B:
+                      name: Shoulder press
+                - id: block-2-slot-3
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Triceps dips
+                    B:
+                      name: Biceps curls
+                - id: block-2-slot-4
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Burpees
+                    B:
+                      name: Overhead triceps extensions
+          - id: block-2-rest
+            type: rest
+            duration: 2m
+            kind: blockRest
+    - id: block-3
+      title: Abs & core
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: block-3-body
+        type: sequence
+        children:
+          - id: block-3-rounds
+            type: repeat
+            count: 2
+            assignmentPolicy: alternate
+            body:
+              id: block-3-stations
+              type: sequence
+              betweenChildrenRest: 20s
+              trailingRest: 20s
+              children:
+                - id: block-3-slot-1
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Sit-ups
+                    B:
+                      name: Russian twists
+                - id: block-3-slot-2
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Bicycle crunches
+                    B:
+                      name: Dumbbell deadlifts
+                - id: block-3-slot-3
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Plank
+                    B:
+                      name: Farmer march
+                - id: block-3-slot-4
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Mountain climbers
+                    B:
+                      name: Dumbbell woodchoppers
+          - id: block-3-rest
+            type: rest
+            duration: 2m
+            kind: blockRest
+    - id: block-4
+      title: HYROX finisher
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: block-4-body
+        type: sequence
+        children:
+          - id: block-4-rounds
+            type: repeat
+            count: 2
+            assignmentPolicy: alternate
+            body:
+              id: block-4-stations
+              type: sequence
+              betweenChildrenRest: 20s
+              trailingRest: 20s
+              children:
+                - id: block-4-slot-1
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: High knees
+                    B:
+                      name: Dumbbell hang cleans
+                - id: block-4-slot-2
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Skater jumps
+                    B:
+                      name: Dumbbell thrusters
+                - id: block-4-slot-3
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Burpees
+                    B:
+                      name: Alternating lunges
+                - id: block-4-slot-4
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Jump squats
+                    B:
+                      name: Biceps curls
+          - id: block-4-rest
+            type: rest
+            duration: 2m
+            kind: blockRest
+    - id: cool-down
+      title: Cool-down
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: cool-down-sequence
+        type: sequence
+        children:
+          - id: cool-down-1
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Quad stretch
+              B:
+                name: Quad stretch
+          - id: cool-down-2
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Hamstring stretch
+              B:
+                name: Hamstring stretch
+          - id: cool-down-3
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Hip flexor stretch
+              B:
+                name: Hip flexor stretch
+          - id: cool-down-4
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Chest & shoulder stretch
+              B:
+                name: Chest & shoulder stretch
+          - id: cool-down-5
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Deep breathing
+              B:
+                name: Deep breathing

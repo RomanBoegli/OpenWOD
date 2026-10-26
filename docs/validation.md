@@ -42,3 +42,16 @@ Screenshots and retained failure traces are ignored local test artifacts under `
 - The real 60-minute timing/offline/recovery/memory run remains pending. Short accelerated and production smoke tests do not satisfy that gate.
 - amd64/native multi-architecture CI, GHCR publishing and actual Portainer deployment have not been run. Workflows and Compose definitions are provided.
 - SQLite, authentication, durable local/server checkpoints, reload recovery, result synchronisation, saved-library import conflict/provenance handling, packs/programs, and the editor are not implemented in this milestone.
+
+## Feature round, 26 October 2026
+
+Added after the player milestone: YAML exchange format (version 2, human durations, legacy JSON still read), projected difficulty, the overview page, six sourced example workouts, device-voice selection with optional recorded cue clips, and the timed-circuit editor with autosaved drafts.
+
+| Check | Result |
+| --- | --- |
+| Strict TypeScript, generated schema/example consistency, unit tests | 40 unit tests passed (compiler, engine, audio, server, library, difficulty, outline, examples, builder). |
+| Accelerated browser integration | 17 scenarios in each of Firefox and WebKit passed (34); Chromium runs in CI. |
+| Production build and test-hook exclusion | Passed; bundle grew by the YAML parser (about 33 kB gzipped). |
+| Visual pass | WebKit screenshots of library, overview, editor and player in light and dark at 1440 and 390 px inspected. |
+
+Not run in this round: the recorded cue clips (`npm run cues:generate` needs a one-off Piper download, which this environment could not perform; the app falls back to device voice and says so), the Docker production smoke test, and the real-hour and physical-device checks listed above.

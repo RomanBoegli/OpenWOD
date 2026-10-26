@@ -13,7 +13,7 @@ export async function createServer({ logger = false, webRoot = resolve('dist/web
       setHeaders(response, filePath) {
         response.header('X-Content-Type-Options', 'nosniff');
         response.header('Referrer-Policy', 'same-origin');
-        response.header('Cache-Control', filePath.includes('/assets/') ? 'public, max-age=31536000, immutable' : 'no-store');
+        response.header('Cache-Control', filePath.includes('/assets/') ? 'public, max-age=31536000, immutable' : filePath.includes('/cues/') ? 'public, max-age=86400' : 'no-store');
       },
     });
   }

@@ -36,12 +36,17 @@ describe('library summaries and filters', () => {
     expect(durationBucket(20 * 60_000 + 1)).toBe('medium');
     expect(matchesFilter(fullBody, { duration: 'long', query: 'burpees' })).toBe(true);
     expect(matchesFilter(fullBody, { duration: 'short' })).toBe(false);
+    expect(circuit.difficulty.label).toBe('Hard');
+    expect(matchesFilter(circuit, { difficulty: 3 })).toBe(true);
+    expect(matchesFilter(circuit, { difficulty: 1 })).toBe(false);
   });
 
   it('sorts by title or duration and lists equipment once', () => {
     expect(sortSummaries([fullBody, circuit], 'title').map(item => item.id)).toEqual(['full-body-partner', 'partner-circuit']);
     expect(sortSummaries([fullBody, circuit], 'shortest').map(item => item.id)).toEqual(['partner-circuit', 'full-body-partner']);
     expect(sortSummaries([circuit, fullBody], 'longest').map(item => item.id)).toEqual(['full-body-partner', 'partner-circuit']);
+    expect(sortSummaries([circuit, fullBody], 'easiest').map(item => item.id)).toEqual(['partner-circuit', 'full-body-partner']);
+    expect(sortSummaries([circuit, fullBody], 'hardest').map(item => item.id)).toEqual(['full-body-partner', 'partner-circuit']);
     expect(equipmentOptions([circuit, fullBody, { ...circuit, equipment: ['kettlebell'] }])).toEqual(['Dumbbells', 'Exercise mat', 'Kettlebell', 'Rowing machine']);
   });
 });

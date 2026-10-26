@@ -23,12 +23,21 @@ export const NodeSchema = Type.Recursive(Self => Type.Union([
 ]), { $id: 'WorkoutNode' });
 export type WorkoutNode = Static<typeof NodeSchema>;
 
+export const AttributionSchema = Type.Object({
+  author: Type.Optional(Type.String({ minLength: 1, maxLength: 160 })),
+  sourceUrl: Type.Optional(Type.String({ minLength: 1, maxLength: 500, pattern: '^https?://' })),
+  licence: Type.Optional(Type.String({ minLength: 1, maxLength: 300 })),
+  notes: Type.Optional(Type.String({ minLength: 1, maxLength: 1000 })),
+}, { additionalProperties: false });
+export type Attribution = Static<typeof AttributionSchema>;
+
 export const WorkoutSchema = Type.Object({
   schemaVersion: Type.Literal(1),
   id,
   revision: Type.Integer({ minimum: 1 }),
   title: label,
   description: Type.Optional(Type.String({ maxLength: 2000 })),
+  attribution: Type.Optional(AttributionSchema),
   equipment: Type.Array(Type.String({ minLength: 1, maxLength: 80 }), { maxItems: 30 }),
   participants: Type.Union([Type.Literal(1), Type.Literal(2)]),
   prepMs: Type.Integer({ minimum: 0, maximum: 60_000 }),
@@ -42,6 +51,7 @@ export const WorkoutSchema = Type.Object({
 }, { $id: 'Workout', additionalProperties: false });
 export type Workout = Static<typeof WorkoutSchema>;
 
+/** Version 1 exchange envelope (JSON, integer-millisecond keys). Version 2 is derived from it in exchange.ts. */
 export const WorkoutFileSchema = Type.Object({
   format: Type.Literal('wodva.workout'),
   formatVersion: Type.Literal(1),

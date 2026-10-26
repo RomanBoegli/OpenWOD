@@ -1,0 +1,71 @@
+format: wodva.workout
+formatVersion: 2
+workout:
+  schemaVersion: 1
+  id: fight-gone-bad
+  revision: 1
+  title: Fight Gone Bad
+  description: "Three five-minute rounds that mimic a fight: five stations, one minute each, the clock never stops, one minute to breathe between rounds. Count every rep and every rowing calorie."
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/workout/2013/09/22
+    notes: Follows the published benchmark structure. Loads shown are the published Rx; scale freely.
+  equipment:
+    - Medicine ball
+    - Barbell
+    - Plyo box
+    - Rowing machine
+  participants: 1
+  prep: 10s
+  sections:
+    - id: fgb
+      title: Fight Gone Bad
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: fgb-rounds
+        type: repeat
+        count: 3
+        betweenIterationsRest: 1m
+        body:
+          id: fgb-stations
+          type: sequence
+          children:
+            - id: fgb-wall-ball
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: Rx 20 lb ball to a 10 ft target (14 lb / 9 ft)
+                  name: Wall balls
+                  shortName: Wall balls
+            - id: fgb-sdhp
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: Rx 75 lb (55 lb)
+                  name: Sumo deadlift high pulls
+                  shortName: SDHP
+                  spokenName: sumo deadlift high pulls
+            - id: fgb-box-jump
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: Rx 20 in box; step-ups to scale
+                  name: Box jumps
+            - id: fgb-push-press
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: Rx 75 lb (55 lb)
+                  name: Push presses
+            - id: fgb-row
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: Score calories
+                  name: Row

@@ -1,17 +1,22 @@
 import { useMemo, useRef, useState } from 'react';
-import { parseWorkoutFile, type Workout } from '../../../packages/domain/src';
+import { MAX_FILE_BYTES, parseWorkoutFile, type Workout } from '../../../packages/domain/src';
 import { equipmentOptions, matchesFilter, sortSummaries, summariseWorkout, type DurationBucket, type LibrarySort, type WorkoutSummary } from '../../../packages/domain/src/library';
+import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
+import { DifficultyChip } from './DifficultyChip';
 import { displayTime } from '../../../packages/engine/src';
 import { exportWorkoutFile } from './Player';
-import { workoutHref } from './router';
+import { editHref, NEW_HREF, playHref, workoutHref } from './router';
+import { workoutToBuilder } from '../../../packages/domain/src/builder';
+import { NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
+import { ConfirmDialog } from './ConfirmDialog';
 import styles from './Library.module.css';
 import shared from './App.module.css';
 
-export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved' }
+export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean }
 
 export function toEntry(workout: Workout, source: LibraryEntry['source']): LibraryEntry {
-  return { workout, summary: summariseWorkout(workout), source };
+  return { workout, summary: summariseWorkout(workout), source, editable: workoutToBuilder(workout) !== null };
 }
 
 interface LibraryProps {
@@ -20,33 +25,37 @@ interface LibraryProps {
   onRemove: (id: string) => void;
   storageError: string;
   missingId?: string;
+  drafts: StoredDraft[];
+  onDiscardDraft: (id: string) => void;
 }
 
-export function Library({ entries, onImport, onRemove, storageError, missingId }: LibraryProps) {
+export function Library({ entries, onImport, onRemove, storageError, missingId, drafts, onDiscardDraft }: LibraryProps) {
   const [query, setQuery] = useState('');
   const [participants, setParticipants] = useState<'' | '1' | '2'>('');
   const [equipment, setEquipment] = useState('');
   const [duration, setDuration] = useState<'' | DurationBucket>('');
+  const [difficulty, setDifficulty] = useState<'' | DifficultyLevel>('');
   const [sort, setSort] = useState<LibrarySort>('title');
   const [preview, setPreview] = useState<Workout>();
   const [importError, setImportError] = useState('');
   const [removing, setRemoving] = useState<LibraryEntry>();
+  const [discarding, setDiscarding] = useState<StoredDraft>();
   const importDialog = useRef<HTMLDialogElement>(null);
   const removeDialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const equipmentList = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
-  const filter = { query, participants: participants ? Number(participants) as 1 | 2 : undefined, equipment: equipment || undefined, duration: duration || undefined };
-  const visible = useMemo(() => sortSummaries(entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry })), sort).map(item => item.entry), [entries, query, participants, equipment, duration, sort]);
-  const filtering = Boolean(query || participants || equipment || duration);
-  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment(''); setDuration(''); };
+  const filter = { query, participants: participants ? Number(participants) as 1 | 2 : undefined, equipment: equipment || undefined, duration: duration || undefined, difficulty: difficulty || undefined };
+  const visible = useMemo(() => sortSummaries(entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry })), sort).map(item => item.entry), [entries, query, participants, equipment, duration, difficulty, sort]);
+  const filtering = Boolean(query || participants || equipment || duration || difficulty);
+  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment(''); setDuration(''); setDifficulty(''); };
   const previewSummary = useMemo(() => preview && summariseWorkout(preview), [preview]);
   const conflict = preview && entries.find(entry => entry.workout.id === preview.id);
 
   async function importFile(file?: File) {
     if (!file) return;
     try {
-      if (file.size > 1_048_576) throw new Error('Choose a workout file smaller than 1 MB.');
+      if (file.size > MAX_FILE_BYTES) throw new Error('Choose a workout file smaller than 1 MB.');
       const parsed = parseWorkoutFile(await file.text());
       summariseWorkout(parsed); // Compiles: unsupported or unbounded content is rejected before anything is saved.
       setPreview(parsed); setImportError('');
@@ -68,11 +77,13 @@ export function Library({ entries, onImport, onRemove, storageError, missingId }
         <p className={shared.description}>Bundled circuits and the WODs you’ve imported, all on this device. Filter, then press Start.</p>
       </div>
       <div className={styles.headingActions}>
-        <button className={shared.primaryButton} onClick={() => fileInput.current?.click()}><Icon name="upload" size={18} />Import WOD</button>
-        <input ref={fileInput} hidden type="file" accept=".json,.wod.json,application/json" onChange={event => void importFile(event.target.files?.[0])} />
+        <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
+        <button className={shared.quietButton} onClick={() => fileInput.current?.click()}><Icon name="upload" size={18} />Import WOD</button>
+        <input ref={fileInput} hidden type="file" accept=".yaml,.yml,.json,.wod.yaml,.wod.json,application/yaml,application/x-yaml,text/yaml,application/json" onChange={event => void importFile(event.target.files?.[0])} />
       </div>
     </div>
 
+    {drafts.length > 0 && <section className={styles.drafts} aria-label="Drafts"><h2>Drafts</h2><ul>{drafts.map(draft => <li key={draft.id}><div><strong>{draft.draft.title.trim() || 'Untitled workout'}</strong><small>{draft.mode === 'replace' ? `Edits to “${entries.find(entry => entry.workout.id === draft.id)?.summary.title ?? draft.id}”` : 'New workout'} · saved {new Date(draft.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</small></div><div className={styles.draftActions}><a className={shared.primaryButton} href={draft.id === NEW_DRAFT_ID ? NEW_HREF : editHref(draft.id)}>Continue editing</a><button className={shared.quietButton} onClick={() => setDiscarding(draft)} aria-label={`Discard draft ${draft.draft.title.trim() || 'Untitled workout'}`}><Icon name="trash" size={16} />Discard</button></div></li>)}</ul></section>}
     {missingId && <p className={shared.notice} role="status">No workout with the ID “{missingId}” is in this library. It may have been removed from this device.</p>}
     {storageError && <p className={shared.notice} role="alert">{storageError}</p>}
 
@@ -81,13 +92,14 @@ export function Library({ entries, onImport, onRemove, storageError, missingId }
       <label>Athletes<select value={participants} onChange={event => setParticipants(event.target.value as '' | '1' | '2')}><option value="">Any</option><option value="1">Solo</option><option value="2">Pair</option></select></label>
       <label>Equipment<select value={equipment} onChange={event => setEquipment(event.target.value)}><option value="">Any</option>{equipmentList.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
       <label>Duration<select value={duration} onChange={event => setDuration(event.target.value as '' | DurationBucket)}><option value="">Any</option><option value="short">Up to 20 min</option><option value="medium">20 to 40 min</option><option value="long">Over 40 min</option></select></label>
-      <label>Sort<select value={sort} onChange={event => setSort(event.target.value as LibrarySort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option></select></label>
+      <label>Difficulty<select value={difficulty} onChange={event => setDifficulty(event.target.value ? Number(event.target.value) as DifficultyLevel : '')}><option value="">Any</option>{([1, 2, 3, 4] as const).map(level => <option key={level} value={level}>{DIFFICULTY_LABELS[level]}</option>)}</select></label>
+      <label>Sort<select value={sort} onChange={event => setSort(event.target.value as LibrarySort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option></select></label>
     </div>
     <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
-    {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.json file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
-      {visible.map(({ workout, summary, source }) => <li key={workout.id} className={styles.card} data-source={source}>
-        <div className={styles.cardTop}><span className={styles.badge} data-kind={summary.participants === 2 ? 'pair' : 'solo'}><Icon name={summary.participants === 2 ? 'users' : 'user'} size={14} />{summary.participants === 2 ? 'Pair' : 'Solo'}</span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
+    {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
+      {visible.map(({ workout, summary, source, editable }) => <li key={workout.id} className={styles.card} data-source={source}>
+        <div className={styles.cardTop}><span className={styles.badges}><span className={styles.badge} data-kind={summary.participants === 2 ? 'pair' : 'solo'}><Icon name={summary.participants === 2 ? 'users' : 'user'} size={14} />{summary.participants === 2 ? 'Pair' : 'Solo'}</span><DifficultyChip difficulty={summary.difficulty} /></span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
         <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
         {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
         <dl className={styles.facts}>
@@ -97,9 +109,11 @@ export function Library({ entries, onImport, onRemove, storageError, missingId }
         </dl>
         {summary.equipment.length > 0 && <div className={styles.tags}>{summary.equipment.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment === item} onClick={() => setEquipment(value => value === item ? '' : item)}>{item}</button>)}</div>}
         <div className={styles.cardActions}>
-          <a className={shared.primaryButton} href={workoutHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
+          <a className={shared.primaryButton} href={playHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
+          <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Read through ${summary.title}`}><Icon name="list" size={17} />Read through</a>
+          {editable && <a className={shared.quietButton} href={editHref(workout.id)} aria-label={`${source === 'saved' ? 'Edit' : 'Duplicate and edit'} ${summary.title}`}><Icon name="settings" size={16} />{source === 'saved' ? 'Edit' : 'Duplicate'}</a>}
           <button className={shared.quietButton} onClick={() => exportWorkoutFile(workout)} aria-label={`Export ${summary.title}`}><Icon name="download" size={17} />Export</button>
-          {source === 'saved' && <button className={shared.quietButton} onClick={() => { setRemoving({ workout, summary, source }); removeDialog.current?.showModal(); }} aria-label={`Remove ${summary.title}`}><Icon name="trash" size={17} />Remove</button>}
+          {source === 'saved' && <button className={shared.quietButton} onClick={() => { setRemoving({ workout, summary, source, editable }); removeDialog.current?.showModal(); }} aria-label={`Remove ${summary.title}`}><Icon name="trash" size={17} />Remove</button>}
         </div>
       </li>)}
     </ul>}
@@ -108,7 +122,7 @@ export function Library({ entries, onImport, onRemove, storageError, missingId }
       {importError ? <p role="alert" className={shared.importError}>{importError}</p> : preview && previewSummary && <>
         <h3>{preview.title}</h3>
         {preview.description && <p>{preview.description}</p>}
-        <p>{displayTime(previewSummary.totalMs)} incl. prep · {preview.participants === 2 ? '2 athletes' : 'Solo'} · {previewSummary.sections} {previewSummary.sections === 1 ? 'section' : 'sections'} · {previewSummary.movements.length} movements</p>
+        <p>{displayTime(previewSummary.totalMs)} incl. prep · {preview.participants === 2 ? '2 athletes' : 'Solo'} · {previewSummary.sections} {previewSummary.sections === 1 ? 'section' : 'sections'} · {previewSummary.movements.length} movements · projected {previewSummary.difficulty.label.toLowerCase()}</p>
         {preview.equipment.length > 0 && <p>{preview.equipment.join(' + ')}</p>}
         {conflict ? <p className={shared.notice} role="status">{conflict.source === 'bundled' ? `“${conflict.summary.title}” is a bundled workout with the same ID. The import is saved as a separate copy.` : `“${conflict.summary.title}” is already saved with this ID. Import another copy, or replace the saved one.`}</p> : <p className={shared.dialogIntro}>Saved to this device’s library. Starting is a separate step.</p>}
         <div className={shared.dialogActions}>
@@ -118,6 +132,7 @@ export function Library({ entries, onImport, onRemove, storageError, missingId }
       </>}
     </dialog>
 
+    <ConfirmDialog open={Boolean(discarding)} title={`Discard “${discarding?.draft.title.trim() || 'Untitled workout'}”?`} confirmLabel="Discard draft" cancelLabel="Keep it" onClose={() => setDiscarding(undefined)} onConfirm={() => { if (discarding) onDiscardDraft(discarding.id); setDiscarding(undefined); }}><p>The draft is removed from this device. Saved workouts are not affected.</p></ConfirmDialog>
     <dialog ref={removeDialog} className={shared.dialog} aria-labelledby="remove-title"><h2 id="remove-title">Remove “{removing?.summary.title}”?</h2><p>It disappears from this device. Export it first if you want to keep a copy.</p><div className={shared.dialogActions}><button className={shared.quietButton} onClick={() => removeDialog.current?.close()}>Keep it</button><button className={shared.primaryButton} onClick={() => { if (removing) onRemove(removing.workout.id); removeDialog.current?.close(); setRemoving(undefined); }}>Remove workout</button></div></dialog>
   </div>;
 }

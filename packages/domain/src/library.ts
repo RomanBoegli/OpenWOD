@@ -1,4 +1,5 @@
 import { compileWorkout } from './compiler';
+import { rateDifficulty, type Difficulty, type DifficultyLevel } from './difficulty';
 import type { Workout, WorkoutNode } from './schema';
 
 /** Presentation-ready facts about a workout, computed once per library entry. */
@@ -14,11 +15,12 @@ export interface WorkoutSummary {
   activeMs: number;
   /** Timed content including the prep countdown. */
   totalMs: number;
+  difficulty: Difficulty;
 }
 
 export type DurationBucket = 'short' | 'medium' | 'long';
-export type LibrarySort = 'title' | 'shortest' | 'longest';
-export interface LibraryFilter { query?: string; participants?: 1 | 2; equipment?: string; duration?: DurationBucket }
+export type LibrarySort = 'title' | 'shortest' | 'longest' | 'easiest' | 'hardest';
+export interface LibraryFilter { query?: string; participants?: 1 | 2; equipment?: string; duration?: DurationBucket; difficulty?: DifficultyLevel }
 
 const SHORT_MAX_MS = 20 * 60_000;
 const MEDIUM_MAX_MS = 40 * 60_000;
@@ -41,7 +43,7 @@ export function summariseWorkout(workout: Workout): WorkoutSummary {
   return {
     id: workout.id, title: workout.title, description: workout.description ?? '', participants: workout.participants,
     equipment: [...workout.equipment], movements, sections: workout.sections.length,
-    activeMs: plan.durationMs, totalMs: plan.durationMs + workout.prepMs,
+    activeMs: plan.durationMs, totalMs: plan.durationMs + workout.prepMs, difficulty: rateDifficulty(plan),
   };
 }
 
@@ -52,6 +54,7 @@ export function matchesFilter(summary: WorkoutSummary, filter: LibraryFilter): b
   if (filter.participants && summary.participants !== filter.participants) return false;
   if (filter.equipment && !summary.equipment.some(item => normalise(item) === normalise(filter.equipment!))) return false;
   if (filter.duration && durationBucket(summary.totalMs) !== filter.duration) return false;
+  if (filter.difficulty && summary.difficulty.level !== filter.difficulty) return false;
   const tokens = normalise(filter.query ?? '').split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
   const haystack = normalise([summary.title, summary.description, ...summary.movements, ...summary.equipment].join('\n'));
@@ -63,6 +66,8 @@ export function sortSummaries<T extends WorkoutSummary>(summaries: T[], sort: Li
     title: (a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }),
     shortest: (a, b) => a.totalMs - b.totalMs || a.title.localeCompare(b.title, 'en'),
     longest: (a, b) => b.totalMs - a.totalMs || a.title.localeCompare(b.title, 'en'),
+    easiest: (a, b) => a.difficulty.score - b.difficulty.score || a.title.localeCompare(b.title, 'en'),
+    hardest: (a, b) => b.difficulty.score - a.difficulty.score || a.title.localeCompare(b.title, 'en'),
   };
   return [...summaries].sort(compare[sort]);
 }

@@ -1,9 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { partnerCircuit } from '../../packages/domain/src/fixtures';
+import { fixtureWorkouts, partnerCircuit } from '../../packages/domain/src/fixtures';
+const BUNDLED = fixtureWorkouts.length;
+import { serialiseWorkoutFile } from '../../packages/domain/src';
 
-const PLAYER = '/#/wod/partner-circuit';
+const PLAYER = '/#/wod/partner-circuit/play';
 const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__wodvaTest));
-const communityFile = (title = 'Community circuit', id = partnerCircuit.id) => ({ name: 'community.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, id, title } })) });
+const communityFile = (title = 'Community circuit', id = partnerCircuit.id) => ({ name: 'community.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile({ ...partnerCircuit, id, title })) });
+const legacyJsonFile = { name: 'legacy.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, id: 'legacy-circuit', title: 'Legacy circuit' } })) };
 
 test.describe('player', () => {
   test.beforeEach(async ({ page }) => { await page.goto(PLAYER); await ready(page); });
@@ -59,7 +62,7 @@ test.describe('player', () => {
   test('confirms destructive stop and exports a portable JSON file', async ({ page }) => {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export WOD' }).click();
-    expect((await download).suggestedFilename()).toBe('partner-circuit.wod.json');
+    expect((await download).suggestedFilename()).toBe('partner-circuit.wod.yaml');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.getByRole('button', { name: 'End session', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'End this session?' })).toBeVisible();
@@ -134,24 +137,123 @@ test.describe('player', () => {
   });
 });
 
+test.describe('overview', () => {
+  test('lays out every section and round for study, then starts the player', async ({ page }) => {
+    await page.goto('/#/wod/full-body-partner');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
+    const sections = page.getByRole('list', { name: 'Sections' }).getByRole('listitem');
+    await expect(sections).toHaveCount(6);
+    const block = sections.nth(1);
+    await expect(block).toContainText('Legs & strength');
+    await expect(block).toContainText('Round 1 of 2');
+    await expect(block).toContainText('Round 2 of 2');
+    await expect(block).toContainText('2m block rest');
+    const firstRows = block.getByRole('table').first().getByRole('row');
+    await expect(firstRows.nth(1)).toContainText('Air squats');
+    await expect(firstRows.nth(1)).toContainText('Dumbbell thrusters');
+    await expect(block.getByRole('table').nth(1).getByRole('row').nth(1)).toContainText('Dumbbell thrusters');
+    await page.goto('/#/wod/partner-circuit');
+    await expect(page.getByRole('list', { name: 'Sections' }).getByRole('listitem').first()).toContainText('Rounds 1–5 of 5');
+    await expect(page.getByText('1m rest between rounds')).toBeVisible();
+    await expect(page.getByLabel('Projected difficulty: Hard')).toBeVisible();
+    await page.getByRole('link', { name: 'Start workout' }).click();
+    await ready(page);
+    expect(page.url()).toContain('#/wod/partner-circuit/play');
+    await expect(page.getByRole('status')).toHaveText('Ready when you are');
+    await page.getByRole('link', { name: 'Back to workout overview' }).click();
+    await expect(page.getByRole('list', { name: 'Sections' })).toBeVisible();
+  });
+});
+
+test.describe('editor', () => {
+  test('builds a pair circuit with live totals, saves it to the library, and plays it to completion', async ({ page }) => {
+    await page.goto('/#/new');
+    const save = page.getByRole('button', { name: 'Save to library' });
+    await expect(save).toBeDisabled();
+    await expect(page.getByRole('alert')).toContainText('Give the workout a title.');
+    await page.getByLabel('Title', { exact: true }).fill('Garage pair');
+    await page.getByLabel('Section 1 slot 1 athlete A', { exact: true }).fill('Row');
+    await page.getByLabel('Section 1 slot 1 athlete B', { exact: true }).fill('Swings');
+    await page.getByRole('button', { name: 'Add slot' }).click();
+    await page.getByLabel('Section 1 slot 2 athlete A', { exact: true }).fill('Burpees');
+    await page.getByLabel('Section 1 slot 2 athlete B', { exact: true }).fill('Squats');
+    await page.locator('#s0-slot1-duration').fill('0:30');
+    await page.getByLabel('Rounds').fill('2');
+    await page.getByLabel('Rest between rounds').fill('1:00');
+    const summary = page.getByRole('complementary', { name: 'Summary' });
+    await expect(summary).toContainText('03:40');
+    await expect(summary).toContainText('03:50');
+    await expect(save).toBeEnabled();
+    await save.click();
+    await expect(page).toHaveURL(/#\/wod\/garage-pair$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Garage pair');
+    await expect(page.getByRole('list', { name: 'Sections' }).getByRole('listitem').first()).toContainText('Rounds 1–2 of 2');
+    await page.getByRole('link', { name: 'Start workout' }).click();
+    await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.evaluate(() => window.__wodvaTest!.advance(230_000));
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await expect(page.getByTestId('primary-timer')).toHaveText('03:40');
+    await page.goto('/#/wod/garage-pair/edit');
+    await page.locator('#s0-slot0-duration').fill('1:00');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Garage pair');
+    await expect(page.getByRole('definition').filter({ hasText: '04:20' })).toBeVisible();
+    await page.goto('/');
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Garage pair');
+  });
+
+  test('autosaves a draft across reload, lists it in the library, and discards it on request', async ({ page }) => {
+    await page.goto('/#/new');
+    await page.getByLabel('Title', { exact: true }).fill('Half done');
+    await expect(page.getByText(/Draft saved on this device/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Half done');
+    await page.goto('/');
+    const drafts = page.getByRole('region', { name: 'Drafts' });
+    await expect(drafts).toContainText('Half done');
+    await page.getByRole('button', { name: 'Discard draft Half done' }).click();
+    await page.getByRole('button', { name: 'Discard draft', exact: true }).click();
+    await expect(drafts).toHaveCount(0);
+  });
+
+  test('duplicates a bundled workout into an editable copy and explains structures it cannot edit', async ({ page }) => {
+    await page.goto('/#/wod/partner-circuit/edit');
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Copy of Partner circuit');
+    await expect(page.getByRole('complementary', { name: 'Summary' })).toContainText('19:50');
+    await page.getByRole('button', { name: 'Save to library' }).click();
+    await expect(page).toHaveURL(/#\/wod\/copy-of-partner-circuit$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner circuit');
+    await page.goto('/#/wod/tabata-this/edit');
+    await expect(page.getByRole('status')).toContainText('cannot change yet');
+  });
+});
+
 test.describe('library', () => {
   test.beforeEach(async ({ page }) => { await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor(); });
 
   test('lists bundled workouts, filters them and starts the chosen one through the player', async ({ page }) => {
     const list = page.getByRole('list', { name: 'Workouts' });
-    await expect(list.getByRole('listitem')).toHaveCount(2);
-    await page.getByRole('searchbox', { name: 'Search workouts' }).fill('kettlebell');
+    await expect(list.getByRole('listitem')).toHaveCount(BUNDLED);
+    await page.getByRole('searchbox', { name: 'Search workouts' }).fill('friendly competition');
     await expect(list.getByRole('listitem')).toHaveCount(1);
     await expect(list).toContainText('Partner circuit');
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await page.getByRole('combobox', { name: 'Duration' }).selectOption('long');
-    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list.getByRole('listitem')).toHaveCount(2);
     await expect(list).toContainText('Full body partner workout');
+    await expect(list).toContainText('HYROX pace intervals');
     await page.getByRole('combobox', { name: 'Duration' }).selectOption('');
     await page.getByRole('combobox', { name: 'Equipment' }).selectOption('Dumbbells');
     await expect(list.getByRole('listitem')).toHaveCount(1);
     await page.getByRole('combobox', { name: 'Athletes' }).selectOption('1');
     await expect(page.getByText('Nothing matches yet')).toBeVisible();
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await page.getByRole('combobox', { name: 'Difficulty' }).selectOption('1');
+    await expect(list.getByRole('listitem')).toHaveCount(0);
+    await page.getByRole('combobox', { name: 'Athletes' }).selectOption('1');
+    await page.getByRole('combobox', { name: 'Difficulty' }).selectOption('');
+    await expect(list.getByRole('listitem')).toHaveCount(fixtureWorkouts.filter(workout => workout.participants === 1).length);
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await page.getByRole('link', { name: 'Start Full body partner workout' }).click();
     await ready(page);
@@ -173,30 +275,35 @@ test.describe('library', () => {
     await expect(dialog).toContainText('bundled workout with the same ID');
     await page.getByRole('button', { name: 'Import as copy' }).click();
     const list = page.getByRole('list', { name: 'Workouts' });
-    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await expect(list.getByRole('listitem')).toHaveCount(BUNDLED + 1);
     await expect(list).toContainText('Saved on this device');
     await page.reload();
-    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await expect(list.getByRole('listitem')).toHaveCount(BUNDLED + 1);
     await page.getByRole('link', { name: 'Start Community circuit' }).click();
     await ready(page);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Community circuit');
     await expect(page.getByTestId('movement-A')).toHaveText('Row');
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export WOD' }).click();
-    expect((await download).suggestedFilename()).toBe('community-circuit.wod.json');
+    expect((await download).suggestedFilename()).toBe('community-circuit.wod.yaml');
+    await page.getByRole('link', { name: 'Back to workout overview' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Community circuit');
     await page.getByRole('link', { name: 'Back to library' }).click();
     await page.getByRole('button', { name: 'Remove Community circuit' }).click();
     await page.getByRole('button', { name: 'Remove workout' }).click();
-    await expect(list.getByRole('listitem')).toHaveCount(2);
+    await expect(list.getByRole('listitem')).toHaveCount(BUNDLED);
     await page.goto('/#/wod/partner-circuit-2');
     await expect(page.getByRole('status')).toContainText('No workout with the ID');
   });
 
-  test('rejects invalid files without touching the library', async ({ page }) => {
-    await page.locator('input[type=file]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"formatVersion":99}') });
-    await expect(page.getByRole('alert')).toContainText('Unsupported workout file');
+  test('rejects invalid files without touching the library and still reads legacy JSON', async ({ page }) => {
+    await page.locator('input[type=file]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"wodva.workout","formatVersion":99}') });
+    await expect(page.getByRole('alert')).toContainText('newer than this app');
     await page.getByRole('button', { name: 'Close import preview' }).click();
-    await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(2);
+    await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(BUNDLED);
+    await page.locator('input[type=file]').setInputFiles(legacyJsonFile);
+    await page.getByRole('button', { name: 'Save to library' }).click();
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Legacy circuit');
   });
 
   test('follows the system colour scheme and honours an explicit choice across reloads', async ({ page }) => {

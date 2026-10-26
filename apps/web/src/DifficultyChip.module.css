@@ -1,0 +1,8 @@
+.chip { --tone: var(--phase-rest); display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .4px; color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent); white-space: nowrap; }
+.chip[data-level="2"] { --tone: var(--phase-work); }
+.chip[data-level="3"] { --tone: var(--phase-amber); }
+.chip[data-level="4"] { --tone: var(--phase-red); }
+.chip small { font-weight: 400; color: var(--ink-3); }
+.dots { display: inline-flex; gap: 2px; }
+.dots i { width: 5px; height: 9px; border-radius: 2px; background: color-mix(in srgb, var(--tone) 25%, transparent); }
+.dots i[data-on=true] { background: var(--tone); }

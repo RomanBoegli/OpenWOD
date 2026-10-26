@@ -15,6 +15,33 @@
       "$id": "Workout",
       "additionalProperties": false,
       "properties": {
+        "attribution": {
+          "additionalProperties": false,
+          "properties": {
+            "author": {
+              "maxLength": 160,
+              "minLength": 1,
+              "type": "string"
+            },
+            "licence": {
+              "maxLength": 300,
+              "minLength": 1,
+              "type": "string"
+            },
+            "notes": {
+              "maxLength": 1000,
+              "minLength": 1,
+              "type": "string"
+            },
+            "sourceUrl": {
+              "maxLength": 500,
+              "minLength": 1,
+              "pattern": "^https?://",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
         "description": {
           "maxLength": 2000,
           "type": "string"

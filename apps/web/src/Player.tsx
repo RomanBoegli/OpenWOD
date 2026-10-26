@@ -1,12 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { canonicalJson, type Workout } from '../../../packages/domain/src';
+import { FILE_EXTENSION, serialiseWorkoutFile, type Workout } from '../../../packages/domain/src';
 import { fixtureWorkouts, prescriptionText } from '../../../packages/domain/src/fixtures';
 import { displayTime, warningLevel, type ClockValues } from '../../../packages/engine/src';
 import { useWorkout } from './use-workout';
 import type { WorkoutAudio } from './audio';
 import type { Preferences } from './preferences';
 import { slugify } from './library-store';
+import { workoutHref } from './router';
 import { Icon } from './Icon';
+import { DifficultyChip } from './DifficultyChip';
+import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import styles from './App.module.css';
 
 function Perimeter({ progress }: { progress: RefObject<SVGPathElement | null> }) {
@@ -23,11 +26,11 @@ function Perimeter({ progress }: { progress: RefObject<SVGPathElement | null> })
 }
 
 export function exportWorkoutFile(workout: Workout) {
-  const blob = new Blob([canonicalJson({ format: 'wodva.workout', formatVersion: 1, workout })], { type: 'application/json' });
+  const blob = new Blob([serialiseWorkoutFile(workout)], { type: 'application/yaml' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `${slugify(workout.title)}.wod.json`;
+  anchor.download = `${slugify(workout.title)}${FILE_EXTENSION}`;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -63,6 +66,7 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
   const totalRounds = round?.count ?? 1;
   const roundNumber = round?.iteration ?? 1;
   const bundled = fixtureWorkouts.some(item => item.id === workout.id);
+  const difficulty = useMemo(() => rateDifficulty(plan), [plan]);
 
   // One row per content anchor in the current section, showing the assignments of the current round.
   const contextRows = useMemo(() => {
@@ -78,6 +82,7 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
   const currentWorkNumber = contextRows.findIndex(item => item.anchor === focusAnchor) + 1;
 
   useEffect(() => { onPerformingChange(!editable); }, [editable, onPerformingChange]);
+  useEffect(() => { void audio.preload(); }, [audio]); // Clips are decoded before Play so a session never waits on the network.
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
   // Until checkpoints exist, leaving the page ends the session: ask first.
@@ -118,10 +123,10 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
   return <div className={styles.screen} data-performing={!editable} data-view={view}>
     <div className={styles.workoutHeading}>
       <div>
-        <div className={styles.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {workout.participants === 2 ? 'PARTNER SESSION' : 'SOLO SESSION'}{!bundled && <><span>/</span>SAVED ON THIS DEVICE</>}</div>
+        <div className={styles.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> <a href={workoutHref(workout.id)}>{workout.participants === 2 ? 'PARTNER SESSION' : 'SOLO SESSION'}</a>{!bundled && <><span>/</span>SAVED ON THIS DEVICE</>}</div>
         <h1>{workout.title}</h1>
         {workout.description && <p className={styles.description}>{workout.description}</p>}
-        <div className={styles.metadata}><span><Icon name="clock" size={16} />{displayTime(plan.durationMs + workout.prepMs)} incl. prep</span><span><Icon name={workout.participants === 2 ? 'users' : 'user'} size={16} />{workout.participants === 2 ? '2 athletes' : 'Solo'}</span>{workout.equipment.length > 0 && <span className={styles.equipment}>{workout.equipment.join(' + ')}</span>}</div>
+        <div className={styles.metadata}><span><Icon name="clock" size={16} />{displayTime(plan.durationMs + workout.prepMs)} incl. prep</span><span><Icon name={workout.participants === 2 ? 'users' : 'user'} size={16} />{workout.participants === 2 ? '2 athletes' : 'Solo'}</span>{workout.equipment.length > 0 && <span className={styles.equipment}>{workout.equipment.join(' + ')}</span>}<DifficultyChip difficulty={difficulty} /></div>
       </div>
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
@@ -171,7 +176,7 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
       <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isRest ? 'Breathe. Your next stations are above.' : 'Your pace. Keep moving.'}</span></div>
     </div>
 
-    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span></div><div className={styles.sharing}><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
+    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Read through</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
 
     <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={styles.primaryButton} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
   </div>;

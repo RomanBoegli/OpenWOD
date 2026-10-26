@@ -1,0 +1,83 @@
+format: wodva.workout
+formatVersion: 2
+workout:
+  schemaVersion: 1
+  id: tabata-this
+  revision: 1
+  title: Tabata This
+  description: "Five movements, each as a Tabata: eight rounds of 20 seconds on and 10 seconds off, with a minute to walk to the next station. Your score per movement is your weakest interval, so pace the first one like the eighth."
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/tabata-this
+    notes: Follows the published benchmark structure. Score each movement by its lowest interval; the row counts calories.
+  equipment:
+    - Rowing machine
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: tabata
+      title: Tabata This
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: tabata-stations
+        type: sequence
+        betweenChildrenRest: 1m
+        children:
+          - id: tabata-row
+            type: repeat
+            count: 8
+            betweenIterationsRest: 10s
+            body:
+              id: tabata-row-work
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  notes: Score calories
+                  name: Row
+          - id: tabata-squat
+            type: repeat
+            count: 8
+            betweenIterationsRest: 10s
+            body:
+              id: tabata-squat-work
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Air squats
+          - id: tabata-pull-up
+            type: repeat
+            count: 8
+            betweenIterationsRest: 10s
+            body:
+              id: tabata-pull-up-work
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Pull-ups
+          - id: tabata-push-up
+            type: repeat
+            count: 8
+            betweenIterationsRest: 10s
+            body:
+              id: tabata-push-up-work
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Push-ups
+          - id: tabata-sit-up
+            type: repeat
+            count: 8
+            betweenIterationsRest: 10s
+            body:
+              id: tabata-sit-up-work
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Sit-ups

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalJson, parseWorkoutFile, WorkoutValidationError } from '../../packages/domain/src';
+import { formatDuration, parseDuration, parseWorkoutFile, serialiseWorkoutFile, WorkoutValidationError } from '../../packages/domain/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtures';
 
@@ -63,13 +63,48 @@ describe('canonical workout compiler', () => {
     expect(() => compileWorkout(large)).toThrow(/10,000|24 hours/);
   });
 
-  it('exports self-contained fixtures that round-trip without personal session settings', () => {
-    const file = canonicalJson({ format: 'wodva.workout', formatVersion: 1, workout: fullBodyPartner });
+  it('exports self-contained YAML fixtures that round-trip without personal session settings', () => {
+    const file = serialiseWorkoutFile(fullBodyPartner);
+    expect(file.startsWith('format: wodva.workout\nformatVersion: 2\nworkout:\n  schemaVersion: 1\n  id: full-body-partner\n')).toBe(true);
+    expect(file).toContain('duration: 40s');
+    expect(file).toContain('betweenChildrenRest: 20s');
+    expect(file).toContain('prep: 10s');
+    expect(file).not.toContain('Ms:');
+    expect(file).not.toContain('voiceURI');
     expect(parseWorkoutFile(file)).toEqual(fullBodyPartner);
     expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(3_000_000);
-    expect(file).not.toContain('voiceURI');
-    expect(() => parseWorkoutFile(file.replace('"formatVersion": 1', '"formatVersion": 99'))).toThrow(/Unsupported/);
-    expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/valid JSON/);
+    expect(() => parseWorkoutFile(file.replace('formatVersion: 2', 'formatVersion: 99'))).toThrow(/newer than this app/);
+    expect(() => parseWorkoutFile(file.replace('format: wodva.workout', 'format: other'))).toThrow(/not a Wodva workout/);
+    expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/not a Wodva workout|valid YAML/);
+    expect(() => parseWorkoutFile('{"formatVersion":99}')).toThrow(/not a Wodva workout/);
+  });
+
+  it('still reads version 1 JSON files and rejects YAML aliases and duplicate keys', () => {
+    const legacy = JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: partnerCircuit });
+    expect(parseWorkoutFile(legacy)).toEqual(partnerCircuit);
+    const bomb = 'format: wodva.workout\nformatVersion: 2\nworkout: &w\n  title: x\nother: *w\n';
+    expect(() => parseWorkoutFile(bomb)).toThrow(/valid YAML/);
+    expect(() => parseWorkoutFile('format: wodva.workout\nformat: wodva.workout\nformatVersion: 2\n')).toThrow(/valid YAML/);
+    expect(() => parseWorkoutFile(JSON.stringify({ format: 'wodva.workout', formatVersion: 2, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are version 1 only
+  });
+
+  it('reads human durations in version 2 files and rejects ambiguous ones', () => {
+    const file = serialiseWorkoutFile(partnerCircuit).replace('duration: 40s', 'duration: 0:40').replace('betweenIterationsRest: 1m', 'betweenIterationsRest: 60').replace('prep: 10s', 'prep: 10000ms');
+    expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(1_190_000);
+    expect(parseWorkoutFile(file).prepMs).toBe(10_000);
+    expect(() => parseWorkoutFile(serialiseWorkoutFile(partnerCircuit).replace('duration: 40s', 'duration: forty'))).toThrow(WorkoutValidationError);
+    expect(() => parseWorkoutFile(serialiseWorkoutFile(partnerCircuit).replace('prep: 10s', 'prep: 10s\n  prepMs: 10000'))).toThrow(/not both|Unsupported/);
+    expect(parseDuration('1m30s')).toBe(90_000);
+    expect(parseDuration('1:02:03')).toBe(3_723_000);
+    expect(parseDuration('0.5s')).toBe(500);
+    expect(parseDuration(45)).toBe(45_000);
+    expect(() => parseDuration('1:75')).toThrow();
+    expect(() => parseDuration('')).toThrow();
+    expect(() => parseDuration(-1)).toThrow();
+    expect(formatDuration(0)).toBe('0s');
+    expect(formatDuration(90_000)).toBe('1m30s');
+    expect(formatDuration(3_600_000)).toBe('1h');
+    expect(formatDuration(1_500)).toBe('1.5s');
   });
 
   it('keeps authored nodes distinct from generated rest occurrences with similar names', () => {

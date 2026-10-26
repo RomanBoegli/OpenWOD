@@ -1,0 +1,43 @@
+format: wodva.workout
+formatVersion: 2
+workout:
+  schemaVersion: 1
+  id: row-burpee-emom-20
+  revision: 1
+  title: Row & burpee EMOM 20
+  description: "Every minute on the minute for twenty minutes: odd minutes row for calories, even minutes burpees. Finish the work, then rest until the next minute starts. Pick targets you can hold for all ten rounds."
+  attribution:
+    author: Wodva
+    notes: "An EMOM in the CrossFit sense: work starts on each minute boundary whether or not the previous set is done."
+  equipment:
+    - Rowing machine
+  participants: 1
+  prep: 10s
+  sections:
+    - id: emom
+      title: EMOM 20
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: emom-rounds
+        type: repeat
+        count: 10
+        body:
+          id: emom-minutes
+          type: sequence
+          children:
+            - id: emom-row
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: 12 calories, then rest until the minute
+                  name: Row
+            - id: emom-burpees
+              type: timed
+              duration: 1m
+              assignments:
+                A:
+                  notes: Then rest until the minute
+                  name: Burpees
+                  reps: 10
