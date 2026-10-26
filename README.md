@@ -204,7 +204,7 @@ workouts/        The registry: one folder per collection, one .wod.yaml per work
 
 Pushing a `v*` tag runs the **Release image** workflow: it validates, runs the browser tests, builds native amd64 and arm64 images with the voices rendered inside, smoke-tests both, and publishes a multi-arch manifest.
 A manual run publishes `sha-<commit>` instead.
-Before the tag: run `scripts/rehearse-restore.sh`, go through [docs/device-checklist.md](docs/device-checklist.md), and fill in [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
+The step-by-step process, from the version bump to the digest in the Portainer stack, is in [docs/development.md](docs/development.md#cutting-a-release).
 
 ## 🧹 Cleanup
 

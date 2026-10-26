@@ -12,6 +12,13 @@
 .top { display: flex; justify-content: space-between; font-size: 7px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-2); }
 .dot { display: inline-block; width: 5px; height: 5px; margin-right: 4px; border-radius: 50%; background: var(--color); vertical-align: middle; }
 .phase { font-size: 7px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--color); text-align: center; filter: brightness(.85); }
+.overall { display: grid; gap: 2px; margin: 2px 0; }
+.overallTrack { display: block; height: 2px; border-radius: 999px; background: var(--accent-track); overflow: hidden; }
+.overallFill { display: block; height: 100%; border-radius: inherit; background: var(--color); transition: width 200ms linear; }
+.overallText { font-size: 5.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); text-align: right; }
+.panel[data-clock-weight=light] .time { font-weight: 300; letter-spacing: -1px; }
+.panel[data-clock-size=compact] .time { font-size: 26px; }
+.panel[data-view=context][data-clock-size=compact] .time { font-size: 18px; }
 .time { text-align: center; font-size: 34px; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
 .panel[data-view=context] .time { font-size: 22px; letter-spacing: -1px; }
 .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }

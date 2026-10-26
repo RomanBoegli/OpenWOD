@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
-import { WorkoutEngine, displayTime, warningLevel, washDrain, type CommandType } from '../../packages/engine/src';
+import { WorkoutEngine, displayTime, overallProgress, warningLevel, washDrain, type CommandType } from '../../packages/engine/src';
 const fullBodyPartner = bundledWorkout('full-body-partner');
 const partnerCircuit = bundledWorkout('partner-circuit');
 
@@ -143,5 +143,24 @@ describe('checkpoint recovery (ENG-11/12)', () => {
     expect(restored.readClocks().activeMs).toBe(45_000);
     // Commands acknowledged before the checkpoint stay acknowledged after it.
     expect(restored.command({ type: 'pause', id: '1', occurrenceId: restored.occurrenceId })).toBe(false);
+  });
+});
+
+describe('overall progress', () => {
+  it('runs from 0 at ready to 1 at completion, counting the current slot by its elapsed share and naming section and round', () => {
+    let now = 0; let id = 0;
+    const plan = compileWorkout(bundledWorkout('partner-circuit'));
+    const engine = new WorkoutEngine(plan, () => now, 'overall');
+    const command = (type: Parameters<WorkoutEngine['command']>[0]['type']) => engine.command({ type, id: String(++id), occurrenceId: engine.occurrenceId });
+    const read = () => overallProgress(plan, engine.project(), engine.readClocks());
+    expect(read()).toMatchObject({ fraction: 0, sectionIndex: 0, sections: plan.sections.length });
+    command('play'); now = 10_000; engine.tick();
+    expect(read().fraction).toBe(0);
+    now = 30_000; engine.tick();
+    expect(read().fraction).toBeCloseTo(0.5 / plan.occurrences.length, 5);
+    expect(read().round).toEqual({ current: 1, total: 5 });
+    now = 10_000 + plan.durationMs; engine.tick();
+    expect(engine.project().status).toBe('completed');
+    expect(read().fraction).toBe(1);
   });
 });

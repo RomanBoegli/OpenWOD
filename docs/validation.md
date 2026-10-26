@@ -145,3 +145,18 @@ Verified: 129 unit tests, 60 browser scenarios in Firefox and WebKit (new: the c
 The settings miniature then switched from its own flat tint to the player's wash overlay (one shared class, the same custom properties), re-verified with the player and settings specs in both engines and a WebKit capture of the Training view.
 
 Not run in this round: the real-hour and physical-device checks listed above.
+
+## Persistence, sharing and release rehearsal (Wave 3), 26 October 2026
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 150 passed, including the server and its store against an in-memory database (migrations, a newer schema refused, the pre-migration backup, revision conflicts, idempotent sessions, score corrections, device and pack imports, export, backup), the session record and master-data schemas, packs with the SHR-06 comparison, the engine's checkpoint restore and overall progress, and the configuration parser. |
+| Browser scenarios, Firefox and WebKit | 82 passed each. New: the server library with archive, the editor's conflict dialog (AT-14 revision check), history with Repeat and a score correction, the server going away mid-session (AT-24), reload recovery in round 3 during B's turn and End from the prompt (AT-12), storage denied (AT-16), a second tab taking over (AT-21), the device-library migration, pack import with reimport detection and a replace, pack export with the sharing identity, and the Training view options reaching the player. |
+| Production build | Passed. |
+| Docker image (native arm64) | Built with the reordered Dockerfile. A second build after an app-only edit reused the voice layer and finished in 7 seconds instead of 286. |
+| Production smoke test against the image | 6 passed in Chromium, Firefox and WebKit, with health reporting `persistence: true`, schema version 1 and version 1.0.0. |
+| Container restart keeps data (AT-24, server side) | A workout saved through the API was still there after `docker compose restart`. |
+| Backup, volume loss and restore | `scripts/rehearse-restore.sh` passed: save, download the backup while running, destroy the stack and volume, start empty, restore with the server stopped, the workout is back. |
+| Visual pass | WebKit screenshots of history, the recovery prompt, the import preview, the household tile under General, the overall progress line in the player and the Look & feel miniature, in both themes at 1024 and 390 px. |
+
+Not run in this round: the GitHub release workflow on the user's repository, the Portainer deployment, the 60-minute real run, and the device checklist.

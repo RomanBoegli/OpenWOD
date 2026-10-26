@@ -174,6 +174,9 @@ test.describe('workout view settings', () => {
   test('ring width, pulse intensity and colour marks reach the player', async ({ page }) => {
     await page.goto('/#/settings/player'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
     await page.getByRole('slider', { name: /Timer ring width/ }).fill('10');
+    await page.getByRole('radio', { name: 'Bar and numbers' }).check();
+    await page.getByRole('radio', { name: 'Light' }).check();
+    await page.getByRole('radio', { name: 'Compact' }).check();
     await page.getByRole('slider', { name: /Pulse intensity/ }).fill('60');
     await page.getByRole('slider', { name: 'First milestone marker' }).fill('20');
     await page.getByLabel('First milestone colour').fill('#ff00ff');
@@ -198,5 +201,10 @@ test.describe('workout view settings', () => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__openwodTest!.advance(30_000));
     expect(Number(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--drained')))).toBeGreaterThan(0.3);
+    const overall = page.getByTestId('overall-progress');
+    await expect(overall).toContainText('SECTION 1 / 1');
+    await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-weight', 'light');
+    await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-size', 'compact');
+    await expect(overall.locator('span span')).toHaveAttribute('style', /width/);
   });
 });

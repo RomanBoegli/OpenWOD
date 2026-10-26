@@ -4,7 +4,7 @@ import { Icon } from '../Icon';
 import shared from '../App.module.css';
 import styles from './TimerPreview.module.css';
 
-interface TimerPreviewProps { view: 'focus' | 'context'; ringWidth: number; washGain: number; amberMs: number; redMs: number; colors: { first: string; second: string } }
+interface TimerPreviewProps { view: 'focus' | 'context'; ringWidth: number; washGain: number; amberMs: number; redMs: number; colors: { first: string; second: string }; progress: 'off' | 'bar' | 'detail'; clockWeight: 'bold' | 'light'; clockSize: 'large' | 'compact' }
 type Phase = 'idle' | 'work' | 'complete';
 
 /** The player's ring path at miniature size: starts top centre and drains clockwise, like Player.tsx. */
@@ -17,7 +17,7 @@ const MARKS_MAX_MS = 8000;
  * A miniature of the player: the ring, the pulse and the colour marks with the settings as they are, drawn as the
  * focus or the context layout. Preview drains one slot in a few seconds using the same warning rule as the player.
  */
-export function TimerPreview({ view, ringWidth, washGain, amberMs, redMs, colors }: TimerPreviewProps) {
+export function TimerPreview({ view, ringWidth, washGain, amberMs, redMs, colors, progress, clockWeight, clockSize }: TimerPreviewProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [remainingMs, setRemainingMs] = useState(0);
   const frame = useRef(0);
@@ -54,7 +54,7 @@ export function TimerPreview({ view, ringWidth, washGain, amberMs, redMs, colors
   const style = { '--ring': `${ringWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), '--drained': drained.toFixed(3), ...(colors.first ? { '--phase-amber': colors.first } : {}), ...(colors.second ? { '--phase-red': colors.second } : {}) } as CSSProperties;
   const time = phase === 'idle' ? displayTime(slotMs) : phase === 'complete' ? '00:00' : displayTime(remainingMs);
   return <div className={styles.wrap}>
-    <div className={`${shared.wash} ${styles.panel}`} data-view={view} data-phase={phase} data-warning={warning} style={style} aria-hidden="true">
+    <div className={`${shared.wash} ${styles.panel}`} data-view={view} data-phase={phase} data-warning={warning} data-clock-weight={clockWeight} data-clock-size={clockSize} style={style} aria-hidden="true">
       <svg className={styles.ring} viewBox="0 0 200 132" preserveAspectRatio="none">
         <path className={styles.track} d={RING} />
         <path className={styles.progress} d={RING} pathLength={1} strokeDasharray="1 1" strokeDashoffset={-(1 - fraction)} />
@@ -63,6 +63,7 @@ export function TimerPreview({ view, ringWidth, washGain, amberMs, redMs, colors
         <path className={styles.mark} data-mark="red" d={RING} pathLength={1} strokeDasharray={`${redMs / slotMs} 1`} strokeDashoffset={-(1 - redMs / slotMs)} />
       </svg>
       <div className={styles.top}><span><span className={styles.dot} />Row</span><span>1 / 5</span></div>
+      {progress !== 'off' && <div className={styles.overall}><span className={styles.overallTrack}><span className={styles.overallFill} style={{ width: `${Math.round((phase === 'complete' ? 1 : 0.2 + (phase === 'work' ? 0.1 * (1 - fraction) : 0)) * 100)}%` }} /></span>{progress === 'detail' && <span className={styles.overallText}>SECTION 1 / 3 · ROUND 1 / 5 · {Math.round((phase === 'complete' ? 1 : 0.2 + (phase === 'work' ? 0.1 * (1 - fraction) : 0)) * 100)} %</span>}</div>}
       <div className={styles.phase}>{phase === 'complete' ? 'Done' : warning === 'red' ? 'Last seconds' : warning === 'amber' ? 'Nearly there' : 'Work'}</div>
       <div className={styles.time}>{time}</div>
       {view === 'focus' ? <div className={styles.lanes}><span className={styles.lane}><b>A</b>Row</span><span className={styles.lane}><b>B</b>Swings</span></div>

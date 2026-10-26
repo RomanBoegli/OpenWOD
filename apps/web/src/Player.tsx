@@ -4,7 +4,7 @@ import { bundledWorkouts } from '../../../packages/domain/src/bundled';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import type { Occurrence, TaskItem } from '../../../packages/domain/src/compiler';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
-import { displayTime, warningLevel, washDrain, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
+import { displayTime, overallProgress, warningLevel, washDrain, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
 import { useWorkout } from './use-workout';
 import type { WorkoutAudio } from './audio';
 import type { Preferences } from './preferences';
@@ -99,7 +99,7 @@ interface PlayerProps {
 export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery }: PlayerProps) {
   // The session plays the workout it started with; an edit in the library never changes a running session (AT-14).
   const [workout] = useState(workoutProp);
-  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors } = preferences;
+  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, progress, clockWeight, clockSize } = preferences;
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
   const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
@@ -114,6 +114,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const capClock = useRef<HTMLElement>(null);
   const turnClock = useRef<HTMLElement>(null);
   const border = useRef<SVGPathElement>(null);
+  const overallFill = useRef<HTMLSpanElement>(null);
+  const overallText = useRef<HTMLSpanElement>(null);
   const player = useRef<HTMLDivElement>(null);
   const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints } = useWorkout(workout, audio, { recovery });
   const [takenOver, setTakenOver] = useState(false);
@@ -209,6 +211,11 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const countUp = (format === 'forTime' || format === 'strength') && timing === 'manual' && !isBlock;
   const firstDisplayMs = countUp ? 0 : clockScope === 'cap' ? section.capMs ?? 0 : clockScope === 'elapsed' ? 0 : current.durationMs;
   useEffect(() => subscribeClock((clocks: ClockValues) => {
+    if (overallFill.current || overallText.current) {
+      const overall = overallProgress(plan, engine.project(), clocks);
+      if (overallFill.current) overallFill.current.style.width = `${Math.round(overall.fraction * 1000) / 10}%`;
+      if (overallText.current) { const text = [`SECTION ${overall.sectionIndex + 1} / ${overall.sections}`, overall.round ? `ROUND ${overall.round.current} / ${overall.round.total}` : '', `${Math.round(overall.fraction * 100)} %`].filter(Boolean).join(' · '); if (overallText.current.textContent !== text) overallText.current.textContent = text; }
+    }
     if (timer.current) {
       const text = status === 'ready' ? displayTime(workout.prepMs || firstDisplayMs) : terminal ? displayTime(clocks.activeMs) : status === 'awaitingReady' ? displayTime(firstDisplayMs) : clockScope === 'elapsed' || countUp ? displayTime(clocks.sectionMs, 'floor') : displayTime(clocks.remainingMs);
       if (timer.current.textContent !== text) timer.current.textContent = text;
@@ -299,9 +306,10 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
 
-    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
+    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash} data-clock-weight={clockWeight} data-clock-size={clockSize} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
       <Perimeter progress={border} width={perimeterWidth} />
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span>{positionLabel}{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
+      {progress !== 'off' && <div className={styles.overall} data-testid="overall-progress" aria-label="Overall progress"><span className={styles.overallTrack}><span ref={overallFill} className={styles.overallFill} /></span>{progress === 'detail' && <span ref={overallText} className={styles.overallText}>SECTION 1 / {plan.sections.length} · 0 %</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
         <div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>

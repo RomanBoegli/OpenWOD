@@ -16,6 +16,7 @@ Nothing is built on the server.
    The combined GHCR manifest is published only when both architectures pass.
    Failures retain browser traces for seven days and print the container logs.
    Existing tags are never overwritten.
+   The image name is the lower-cased GitHub repository under `ghcr.io`, and a freshly published package is private until its visibility is changed or the stack gets registry credentials.
 2. In Portainer Community Edition on Docker Standalone, create a stack from **Repository**: the Git URL and reference, Compose path `compose.yaml`.
    Name the stack `openwod` so it matches the `name` in the file and the volume is `openwod_openwod-data`.
 3. Set `APP_IMAGE` to the published reference (a digest is best) and optionally `HTTP_PORT` (default `8080`).

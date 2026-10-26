@@ -56,3 +56,29 @@ Without them the app uses beeps and the device's best English voice.
 Formats stay a bounded set of shared behaviours (timed, interval, manual, cap) rather than one implementation per workout type.
 The engine never guesses: manual work has no deadline, and nothing is inferred from elapsed wall time.
 Browser storage is a convenience until the server milestone and every read is validated.
+
+## Cutting a release
+
+The image is built and published by the **Release image** workflow (`.github/workflows/release.yml`) when a `v*` tag is pushed.
+The workflow refuses a tag whose version is not the one in `package.json`, and a tag without release notes.
+
+1. Pick the version, `vX.Y.Z`, and put `X.Y.Z` in `package.json`, `package-lock.json` (both `version` fields), `CITATION.cff` (with the release date) and the `ARG VERSION` default of the `Dockerfile`.
+2. Write `docs/releases/vX.Y.Z.md` from the previous one: what changed, supported browsers, hardware tested, known limitations, the schema version, and a digest line left to fill.
+3. Run `npm run check`, `npm run build`, the browser suite in Firefox and WebKit, `scripts/rehearse-restore.sh`, and go through `docs/device-checklist.md` on a real device.
+4. Commit everything as `Release vX.Y.Z`, tag it annotated, and push both:
+
+   ```sh
+   git tag -a vX.Y.Z -m "OpenWOD X.Y.Z"
+   git push origin main --tags
+   ```
+
+5. Watch the workflow.
+   It validates, builds the image natively for amd64 and arm64 (the voice layer comes from the build cache unless a cue script or the catalogue changed), smoke-tests each architecture against a running container, and publishes the manifest `ghcr.io/<owner>/<repository>:vX.Y.Z`.
+   The job summary of the manifest step prints the digest.
+6. The first time: open the package on GitHub (Packages → the repository's image) and set its visibility, or add registry credentials to the Portainer stack.
+   A fresh package is private.
+7. Put the digest into the release notes and into the Portainer stack's `APP_IMAGE`, redeploy, and check `/api/v1/health/ready` reports the new version.
+8. Create the GitHub release from the tag with the notes as its body.
+
+Existing tags are never overwritten.
+A mistake after the push means a new patch version, not a moved tag.

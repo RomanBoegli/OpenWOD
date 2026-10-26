@@ -16,6 +16,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Tag must match package.json
+        if: github.ref_type == 'tag'
+        run: |
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then echo "Tag $GITHUB_REF_NAME does not match package.json version $version"; exit 1; fi
+          test -f "docs/releases/$GITHUB_REF_NAME.md" || { echo "docs/releases/$GITHUB_REF_NAME.md is missing"; exit 1; }
       - run: npm run check
       - run: npm run build
       - run: npm run browsers:install -- --with-deps
@@ -57,6 +63,8 @@ jobs:
           load: true
           platforms: ${{ matrix.platform }}
           tags: ${{ env.IMAGE }}:candidate-${{ github.sha }}-${{ matrix.architecture }}
+          cache-from: type=gha,scope=${{ matrix.architecture }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.architecture }}
           build-args: |
             VERSION=${{ github.ref_name }}
             REVISION=${{ github.sha }}
@@ -121,3 +129,11 @@ jobs:
             exit 1
           fi
           docker buildx imagetools create --tag "$image:$version" "$image:candidate-$REVISION-amd64" "$image:candidate-$REVISION-arm64"
+          digest="$(docker buildx imagetools inspect "$image:$version" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          {
+            echo "## Published $image:$version"
+            echo
+            echo "Digest: \`$digest\`"
+            echo
+            echo "Pin it in the stack: \`APP_IMAGE=$image@$digest\`"
+          } >> "$GITHUB_STEP_SUMMARY"

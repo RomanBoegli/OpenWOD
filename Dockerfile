@@ -1,20 +1,30 @@
 ARG NODE_IMAGE=node:24.22.1-bookworm-slim
-FROM ${NODE_IMAGE} AS build
-# CUES=1 renders the recorded cue packs with Piper (offline text-to-speech) during the build; CUES=0 skips it for fast local builds.
-ARG CUES=1
+
+# Dependencies once: everything below shares this layer and only a lockfile change rebuilds it.
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --include=dev
-# The voices depend only on the scripts and the bundled catalogue, so this layer survives app edits.
-COPY scripts ./scripts
-COPY packages ./packages
+
+# The recorded voices. They depend only on the two cue scripts and the movement catalogue, so an edit anywhere else
+# in the app reuses this layer. CUES=1 renders them with Piper (offline text-to-speech); CUES=0 skips them for fast local builds.
+FROM deps AS cues
+ARG CUES=1
 RUN if [ "$CUES" = "1" ]; then \
       apt-get update && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip && rm -rf /var/lib/apt/lists/* \
-      && pip3 install --no-cache-dir --break-system-packages piper-tts==1.8.0 \
-      && CUES_OUT=/cues PIPER_VOICES=/tmp/piper-voices PIPER_PYTHON=python3 npx tsx scripts/generate-cues.ts && rm -rf /tmp/piper-voices; \
+      && pip3 install --no-cache-dir --break-system-packages piper-tts==1.8.0; \
+    fi
+COPY scripts/generate-cues.ts scripts/render-cues.py ./scripts/
+COPY packages/domain/src/movements.ts ./packages/domain/src/movements.ts
+RUN if [ "$CUES" = "1" ]; then \
+      CUES_OUT=/cues PIPER_VOICES=/tmp/piper-voices PIPER_PYTHON=python3 npx tsx scripts/generate-cues.ts && rm -rf /tmp/piper-voices; \
     else mkdir -p /cues; fi
+
+# The app: checks, build, and the voices copied in last so the build layers never depend on them.
+FROM deps AS build
 COPY . .
-RUN npm run check && npm run build && mkdir -p dist/web/cues && cp -r /cues/. dist/web/cues/
+RUN npm run check && npm run build
+COPY --from=cues /cues ./dist/web/cues
 
 FROM ${NODE_IMAGE} AS runtime
 ARG VERSION=1.0.0
