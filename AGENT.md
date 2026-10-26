@@ -780,6 +780,7 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 - The real-duration 60-minute run is dropped as a release gate by the user's decision: NFR-01 and NFR-05 are verified under the injected clock and by the production smoke test, and the device checklist remains the only by-hand gate.
 - The Docker voice stage starts from the bare Node image with a pinned `tsx`, so version bumps and dependency updates no longer re-render the voices.
+- The workflows run every GitHub Action on its Node 24 major (checkout 7, setup-node 7, upload-artifact 7, Docker setup-buildx 4, login 4, build-push 7) after the runner's Node 20 deprecation warning.
 - The accent is chosen per theme (dark and light each keep their own swatch or custom colour, migrated from the single 1.1.0 draft value), and the beeps have their own volume and one of five tones, including the held 1 kHz gym-clock beep and a sawtooth alarm (AUD-01).
 
 ## Version 1.10 — 26 October 2026
