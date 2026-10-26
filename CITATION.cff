@@ -3,7 +3,7 @@ message: If you use OpenWOD in your work, please cite it as below.
 type: software
 title: "OpenWOD: a workout player for training at home"
 authors:
-  - family-names: Boegli
+  - family-names: Bögli
     given-names: Roman
 repository-code: https://github.com/RomanBoegli/OpenWOD
 url: https://github.com/RomanBoegli/OpenWOD

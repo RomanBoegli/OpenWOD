@@ -226,7 +226,7 @@ If OpenWOD is useful in your work, cite it via the **Cite this repository** butt
 
 ```bibtex
 @software{boegli_openwod_2026,
-  author  = {Boegli, Roman},
+  author  = {B{\"o}gli, Roman},
   title   = {{OpenWOD}},
   year    = {2026},
   url     = {https://github.com/RomanBoegli/OpenWOD},
