@@ -2,6 +2,7 @@ import { TimerPreview } from './TimerPreview';
 import type { Preferences } from '../preferences';
 import { Switch } from '../Switch';
 import { Icon } from '../Icon';
+import { BEEP_TONES } from '../audio';
 import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { type SettingsProps } from './shared';
@@ -56,8 +57,13 @@ export function SoundSettings({ preferences, onPreferencesChange, clipsReady, pa
     </div>
     <div className={styles.twoUp}>
       <label className={styles.field}>Device voice speed<input type="range" min="0.7" max="1.3" step="0.1" value={preferences.rate} onChange={event => update({ rate: Number(event.target.value) })} /></label>
-      <label className={styles.field}>Volume<input type="range" min="0" max="1" step="0.1" value={preferences.volume} onChange={event => update({ volume: Number(event.target.value) })} /></label>
+      <label className={styles.field}>Voice volume<input type="range" min="0" max="1" step="0.1" value={preferences.volume} onChange={event => update({ volume: Number(event.target.value) })} /></label>
     </div>
-    <div><button type="button" className={shared.quietButton} onClick={() => void audio.test()} disabled={preferences.soundMode === 'silent'}><Icon name="sound" />Test sound</button></div>
+    <div className={styles.twoUp}>
+      <label className={styles.field}>Beep tone<select value={preferences.beepTone} onChange={event => { update({ beepTone: event.target.value as Preferences['beepTone'] }); audio.tone = event.target.value as Preferences['beepTone']; void audio.testBeeps(); }}>{BEEP_TONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <label className={styles.field}>Beep volume<input type="range" min="0" max="1" step="0.1" value={preferences.beepVolume} onChange={event => update({ beepVolume: Number(event.target.value) })} /></label>
+    </div>
+    <small className={shared.fieldNote}>The beeps have their own level, so they can be louder than the voice when music is playing. Gym timer is the long, held beep of a gym clock, Alarm is harsher still. Choosing a tone plays it.</small>
+    <div className={styles.buttonRow}><button type="button" className={shared.quietButton} onClick={() => void audio.test()} disabled={preferences.soundMode === 'silent'}><Icon name="sound" />Test sound</button><button type="button" className={shared.quietButton} onClick={() => void audio.testBeeps()} disabled={preferences.soundMode === 'silent'}><Icon name="sound" />Test beeps</button></div>
   </section>;
 }

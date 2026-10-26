@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { ThemePreference } from './preferences';
+import type { Preferences, ThemePreference } from './preferences';
 
 export type Theme = 'light' | 'dark';
 const THEME_COLOR: Record<Theme, string> = { dark: '#101613', light: '#f3f5ee' };
@@ -53,14 +53,16 @@ export function applyAccent(hex: string, theme: Theme) {
   for (const [token, value] of Object.entries(accentTokens(hex, theme))) style.setProperty(token, value);
 }
 
-/** Auto follows the operating system and reacts to live changes; an explicit choice overrides it. */
-export function useTheme(preference: ThemePreference, accent = '') {
+const NO_ACCENT: Preferences['accent'] = { dark: '', light: '' };
+
+/** Auto follows the operating system and reacts to live changes; an explicit choice overrides it. Each theme applies its own accent. */
+export function useTheme(preference: ThemePreference, accent: Preferences['accent'] = NO_ACCENT) {
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const update = () => { const theme = resolveTheme(preference, media.matches); applyTheme(theme); applyAccent(accent, theme); };
+    const update = () => { const theme = resolveTheme(preference, media.matches); applyTheme(theme); applyAccent(accent[theme], theme); };
     update();
     if (preference !== 'auto') return;
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
-  }, [preference, accent]);
+  }, [preference, accent.dark, accent.light]);
 }

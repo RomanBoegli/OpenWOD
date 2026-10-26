@@ -53,6 +53,8 @@ export default function App() {
   audio.cuePack = preferences.cuePack;
   audio.rate = preferences.rate;
   audio.volume = preferences.volume;
+  audio.beepVolume = preferences.beepVolume;
+  audio.tone = preferences.beepTone;
 
   useTheme(preferences.theme, preferences.accent);
   useEffect(() => savePreferences(preferences), [preferences]);

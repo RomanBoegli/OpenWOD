@@ -1,4 +1,4 @@
-import type { CueSource, SoundMode } from './audio';
+import type { BeepTone, CueSource, SoundMode } from './audio';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import { DEFAULT_CALIBRATION, normaliseCalibration, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
 
@@ -10,6 +10,9 @@ export interface Preferences {
   cueSource: CueSource;
   rate: number;
   volume: number;
+  /** The beeps' own level (0 to 1) and character, independent of the voice. */
+  beepVolume: number;
+  beepTone: BeepTone;
   view: 'focus' | 'context';
   /** The full-screen phase tint behind the timer. */
   wash: boolean;
@@ -28,8 +31,8 @@ export interface Preferences {
   redMs: number;
   /** Colours of the two milestone markers as #rrggbb, or '' for the theme's amber and red. */
   markColors: { first: string; second: string };
-  /** The accent colour as #rrggbb, or '' for the built-in green. Both themes derive their tints from it. */
-  accent: string;
+  /** The accent colour per theme as #rrggbb, or '' for the built-in green. Each theme derives its tints from its own choice. */
+  accent: { dark: string; light: string };
   /** The overall progress line across every section and round: hidden, a bar, or a bar with the numbers. */
   progress: 'off' | 'bar' | 'detail';
   /** The big clock's digits. */
@@ -42,7 +45,7 @@ export interface Preferences {
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: '', progress: 'detail', clockWeight: 'bold', clockSize: 'large', myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: { dark: '', light: '' }, progress: 'detail', clockWeight: 'bold', clockSize: 'large', myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -57,7 +60,7 @@ const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']> } : {};
+    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']> } : {};
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
@@ -65,6 +68,9 @@ export function loadPreferences(): Preferences {
       cueSource: oneOf(stored.cueSource, ['clips', 'device'], defaultPreferences.cueSource),
       rate: clamp(stored.rate, .7, 1.3, defaultPreferences.rate),
       volume: clamp(stored.volume, 0, 1, defaultPreferences.volume),
+      // Before 1.1.0 one level served voice and beeps; the beeps start from that level.
+      beepVolume: clamp(stored.beepVolume, 0, 1, clamp(stored.volume, 0, 1, defaultPreferences.beepVolume)),
+      beepTone: oneOf(stored.beepTone, ['classic', 'soft', 'sharp', 'gym', 'alarm'], defaultPreferences.beepTone),
       view: oneOf(stored.view, ['focus', 'context'], defaultPreferences.view),
       wash: stored.wash !== false,
       cuePack: text(stored.cuePack, '', 40),
@@ -75,7 +81,8 @@ export function loadPreferences(): Preferences {
       amberMs: Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs)),
       redMs: Math.min(Math.round(clamp(stored.redMs, 1000, 10_000, defaultPreferences.redMs)), Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs))),
       markColors: { first: color(stored.markColors?.first), second: color(stored.markColors?.second) },
-      accent: color(stored.accent),
+      // Before 1.1.0 one accent served both themes; that choice carries over to each.
+      accent: typeof stored.accent === 'string' ? { dark: color(stored.accent), light: color(stored.accent) } : { dark: color(stored.accent?.dark), light: color(stored.accent?.light) },
       progress: oneOf(stored.progress, ['off', 'bar', 'detail'], 'detail'),
       clockWeight: oneOf(stored.clockWeight, ['bold', 'light'], 'bold'),
       clockSize: oneOf(stored.clockSize, ['large', 'compact'], 'large'),

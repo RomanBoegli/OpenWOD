@@ -55,8 +55,6 @@ Reproduce with `npm run test:e2e` and, while the Docker preview is running, `npm
 - Direct manual inspection in the installed Safari application was unavailable because computer-use permission was not granted.
   WebKit engine coverage passed.
 - No physical iPad/iPhone testing, two-metre recognition trial, real-speaker/music audibility trial, or home-screen-mode test has been completed.
-- The real 60-minute timing/offline/recovery/memory run remains pending.
-  Short accelerated and production smoke tests do not satisfy that gate.
 - amd64/native multi-architecture CI, GHCR publishing and actual Portainer deployment have not been run.
   Workflows and Compose definitions are provided.
 - SQLite, authentication, durable local/server checkpoints, reload recovery, result synchronisation, saved-library import conflict/provenance handling, packs/programs, and the editor are not implemented in this milestone.
@@ -153,10 +151,10 @@ The rule is anchored to the root, the data layer is tracked, and the clean check
 
 | Check | Result |
 | - | - |
-| Unit tests | 153 passed in 21 files, including the accent derivation. |
+| Unit tests | 156 passed in 22 files, including the accent derivation, the preference migration to one accent per theme, and the beep tones. |
 | Browser scenarios | Library, packs, settings, screens, player and footer specs in Firefox and WebKit after each change, including whole-card clicks and the sound-test probe. |
 | Sound test probe | In headless Firefox and WebKit every part of the test comes from the recorded pack and speech synthesis is never called. The device-voice fallback now reports itself. |
-| Layout | Screenshots at 1280, 1024 and 390 px of the three-column feed, the accent swatches in both themes, the player with a pink and a blue accent, and the footer. |
+| Layout | Screenshots at 1280, 1024 and 390 px of the three-column feed, the per-theme accent swatches in both themes, the sound card with the beep controls, the player with a pink and a blue accent, and the footer. |
 | Release workflow | Not yet exercised past validation on GitHub runners. A manual run of the Release image workflow is the dry run before the tag. |
 | Voice layer cache | The voice stage no longer derives from the dependency stage, so a version bump stops re-rendering the five packs. The stage alone was built from the bare Node image with a pinned `tsx` and rendered every pack. |
 
@@ -173,4 +171,4 @@ The rule is anchored to the root, the data layer is tracked, and the clean check
 | Backup, volume loss and restore | `scripts/rehearse-restore.sh` passed: save, download the backup while running, destroy the stack and volume, start empty, restore with the server stopped, the workout is back. |
 | Visual pass | WebKit screenshots of history, the recovery prompt, the import preview, the household tile under General, the overall progress line in the player and the Look & feel miniature, in both themes at 1024 and 390 px. |
 
-Not run in this round: the GitHub release workflow on the user's repository, the Portainer deployment, the 60-minute real run, and the device checklist.
+Not run in this round: the GitHub release workflow on the user's repository, the Portainer deployment, and the device checklist.

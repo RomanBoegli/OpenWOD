@@ -1,6 +1,15 @@
 import type { ClockValues, Projection } from '../../../packages/engine/src';
 
 export type SoundMode = 'voice' | 'beeps' | 'silent';
+/**
+ * The character of the synthesised beeps: a plain sine, a lower and rounder triangle, a higher and edgier square wave, the gym
+ * timer (a pure 1 kHz tone held at full level with a hard start and stop, about 0.3 s for each count and 0.75 s for the Go, measured
+ * from a recording of a gym clock: BEEP BEEP BEEP, BEEEEP), or the alarm, a harsh sawtooth held three times as long as the classic beep.
+ */
+export type BeepTone = 'classic' | 'soft' | 'sharp' | 'gym' | 'alarm';
+export const BEEP_TONES: [BeepTone, string][] = [['classic', 'Classic'], ['soft', 'Soft'], ['sharp', 'Sharp'], ['gym', 'Gym timer'], ['alarm', 'Alarm']];
+interface Tone { wave: OscillatorType; pitch: number; gain: number; tail: number; /** One fixed pitch for every beep, in Hz. */ fixed?: number; /** Held at full level until the end, capped at this many seconds. */ hold?: number }
+const TONES: Record<BeepTone, Tone> = { classic: { wave: 'sine', pitch: 1, gain: 1, tail: 1 }, soft: { wave: 'triangle', pitch: .75, gain: .9, tail: 1.6 }, sharp: { wave: 'square', pitch: 1.25, gain: .4, tail: .8 }, gym: { wave: 'sine', pitch: 1, fixed: 1000, gain: 1.2, tail: 4, hold: .8 }, alarm: { wave: 'sawtooth', pitch: 1, gain: .6, tail: 3.2, hold: 1.2 } };
 export type CueSource = 'clips' | 'device';
 export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' | 'one' | 'paused' | 'resume' | 'complete' | 'a' | 'b' | 'next' | 'last-interval' | 'a-waiting' | 'b-waiting' | 'ended';
 /** A recorded voice pack: fixed cues plus, when `names` is set, one clip per bundled movement under names/<id>.mp3. */
@@ -38,7 +47,13 @@ export class WorkoutAudio {
   mode: SoundMode = 'voice';
   cueSource: CueSource = 'clips';
   rate = 1;
+  /** Voice volume, for the recorded clips and the device voice. */
   volume = .7;
+  /** The beeps have their own level so they can cut through music while the voice stays conversational. */
+  beepVolume = .7;
+  /** Oscillator amplitude for the beep slider: squared so the low end stays gentle, the top is close to full scale (about -6 dBFS). */
+  private get beepGain() { return this.beepVolume * this.beepVolume * .5; }
+  tone: BeepTone = 'classic';
   /** Base URL for the pre-rendered cue clips; packs live in subfolders listed by packs.json. */
   clipBase = '/cues/';
   /** Chosen pack id; '' means the first available. */
@@ -146,13 +161,18 @@ export class WorkoutAudio {
     source.onended = () => { source.disconnect(); nodes.forEach(node => node.disconnect()); this.sources = this.sources.filter(item => item !== source); };
   }
 
-  private beep(at: number, length: number, frequency: number, gain = this.volume * .13) {
+  private beep(at: number, length: number, frequency: number, gain = this.beepGain) {
     if (!this.context || this.context.state !== 'running') return;
+    const tone = TONES[this.tone];
+    length = Math.min(length * tone.tail, tone.hold ?? Infinity);
     const source = this.context.createOscillator();
     const volume = this.context.createGain();
-    source.frequency.value = frequency;
+    source.type = tone.wave;
+    source.frequency.value = tone.fixed ?? frequency * tone.pitch;
     volume.gain.setValueAtTime(0, at);
-    volume.gain.linearRampToValueAtTime(gain, at + .006);
+    volume.gain.linearRampToValueAtTime(gain * tone.gain, at + .006);
+    // A held tone stays at full level and cuts off; the others decay from the start.
+    if (tone.hold) volume.gain.setValueAtTime(gain * tone.gain, at + length - .01);
     volume.gain.exponentialRampToValueAtTime(.001, at + length);
     source.connect(volume).connect(this.context.destination);
     source.start(at);
@@ -257,6 +277,15 @@ export class WorkoutAudio {
     if (this.context && this.mode !== 'silent') this.beep(this.context.currentTime + .1, .15, 880);
     const result = this.announce(sample, 'Ready to train.', ['get-ready'], (this.context?.currentTime ?? 0) + .4);
     if (result === 'mixed') this.onError?.('The movement names were read by the device voice: their recordings could not be loaded. Reload the page and try again, or pick another voice.');
+  }
+
+  /** The countdown and a Go, as beeps only, so the tone and level can be judged without the voice. */
+  async testBeeps() {
+    await this.unlock();
+    if (!this.context || this.mode === 'silent') return;
+    const now = this.context.currentTime + .1;
+    for (const step of [0, 1, 2]) this.beep(now + step * .4, .08, 620);
+    this.beep(now + 1.2, .18, 880);
   }
 
   private lastTurn?: { key: string; number: number };

@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.10 · 26 October 2026 · Desktop-first development, portable workout sharing, and the planned static deployment shape
+Version 1.11 · 26 October 2026 · Desktop-first development, portable workout sharing, and the planned static deployment shape
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -398,7 +398,7 @@ Use this document to test paired table/context layout, long movement names, mult
 
 # 9 Audio and spoken cues
 
-**AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. No microphone permission is needed.
+**AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
 
 **AUD-02** Audio SHALL consume semantic engine events: prep, work start, rest start, upcoming assignment, countdown, round start, cap reached, paused, resumed, and completed. Components SHALL not independently trigger their own timers or announcements.
 
@@ -587,11 +587,11 @@ The implementation SHALL document exact environment names in .env.example and th
 
 | ID | Requirement and acceptance target |
 | - | - |
-| NFR-01 | On the recorded reference device/browser in the foreground, a 60-minute timing test SHALL end within 250ms of the test reference clock, excluding deliberate pauses. Individual visible boundaries SHOULD be within 150ms; exact speech latency is not guaranteed. Record the reference clock, aligned start/end signals, sampling method, and measurement uncertainty; distinguish engine deadline correctness from visible/audio latency. Fake-clock tests SHALL verify exact engine deadlines separately. |
+| NFR-01 | On the recorded reference device/browser in the foreground, a 60-minute timing test SHALL end within 250ms of the test reference clock, excluding deliberate pauses. Individual visible boundaries SHOULD be within 150ms; exact speech latency is not guaranteed. Fake-clock tests verify exact engine deadlines; the browser suite verifies the visible boundaries under the injected clock. No real-duration run is a release gate (version 1.11). |
 | NFR-02 | A delayed callback test SHALL produce correct state with no accumulated tick drift and no replay burst of obsolete cues. |
 | NFR-03 | At two metres, both users SHALL correctly identify current task, primary time, A/B role, and next task in at least 9 of 10 random screen states each, under normal room lighting. |
 | NFR-04 | With 1,000 workouts and 10,000 session summaries, library search SHOULD respond within 500ms and a preloaded workout SHOULD enter prep within 300ms on the reference hardware/LAN. Search SHOULD use SQLite full-text search or an indexed search column with server-side pagination; the client SHALL NOT download the whole library to filter it. |
-| NFR-05 | A 60-minute session SHALL remain usable with network disabled after setup; reconnection SHALL synchronise one result without duplicates. This is a real-duration run and is not satisfied by an accelerated clock. |
+| NFR-05 | A 60-minute session SHALL remain usable with network disabled after setup; reconnection SHALL synchronise one result without duplicates. Verified under the injected clock in the browser suite and by the production smoke test (version 1.11). |
 | NFR-06 | Server idle memory SHOULD remain below 256MiB and routine household use below 512MiB, excluding optional future TTS. Measure on the recorded deployment hardware. |
 | NFR-07 | Initial player and editing acceptance SHALL pass in desktop Safari and Firefox, including a recorded half-monitor-width window and responsive tablet/phone viewports. Automated browser tests SHALL cover Chromium, Firefox, and WebKit, with WebKit described as engine coverage rather than the installed Safari browser. Later physical iPad/iPhone smoke tests SHALL record device/OS/browser versions and cover touch, sound, wake lock, safe areas, and performance; home-screen mode SHALL be tested if offered. Physical-device checks SHALL NOT gate initial implementation or desktop UX review. |
 | NFR-08 | Essential controls SHALL be keyboard accessible with visible focus and accessible names. Screen-reader output SHALL announce phase changes without reading every second. |
@@ -606,7 +606,7 @@ Desktop reference hardware, browser versions, and actual CSS viewport sizes are 
 
 # 14 Acceptance scenarios and traceability
 
-Tests below define release gates at their applicable milestones. Unit tests use a fake monotonic clock; desktop/browser tests verify integration and responsive behaviour; later real-device tests verify visibility and platform behaviour. The browser build SHALL accept an injected clock and audio stub behind an explicit test flag so timing scenarios such as AT-01 run in seconds under Playwright rather than in real time. Accelerated runs do not replace real-duration runs: NFR-01, AT-18, and one real 60-minute reliability run combining timing, network loss, recovery, and memory observation (NFR-05/06) remain real time. The clock and audio injection SHALL exist only in test builds and SHALL NOT be reachable in the production image. Browser tests SHOULD replay the same fixture traces as the engine unit tests.
+Tests below define release gates at their applicable milestones. Unit tests use a fake monotonic clock; desktop/browser tests verify integration and responsive behaviour; later real-device tests verify visibility and platform behaviour. The browser build SHALL accept an injected clock and audio stub behind an explicit test flag so timing scenarios such as AT-01 run in seconds under Playwright rather than in real time. AT-18 and the device checklist stay on real hardware; the real-duration 60-minute run is no longer a release gate (version 1.11). The clock and audio injection SHALL exist only in test builds and SHALL NOT be reachable in the production image. Browser tests SHOULD replay the same fixture traces as the engine unit tests.
 
 | Test | Scenario and expected outcome | Requirements |
 | - | - | - |
@@ -679,11 +679,11 @@ Recorded 26 October 2026 after version 1.8. "Done" means implemented with automa
 
 | Phase | Status | Open items |
 | - | - | - |
-| 0 Tested browser fixture | Done | User-side exit gate: publish an image, one Portainer deployment, the real 60-minute run, physical iPad checks. |
+| 0 Tested browser fixture | Done | User-side exit gate: publish an image, one Portainer deployment, physical iPad checks. |
 | 1 Dependable saved workout | Done (version 1.8) | Login deferred by decision; the server is for a trusted network. |
 | 2 Initial household version | Done (versions 1.3 to 1.8) | The import of the full application export (restore is the SQLite backup). |
 | 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
-| 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the 60-minute real run, the device checklist, the digest and hardware lines of the release notes. |
+| 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the device checklist, the digest and hardware lines of the release notes. |
 | 5 Static shape and Pages | Planned (version 1.9, section 15.5) | Starts after the 1.0.0 tag. |
 | 6 Follow-up improvements | Open | Prioritised from real training sessions. |
 
@@ -775,6 +775,12 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 
 # 18 Plan revision record
+
+## Version 1.11 — 26 October 2026
+
+- The real-duration 60-minute run is dropped as a release gate by the user's decision: NFR-01 and NFR-05 are verified under the injected clock and by the production smoke test, and the device checklist remains the only by-hand gate.
+- The Docker voice stage starts from the bare Node image with a pinned `tsx`, so version bumps and dependency updates no longer re-render the voices.
+- The accent is chosen per theme (dark and light each keep their own swatch or custom colour, migrated from the single 1.1.0 draft value), and the beeps have their own volume and one of five tones, including the held 1 kHz gym-clock beep and a sawtooth alarm (AUD-01).
 
 ## Version 1.10 — 26 October 2026
 

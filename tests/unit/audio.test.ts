@@ -11,7 +11,7 @@ const runSledRun = bundledWorkout('run-sled-run');
 
 afterEach(() => vi.unstubAllGlobals());
 
-interface Source { at?: number; cancelled: boolean; kind: 'beep' | 'clip'; clip?: string }
+interface Source { at?: number; stopAt?: number; cancelled: boolean; kind: 'beep' | 'clip'; clip?: string; frequency?: number; wave?: string }
 
 function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
   const sources: Source[] = [];
@@ -22,9 +22,14 @@ function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
     private source(kind: Source['kind']) {
       const record: Source = { at: undefined, cancelled: false, kind };
       sources.push(record);
-      return { frequency: { value: 0 }, buffer: undefined as unknown, connect: (target: unknown) => target, disconnect: () => {}, start: (at: number) => { record.at = at; record.clip = (this as unknown as { lastBuffer?: string }).lastBuffer; }, stop: (at?: number) => { if (at === undefined) record.cancelled = true; }, onended: undefined, set bufferName(name: string) { record.clip = name; } };
+      return { frequency: { value: 0 }, buffer: undefined as unknown, connect: (target: unknown) => target, disconnect: () => {}, start: (at: number) => { record.at = at; record.clip = (this as unknown as { lastBuffer?: string }).lastBuffer; }, stop: (at?: number) => { if (at === undefined) record.cancelled = true; else record.stopAt = Math.round((at - record.at!) * 100) / 100 + record.at!; }, onended: undefined, set bufferName(name: string) { record.clip = name; } };
     }
-    createOscillator() { return this.source('beep'); }
+    createOscillator() {
+      const node = this.source('beep') as ReturnType<FakeContext['source']> & { type?: string };
+      const record = sources[sources.length - 1], start = node.start;
+      node.start = at => { start(at); record.frequency = node.frequency.value; record.wave = node.type; };
+      return node;
+    }
     createBufferSource() {
       const record: Source = { at: undefined, cancelled: false, kind: 'clip' };
       sources.push(record);
@@ -165,4 +170,23 @@ it('announces who does what from recorded name clips when the pack has them, and
   audio.update(engine.project(), engine.readClocks());
   expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toContain('rest');
   expect(spoken).toHaveLength(1);
+});
+
+it('shapes every beep by the chosen tone', async () => {
+  const { audio, sources, engine } = setup();
+  await audio.unlock(); await audio.preload(); sources.length = 0;
+  audio.update(engine.project(), engine.readClocks());
+  expect(sources.map(source => [source.wave, source.frequency])).toEqual([['sine', 620], ['sine', 620], ['sine', 620], ['sine', 880]]);
+  audio.tone = 'soft'; sources.length = 0;
+  await audio.testBeeps();
+  // The unlock click comes first, then the countdown and the Go, all in the lower rounder tone.
+  expect(sources.map(source => [source.wave, source.frequency])).toEqual([['triangle', 495], ['triangle', 465], ['triangle', 465], ['triangle', 465], ['triangle', 660]]);
+  audio.tone = 'gym'; sources.length = 0;
+  await audio.testBeeps();
+  // The gym clock: every beep is a 1 kHz sine, the Go held about three quarters of a second.
+  expect(sources.map(source => [source.wave, source.frequency])).toEqual(Array(5).fill(['sine', 1000]));
+  expect(sources.map(source => Math.round((source.stopAt! - source.at!) * 100) / 100).slice(1)).toEqual([.34, .34, .34, .74]);
+  audio.tone = 'alarm'; sources.length = 0;
+  await audio.testBeeps();
+  expect(sources.map(source => source.wave)).toEqual(Array(5).fill('sawtooth'));
 });

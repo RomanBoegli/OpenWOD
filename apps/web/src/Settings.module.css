@@ -17,6 +17,7 @@
 .field input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
 .field input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .twoUp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.buttonRow { display: flex; flex-wrap: wrap; gap: 8px; }
 .threeUp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .references { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .references li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; padding: 0 2px; border-bottom: 1px solid var(--line); }
@@ -36,8 +37,6 @@
 .rowActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .swatches { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 1px #00000022; cursor: pointer; padding: 0; }
-.swatch[data-default] { background: #c8ee91; }
-:root[data-theme=light] .swatch[data-default] { background: #3f8313; }
 .swatch[aria-pressed=true] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--ink); }
 .swatchPicker { display: inline-flex; align-items: center; gap: 7px; text-transform: none; letter-spacing: 0; font-weight: 500; cursor: pointer; }
 .swatchPicker input[type=color] { width: 34px; height: 34px; min-height: 0; padding: 2px; border: 1px solid var(--line-2); border-radius: 50%; background: var(--input-bg); cursor: pointer; }
