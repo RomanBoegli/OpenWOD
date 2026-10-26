@@ -25,12 +25,14 @@ export interface Preferences {
   /** The remaining time at which the colour turns amber, then red (both still capped to the slot length). */
   amberMs: number;
   redMs: number;
+  /** Colours of the two milestone markers as #rrggbb, or '' for the theme's amber and red. */
+  markColors: { first: string; second: string };
   /** Equipment available at home; the library can hide anything that needs more. */
   myEquipment: string[];
   onlyMyEquipment: boolean;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, myEquipment: [], onlyMyEquipment: false };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, myEquipment: [], onlyMyEquipment: false };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -38,13 +40,14 @@ export const THEME_KEY = 'openwod.theme';
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 const text = (value: unknown, fallback: string, max = 30) => typeof value === 'string' && value.trim() ? value.slice(0, max) : fallback;
+const color = (value: unknown) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '';
 const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback: T): T => (options as readonly string[]).includes(value as string) ? value as T : fallback;
 
 /** Browser storage is a convenience: every read is validated and any failure yields the defaults. */
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']> } : {};
+    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']> } : {};
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
@@ -61,6 +64,7 @@ export function loadPreferences(): Preferences {
       washGain: Math.round(clamp(stored.washGain, 10, 60, defaultPreferences.washGain)),
       amberMs: Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs)),
       redMs: Math.min(Math.round(clamp(stored.redMs, 1000, 10_000, defaultPreferences.redMs)), Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs))),
+      markColors: { first: color(stored.markColors?.first), second: color(stored.markColors?.second) },
       myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,
     };

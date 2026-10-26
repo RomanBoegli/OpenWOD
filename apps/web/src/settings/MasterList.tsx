@@ -17,9 +17,9 @@ export interface MasterRow {
  * The one list every master-data page uses: a caption row, dense rows in a grid, an optional selection column for
  * merges, and a right-aligned action cell. Rows stay `li` elements so the list keeps its accessible name.
  */
-export function MasterList({ label, columns, rows, selectable, empty }: { label: string; columns: MasterColumn[]; rows: MasterRow[]; selectable?: boolean; empty: ReactNode }) {
+export function MasterList({ label, columns, rows, selectable, empty, actionsWidth = '120px' }: { label: string; columns: MasterColumn[]; rows: MasterRow[]; selectable?: boolean; empty: ReactNode; /** Width of the action cell, the same in the caption row and every row so the columns line up. */ actionsWidth?: string }) {
   const style = {
-    '--columns': [selectable ? '28px' : '', ...columns.map(column => column.width ?? 'minmax(0, 1fr)'), 'auto'].filter(Boolean).join(' '),
+    '--columns': [selectable ? '28px' : '', ...columns.map(column => column.width ?? 'minmax(0, 1fr)'), actionsWidth].filter(Boolean).join(' '),
     '--narrow-columns': `${selectable ? '28px' : '0'} minmax(0, 1fr) auto`,
   } as CSSProperties;
   return <div className={styles.list} style={style}>

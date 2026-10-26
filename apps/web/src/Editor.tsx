@@ -12,6 +12,8 @@ import { MovementPicker } from './MovementPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
+import { TagPicker } from './TagPicker';
+import { equipmentRepertoire } from './equipment';
 import { LEVEL_LABELS, LEVEL_LETTERS } from './LevelChip';
 import styles from './Editor.module.css';
 import shared from './App.module.css';
@@ -91,7 +93,6 @@ const FORMAT_HELP: Record<SectionFormat, string> = {
 
 export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
   const [draft, setDraft] = useState(initial);
-  const [equipmentText, setEquipmentText] = useState(initial.equipment.join(', '));
   const [dirty, setDirty] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const first = useRef(true);
@@ -105,6 +106,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
   const difficulty = useMemo(() => compiled.plan && rateDifficulty(compiled.plan), [compiled.plan]);
   const canSave = issues.length === 0 && Boolean(compiled.plan);
   const unmatched = useMemo(() => unmatchedMovements(draft, catalogue), [draft, catalogue]);
+  const equipmentNames = useMemo(() => equipmentRepertoire(catalogue, [], draft.equipment), [catalogue, draft.equipment]);
 
   useEffect(() => {
     if (first.current) { first.current = false; return; }
@@ -126,9 +128,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
   const addEquipment = (items: string[] = []) => {
     const missing = items.filter(item => !draft.equipment.some(known => equipmentKey(known) === equipmentKey(item)));
     if (!missing.length) return;
-    const equipment = [...draft.equipment, ...missing];
-    setEquipmentText(equipment.join(', '));
-    update({ equipment });
+    update({ equipment: [...draft.equipment, ...missing] });
   };
   /** Creates records for names the catalogue does not know and links every lane that uses them. */
   const addToCatalogue = (names: string[]) => {
@@ -200,7 +200,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
           <div className={styles.row}>
             <fieldset className={styles.choice}><legend>Athletes</legend>{([1, 2] as const).map(count => <label key={count} data-checked={draft.participants === count}><input type="radio" name="participants" checked={draft.participants === count} onChange={() => setParticipants(count)} /><Icon name={count === 2 ? 'users' : 'user'} size={15} />{count === 2 ? 'Pair' : 'Solo'}</label>)}</fieldset>
             <DurationField label="Prep countdown" value={draft.prepMs} onChange={prepMs => update({ prepMs })} />
-            <label className={styles.field}>Equipment<input value={equipmentText} placeholder="Dumbbells, Kettlebell" onChange={event => { setEquipmentText(event.target.value); update({ equipment: event.target.value.split(',').map(item => item.trim()).filter(Boolean) }); }} /></label>
+            <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={draft.equipment} options={equipmentNames} placeholder="Dumbbells, Kettlebell…" onChange={equipment => update({ equipment })} /></div>
           </div>
           <details className={styles.details}><summary>Source and attribution</summary>
             <div className={styles.row}>

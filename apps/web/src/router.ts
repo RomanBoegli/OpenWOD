@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const SETTINGS_SECTIONS = ['general', 'sound', 'player', 'equipment', 'movements', 'collections'] as const;
+export const SETTINGS_SECTIONS = ['general', 'player', 'equipment', 'movements', 'collections'] as const;
 export type SettingsSection = typeof SETTINGS_SECTIONS[number];
 export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string };
 
@@ -8,7 +8,7 @@ export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; 
 export function parseRoute(hash: string): Route {
   if (/^#\/new\/?$/.test(hash)) return { name: 'new' };
   const settings = /^#\/settings(?:\/([a-z]+))?\/?$/.exec(hash);
-  if (settings) return { name: 'settings', section: settings[1] === 'exercises' ? 'movements' : (SETTINGS_SECTIONS as readonly string[]).includes(settings[1]) ? settings[1] as SettingsSection : 'general' };
+  if (settings) return { name: 'settings', section: settings[1] === 'exercises' ? 'movements' : settings[1] === 'sound' ? 'player' : (SETTINGS_SECTIONS as readonly string[]).includes(settings[1]) ? settings[1] as SettingsSection : 'general' };
   const draft = /^#\/draft\/([^/?#]+)\/?$/.exec(hash);
   if (draft) return { name: 'draft', id: decodeURIComponent(draft[1]) };
   const match = /^#\/wod\/([^/?#]+)(?:\/(play|edit))?\/?$/.exec(hash);

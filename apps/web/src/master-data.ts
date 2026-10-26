@@ -1,7 +1,7 @@
 import { Catalogue, movementKey, type Movement } from '../../../packages/domain/src/catalogue';
 import { equipmentKey } from '../../../packages/domain/src/library';
 import { seedMovements } from '../../../packages/domain/src/movements';
-import { bundledCollections, bundledWorkouts } from '../../../packages/domain/src/bundled';
+import { bundledCollections } from '../../../packages/domain/src/bundled';
 
 /**
  * Master data kept on this device until the server milestone: equipment spellings (merges), collections of workouts,
@@ -21,18 +21,21 @@ export interface MasterData {
   hiddenMovements: string[];
   /** Extra spellings → record id, from merges and renames ("Wall-ball shots" → wall-ball). */
   movementAliases: Record<string, string>;
+  /** Merges you committed: they keep working but no longer appear in the history with an Undo. */
+  committed: string[];
 }
 
 const KEY = 'openwod.master.v1';
 
-/** Collections that ship with the app: one per registry folder with a collection.yaml, plus every pair workout. They are not editable; your own collections sit beside them. */
-export const builtInCollections: Collection[] = [
-  ...bundledCollections.map(collection => ({ ...collection, builtIn: true })),
-  { id: 'partners', title: 'Partner sessions', description: 'Everything built for two.', workoutIds: bundledWorkouts.filter(workout => workout.participants === 2).map(workout => workout.id), builtIn: true },
-];
+/** Collections that ship with the app: one per registry folder with a collection.yaml. They are not editable; your own collections sit beside them. */
+export const builtInCollections: Collection[] = bundledCollections.map(collection => ({ ...collection, builtIn: true }));
 
-export const allCollections = (data: MasterData): Collection[] => [...builtInCollections, ...data.collections];
-export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], movements: [], hiddenMovements: [], movementAliases: {} });
+/** Bundled collections first (with your edits applied as overrides of the same id), then your own. */
+export const allCollections = (data: MasterData): Collection[] => [
+  ...builtInCollections.map(collection => { const override = data.collections.find(item => item.id === collection.id); return override ? { ...override, builtIn: true } : collection; }),
+  ...data.collections.filter(collection => !builtInCollections.some(item => item.id === collection.id)),
+];
+export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], movements: [], hiddenMovements: [], movementAliases: {}, committed: [] });
 
 const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
@@ -68,7 +71,7 @@ export function loadMasterData(): MasterData {
     const hiddenMovements = strings(stored.hiddenMovements, MOVEMENT_LIMIT);
     const movementAliases: Record<string, string> = {};
     if (stored.movementAliases && typeof stored.movementAliases === 'object') for (const [key, id] of Object.entries(stored.movementAliases)) if (text(key, 160) && text(id, 80)) movementAliases[text(key, 160)] = text(id, 80);
-    return { equipmentAliases: aliases, collections, movements, hiddenMovements, movementAliases };
+    return { equipmentAliases: aliases, collections, movements, hiddenMovements, movementAliases, committed: strings(stored.committed, 2000, 200) };
   } catch { return emptyMasterData(); }
 }
 
@@ -92,10 +95,15 @@ export function mergeEquipment(data: MasterData, names: string[], target: string
   return { ...data, equipmentAliases: aliases };
 }
 
+/** Keeps a merge or rename for good and drops it from the history list. */
+export function commitMerge(data: MasterData, entry: string): MasterData {
+  return data.committed.includes(entry) ? data : { ...data, committed: [...data.committed, entry] };
+}
+
 export function unmergeEquipment(data: MasterData, key: string): MasterData {
   const aliases = { ...data.equipmentAliases };
   delete aliases[key];
-  return { ...data, equipmentAliases: aliases };
+  return { ...data, equipmentAliases: aliases, committed: data.committed.filter(entry => entry !== `equipment:${key}`) };
 }
 
 // ---- Movement catalogue ---------------------------------------------------------------------------------------
@@ -170,22 +178,37 @@ export function mergeMovements(data: MasterData, ids: string[], targetId: string
 
 /** Drops every change to the bundled records (overrides, removals and merge aliases); your own records stay. */
 export function restoreBundledMovements(data: MasterData): MasterData {
-  return { ...data, movements: data.movements.filter(record => !seedIds.has(record.id)), hiddenMovements: [], movementAliases: {} };
+  return { ...data, movements: data.movements.filter(record => !seedIds.has(record.id)), hiddenMovements: [], movementAliases: {}, committed: data.committed.filter(entry => !entry.startsWith('movement:')) };
 }
 
 export function removeMovementAlias(data: MasterData, spelling: string): MasterData {
   const movementAliases = { ...data.movementAliases };
   delete movementAliases[spelling];
-  return { ...data, movementAliases };
+  return { ...data, movementAliases, committed: data.committed.filter(entry => entry !== `movement:${spelling}`) };
 }
 
 // ---- Collections ---------------------------------------------------------------------------------------------
 
-/** Replaces a collection in place (so editing never reorders the list) or appends a new one. */
+/**
+ * Replaces a collection in place (so editing never reorders the list) or appends a new one. A workout belongs to one
+ * of your collections at a time: the ids it now holds leave every other collection of yours.
+ */
 export function upsertCollection(data: MasterData, collection: Collection): MasterData {
-  const index = data.collections.findIndex(item => item.id === collection.id);
-  const collections = index === -1 ? [...data.collections, collection] : data.collections.map((item, at) => at === index ? collection : item);
+  const strip = (item: Collection): Collection => { const { builtIn: _flag, ...rest } = item; return rest; };
+  const stored = strip(collection);
+  const others = (item: Collection): Collection => ({ ...item, workoutIds: item.workoutIds.filter(id => !stored.workoutIds.includes(id)) });
+  // A bundled collection that still holds one of these workouts gets an override without them.
+  const touched: Collection[] = builtInCollections.filter(item => item.id !== stored.id && !data.collections.some(own => own.id === item.id) && item.workoutIds.some(id => stored.workoutIds.includes(id))).map(strip);
+  const base: Collection[] = [...data.collections, ...touched];
+  const index = base.findIndex(item => item.id === stored.id);
+  const collections = index === -1 ? [...base.map(others), stored] : base.map((item, at) => at === index ? stored : others(item));
   return { ...data, collections };
+}
+
+/** The one collection a workout is shown under: yours first, then the bundled one its file sits in. */
+export function collectionOf(collections: Collection[], workoutId: string): Collection | undefined {
+  const matching = collections.filter(collection => collection.workoutIds.includes(workoutId));
+  return matching.find(collection => !collection.builtIn) ?? matching[0];
 }
 
 export function removeCollection(data: MasterData, id: string): MasterData {

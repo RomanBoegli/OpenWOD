@@ -3,12 +3,14 @@ import { CATEGORY_LABELS, MOVEMENT_CATEGORIES, movementSlug, type Catalogue, typ
 import { collectPrescriptions, equipmentKey, equipmentOptions } from '../../../packages/domain/src/library';
 import type { WorkoutAudio } from './audio';
 import type { LibraryEntry } from './Library';
-import { allCollections, freeMovementId, mergeEquipment, mergeMovements, removeCollection, removeMovement, removeMovementAlias, restoreBundledMovements, seedIds, unmergeEquipment, upsertCollection, upsertMovement, type Collection, type MasterData } from './master-data';
+import { allCollections, commitMerge, freeMovementId, mergeEquipment, mergeMovements, removeCollection, removeMovement, removeMovementAlias, restoreBundledMovements, seedIds, unmergeEquipment, upsertCollection, upsertMovement, type Collection, type MasterData } from './master-data';
 import { recordForName } from './catalogue-link';
 import { movementRows } from './settings/movement-rows';
 import { Badge, MasterList } from './settings/MasterList';
 import { FormDialog } from './settings/FormDialog';
 import { TimerPreview } from './settings/TimerPreview';
+import { TagPicker } from './TagPicker';
+import { equipmentRepertoire } from './equipment';
 import { ConfirmDialog } from './ConfirmDialog';
 import type { Preferences } from './preferences';
 import { SETTINGS_SECTIONS, settingsHref, type SettingsSection } from './router';
@@ -33,8 +35,7 @@ interface SettingsProps {
 
 const SECTION_LABELS: Record<SettingsSection, { title: string; blurb: string }> = {
   general: { title: 'General', blurb: 'Theme, the player’s look, and who trains here.' },
-  sound: { title: 'Sound', blurb: 'Beeps and the recorded voices.' },
-  player: { title: 'Workout view', blurb: 'Units, the timer ring and the background pulse.' },
+  player: { title: 'Training view', blurb: 'Units, the look of the timer, and the sound.' },
   equipment: { title: 'Equipment', blurb: 'What you own, and one spelling per item across the library.' },
   movements: { title: 'Movements', blurb: 'Every movement the library knows, with its variants and equipment.' },
   collections: { title: 'Collections', blurb: 'Named lists of workouts, shown as chips and as a filter.' },
@@ -42,7 +43,7 @@ const SECTION_LABELS: Record<SettingsSection, { title: string; blurb: string }> 
 
 const slug = (title: string) => title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'collection';
 
-/** Everything about this device and its master data, in sections: general, sound, equipment, movements, collections. */
+/** Everything about this device and its master data, in sections: general, training view (with sound), equipment, movements, collections. */
 export function Settings(props: SettingsProps) {
   const { section } = props;
   return <div className={styles.settings}>
@@ -53,7 +54,6 @@ export function Settings(props: SettingsProps) {
       </nav>
       <div className={styles.content}>
         {section === 'general' && <GeneralSettings {...props} />}
-        {section === 'sound' && <SoundSettings {...props} />}
         {section === 'player' && <PlayerSettings {...props} />}
         {section === 'equipment' && <EquipmentSettings {...props} />}
         {section === 'movements' && <MovementSettings {...props} />}
@@ -82,9 +82,12 @@ function GeneralSettings({ preferences, onPreferencesChange }: SettingsProps) {
   </>;
 }
 
-function PlayerSettings({ preferences, onPreferencesChange }: SettingsProps) {
+function PlayerSettings(props: SettingsProps) {
+  const { preferences, onPreferencesChange } = props;
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
   const seconds = (ms: number) => `${Math.round(ms / 1000)} s`;
+  /** The theme's own marker colour, as the colour input needs a concrete value. */
+  const themeColor = (token: string) => { const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim(); return /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000'; };
   return <>
     <section className={styles.card} aria-labelledby="units-title">
       <h2 id="units-title">Loads</h2>
@@ -94,20 +97,21 @@ function PlayerSettings({ preferences, onPreferencesChange }: SettingsProps) {
     <section className={styles.card} aria-labelledby="player-title">
       <h2 id="player-title">Look &amp; feel</h2>
       <div className={styles.previewRow}>
-        <TimerPreview view={preferences.view} ringWidth={preferences.perimeterWidth} washGain={preferences.wash ? preferences.washGain : 0} amberMs={preferences.amberMs} redMs={preferences.redMs} />
+        <TimerPreview view={preferences.view} ringWidth={preferences.perimeterWidth} washGain={preferences.wash ? preferences.washGain : 0} amberMs={preferences.amberMs} redMs={preferences.redMs} colors={preferences.markColors} />
         <div className={styles.previewFields}>
           <label className={styles.field}>Default view<select value={preferences.view} onChange={event => update({ view: event.target.value as Preferences['view'] })}><option value="focus">Focus</option><option value="context">Context</option></select></label>
           <label className={styles.field}>Timer ring width · {preferences.perimeterWidth} px<input type="range" min="3" max="12" step="1" value={preferences.perimeterWidth} onChange={event => update({ perimeterWidth: Number(event.target.value) })} /></label>
           <div className={styles.twoUp}>
-            <label className={styles.field}>Turn amber at · {seconds(preferences.amberMs)}<input type="range" min="5" max="30" step="1" value={preferences.amberMs / 1000} onChange={event => { const amberMs = Number(event.target.value) * 1000; update({ amberMs, redMs: Math.min(preferences.redMs, amberMs) }); }} /></label>
-            <label className={styles.field}>Turn red at · {seconds(preferences.redMs)}<input type="range" min="1" max={Math.min(10, preferences.amberMs / 1000)} step="1" value={preferences.redMs / 1000} onChange={event => update({ redMs: Number(event.target.value) * 1000 })} /></label>
+            <div className={styles.field}><span>First milestone marker · {seconds(preferences.amberMs)}</span><div className={styles.markerRow}><input type="range" min="5" max="30" step="1" aria-label="First milestone marker" value={preferences.amberMs / 1000} onChange={event => { const amberMs = Number(event.target.value) * 1000; update({ amberMs, redMs: Math.min(preferences.redMs, amberMs) }); }} /><input type="color" aria-label="First milestone colour" value={preferences.markColors.first || themeColor('--phase-amber')} onChange={event => update({ markColors: { ...preferences.markColors, first: event.target.value } })} />{preferences.markColors.first && <button type="button" className={shared.iconButton} aria-label="First milestone colour back to the theme" title="Theme colour" onClick={() => update({ markColors: { ...preferences.markColors, first: '' } })}><Icon name="undo" size={14} /></button>}</div></div>
+            <div className={styles.field}><span>Second milestone marker · {seconds(preferences.redMs)}</span><div className={styles.markerRow}><input type="range" min="1" max={Math.min(10, preferences.amberMs / 1000)} step="1" aria-label="Second milestone marker" value={preferences.redMs / 1000} onChange={event => update({ redMs: Number(event.target.value) * 1000 })} /><input type="color" aria-label="Second milestone colour" value={preferences.markColors.second || themeColor('--phase-red')} onChange={event => update({ markColors: { ...preferences.markColors, second: event.target.value } })} />{preferences.markColors.second && <button type="button" className={shared.iconButton} aria-label="Second milestone colour back to the theme" title="Theme colour" onClick={() => update({ markColors: { ...preferences.markColors, second: '' } })}><Icon name="undo" size={14} /></button>}</div></div>
           </div>
-          <p className={styles.hint}>Work turns amber, then red, this long before a slot ends; the marks sit on the ring above. Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds.</p>
+          <p className={styles.hint}>Work changes colour at each marker this long before a slot ends; the markers sit on the ring above, in the colours you pick (the theme’s amber and red unless changed). Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds.</p>
         </div>
       </div>
-      <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player and deepens as the clock drains." />
+      <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player, climbing to full strength just before each milestone and morphing into the next colour." />
       {preferences.wash && <label className={styles.field}>Pulse intensity · {preferences.washGain} %<input type="range" min="10" max="60" step="5" value={preferences.washGain} onChange={event => update({ washGain: Number(event.target.value) })} /></label>}
     </section>
+    <SoundSettings {...props} />
   </>;
 }
 
@@ -143,7 +147,7 @@ function EquipmentSettings({ preferences, onPreferencesChange, masterData, onMas
   }, [entries]);
   const names = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
   const visible = names.filter(name => !query.trim() || name.toLowerCase().includes(query.trim().toLowerCase()));
-  const merges = Object.entries(masterData.equipmentAliases).filter(([key, name]) => key !== equipmentKey(name));
+  const merges = Object.entries(masterData.equipmentAliases).filter(([key, name]) => key !== equipmentKey(name) && !masterData.committed.includes(`equipment:${key}`));
   const owned = (name: string) => preferences.myEquipment.includes(name);
   const setOwned = (name: string, have: boolean) => update({ myEquipment: have ? [...preferences.myEquipment.filter(item => item !== name), name] : preferences.myEquipment.filter(item => item !== name) });
   const merge = () => {
@@ -174,7 +178,7 @@ function EquipmentSettings({ preferences, onPreferencesChange, masterData, onMas
         <button type="button" className={shared.primaryButton} onClick={merge}><Icon name="check" />Merge {selection.length}</button>
         <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
       </div>}
-      <MasterList label="Equipment in the library" selectable empty={`Nothing matches “${query}”.`}
+      <MasterList label="Equipment in the library" selectable actionsWidth="110px" empty={`Nothing matches “${query}”.`}
         columns={[{ key: 'name', caption: 'Name' }, { key: 'usage', caption: 'Workouts', width: '90px', align: 'end' }, { key: 'owned', caption: 'I have it', width: '80px' }]}
         rows={visible.map(name => ({
           id: name,
@@ -182,7 +186,7 @@ function EquipmentSettings({ preferences, onPreferencesChange, masterData, onMas
           select: { checked: selection.includes(name), label: `Select ${name}`, onChange: checked => setSelection(current => checked ? [...current, name] : current.filter(item => item !== name)) },
           actions: <button type="button" className={shared.quietButton} aria-label={`Rename ${name}`} onClick={() => setRenaming({ from: name, to: name })}><Icon name="edit" size={14} />Rename</button>,
         }))} />
-      {merges.length > 0 && <ul className={styles.merges} aria-label="Merged names">{merges.map(([key, name]) => <li key={key}><span>{key} → <strong>{name}</strong></span><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => unmergeEquipment(data, key))}><Icon name="undo" size={14} />Undo</button></li>)}</ul>}
+      {merges.length > 0 && <ul className={styles.merges} aria-label="Merged names">{merges.map(([key, name]) => <li key={key}><span>{key} → <strong>{name}</strong></span><span className={styles.rowActions}><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => unmergeEquipment(data, key))}><Icon name="undo" size={14} />Undo</button><button type="button" className={shared.quietButton} title="Keep this for good and drop it from the list" aria-label={`Commit ${key}`} onClick={() => onMasterDataChange(data => commitMerge(data, `equipment:${key}`))}><Icon name="check" size={14} />Commit</button></span></li>)}</ul>}
     </section>
     <FormDialog open={Boolean(renaming)} title={`Rename ${renaming?.from ?? ''}`} submitLabel="Rename" disabled={!renaming?.to.trim()} onSubmit={rename} onClose={() => setRenaming(undefined)}>
       <label>Name<input value={renaming?.to ?? ''} maxLength={80} onChange={event => setRenaming(current => current && { ...current, to: event.target.value })} /></label>
@@ -191,9 +195,9 @@ function EquipmentSettings({ preferences, onPreferencesChange, masterData, onMas
   </>;
 }
 
-type MovementForm = { id?: string; name: string; shortName: string; spokenName: string; aliases: string; family: string; category: '' | MovementCategory; equipment: string; notes: string };
-const emptyForm = (): MovementForm => ({ name: '', shortName: '', spokenName: '', aliases: '', family: '', category: '', equipment: '', notes: '' });
-const toForm = (record: Movement): MovementForm => ({ id: record.id, name: record.name, shortName: record.shortName ?? '', spokenName: record.spokenName ?? '', aliases: (record.aliases ?? []).join(', '), family: record.family ?? '', category: record.category ?? '', equipment: (record.equipment ?? []).join(', '), notes: record.notes ?? '' });
+type MovementForm = { id?: string; name: string; shortName: string; spokenName: string; aliases: string; family: string; category: '' | MovementCategory; equipment: string[]; notes: string };
+const emptyForm = (): MovementForm => ({ name: '', shortName: '', spokenName: '', aliases: '', family: '', category: '', equipment: [], notes: '' });
+const toForm = (record: Movement): MovementForm => ({ id: record.id, name: record.name, shortName: record.shortName ?? '', spokenName: record.spokenName ?? '', aliases: (record.aliases ?? []).join(', '), family: record.family ?? '', category: record.category ?? '', equipment: [...(record.equipment ?? [])], notes: record.notes ?? '' });
 const list = (text: string) => text.split(',').map(item => item.trim()).filter(Boolean);
 const plural = (count: number, noun: string) => `${count} ${count === 1 ? noun : `${noun}s`}`;
 
@@ -204,7 +208,7 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
   const [form, setForm] = useState<MovementForm>();
   const [removing, setRemoving] = useState<Movement>();
   const [restoring, setRestoring] = useState(false);
-  const equipmentChoices = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
+  const equipmentChoices = useMemo(() => equipmentRepertoire(catalogue, entries.map(entry => entry.summary)), [catalogue, entries]);
   // How many library workouts use each record, and the names no record knows.
   const { usage, unknown } = useMemo(() => {
     const usage = new Map<string, number>();
@@ -230,7 +234,7 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
     if (list(form.aliases).length) record.aliases = list(form.aliases);
     if (form.family && form.family !== id) record.family = form.family;
     if (form.category) record.category = form.category;
-    if (list(form.equipment).length) record.equipment = list(form.equipment);
+    if (form.equipment.length) record.equipment = form.equipment;
     if (form.notes.trim()) record.notes = form.notes.trim();
     onMasterDataChange(data => upsertMovement(data, record));
     setForm(undefined);
@@ -269,7 +273,7 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
         <button type="button" className={shared.primaryButton} onClick={merge}><Icon name="check" />Merge {selection.length}</button>
         <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
       </div>}
-      <MasterList label="Movements" selectable empty={`Nothing matches “${query}”.`}
+      <MasterList label="Movements" selectable actionsWidth="124px" empty={`Nothing matches “${query}”.`}
         columns={[{ key: 'name', caption: 'Movement', width: 'minmax(180px, 1.3fr)' }, { key: 'equipment', caption: 'Equipment', width: 'minmax(0, 1fr)' }, { key: 'usage', caption: 'Workouts', width: '80px', align: 'end' }]}
         rows={rows.map(({ record, variant, muted }) => ({
           id: record.id, indent: variant, muted,
@@ -284,7 +288,7 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
             <button type="button" className={shared.quietButton} onClick={() => setRemoving(record)} aria-label={`Remove ${record.name}`}><Icon name="trash" size={14} /></button>
           </>,
         }))} />
-      {Object.keys(masterData.movementAliases).length > 0 && <ul className={styles.merges} aria-label="Merged movement names">{Object.entries(masterData.movementAliases).map(([spelling, id]) => <li key={spelling}><span>{spelling} → <strong>{catalogue.get(id)?.name ?? id}</strong></span><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => removeMovementAlias(data, spelling))}><Icon name="undo" size={14} />Undo</button></li>)}</ul>}
+      {Object.entries(masterData.movementAliases).some(([spelling]) => !masterData.committed.includes(`movement:${spelling}`)) && <ul className={styles.merges} aria-label="Merged movement names">{Object.entries(masterData.movementAliases).filter(([spelling]) => !masterData.committed.includes(`movement:${spelling}`)).map(([spelling, id]) => <li key={spelling}><span>{spelling} → <strong>{catalogue.get(id)?.name ?? id}</strong></span><span className={styles.rowActions}><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => removeMovementAlias(data, spelling))}><Icon name="undo" size={14} />Undo</button><button type="button" className={shared.quietButton} title="Keep this for good and drop it from the list" aria-label={`Commit ${spelling}`} onClick={() => onMasterDataChange(data => commitMerge(data, `movement:${spelling}`))}><Icon name="check" size={14} />Commit</button></span></li>)}</ul>}
       {customised > 0 && <div><button type="button" className={shared.quietButton} onClick={() => setRestoring(true)}>Restore the bundled movements</button></div>}
     </section>
 
@@ -296,7 +300,7 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
         <label className={styles.field}>Spoken name<input value={form.spokenName} maxLength={160} placeholder="hang power cleans" onChange={event => setForm({ ...form, spokenName: event.target.value })} /></label>
         <label className={styles.field}>Also known as<input value={form.aliases} maxLength={500} placeholder="HPC, hang power clean" onChange={event => setForm({ ...form, aliases: event.target.value })} /></label>
         <label className={styles.field}>Category<select value={form.category} onChange={event => setForm({ ...form, category: event.target.value as MovementForm['category'] })}><option value="">Unset</option>{MOVEMENT_CATEGORIES.map(category => <option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label>
-        <label className={styles.field}>Equipment<input value={form.equipment} maxLength={300} list="movement-equipment-names" placeholder="Barbell" onChange={event => setForm({ ...form, equipment: event.target.value })} /><datalist id="movement-equipment-names">{equipmentChoices.map(item => <option key={item} value={item} />)}</datalist></label>
+        <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={form.equipment} options={equipmentChoices} placeholder="Barbell, Pull-up bar…" onChange={equipment => setForm({ ...form, equipment })} /></div>
         <label className={`${styles.field} ${styles.wide}`}>Notes<input value={form.notes} maxLength={500} placeholder="Standards, scaling, cues" onChange={event => setForm({ ...form, notes: event.target.value })} /></label>
       </div>}
     </FormDialog>
@@ -329,16 +333,16 @@ function CollectionSettings({ masterData, onMasterDataChange, entries }: Setting
   return <>
     <section className={styles.card} aria-labelledby="collections-title">
       <div className={styles.cardHeading}><h2 id="collections-title">Collections</h2><span className={styles.hint}>{collections.length} collections</span></div>
-      <p className={styles.hint}>Named lists of workouts, shown as chips on cards and as a filter. Bundled collections come with the app and are read-only; make your own beside them.</p>
+      <p className={styles.hint}>Named lists of workouts, shown in the corner of each card and as a filter. A workout belongs to one collection at a time; adding it to another moves it. The collections that come with the app can be edited but not removed; make your own beside them.</p>
       <div className={styles.listTop}><span /><button type="button" className={shared.primaryButton} onClick={() => open()}><Icon name="plus" size={16} />New collection</button></div>
-      <MasterList label="Collections" empty="No collections yet."
+      <MasterList label="Collections" actionsWidth="124px" empty="No collections yet."
         columns={[{ key: 'title', caption: 'Collection' }, { key: 'count', caption: 'Workouts', width: '90px', align: 'end' }]}
         rows={collections.map(collection => ({
           id: collection.id,
-          cells: { title: <><strong>{collection.title}</strong>{collection.builtIn && <Badge>bundled</Badge>}{collection.description && <small>{collection.description}</small>}</>, count: collection.workoutIds.length },
-          actions: collection.builtIn ? undefined : <>
+          cells: { title: <><strong>{collection.title}</strong>{collection.description && <small>{collection.description}</small>}</>, count: collection.workoutIds.length },
+          actions: <>
             <button type="button" className={shared.quietButton} aria-label={`Edit collection ${collection.title}`} onClick={() => open(collection)}><Icon name="edit" size={14} />Edit</button>
-            <button type="button" className={shared.quietButton} aria-label={`Remove collection ${collection.title}`} onClick={() => setRemoving(collection)}><Icon name="trash" size={14} /></button>
+            {!collection.builtIn && <button type="button" className={shared.quietButton} aria-label={`Remove collection ${collection.title}`} onClick={() => setRemoving(collection)}><Icon name="trash" size={14} /></button>}
           </>,
         }))} />
     </section>

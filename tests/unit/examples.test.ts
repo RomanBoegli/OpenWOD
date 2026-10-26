@@ -24,7 +24,7 @@ describe('the workout registry (workouts/**)', () => {
   });
 
   it('groups folders with a collection.yaml into bundled collections', () => {
-    expect(bundledCollections.map(collection => collection.id)).toEqual(['benchmarks', 'coach-programming', 'hyrox']);
+    expect(bundledCollections.map(collection => collection.id)).toEqual(['benchmarks', 'coach-programming', 'default', 'hyrox']);
     const benchmarks = bundledCollections.find(collection => collection.id === 'benchmarks')!;
     expect(benchmarks.title).toBe('Benchmarks');
     expect(benchmarks.workoutIds).toHaveLength(19);

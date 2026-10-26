@@ -4,7 +4,7 @@ import { bundledWorkouts } from '../../../packages/domain/src/bundled';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import type { Occurrence, TaskItem } from '../../../packages/domain/src/compiler';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
-import { displayTime, warningLevel, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
+import { displayTime, warningLevel, washDrain, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
 import { useWorkout } from './use-workout';
 import type { WorkoutAudio } from './audio';
 import type { Preferences } from './preferences';
@@ -79,7 +79,7 @@ interface PlayerProps {
 }
 
 export function Player({ workout, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
-  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs } = preferences;
+  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors } = preferences;
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
   const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
@@ -193,14 +193,14 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
     const fraction = status === 'ready' || status === 'awaitingReady' || clockScope === 'elapsed' ? 1 : clocks.fraction;
     if (border.current) border.current.style.strokeDashoffset = String(-(1 - fraction));
     if (player.current) {
-      const drained = (status === 'running' || status === 'paused') && clockScope !== 'elapsed' ? (1 - fraction).toFixed(3) : '0';
+      const drained = (status === 'running' || status === 'paused') && clockScope !== 'elapsed' ? (!isRest && !isPrep ? washDrain(clocks.remainingMs, clocks.durationMs, { amberMs, redMs }) : 1 - fraction).toFixed(3) : '0';
       if (player.current.style.getPropertyValue('--drained') !== drained) player.current.style.setProperty('--drained', drained);
     }
     if (player.current) {
       const warning = clockScope === 'elapsed' || status === 'ready' || status === 'awaitingReady' ? 'normal' : warningLevel(clocks.remainingMs, clocks.durationMs, { amberMs, redMs });
       if (player.current.dataset.warning !== warning) player.current.dataset.warning = warning;
     }
-  }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp, amberMs, redMs]);
+  }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp, amberMs, redMs, isRest, isPrep]);
 
   useEffect(() => {
     if (following && view === 'context' && activeRow.current && context.current) {
@@ -260,7 +260,7 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
 
-    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600) } as CSSProperties}>
+    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
       <Perimeter progress={border} width={perimeterWidth} />
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span>{positionLabel}{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
       <div className={styles.clockBlock}>

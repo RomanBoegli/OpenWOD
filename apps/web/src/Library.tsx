@@ -4,7 +4,7 @@ import { equipmentOptions, matchesFilter, searchFields, sortSummaries, summarise
 import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
 import type { Preferences } from './preferences';
-import type { Collection } from './master-data';
+import { collectionOf, type Collection } from './master-data';
 import { agoText, lastDone, timesDone, type SessionRecord } from './session-log';
 import { DifficultyChip } from './DifficultyChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
@@ -98,7 +98,6 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
   const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
   const previewSummary = useMemo(() => preview && summariseWorkout(preview), [preview]);
   const conflict = preview && entries.find(entry => entry.workout.id === preview.id);
-  const collectionsOf = (id: string) => collections.filter(collection => collection.workoutIds.includes(id));
 
   async function importFile(file?: File) {
     if (!file) return;
@@ -160,7 +159,7 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
         const last = lastDone(sessions, workout.id);
         const count = timesDone(sessions, workout.id);
         return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt>
-          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} />{collectionsOf(workout.id).map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} /></span></div>
+          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} /><DifficultyChip difficulty={summary.difficulty} /></span>{collectionOf(collections, workout.id) && <span className={styles.cardCollection} title="Collection">{collectionOf(collections, workout.id)!.title}</span>}</div>
           <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
           {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
           <dl className={styles.facts}>

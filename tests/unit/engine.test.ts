@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
-import { WorkoutEngine, displayTime, warningLevel, type CommandType } from '../../packages/engine/src';
+import { WorkoutEngine, displayTime, warningLevel, washDrain, type CommandType } from '../../packages/engine/src';
 const fullBodyPartner = bundledWorkout('full-body-partner');
 const partnerCircuit = bundledWorkout('partner-circuit');
 
@@ -106,5 +106,13 @@ describe('deterministic workout engine', () => {
     expect(warningLevel(14_000, 120_000, { amberMs: 15_000, redMs: 5000 })).toBe('amber');
     expect(warningLevel(4000, 120_000, { amberMs: 15_000, redMs: 5000 })).toBe('red');
     expect(warningLevel(4000, 20_000, { amberMs: 15_000, redMs: 5000 })).toBe('amber'); // the quarter and tenth caps still apply
+    // The pulse climbs within each segment and is full just before its end: 60 s slot, markers at 10 s and 3 s.
+    expect(washDrain(60_000, 60_000)).toBe(0);
+    expect(washDrain(35_000, 60_000)).toBeCloseTo(25 / 45, 3);
+    expect(washDrain(11_000, 60_000)).toBe(1);
+    expect(washDrain(9999, 60_000)).toBeCloseTo(0, 2);
+    expect(washDrain(3100, 60_000)).toBe(1);
+    expect(washDrain(1500, 60_000)).toBeCloseTo(1.5 / 2.7, 3);
+    expect(washDrain(0, 60_000)).toBe(1);
   });
 });

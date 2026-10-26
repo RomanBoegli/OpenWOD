@@ -540,6 +540,20 @@ export function displayTime(ms: number, rounding: 'ceil' | 'floor' = 'ceil'): st
 export interface WarningMarks { amberMs: number; redMs: number }
 export const DEFAULT_WARNING_MARKS: WarningMarks = { amberMs: 10_000, redMs: 3000 };
 /** Amber and red marks, capped to a quarter and a tenth of the slot so short intervals do not spend their whole length in warning (UI-13). */
+/**
+ * How deep the background pulse is, 0..1: the slot is three segments (work until the first marker, first marker
+ * until the second, second marker until the end), and within each the intensity climbs from nothing to full shortly
+ * before the segment ends (at 90 % of it), so every colour arrives soft and leaves at full strength.
+ */
+export function washDrain(remainingMs: number, durationMs: number, marks: WarningMarks = DEFAULT_WARNING_MARKS): number {
+  if (!(durationMs > 0)) return 0;
+  const amber = Math.min(marks.amberMs, durationMs * .25);
+  const red = Math.min(marks.redMs, durationMs * .1);
+  const remaining = Math.max(0, Math.min(remainingMs, durationMs));
+  const [length, elapsed] = remaining > amber ? [durationMs - amber, durationMs - remaining] : remaining > red ? [amber - red, amber - remaining] : [red, red - remaining];
+  return length > 0 ? Math.min(1, elapsed / (length * .9)) : 1;
+}
+
 export function warningLevel(remainingMs: number, durationMs: number, marks: WarningMarks = DEFAULT_WARNING_MARKS): 'normal' | 'amber' | 'red' {
   if (remainingMs <= Math.min(marks.redMs, durationMs * .1)) return 'red';
   if (remainingMs <= Math.min(marks.amberMs, durationMs * .25)) return 'amber';

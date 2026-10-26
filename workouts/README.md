@@ -1,13 +1,13 @@
 # Workout registry
 
-This folder is the source of every workout that ships with OpenWOD. Each workout is one hand-written `<id>.wod.yaml` file in the file format described in `docs/formats.md`; the file name must equal the workout `id` inside it. A folder that contains a `collection.yaml` (`title`, `description`) is a bundled collection that the app lists as a group; a folder without one only groups files.
+This folder is the source of every workout that ships with OpenWOD. Each workout is one hand-written `<id>.wod.yaml` file in the file format described in `docs/formats.md`; the file name must equal the workout `id` inside it. A folder that contains a `collection.yaml` (`title`, `description`) is a bundled collection that the app lists as a group; every folder has one.
 
 | Folder | Collection | Contents |
 | --- | --- | --- |
 | `benchmarks/` | Benchmarks | The CrossFit girls and hero workouts, as published on CrossFit.com. |
 | `coach-programming/` | Coach programming | Standalone pieces curated from class programming. |
 | `hyrox/` | HYROX | Training variations of the race structure. |
-| `sessions/` | (none) | Example sessions that exercise every section format and both participant counts. |
+| `default/` | Default | Timed circuits, intervals and mixed sessions that show every format and both participant counts. |
 
 `npm run workouts:bundle` (`scripts/bundle-workouts.ts`) parses every file, checks ids, and refuses any movement `name` the catalogue in `packages/domain/src/movements.ts` does not know (by name or alias), then writes `packages/domain/src/generated/bundled.ts`, which the app, the server and the tests import. `npm run workouts:check` fails when that module is out of date; it is part of `npm run check`.
 

@@ -129,7 +129,7 @@ test.describe('player', () => {
   test('persists athlete names, sound and view preferences across a reload', async ({ page }) => {
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.getByRole('textbox', { name: 'Athlete A' }).fill('Mia');
-    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Sound' }).click();
+    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Training view' }).click();
     await page.getByRole('combobox', { name: 'Sound', exact: true }).selectOption('beeps');
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Context', exact: true }).click();
@@ -550,7 +550,7 @@ test.describe('movements and search', () => {
     await lane.press('Enter');
     await expect(lane).toHaveValue('Thrusters');
     await expect(page.getByRole('main')).toContainText('Thrusters · Barbell');
-    await expect(page.getByLabel('Equipment', { exact: true })).toHaveValue('Barbell');
+    await expect(page.getByRole('group', { name: 'Equipment' })).toContainText('Barbell');
     const partner = page.getByRole('combobox', { name: 'Section 1 slot 1 athlete B', exact: true });
     await partner.pressSequentially('Pogo hops');
     await partner.press('Escape');
@@ -590,6 +590,22 @@ test.describe('movements and search', () => {
     const list = page.getByRole('list', { name: 'Movements' });
     await expect(list.getByRole('listitem').first()).toContainText('Cleans');
     await expect(list.getByRole('listitem').nth(1)).toContainText('Hang power cleans');
+    await page.getByRole('button', { name: 'Edit Hang power cleans' }).click();
+    const form = page.getByRole('dialog', { name: 'Edit Hang power cleans' });
+    const equipment = form.getByRole('combobox', { name: 'Equipment' });
+    await equipment.pressSequentially('row');
+    await expect(form.getByRole('listbox', { name: 'Equipment suggestions' }).getByRole('option').first()).toHaveText('Rowing machine');
+    await equipment.press('Enter');
+    await equipment.pressSequentially('Sandbox');
+    await expect(form.getByRole('option', { name: 'Add “Sandbox”' })).toBeVisible();
+    await equipment.press('Enter');
+    await expect(form.getByRole('group', { name: 'Equipment' })).toContainText('Barbell');
+    await expect(form.getByRole('group', { name: 'Equipment' })).toContainText('Rowing machine');
+    await expect(form.getByRole('group', { name: 'Equipment' })).toContainText('Sandbox');
+    await form.getByRole('button', { name: 'Remove Barbell' }).click();
+    await form.getByRole('button', { name: 'Save movement' }).click();
+    await expect(list.getByRole('listitem').nth(1)).toContainText('Sandbox');
+    await expect(list.getByRole('listitem').nth(1)).not.toContainText('Barbell');
     await page.getByRole('button', { name: 'Remove Hang power cleans' }).click();
     await expect(page.getByRole('dialog', { name: 'Remove Hang power cleans?' })).toContainText('bundled record');
     await page.getByRole('dialog', { name: 'Remove Hang power cleans?' }).getByRole('button', { name: 'Remove' }).click();
@@ -622,7 +638,8 @@ test.describe('workout view settings', () => {
     await page.goto('/#/settings/player'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
     await page.getByRole('slider', { name: /Timer ring width/ }).fill('10');
     await page.getByRole('slider', { name: /Pulse intensity/ }).fill('60');
-    await page.getByRole('slider', { name: /Turn amber at/ }).fill('20');
+    await page.getByRole('slider', { name: 'First milestone marker' }).fill('20');
+    await page.getByLabel('First milestone colour').fill('#ff00ff');
     await page.getByRole('radio', { name: 'Pounds' }).check();
     const preview = page.locator('[data-view]');
     await expect(preview).toHaveAttribute('data-view', 'focus');
@@ -637,6 +654,7 @@ test.describe('workout view settings', () => {
     await expect(page.locator('svg[data-perimeter] path').first()).toHaveCSS('stroke-width', '10px');
     const player = page.locator('[data-wash]');
     expect(await player.evaluate(element => element.style.getPropertyValue('--wash-gain'))).toBe('0.6');
+    expect(await player.evaluate(element => element.style.getPropertyValue('--phase-amber'))).toBe('#ff00ff');
     await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('95 (65) lb');
     // The pulse deepens as a timed slot drains: half-way through the first 40 s slot of the partner circuit.
     await page.goto(PLAYER); await ready(page);
