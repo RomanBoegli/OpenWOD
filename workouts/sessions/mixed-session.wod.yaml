@@ -99,6 +99,7 @@ workout:
             type: task
             assignments:
               A:
+                notes: 24 in (20 in) box
                 name: Box step-ups
                 reps: 12
           - id: mixed-sit-ups

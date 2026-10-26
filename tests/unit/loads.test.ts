@@ -13,6 +13,8 @@ describe('loads with a women’s amount and a display unit', () => {
     expect(convertLoad(25, 'kg', 'lb')).toBe(55);
     expect(convertLoad(75, 'lb', 'kg')).toBe(34);
     expect(convertLoad(4, 'kg', 'lb')).toBe(9);
+    expect(convertLoad(29, 'kg', 'lb')).toBe(65);
+    expect(convertLoad(30, 'kg', 'lb')).toBe(65);
     expect(convertLoad(10, 'lb', 'kg')).toBe(4.5);
     expect(convertLoad(20, 'kg', 'kg')).toBe(20);
   });
@@ -29,7 +31,7 @@ describe('loads with a women’s amount and a display unit', () => {
 
   it('writes every level on one line with the unit once', () => {
     expect(levelsText(randy)).toBe('L 15 (12) · M 25 (19) · H 34 (25) kg');
-    expect(levelsText(randy, { unit: 'lb', sex: 'women' })).toBe('L 26 · M 42 · H 55 lb');
+    expect(levelsText(randy, { unit: 'lb', sex: 'women' })).toBe('L 25 · M 40 · H 55 lb');
     expect(levelsText({ light: { value: 65, unit: 'percent' }, heavy: { value: 85, unit: 'percent' } })).toBe('L 65 · H 85 % 1RM');
     expect(prescriptionText({ name: 'Power snatches', reps: 75, load: randy })).toBe('75 reps · L 15 (12) · M 25 (19) · H 34 (25) kg');
     expect(prescriptionText({ name: 'Run', notes: 'Easy' })).toBe('Easy');

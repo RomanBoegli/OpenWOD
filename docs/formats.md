@@ -39,7 +39,7 @@ workout:
 | Key | Meaning |
 | --- | --- |
 | `format` | `openwod.workout`. Nothing else is accepted. |
-| `formatVersion` | `3`. Version 2 (timed circuits with human durations) and version 1 (JSON with `*Ms` keys) still import and migrate. Newer versions are refused with a clear message. |
+| `formatVersion` | `3`. Versions 1 and 2 only existed before the first release and are refused, as are newer versions, each with a clear message. |
 | `workout` | The workout model, version 2 (`schemaVersion: 2`). |
 
 Durations are human readable: `40s`, `2m`, `1m30s`, `1:30`, `1:02:03`, or a bare number of seconds. Duration keys are `prep`, `duration`, `betweenChildrenRest`, `trailingRest`, `betweenIterationsRest`, `cap`, `interval`, `turn` and `time`. The app stores integer milliseconds internally and writes the shortest readable form.
@@ -92,4 +92,4 @@ At most two repeat levels nest. Rests are only ever added where they are written
 
 ## Examples and schemas
 
-`examples/workouts/` holds every bundled workout as a file; `schemas/workout.v2.schema.json` and `schemas/workout-file.v3.schema.json` validate the model and the parsed file. Earlier schema versions stay in the folder for reference.
+`workouts/` holds every bundled workout as a file, one folder per collection, and is the best set of examples; `schemas/workout.v2.schema.json` and `schemas/workout-file.v3.schema.json` validate the model and the parsed file. `schemas/workout.v1.schema.json` stays for reference.

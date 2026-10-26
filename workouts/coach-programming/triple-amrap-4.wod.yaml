@@ -44,12 +44,15 @@ workout:
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg
           - id: triple-amrap-1-muscle-ups
             type: task
@@ -62,8 +65,8 @@ workout:
             type: task
             assignments:
               A:
-                notes: Max lengths in the time left; count each as a rep
-                name: Farmers carry shuttles
+                notes: Same dumbbells, one per hand; max lengths in the time left, count each as a rep
+                name: Dumbbell farmers carry shuttles
                 shortName: Carry shuttles
                 distance:
                   value: 7.5
@@ -71,12 +74,15 @@ workout:
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg
     - id: triple-amrap-2
       title: AMRAP 4, part 2
@@ -106,12 +112,15 @@ workout:
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg
           - id: triple-amrap-2-muscle-ups
             type: task
@@ -124,8 +133,8 @@ workout:
             type: task
             assignments:
               A:
-                notes: Max lengths in the time left; count each as a rep
-                name: Farmers carry shuttles
+                notes: Same dumbbells, one per hand; max lengths in the time left, count each as a rep
+                name: Dumbbell farmers carry shuttles
                 shortName: Carry shuttles
                 distance:
                   value: 7.5
@@ -133,12 +142,15 @@ workout:
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg
     - id: triple-amrap-3
       title: AMRAP 4, part 3
@@ -168,12 +180,15 @@ workout:
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg
           - id: triple-amrap-3-muscle-ups
             type: task
@@ -186,8 +201,8 @@ workout:
             type: task
             assignments:
               A:
-                notes: Max lengths in the time left; count each as a rep
-                name: Farmers carry shuttles
+                notes: Same dumbbells, one per hand; max lengths in the time left, count each as a rep
+                name: Dumbbell farmers carry shuttles
                 shortName: Carry shuttles
                 distance:
                   value: 7.5
@@ -195,10 +210,13 @@ workout:
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg

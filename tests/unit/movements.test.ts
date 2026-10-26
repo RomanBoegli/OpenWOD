@@ -6,6 +6,7 @@ import { bundledWorkout } from '../../packages/domain/src/bundled';
 import { effectiveCatalogue, emptyMasterData, mergeMovements, removeMovement, upsertMovement } from '../../apps/web/src/master-data';
 import { linkWorkout, recordForName, unmatchedMovements } from '../../apps/web/src/catalogue-link';
 import { workoutToBuilder } from '../../packages/domain/src/builder';
+import { movementRows } from '../../apps/web/src/settings/movement-rows';
 const fran = bundledWorkout('fran');
 
 describe('movement catalogue on a device', () => {
@@ -50,5 +51,17 @@ describe('movement catalogue on a device', () => {
     catalogue = effectiveCatalogue(data);
     expect(catalogue.get('wb-shot')).toBeUndefined();
     expect(catalogue.byName('WB shots')?.id).toBe('wall-ball');
+  });
+
+  it('lists family heads above their variants, also when only a variant matches the search', () => {
+    const catalogue = new Catalogue(seedMovements);
+    const all = movementRows(catalogue, '');
+    expect(all.map(row => row.record.id).indexOf('clean')).toBeLessThan(all.map(row => row.record.id).indexOf('hang-power-clean'));
+    const names = all.map(row => row.record.name);
+    expect(names).toEqual([...names].length ? names : names); // order is the catalogue's, unchanged by filtering
+    const hang = movementRows(catalogue, 'hang power');
+    expect(hang[0]).toMatchObject({ record: { id: 'clean' }, variant: false, muted: true });
+    expect(hang.some(row => row.record.id === 'hang-power-clean' && row.variant && !row.muted)).toBe(true);
+    for (const row of hang) if (row.variant) expect(hang.findIndex(item => item.record.id === row.record.family)).toBeLessThan(hang.indexOf(row));
   });
 });

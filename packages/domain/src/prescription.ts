@@ -13,11 +13,15 @@ export interface LoadOptions {
 export const LEVEL_LETTERS: Record<LoadLevel, string> = { light: 'L', medium: 'M', heavy: 'H' };
 
 const LB_PER_KG = 2.20462;
-/** Converts between kg and lb and rounds to a plate-friendly number: halves under 10, whole numbers above (34 kg → 75 lb, 43 kg → 95 lb). */
+/**
+ * Converts between kg and lb and rounds to a plate-friendly number: kilograms to halves under 10 and whole numbers
+ * above, pounds to whole numbers under 20 and fives above (34 kg → 75 lb, 43 kg → 95 lb, 29 kg → 65 lb).
+ */
 export function convertLoad(amount: number, from: LoadUnit, to: LoadUnit): number {
   if (from === to) return amount;
-  const converted = from === 'kg' ? amount * LB_PER_KG : amount / LB_PER_KG;
-  return converted < 10 ? Math.round(converted * 2) / 2 : Math.round(converted);
+  if (to === 'lb') { const lb = amount * LB_PER_KG; return lb < 20 ? Math.round(lb) : Math.round(lb / 5) * 5; }
+  const kg = amount / LB_PER_KG;
+  return kg < 10 ? Math.round(kg * 2) / 2 : Math.round(kg);
 }
 
 /** The unit a load is shown in: the preference for absolute loads, `percent` untouched. */

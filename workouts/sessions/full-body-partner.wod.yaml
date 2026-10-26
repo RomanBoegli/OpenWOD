@@ -5,10 +5,10 @@ workout:
   id: full-body-partner
   revision: 1
   title: Full body partner workout
-  description: Bodyweight meets dumbbells. Switch task columns each round, then take two minutes to recover before the next block.
+  description: "Bodyweight meets dumbbells. Every loaded station in the B column uses dumbbells: one pair for the squats, hinges, cleans and carries and a lighter pair for the presses, curls, extensions and chops. Switch task columns each round, then take two minutes to recover before the next block."
   attribution:
     author: OpenWOD
-    notes: "Encoded from docs/source/example-wod.md with its timing made explicit (section 6.5 of AGENT.md)."
+    notes: Encoded from docs/source/example-wod.md with its timing made explicit (section 6.5 of AGENT.md).
   equipment:
     - Dumbbells
     - Exercise mat
@@ -88,7 +88,21 @@ workout:
                     A:
                       name: Air squats
                     B:
+                      notes: Per dumbbell
                       name: Dumbbell thrusters
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-1-slot-2
                   type: timed
                   duration: 40s
@@ -96,7 +110,21 @@ workout:
                     A:
                       name: Jump squats
                     B:
+                      notes: One dumbbell held at the chest
                       name: Goblet squats
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-1-slot-3
                   type: timed
                   duration: 40s
@@ -104,7 +132,21 @@ workout:
                     A:
                       name: Mountain climbers
                     B:
+                      notes: With dumbbells, one per hand
                       name: Romanian deadlifts
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-1-slot-4
                   type: timed
                   duration: 40s
@@ -142,7 +184,21 @@ workout:
                     A:
                       name: Push-ups
                     B:
+                      notes: With dumbbells, one per hand
                       name: Bent-over rows
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-2-slot-2
                   type: timed
                   duration: 40s
@@ -150,7 +206,21 @@ workout:
                     A:
                       name: Plank shoulder taps
                     B:
+                      notes: With dumbbells, one per hand
                       name: Shoulder press
+                      load:
+                        light:
+                          value: 5
+                          women: 2.5
+                          unit: kg
+                        medium:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 10
+                          women: 7.5
+                          unit: kg
                 - id: block-2-slot-3
                   type: timed
                   duration: 40s
@@ -158,7 +228,21 @@ workout:
                     A:
                       name: Triceps dips
                     B:
+                      notes: Per dumbbell
                       name: Biceps curls
+                      load:
+                        light:
+                          value: 5
+                          women: 2.5
+                          unit: kg
+                        medium:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 10
+                          women: 7.5
+                          unit: kg
                 - id: block-2-slot-4
                   type: timed
                   duration: 40s
@@ -166,7 +250,21 @@ workout:
                     A:
                       name: Burpees
                     B:
+                      notes: Per dumbbell
                       name: Overhead triceps extensions
+                      load:
+                        light:
+                          value: 5
+                          women: 2.5
+                          unit: kg
+                        medium:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 10
+                          women: 7.5
+                          unit: kg
           - id: block-2-rest
             type: rest
             duration: 2m
@@ -204,7 +302,21 @@ workout:
                     A:
                       name: Bicycle crunches
                     B:
+                      notes: Per dumbbell
                       name: Dumbbell deadlifts
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-3-slot-3
                   type: timed
                   duration: 40s
@@ -212,7 +324,21 @@ workout:
                     A:
                       name: Plank
                     B:
+                      notes: One dumbbell per hand, march on the spot
                       name: Farmer march
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-3-slot-4
                   type: timed
                   duration: 40s
@@ -220,7 +346,21 @@ workout:
                     A:
                       name: Mountain climbers
                     B:
+                      notes: One dumbbell in both hands; switch sides halfway
                       name: Dumbbell woodchoppers
+                      load:
+                        light:
+                          value: 5
+                          women: 2.5
+                          unit: kg
+                        medium:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 10
+                          women: 7.5
+                          unit: kg
           - id: block-3-rest
             type: rest
             duration: 2m
@@ -250,7 +390,21 @@ workout:
                     A:
                       name: High knees
                     B:
+                      notes: Per dumbbell
                       name: Dumbbell hang cleans
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-4-slot-2
                   type: timed
                   duration: 40s
@@ -258,7 +412,21 @@ workout:
                     A:
                       name: Skater jumps
                     B:
+                      notes: Per dumbbell
                       name: Dumbbell thrusters
+                      load:
+                        light:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7.5
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
                 - id: block-4-slot-3
                   type: timed
                   duration: 40s
@@ -274,7 +442,21 @@ workout:
                     A:
                       name: Jump squats
                     B:
+                      notes: Per dumbbell
                       name: Biceps curls
+                      load:
+                        light:
+                          value: 5
+                          women: 2.5
+                          unit: kg
+                        medium:
+                          value: 7.5
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 10
+                          women: 7.5
+                          unit: kg
           - id: block-4-rest
             type: rest
             duration: 2m

@@ -5,10 +5,11 @@ workout:
   id: run-sled-run
   revision: 1
   title: Run, sled, run
-  description: "One kilometre run, fifty metres of sled push, one kilometre run. Tap Done when a distance is covered; the clock counts up and records each split. No cap: finish what you start."
+  description: "One kilometre run, fifty metres of sled push (the race distance, 4 × 12.5 m), one kilometre run. Heavy is the open-division race load, 152 kg for men and 102 kg for women including the sled. Tap Done when a distance is covered; the clock counts up and records each split. No cap: finish what you start."
   attribution:
     author: OpenWOD
-    notes: A HYROX-style run and station sequence. The sled load levels are training suggestions, not race prescriptions.
+    sourceUrl: https://maintain.hyrox.com/rulebooks/HYROX_RulebookDoubles_EN.pdf
+    notes: A HYROX-style run and station sequence. Heavy is the open-division sled push standard from the Season 26/27 rulebook (total incl. sled); medium and light are training suggestions.
   equipment:
     - Running route
     - Sled
@@ -35,19 +36,23 @@ workout:
             type: task
             assignments:
               A:
+                notes: Total incl. sled; heavy is the open standard
                 name: Sled push
                 distance:
                   value: 50
                   unit: m
                 load:
                   light:
-                    value: 50
+                    value: 70
+                    women: 50
                     unit: kg
                   medium:
-                    value: 75
+                    value: 105
+                    women: 70
                     unit: kg
                   heavy:
-                    value: 100
+                    value: 152
+                    women: 102
                     unit: kg
           - id: rsr-run-2
             type: task

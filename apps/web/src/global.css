@@ -52,9 +52,10 @@ button:active:not(:disabled), a[class]:active { transform: scale(.97); }
 @keyframes pop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 /* Press ripple (feel.ts): a wave of the element's own text colour spreading from the pointer. */
-@keyframes rippleWave { from { transform: scale(0); opacity: .28; } to { transform: scale(1); opacity: 0; } }
+@keyframes rippleWave { from { transform: scale(0); opacity: var(--ripple-opacity, .12); } to { transform: scale(1); opacity: 0; } }
 [data-rippling] { overflow: hidden; }
-.rippleWave { position: absolute; z-index: 0; border-radius: 50%; background: currentColor; pointer-events: none; transform: scale(0); animation: rippleWave 520ms var(--ease) forwards; }
+[data-ripple] { --ripple-opacity: .07; }
+.rippleWave { position: absolute; z-index: 0; border-radius: 50%; background: currentColor; pointer-events: none; transform: scale(0); animation: rippleWave 400ms var(--ease) forwards; }
 dialog[open] { animation: pop var(--t-slow) var(--ease); }
 dialog[open]::backdrop { animation: fade var(--t-slow) var(--ease); }
 a { color: inherit; }

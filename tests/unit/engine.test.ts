@@ -103,5 +103,8 @@ describe('deterministic workout engine', () => {
     expect(warningLevel(2501, 10_000)).toBe('normal');
     expect(warningLevel(2500, 10_000)).toBe('amber');
     expect(warningLevel(1000, 10_000)).toBe('red');
+    expect(warningLevel(14_000, 120_000, { amberMs: 15_000, redMs: 5000 })).toBe('amber');
+    expect(warningLevel(4000, 120_000, { amberMs: 15_000, redMs: 5000 })).toBe('red');
+    expect(warningLevel(4000, 20_000, { amberMs: 15_000, redMs: 5000 })).toBe('amber'); // the quarter and tenth caps still apply
   });
 });

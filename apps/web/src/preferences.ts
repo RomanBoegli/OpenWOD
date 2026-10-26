@@ -18,12 +18,19 @@ export interface Preferences {
   loadsFor: { A: Sex; B: Sex };
   /** Absolute loads are shown in this unit, converted when a workout is written in the other. */
   loadUnit: LoadUnit;
+  /** Stroke width of the timer ring around the player, in pixels. */
+  perimeterWidth: number;
+  /** How strongly the background pulse deepens as a slot drains, in percent. */
+  washGain: number;
+  /** The remaining time at which the colour turns amber, then red (both still capped to the slot length). */
+  amberMs: number;
+  redMs: number;
   /** Equipment available at home; the library can hide anything that needs more. */
   myEquipment: string[];
   onlyMyEquipment: boolean;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', myEquipment: [], onlyMyEquipment: false };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, myEquipment: [], onlyMyEquipment: false };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -50,6 +57,10 @@ export function loadPreferences(): Preferences {
       cuePack: text(stored.cuePack, '', 40),
       loadsFor: { A: oneOf(stored.loadsFor?.A, ['men', 'women'], 'men'), B: oneOf(stored.loadsFor?.B, ['men', 'women'], 'men') },
       loadUnit: oneOf(stored.loadUnit, ['kg', 'lb'], 'kg'),
+      perimeterWidth: Math.round(clamp(stored.perimeterWidth, 3, 12, defaultPreferences.perimeterWidth)),
+      washGain: Math.round(clamp(stored.washGain, 10, 60, defaultPreferences.washGain)),
+      amberMs: Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs)),
+      redMs: Math.min(Math.round(clamp(stored.redMs, 1000, 10_000, defaultPreferences.redMs)), Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs))),
       myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,
     };

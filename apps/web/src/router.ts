@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const SETTINGS_SECTIONS = ['general', 'sound', 'equipment', 'movements', 'collections'] as const;
+export const SETTINGS_SECTIONS = ['general', 'sound', 'player', 'equipment', 'movements', 'collections'] as const;
 export type SettingsSection = typeof SETTINGS_SECTIONS[number];
 export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string };
 

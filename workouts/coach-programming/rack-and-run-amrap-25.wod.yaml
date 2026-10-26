@@ -50,12 +50,15 @@ workout:
                 load:
                   light:
                     value: 25
+                    women: 20
                     unit: kg
                   medium:
                     value: 40
+                    women: 30
                     unit: kg
                   heavy:
                     value: 55
+                    women: 40
                     unit: kg
           - id: rack-run-cleans
             type: task
@@ -66,12 +69,15 @@ workout:
                 load:
                   light:
                     value: 25
+                    women: 20
                     unit: kg
                   medium:
                     value: 40
+                    women: 30
                     unit: kg
                   heavy:
                     value: 55
+                    women: 40
                     unit: kg
           - id: rack-run-s2oh
             type: task
@@ -83,12 +89,15 @@ workout:
                 load:
                   light:
                     value: 25
+                    women: 20
                     unit: kg
                   medium:
                     value: 40
+                    women: 30
                     unit: kg
                   heavy:
                     value: 55
+                    women: 40
                     unit: kg
           - id: rack-run-burpees-2
             type: task

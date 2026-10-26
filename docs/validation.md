@@ -100,3 +100,17 @@ Added: the exercise catalogue (190 bundled records in families, device-local rec
 | Production smoke test | Firefox and WebKit against the running image: the real one-second interval through the new import-to-editor flow, the five packs listed with 190 names each, a name clip served and a cue clip decoded in the browser, and the five voices in the Voice select. |
 
 Not run in this round: the real-hour and physical-device checks listed above.
+
+## Registry, polish and master-data wave (2c), 26 October 2026
+
+Added: the workout registry (`workouts/<collection>/<id>.wod.yaml`, bundled at build time with a drift check that also refuses unknown movement names), a CrossFit/HYROX-aware content pass over 28 files (women's loads, HYROX open-division station standards, ball and box standards, equipment; recorded in `workouts/README.md`), the `women` amount on load values with the bracket display for solo workouts and sex-aware lanes for pairs, kg/lb display conversion snapped to plate sizes, loads removed from movement records, the "movement" wording, the complete removal of the working title (storage fallbacks, test hook, the old file discriminator and pre-release file versions, attribution strings) with a guard in `npm run check`, one CRUD flow for the three master-data pages with family heads kept above variants under a search, the Workout view settings section (unit, default view, ring width, pulse intensity, amber/red marks), bordered secondary and danger buttons, a thicker configurable timer ring, a softer ripple, no source label on cards, and a structured editor row with a men/women load table.
+
+| Check | Result |
+| --- | --- |
+| Unit tests | 126 passed, including the registry (every file bundled once under its own id, every movement name resolves), load formatting and conversion, the compiler's rejection of a women's amount on a percentage, parent-first movement rows, and the configurable colour marks. |
+| Generated-file and legacy checks | Schema and workout bundle up to date; no occurrence of the working title outside AGENT.md's history. |
+| Accelerated browser integration | Firefox and WebKit: 29 scenarios each (58): the import flow, pre-release files refused, Fran showing `20 (15) · 30 (20) · 43 (29) kg`, equipment rename and merge through the list, a collection created, edited and removed through the dialogs, a bundled movement removed behind its confirmation, the workout view settings reaching the ring width, the wash and the pound display (`95 (65) lb`). Chromium runs in CI. |
+| Production build and test-hook exclusion | Passed. |
+| Visual pass | WebKit screenshots of the Workout view, Movements, Equipment and Collections pages, the editor, the library, the overview and the for-time and you-go-I-go players in both themes at 1024 and 390 px inspected; the editor's target select was truncated in the lane cell and now stacks under the load group below 1400 px, and narrow list rows caption their cells. |
+
+Not run in this round: the Docker build (the image's cue layer gains one clip for the new dumbbell shuttle record on its next build), the real-hour and physical-device checks listed above.

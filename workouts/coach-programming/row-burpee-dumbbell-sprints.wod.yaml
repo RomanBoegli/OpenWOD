@@ -40,12 +40,12 @@ workout:
             type: task
             assignments:
               A:
-                notes: "Twist: box jump over, then burpee box jump over, one side"
+                notes: "Twist: box jump over, then burpee box jump over, one side; 24 in (20 in) box"
                 name: Burpee box jump overs
                 shortName: Burpee box overs
                 reps: 8
               B:
-                notes: "Twist: box jump over, then burpee box jump over, one side"
+                notes: "Twist: box jump over, then burpee box jump over, one side; 24 in (20 in) box"
                 name: Burpee box jump overs
                 shortName: Burpee box overs
                 reps: 8
@@ -60,12 +60,15 @@ workout:
                 load:
                   light:
                     value: 15
+                    women: 10
                     unit: kg
                   medium:
                     value: 25
+                    women: 17.5
                     unit: kg
                   heavy:
                     value: 35
+                    women: 22.5
                     unit: kg
               B:
                 notes: "Heavy: it should be challenging"
@@ -75,10 +78,13 @@ workout:
                 load:
                   light:
                     value: 15
+                    women: 10
                     unit: kg
                   medium:
                     value: 25
+                    women: 17.5
                     unit: kg
                   heavy:
                     value: 35
+                    women: 22.5
                     unit: kg

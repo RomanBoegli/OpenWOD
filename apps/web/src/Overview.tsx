@@ -53,7 +53,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
       </div>
       <div className={styles.actions}>
         <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
-        {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name="settings" size={16} />{source === 'saved' ? 'Edit' : 'Duplicate and edit'}</a>}
+        {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name={source === 'saved' ? 'edit' : 'copy'} size={16} />{source === 'saved' ? 'Edit' : 'Duplicate and edit'}</a>}
         <button className={shared.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export</button>
         {source === 'saved' && <button className={shared.quietButton} onClick={() => setRemoving(true)}><Icon name="trash" size={17} />Remove</button>}
       </div>

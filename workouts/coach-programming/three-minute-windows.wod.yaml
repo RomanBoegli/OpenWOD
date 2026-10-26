@@ -35,18 +35,21 @@ workout:
                 load:
                   light:
                     value: 40
+                    women: 30
                     unit: kg
                   medium:
                     value: 65
+                    women: 42.5
                     unit: kg
                   heavy:
                     value: 85
+                    women: 60
                     unit: kg
           - id: window-1-box-jump-overs
             type: task
             assignments:
               A:
-                notes: Step down
+                notes: Step down; 24 in (20 in) box
                 name: Box jump overs
                 reps: 12
           - id: window-1-hs-walk
@@ -82,12 +85,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 45
+                    women: 30
                     unit: kg
                   heavy:
                     value: 65
+                    women: 45
                     unit: kg
           - id: window-2-s2oh
             type: task
@@ -99,12 +105,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 45
+                    women: 30
                     unit: kg
                   heavy:
                     value: 65
+                    women: 45
                     unit: kg
           - id: window-2-hs-walk
             type: task

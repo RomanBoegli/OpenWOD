@@ -5,7 +5,7 @@ workout:
   id: bar-lunge-wall-ball-emom-20
   revision: 1
   title: Bar, lunge & wall ball EMOM 20
-  description: "Five stations, four rounds: thirty seconds of toes-to-bar, sixteen metres of single-dumbbell overhead lunges, thirty seconds of chest-to-bar pull-ups, twenty-four wall balls, then a minute of easy skiing or biking. The recovery minute is part of the plan; use it."
+  description: "Five stations, four rounds: thirty seconds of toes-to-bar, sixteen metres of single-dumbbell overhead lunges, thirty seconds of chest-to-bar pull-ups, twenty-four wall balls to the standard 10 ft (9 ft) target, then a minute of easy skiing or biking. The recovery minute is part of the plan; use it."
   attribution:
     author: Coach programming, shared in a members chat
     notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
@@ -13,6 +13,7 @@ workout:
     - Pull-up bar
     - Dumbbells
     - Medicine ball
+    - Wall
     - SkiErg
   participants: 1
   prep: 10s
@@ -47,12 +48,15 @@ workout:
                 load:
                   light:
                     value: 15
+                    women: 10
                     unit: kg
                   medium:
                     value: 22.5
+                    women: 15
                     unit: kg
                   heavy:
                     value: 30
+                    women: 20
                     unit: kg
           - id: blwb-c2b
             type: task
@@ -66,17 +70,21 @@ workout:
             type: task
             assignments:
               A:
+                notes: 10 ft (9 ft) target
                 name: Wall balls
                 reps: 24
                 load:
                   light:
                     value: 4
+                    women: 3
                     unit: kg
                   medium:
                     value: 6
+                    women: 4
                     unit: kg
                   heavy:
                     value: 9
+                    women: 6
                     unit: kg
           - id: blwb-recovery
             type: task

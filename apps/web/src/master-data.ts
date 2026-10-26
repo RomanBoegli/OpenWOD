@@ -168,6 +168,11 @@ export function mergeMovements(data: MasterData, ids: string[], targetId: string
   return next;
 }
 
+/** Drops every change to the bundled records (overrides, removals and merge aliases); your own records stay. */
+export function restoreBundledMovements(data: MasterData): MasterData {
+  return { ...data, movements: data.movements.filter(record => !seedIds.has(record.id)), hiddenMovements: [], movementAliases: {} };
+}
+
 export function removeMovementAlias(data: MasterData, spelling: string): MasterData {
   const movementAliases = { ...data.movementAliases };
   delete movementAliases[spelling];
@@ -176,9 +181,11 @@ export function removeMovementAlias(data: MasterData, spelling: string): MasterD
 
 // ---- Collections ---------------------------------------------------------------------------------------------
 
+/** Replaces a collection in place (so editing never reorders the list) or appends a new one. */
 export function upsertCollection(data: MasterData, collection: Collection): MasterData {
-  const rest = data.collections.filter(item => item.id !== collection.id);
-  return { ...data, collections: [...rest, collection] };
+  const index = data.collections.findIndex(item => item.id === collection.id);
+  const collections = index === -1 ? [...data.collections, collection] : data.collections.map((item, at) => at === index ? collection : item);
+  return { ...data, collections };
 }
 
 export function removeCollection(data: MasterData, id: string): MasterData {

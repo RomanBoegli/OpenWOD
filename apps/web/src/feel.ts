@@ -16,7 +16,7 @@ export function installFeel(): () => void {
     const target = origin.closest<HTMLElement>(RIPPLE_TARGETS);
     if (!target) return;
     const box = target.getBoundingClientRect();
-    const size = Math.hypot(box.width, box.height) * 2;
+    const size = Math.hypot(box.width, box.height) * 1.5;
     const wave = document.createElement('span');
     wave.className = 'rippleWave';
     wave.style.width = wave.style.height = `${size}px`;

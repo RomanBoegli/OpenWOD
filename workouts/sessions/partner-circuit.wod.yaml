@@ -37,12 +37,38 @@ workout:
                   name: Row
                 B:
                   name: Kettlebell swings
+                  load:
+                    light:
+                      value: 12
+                      women: 8
+                      unit: kg
+                    medium:
+                      value: 16
+                      women: 12
+                      unit: kg
+                    heavy:
+                      value: 24
+                      women: 16
+                      unit: kg
             - id: slot-2
               type: timed
               duration: 40s
               assignments:
                 A:
                   name: Kettlebell swings
+                  load:
+                    light:
+                      value: 12
+                      women: 8
+                      unit: kg
+                    medium:
+                      value: 16
+                      women: 12
+                      unit: kg
+                    heavy:
+                      value: 24
+                      women: 16
+                      unit: kg
                 B:
                   name: Row
             - id: slot-3

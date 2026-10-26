@@ -9,7 +9,7 @@ workout:
   attribution:
     author: CrossFit
     sourceUrl: https://www.crossfit.com/benchmark/angie
-    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+    notes: Follows the published benchmark. Bodyweight only; there are no loads to scale.
   equipment:
     - Pull-up bar
   participants: 1

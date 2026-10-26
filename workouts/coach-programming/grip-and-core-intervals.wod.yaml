@@ -10,7 +10,7 @@ workout:
     author: Coach programming, shared in a members chat
     notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
-    - Plates
+    - Weight plate
     - Kettlebell
   participants: 1
   prep: 10s
@@ -34,13 +34,39 @@ workout:
               duration: 45s
               assignments:
                 A:
-                  notes: Or a dead hang from the bar
+                  notes: Per hand, smooth side out; or a dead hang from the bar
                   name: Plate pinch hold
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
             - id: grip-carry
               type: timed
               duration: 45s
               assignments:
                 A:
-                  notes: Switch hands halfway
+                  notes: One bell; switch hands halfway
                   name: Kettlebell suitcase carry
                   shortName: Suitcase carry
+                  load:
+                    light:
+                      value: 16
+                      women: 12
+                      unit: kg
+                    medium:
+                      value: 24
+                      women: 16
+                      unit: kg
+                    heavy:
+                      value: 32
+                      women: 24
+                      unit: kg

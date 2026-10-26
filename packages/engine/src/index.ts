@@ -537,8 +537,11 @@ export function displayTime(ms: number, rounding: 'ceil' | 'floor' = 'ceil'): st
   return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 }
 
-export function warningLevel(remainingMs: number, durationMs: number): 'normal' | 'amber' | 'red' {
-  if (remainingMs <= Math.min(3000, durationMs * .1)) return 'red';
-  if (remainingMs <= Math.min(10_000, durationMs * .25)) return 'amber';
+export interface WarningMarks { amberMs: number; redMs: number }
+export const DEFAULT_WARNING_MARKS: WarningMarks = { amberMs: 10_000, redMs: 3000 };
+/** Amber and red marks, capped to a quarter and a tenth of the slot so short intervals do not spend their whole length in warning (UI-13). */
+export function warningLevel(remainingMs: number, durationMs: number, marks: WarningMarks = DEFAULT_WARNING_MARKS): 'normal' | 'amber' | 'red' {
+  if (remainingMs <= Math.min(marks.redMs, durationMs * .1)) return 'red';
+  if (remainingMs <= Math.min(marks.amberMs, durationMs * .25)) return 'amber';
   return 'normal';
 }

@@ -5,18 +5,20 @@ workout:
   id: hyrox-doubles-circuit
   revision: 1
   title: HYROX doubles circuit
-  description: "Run together, then split the stations the way a doubles team does: 45 seconds on, 15 to swap, and the columns trade after each round so both of you touch every station."
+  description: "Run together, then split the stations the way a doubles team does: 45 seconds on, 15 to swap, and the columns trade after each round so both of you touch every station. Heavy is the doubles open standard: sled push 152 kg (women 102 kg, incl. sled), sled pull 103 kg (78 kg), farmers carry 2 × 24 kg (2 × 16 kg), sandbag lunges 20 kg (10 kg), wall balls 6 kg (4 kg) to a 3 m (2.7 m) target; mixed teams use the men's loads."
   attribution:
     author: OpenWOD
-    sourceUrl: https://hyrox.com/the-fitness-race/
-    notes: "A training variation of the published HYROX race structure (8 runs, 8 stations). Timed intervals replace race distances and loads; nothing here is an official prescription. Swap stations you lack: a heavy carry for the sled, a treadmill or shuttle for the run."
+    sourceUrl: https://maintain.hyrox.com/rulebooks/HYROX_RulebookDoubles_EN.pdf
+    notes: "A training variation of the published HYROX race structure (8 runs, 8 stations); the format is not an official prescription. Timed intervals replace race distances. Heavy loads are the Doubles open-division station standards from the Season 26/27 rulebook (men and mixed / women); medium and light are training suggestions. Swap stations you lack: a heavy carry for the sled, a treadmill or shuttle for the run."
   equipment:
+    - Treadmill or running route
     - SkiErg
     - Sled
     - Rowing machine
-    - Kettlebells
+    - Kettlebell
     - Sandbag
     - Medicine ball
+    - Wall
   participants: 2
   prep: 10s
   sections:
@@ -53,13 +55,41 @@ workout:
                     A:
                       name: SkiErg
                     B:
+                      notes: Total incl. sled; heavy is the open standard
                       name: Sled push
+                      load:
+                        light:
+                          value: 70
+                          women: 50
+                          unit: kg
+                        medium:
+                          value: 105
+                          women: 70
+                          unit: kg
+                        heavy:
+                          value: 152
+                          women: 102
+                          unit: kg
                 - id: doubles-1-sled-pull
                   type: timed
                   duration: 45s
                   assignments:
                     A:
+                      notes: Total incl. sled; heavy is the open standard
                       name: Sled pull
+                      load:
+                        light:
+                          value: 50
+                          women: 35
+                          unit: kg
+                        medium:
+                          value: 70
+                          women: 55
+                          unit: kg
+                        heavy:
+                          value: 103
+                          women: 78
+                          unit: kg
                     B:
                       name: Burpee broad jumps
     - id: doubles-2
@@ -95,12 +125,54 @@ workout:
                     A:
                       name: Row
                     B:
+                      notes: Per hand; heavy is the open standard
                       name: Farmers carry
+                      load:
+                        light:
+                          value: 12
+                          women: 8
+                          unit: kg
+                        medium:
+                          value: 16
+                          women: 12
+                          unit: kg
+                        heavy:
+                          value: 24
+                          women: 16
+                          unit: kg
                 - id: doubles-2-sandbag-lunges
                   type: timed
                   duration: 45s
                   assignments:
                     A:
+                      notes: Heavy is the open standard; women's medium is already the 10 kg race bag
                       name: Sandbag lunges
+                      load:
+                        light:
+                          value: 10
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 15
+                          women: 10
+                          unit: kg
+                        heavy:
+                          value: 20
+                          women: 10
+                          unit: kg
                     B:
+                      notes: 3 m (2.7 m) target
                       name: Wall balls
+                      load:
+                        light:
+                          value: 3
+                          women: 2
+                          unit: kg
+                        medium:
+                          value: 4
+                          women: 3
+                          unit: kg
+                        heavy:
+                          value: 6
+                          women: 4
+                          unit: kg

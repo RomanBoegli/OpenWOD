@@ -48,12 +48,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 42.5
+                    women: 30
                     unit: kg
                   heavy:
                     value: 60
+                    women: 42.5
                     unit: kg
           - id: double-amrap-1-burpees
             type: task
@@ -93,12 +96,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 42.5
+                    women: 30
                     unit: kg
                   heavy:
                     value: 60
+                    women: 42.5
                     unit: kg
           - id: double-amrap-2-burpees
             type: task

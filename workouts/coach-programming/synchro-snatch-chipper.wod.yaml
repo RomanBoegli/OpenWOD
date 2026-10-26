@@ -34,11 +34,37 @@ workout:
                 name: Dumbbell overhead lunges
                 shortName: DB overhead lunges
                 reps: 10
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
               B:
                 notes: Synchro, one dumbbell each
                 name: Dumbbell overhead lunges
                 shortName: DB overhead lunges
                 reps: 10
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
           - id: synchro-snatches-1
             type: task
             completion: team
@@ -50,12 +76,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 42
+                    women: 30
                     unit: kg
                   heavy:
                     value: 61
+                    women: 43
                     unit: kg
               B:
                 notes: Split as you like
@@ -64,23 +93,26 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 42
+                    women: 30
                     unit: kg
                   heavy:
                     value: 61
+                    women: 43
                     unit: kg
           - id: synchro-box-jump-overs-1
             type: task
             completion: both
             assignments:
               A:
-                notes: Synchro
+                notes: Synchro; 24 in (20 in) box
                 name: Box jump overs
                 reps: 30
               B:
-                notes: Synchro
+                notes: Synchro; 24 in (20 in) box
                 name: Box jump overs
                 reps: 30
           - id: synchro-thrusters-1
@@ -88,15 +120,41 @@ workout:
             completion: team
             assignments:
               A:
-                notes: Split as you like
+                notes: Split as you like; one dumbbell, switch arms freely
                 name: Single-dumbbell thrusters
                 shortName: DB thrusters
                 reps: 40
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
               B:
-                notes: Split as you like
+                notes: Split as you like; one dumbbell, switch arms freely
                 name: Single-dumbbell thrusters
                 shortName: DB thrusters
                 reps: 40
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
           - id: synchro-sit-ups
             type: task
             completion: both
@@ -114,25 +172,51 @@ workout:
             completion: team
             assignments:
               A:
-                notes: Split as you like
+                notes: Split as you like; one dumbbell, switch arms freely
                 name: Single-dumbbell thrusters
                 shortName: DB thrusters
                 reps: 40
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
               B:
-                notes: Split as you like
+                notes: Split as you like; one dumbbell, switch arms freely
                 name: Single-dumbbell thrusters
                 shortName: DB thrusters
                 reps: 40
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
           - id: synchro-box-jump-overs-2
             type: task
             completion: both
             assignments:
               A:
-                notes: Synchro
+                notes: Synchro; 24 in (20 in) box
                 name: Box jump overs
                 reps: 30
               B:
-                notes: Synchro
+                notes: Synchro; 24 in (20 in) box
                 name: Box jump overs
                 reps: 30
           - id: synchro-snatches-2
@@ -146,12 +230,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 42
+                    women: 30
                     unit: kg
                   heavy:
                     value: 61
+                    women: 43
                     unit: kg
               B:
                 notes: Split as you like
@@ -160,12 +247,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 42
+                    women: 30
                     unit: kg
                   heavy:
                     value: 61
+                    women: 43
                     unit: kg
           - id: synchro-lunges-2
             type: task
@@ -176,8 +266,34 @@ workout:
                 name: Dumbbell overhead lunges
                 shortName: DB overhead lunges
                 reps: 10
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg
               B:
                 notes: Synchro, one dumbbell each
                 name: Dumbbell overhead lunges
                 shortName: DB overhead lunges
                 reps: 10
+                load:
+                  light:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 10
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    women: 15
+                    unit: kg

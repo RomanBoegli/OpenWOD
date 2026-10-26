@@ -9,7 +9,6 @@ import { agoText, lastDone, timesDone, type SessionRecord } from './session-log'
 import { DifficultyChip } from './DifficultyChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
-import { exportWorkoutFile } from './Player';
 import { rankBySearch } from '../../../packages/domain/src/search';
 import { draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
@@ -32,7 +31,6 @@ interface LibraryProps {
   onImport: (workout: Workout, mode: 'copy' | 'replace') => void;
   /** Editable files open in the editor as an unsaved draft; the preview dialog stays for structures the editor cannot express. */
   onImportDraft: (workout: Workout, fileName: string) => void;
-  onRemove: (id: string) => void;
   storageError: string;
   missingId?: string;
   drafts: StoredDraft[];
@@ -67,7 +65,7 @@ function loadFilters(): StoredFilters {
   } catch { return emptyFilters(); }
 }
 
-export function Library({ entries, collections, sessions, onImport, onImportDraft, onRemove, storageError, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange }: LibraryProps) {
+export function Library({ entries, collections, sessions, onImport, onImportDraft, storageError, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange }: LibraryProps) {
   const [stored] = useState(loadFilters);
   const [query, setQuery] = useState(stored.query);
   const [participants, setParticipants] = useState<'' | 1 | 2>(stored.participants);
@@ -80,10 +78,8 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
   useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ query, participants, equipment, duration, difficulty, format, collectionIds, sort } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [query, participants, equipment, duration, difficulty, format, collectionIds, sort]);
   const [preview, setPreview] = useState<Workout>();
   const [importError, setImportError] = useState('');
-  const [removing, setRemoving] = useState<LibraryEntry>();
   const [discarding, setDiscarding] = useState<StoredDraft>();
   const importDialog = useRef<HTMLDialogElement>(null);
-  const removeDialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const onlyMine = preferences.onlyMyEquipment;
   const setOnlyMine = (value: boolean) => onPreferencesChange(current => ({ ...current, onlyMyEquipment: value }));
@@ -160,11 +156,11 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
     <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}{onlyMine && preferences.myEquipment.length === 0 && <> · bodyweight only, <a href={settingsHref('equipment')}>tick your gear in settings</a></>}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
     {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
-      {visible.map(({ workout, summary, source, editable }) => {
+      {visible.map(({ workout, summary, source }) => {
         const last = lastDone(sessions, workout.id);
         const count = timesDone(sessions, workout.id);
         return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt>
-          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} />{collectionsOf(workout.id).map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} /></span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
+          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} />{collectionsOf(workout.id).map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} /></span></div>
           <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
           {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
           <dl className={styles.facts}>
@@ -178,10 +174,7 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
           </div>
           <div className={styles.cardActions}>
             <a className={shared.primaryButton} href={playHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
-            <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Read through ${summary.title}`}><Icon name="list" size={17} />Read through</a>
-            {editable && <a className={shared.quietButton} href={editHref(workout.id)} aria-label={`${source === 'saved' ? 'Edit' : 'Duplicate and edit'} ${summary.title}`}><Icon name="settings" size={16} />{source === 'saved' ? 'Edit' : 'Duplicate'}</a>}
-            <button className={shared.quietButton} onClick={() => exportWorkoutFile(workout)} aria-label={`Export ${summary.title}`}><Icon name="download" size={17} />Export</button>
-            {source === 'saved' && <button className={shared.quietButton} onClick={() => { setRemoving({ workout, summary, source, editable }); removeDialog.current?.showModal(); }} aria-label={`Remove ${summary.title}`}><Icon name="trash" size={17} />Remove</button>}
+            <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Details of ${summary.title}`}><Icon name="list" size={17} />Details</a>
           </div>
         </li>;
       })}
@@ -202,6 +195,5 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
     </dialog>
 
     <ConfirmDialog open={Boolean(discarding)} title={`Discard “${discarding?.draft.title.trim() || 'Untitled workout'}”?`} confirmLabel="Discard draft" cancelLabel="Keep it" onClose={() => setDiscarding(undefined)} onConfirm={() => { if (discarding) onDiscardDraft(discarding.id); setDiscarding(undefined); }}><p>The draft is removed from this device. Saved workouts are not affected.</p></ConfirmDialog>
-    <dialog ref={removeDialog} className={shared.dialog} aria-labelledby="remove-title"><h2 id="remove-title">Remove “{removing?.summary.title}”?</h2><p>It disappears from this device. Export it first if you want to keep a copy.</p><div className={shared.dialogActions}><button className={shared.quietButton} onClick={() => removeDialog.current?.close()}>Keep it</button><button className={shared.primaryButton} onClick={() => { if (removing) onRemove(removing.workout.id); removeDialog.current?.close(); setRemoving(undefined); }}>Remove workout</button></div></dialog>
   </div>;
 }

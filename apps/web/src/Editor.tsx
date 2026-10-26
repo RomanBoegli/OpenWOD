@@ -12,7 +12,7 @@ import { MovementPicker } from './MovementPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
-import { LEVEL_LETTERS } from './LevelChip';
+import { LEVEL_LABELS, LEVEL_LETTERS } from './LevelChip';
 import styles from './Editor.module.css';
 import shared from './App.module.css';
 
@@ -148,14 +148,38 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
     const levelled = levelledOf(value);
     return <td key={role} className={styles.laneCell}>
       <MovementPicker value={value} label={label} catalogue={catalogue} invalid={Boolean(issueFor(`sections.${s}.slots.${i}.${role}`))} onChange={change => updateLane(s, i, role, change)} onPick={record => addEquipment(record.equipment)} onAdd={name => addToCatalogue([name])[0]} />
-      <div className={styles.targetRow}>
-        <select aria-label={`${label} target kind`} value={kind} onChange={event => updateLane(s, i, role, current => withTarget(current, event.target.value as TargetKind, targetAmountOf(current) || (event.target.value === 'none' ? '' : 10)))}>{(Object.keys(TARGET_LABELS) as TargetKind[]).map(item => <option key={item} value={item}>{TARGET_LABELS[item]}</option>)}</select>
-        {kind !== 'none' && <input type="number" inputMode="decimal" min={0} step={kind === 'km' ? 0.1 : 1} aria-label={`${label} target amount`} value={targetAmountOf(value)} onChange={event => updateLane(s, i, role, current => withTarget(current, kind, event.target.value === '' ? '' : Number(event.target.value)))} />}
-        <select aria-label={`${label} load unit`} value={loadMode} onChange={event => updateLane(s, i, role, current => withLoad(current, event.target.value as LoadMode, levelled, { single: loadValueOf(current) === '' ? 20 : loadValueOf(current) }))}><option value="none">No load</option><option value="kg">kg</option><option value="lb">lb</option><option value="percent">% of 1RM</option></select>
-        {loadMode !== 'none' && <label className={styles.inlineCheck}><input type="checkbox" checked={levelled} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, event.target.checked, event.target.checked ? { light: Math.round(Number(loadValueOf(current) || 20) * .65), medium: Number(loadValueOf(current) || 20), heavy: Math.round(Number(loadValueOf(current) || 20) * 1.4) } : { single: loadValueOf(current, 'medium') }))} />Levels</label>}
+      <div className={styles.laneGrid}>
+        <div className={styles.group}>
+          <span className={styles.caption}>Target</span>
+          <div className={styles.pairRow}>
+            <select aria-label={`${label} target kind`} value={kind} onChange={event => updateLane(s, i, role, current => withTarget(current, event.target.value as TargetKind, targetAmountOf(current) || (event.target.value === 'none' ? '' : 10)))}>{(Object.keys(TARGET_LABELS) as TargetKind[]).map(item => <option key={item} value={item}>{TARGET_LABELS[item]}</option>)}</select>
+            {kind !== 'none' && <input type="number" inputMode="decimal" min={0} step={kind === 'km' ? 0.1 : 1} aria-label={`${label} target amount`} value={targetAmountOf(value)} onChange={event => updateLane(s, i, role, current => withTarget(current, kind, event.target.value === '' ? '' : Number(event.target.value)))} />}
+          </div>
+        </div>
+        <div className={styles.group}>
+          <span className={styles.caption}>Load</span>
+          <div className={styles.pairRow}>
+            <select aria-label={`${label} load unit`} value={loadMode} onChange={event => updateLane(s, i, role, current => withLoad(current, event.target.value as LoadMode, levelled, { single: loadValueOf(current) === '' ? 20 : loadValueOf(current) }))}><option value="none">No load</option><option value="kg">kg</option><option value="lb">lb</option><option value="percent">% of 1RM</option></select>
+            {loadMode !== 'none' && <label className={styles.inlineCheck}><input type="checkbox" checked={levelled} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, event.target.checked, event.target.checked ? { light: Math.round(Number(loadValueOf(current) || 20) * .65), medium: Number(loadValueOf(current) || 20), heavy: Math.round(Number(loadValueOf(current) || 20) * 1.4) } : { single: loadValueOf(current, 'medium') }))} />Levels</label>}
+          </div>
+        </div>
+        {loadMode !== 'none' && <div className={styles.loadTable} data-single={!levelled || undefined} role="group" aria-label={`${label} loads`}>
+          <span />
+          {levelled ? LOAD_LEVELS.map(level => <span key={level} className={styles.levelHead} data-level={level}><span>{LEVEL_LETTERS[level]}</span>{LEVEL_LABELS[level]}</span>) : <span className={styles.levelHead}>{loadMode === 'percent' ? 'Of 1RM' : 'Amount'}</span>}
+          <span className={styles.rowLabel}>{loadMode === 'percent' ? 'All' : 'Men'}</span>
+          {levelled ? LOAD_LEVELS.map(level => <input key={level} type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, true, { [level]: event.target.value === '' ? '' : Number(event.target.value) }))} />)
+            : <input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} load`} value={loadValueOf(value)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, false, { single: event.target.value === '' ? '' : Number(event.target.value) }))} />}
+          {loadMode !== 'percent' && <>
+            <span className={styles.rowLabel}>Women</span>
+            {levelled ? LOAD_LEVELS.map(level => <input key={level} type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} women’s load`} value={womenOf(value, level)} disabled={loadValueOf(value, level) === ''} onChange={event => updateLane(s, i, role, current => withWomen(current, level, event.target.value === '' ? '' : Number(event.target.value)))} />)
+              : <input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} women’s load`} value={womenOf(value)} onChange={event => updateLane(s, i, role, current => withWomen(current, undefined, event.target.value === '' ? '' : Number(event.target.value)))} />}
+          </>}
+        </div>}
+        <div className={`${styles.group} ${styles.full}`}>
+          <span className={styles.caption}>Notes</span>
+          <input className={styles.notes} aria-label={`${label} notes`} value={value.notes ?? ''} maxLength={500} placeholder="Tempo, scaling, standards" onChange={event => updateLane(s, i, role, current => ({ ...current, notes: event.target.value }))} />
+        </div>
       </div>
-      {loadMode !== 'none' && <div className={styles.loadRow} data-women={loadMode !== 'percent'}>{levelled ? LOAD_LEVELS.map(level => <span key={level} className={styles.levelInput} data-level={level}><span aria-hidden="true">{LEVEL_LETTERS[level]}</span><input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, true, { [level]: event.target.value === '' ? '' : Number(event.target.value) }))} />{loadMode !== 'percent' && <input type="number" inputMode="decimal" min={0} step="any" className={styles.womenInput} placeholder="women" title="Women’s load, shown in brackets" aria-label={`${label} ${level} women’s load`} value={womenOf(value, level)} disabled={loadValueOf(value, level) === ''} onChange={event => updateLane(s, i, role, current => withWomen(current, level, event.target.value === '' ? '' : Number(event.target.value)))} />}</span>) : <><input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} load`} value={loadValueOf(value)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, false, { single: event.target.value === '' ? '' : Number(event.target.value) }))} />{loadMode !== 'percent' && <input type="number" inputMode="decimal" min={0} step="any" className={styles.womenInput} placeholder="women" title="Women’s load, shown in brackets" aria-label={`${label} women’s load`} value={womenOf(value)} onChange={event => updateLane(s, i, role, current => withWomen(current, undefined, event.target.value === '' ? '' : Number(event.target.value)))} />}</>}</div>}
-      <input className={styles.notes} aria-label={`${label} notes`} value={value.notes ?? ''} maxLength={500} placeholder="Notes, tempo, scaling" onChange={event => updateLane(s, i, role, current => ({ ...current, notes: event.target.value }))} />
     </td>;
   };
 

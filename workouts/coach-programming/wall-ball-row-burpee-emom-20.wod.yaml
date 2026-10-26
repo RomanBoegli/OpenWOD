@@ -5,12 +5,13 @@ workout:
   id: wall-ball-row-burpee-emom-20
   revision: 1
   title: Wall ball, row, burpee EMOM 20
-  description: "Every minute for twenty minutes: a minute of wall balls, a minute on the rower, a minute of burpee box jump overs, a minute of rest; five rounds. Finish the work, then recover until the next minute starts. Trim the reps if you cannot finish inside 45 seconds."
+  description: "Every minute for twenty minutes: a minute of wall balls to the standard 10 ft (9 ft) target, a minute on the rower, a minute of burpee box jump overs, a minute of rest; five rounds. Finish the work, then recover until the next minute starts. Trim the reps if you cannot finish inside 45 seconds."
   attribution:
     author: Coach programming, shared in a members chat
     notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Medicine ball
+    - Wall
     - Rowing machine
     - Plyo box
   participants: 1
@@ -30,9 +31,22 @@ workout:
             type: task
             assignments:
               A:
-                notes: Big, unbroken sets if you can
+                notes: 10 ft (9 ft) target; big, unbroken sets if you can
                 name: Wall balls
                 reps: 21
+                load:
+                  light:
+                    value: 4
+                    women: 3
+                    unit: kg
+                  medium:
+                    value: 6
+                    women: 4
+                    unit: kg
+                  heavy:
+                    value: 9
+                    women: 6
+                    unit: kg
           - id: wbrb-row
             type: task
             assignments:
@@ -44,7 +58,7 @@ workout:
             type: task
             assignments:
               A:
-                notes: Steady rhythm, no pauses
+                notes: 24 in (20 in) box; steady rhythm, no pauses
                 name: Burpee box jump overs
                 shortName: Burpee box overs
                 reps: 9

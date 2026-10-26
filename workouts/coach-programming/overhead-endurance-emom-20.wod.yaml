@@ -5,7 +5,7 @@ workout:
   id: overhead-endurance-emom-20
   revision: 1
   title: Overhead endurance EMOM 20
-  description: "Four stations, five rounds: thirty seconds of strict handstand push-ups, ten dumbbell overhead walking lunge steps, thirty seconds of kipping handstand push-ups, twenty wall balls. Pick a handstand push-up variation you can keep moving for the full thirty seconds."
+  description: "Four stations, five rounds: thirty seconds of strict handstand push-ups, ten dumbbell overhead walking lunge steps, thirty seconds of kipping handstand push-ups, twenty wall balls to the standard 10 ft (9 ft) target. Pick a handstand push-up variation you can keep moving for the full thirty seconds."
   attribution:
     author: Coach programming, shared in a members chat
     notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
@@ -38,10 +38,23 @@ workout:
             type: task
             assignments:
               A:
-                notes: Two dumbbells overhead; 45 s cap
+                notes: Per dumbbell, two dumbbells overhead; 45 s cap
                 name: Dumbbell overhead walking lunges
                 shortName: DB overhead lunges
                 reps: 10
+                load:
+                  light:
+                    value: 7.5
+                    women: 5
+                    unit: kg
+                  medium:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  heavy:
+                    value: 15
+                    women: 10
+                    unit: kg
           - id: overhead-kipping-hspu
             type: task
             assignments:
@@ -54,6 +67,19 @@ workout:
             type: task
             assignments:
               A:
-                notes: Standard ball and target; 45 s cap
+                notes: 10 ft (9 ft) target; 45 s cap
                 name: Wall balls
                 reps: 20
+                load:
+                  light:
+                    value: 4
+                    women: 3
+                    unit: kg
+                  medium:
+                    value: 6
+                    women: 4
+                    unit: kg
+                  heavy:
+                    value: 9
+                    women: 6
+                    unit: kg

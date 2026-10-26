@@ -9,7 +9,7 @@ workout:
   attribution:
     author: CrossFit
     sourceUrl: https://www.crossfit.com/benchmark/murph
-    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+    notes: Follows the published benchmark. The 20 lb (14 lb) weight vest is optional and stays in the notes; the only loads are your own bodyweight.
   equipment:
     - Running route
     - Pull-up bar

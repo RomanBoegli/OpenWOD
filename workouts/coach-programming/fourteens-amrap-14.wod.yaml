@@ -48,12 +48,15 @@ workout:
                 load:
                   light:
                     value: 20
+                    women: 15
                     unit: kg
                   medium:
                     value: 30
+                    women: 20
                     unit: kg
                   heavy:
                     value: 43
+                    women: 29
                     unit: kg
           - id: fourteens-burpees
             type: task

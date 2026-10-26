@@ -35,18 +35,21 @@ workout:
             type: task
             assignments:
               A:
-                notes: Lane lengths climb with the round; no grips
+                notes: Per hand; lane lengths climb with the round; no grips
                 name: Dumbbell farmers carry
                 shortName: Farmers carry
                 load:
                   light:
                     value: 12
+                    women: 7.5
                     unit: kg
                   medium:
                     value: 17.5
+                    women: 12.5
                     unit: kg
                   heavy:
                     value: 22.5
+                    women: 15
                     unit: kg
           - id: ladder-burpees
             type: task

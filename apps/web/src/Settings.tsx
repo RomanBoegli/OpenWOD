@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
 import { CATEGORY_LABELS, MOVEMENT_CATEGORIES, movementSlug, type Catalogue, type Movement, type MovementCategory } from '../../../packages/domain/src/catalogue';
 import { collectPrescriptions, equipmentKey, equipmentOptions } from '../../../packages/domain/src/library';
-import { rankBySearch } from '../../../packages/domain/src/search';
 import type { WorkoutAudio } from './audio';
 import type { LibraryEntry } from './Library';
-import { allCollections, freeMovementId, mergeEquipment, mergeMovements, removeCollection, removeMovement, removeMovementAlias, seedIds, unmergeEquipment, upsertCollection, upsertMovement, type Collection, type MasterData } from './master-data';
+import { allCollections, freeMovementId, mergeEquipment, mergeMovements, removeCollection, removeMovement, removeMovementAlias, restoreBundledMovements, seedIds, unmergeEquipment, upsertCollection, upsertMovement, type Collection, type MasterData } from './master-data';
 import { recordForName } from './catalogue-link';
-import { movementSearchFields } from './MovementPicker';
+import { movementRows } from './settings/movement-rows';
+import { Badge, MasterList } from './settings/MasterList';
+import { FormDialog } from './settings/FormDialog';
+import { TimerPreview } from './settings/TimerPreview';
+import { ConfirmDialog } from './ConfirmDialog';
 import type { Preferences } from './preferences';
 import { SETTINGS_SECTIONS, settingsHref, type SettingsSection } from './router';
 import { Chip } from './Chip';
@@ -31,6 +34,7 @@ interface SettingsProps {
 const SECTION_LABELS: Record<SettingsSection, { title: string; blurb: string }> = {
   general: { title: 'General', blurb: 'Theme, the player’s look, and who trains here.' },
   sound: { title: 'Sound', blurb: 'Beeps and the recorded voices.' },
+  player: { title: 'Workout view', blurb: 'Units, the timer ring and the background pulse.' },
   equipment: { title: 'Equipment', blurb: 'What you own, and one spelling per item across the library.' },
   movements: { title: 'Movements', blurb: 'Every movement the library knows, with its variants and equipment.' },
   collections: { title: 'Collections', blurb: 'Named lists of workouts, shown as chips and as a filter.' },
@@ -50,6 +54,7 @@ export function Settings(props: SettingsProps) {
       <div className={styles.content}>
         {section === 'general' && <GeneralSettings {...props} />}
         {section === 'sound' && <SoundSettings {...props} />}
+        {section === 'player' && <PlayerSettings {...props} />}
         {section === 'equipment' && <EquipmentSettings {...props} />}
         {section === 'movements' && <MovementSettings {...props} />}
         {section === 'collections' && <CollectionSettings {...props} />}
@@ -64,8 +69,6 @@ function GeneralSettings({ preferences, onPreferencesChange }: SettingsProps) {
     <section className={styles.card} aria-labelledby="appearance-title">
       <h2 id="appearance-title">Appearance</h2>
       <div className={styles.field}><span id="theme-label">Theme</span><div className={shared.segmented} role="radiogroup" aria-labelledby="theme-label">{([['auto', 'Auto', 'auto'], ['light', 'Light', 'sun'], ['dark', 'Dark', 'moon']] as const).map(([value, label, icon]) => <label key={value} data-checked={preferences.theme === value}><input type="radio" name="theme" value={value} checked={preferences.theme === value} onChange={() => update({ theme: value })} /><Icon name={icon} size={16} />{label}</label>)}</div></div>
-      <label className={styles.field}>Default player view<select value={preferences.view} onChange={event => update({ view: event.target.value as Preferences['view'] })}><option value="focus">Focus</option><option value="context">Context</option></select></label>
-      <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player and deepens as the clock drains." />
     </section>
     <section className={styles.card} aria-labelledby="athletes-title">
       <h2 id="athletes-title">Athletes</h2>
@@ -75,6 +78,35 @@ function GeneralSettings({ preferences, onPreferencesChange }: SettingsProps) {
         <div className={styles.field}><span id={`loads-${role}-label`}>Loads shown for</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby={`loads-${role}-label`}>{(['men', 'women'] as const).map(sex => <label key={sex} data-checked={preferences.loadsFor[role] === sex}><input type="radio" name={`loads-${role}`} value={sex} checked={preferences.loadsFor[role] === sex} onChange={() => update({ loadsFor: { ...preferences.loadsFor, [role]: sex } })} />{sex === 'men' ? 'Men' : 'Women'}</label>)}</div></div>
       </div>)}
       <p className={styles.hint}>Switching tabs pauses a running workout. Keep the window visible while training.</p>
+    </section>
+  </>;
+}
+
+function PlayerSettings({ preferences, onPreferencesChange }: SettingsProps) {
+  const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
+  const seconds = (ms: number) => `${Math.round(ms / 1000)} s`;
+  return <>
+    <section className={styles.card} aria-labelledby="units-title">
+      <h2 id="units-title">Loads</h2>
+      <div className={styles.field}><span id="unit-label">Show weights in</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby="unit-label">{(['kg', 'lb'] as const).map(unit => <label key={unit} data-checked={preferences.loadUnit === unit}><input type="radio" name="load-unit" value={unit} checked={preferences.loadUnit === unit} onChange={() => update({ loadUnit: unit })} />{unit === 'kg' ? 'Kilograms' : 'Pounds'}</label>)}</div></div>
+      <p className={styles.hint}>Workouts written in the other unit are converted on screen and rounded to plate-friendly numbers (95 lb ↔ 43 kg). Percentages of a one-rep max stay as written.</p>
+    </section>
+    <section className={styles.card} aria-labelledby="player-title">
+      <h2 id="player-title">Look &amp; feel</h2>
+      <div className={styles.previewRow}>
+        <TimerPreview view={preferences.view} ringWidth={preferences.perimeterWidth} washGain={preferences.wash ? preferences.washGain : 0} amberMs={preferences.amberMs} redMs={preferences.redMs} />
+        <div className={styles.previewFields}>
+          <label className={styles.field}>Default view<select value={preferences.view} onChange={event => update({ view: event.target.value as Preferences['view'] })}><option value="focus">Focus</option><option value="context">Context</option></select></label>
+          <label className={styles.field}>Timer ring width · {preferences.perimeterWidth} px<input type="range" min="3" max="12" step="1" value={preferences.perimeterWidth} onChange={event => update({ perimeterWidth: Number(event.target.value) })} /></label>
+          <div className={styles.twoUp}>
+            <label className={styles.field}>Turn amber at · {seconds(preferences.amberMs)}<input type="range" min="5" max="30" step="1" value={preferences.amberMs / 1000} onChange={event => { const amberMs = Number(event.target.value) * 1000; update({ amberMs, redMs: Math.min(preferences.redMs, amberMs) }); }} /></label>
+            <label className={styles.field}>Turn red at · {seconds(preferences.redMs)}<input type="range" min="1" max={Math.min(10, preferences.amberMs / 1000)} step="1" value={preferences.redMs / 1000} onChange={event => update({ redMs: Number(event.target.value) * 1000 })} /></label>
+          </div>
+          <p className={styles.hint}>Work turns amber, then red, this long before a slot ends; the marks sit on the ring above. Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds.</p>
+        </div>
+      </div>
+      <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player and deepens as the clock drains." />
+      {preferences.wash && <label className={styles.field}>Pulse intensity · {preferences.washGain} %<input type="range" min="10" max="60" step="5" value={preferences.washGain} onChange={event => update({ washGain: Number(event.target.value) })} /></label>}
     </section>
   </>;
 }
@@ -99,35 +131,63 @@ function SoundSettings({ preferences, onPreferencesChange, clipsReady, packs, au
 
 function EquipmentSettings({ preferences, onPreferencesChange, masterData, onMasterDataChange, entries }: SettingsProps) {
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
-  const [mergeSelection, setMergeSelection] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [selection, setSelection] = useState<string[]>([]);
   const [mergeTarget, setMergeTarget] = useState('');
+  const [renaming, setRenaming] = useState<{ from: string; to: string }>();
   // Equipment as the library sees it after merges, with how many workouts need each item.
-  const equipmentUsage = useMemo(() => {
-    const counts = new Map<string, { name: string; count: number }>();
-    for (const entry of entries) for (const item of entry.summary.equipmentNeeded) { const key = equipmentKey(item); counts.set(key, { name: item, count: (counts.get(key)?.count ?? 0) + 1 }); }
-    return [...counts.values()].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+  const usage = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of entries) for (const item of entry.summary.equipmentNeeded) counts.set(equipmentKey(item), (counts.get(equipmentKey(item)) ?? 0) + 1);
+    return counts;
   }, [entries]);
-  const equipmentChoices = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
+  const names = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
+  const visible = names.filter(name => !query.trim() || name.toLowerCase().includes(query.trim().toLowerCase()));
   const merges = Object.entries(masterData.equipmentAliases).filter(([key, name]) => key !== equipmentKey(name));
+  const owned = (name: string) => preferences.myEquipment.includes(name);
+  const setOwned = (name: string, have: boolean) => update({ myEquipment: have ? [...preferences.myEquipment.filter(item => item !== name), name] : preferences.myEquipment.filter(item => item !== name) });
   const merge = () => {
-    const target = mergeTarget.trim() || (mergeSelection[0] ?? '');
-    if (!target || !mergeSelection.length) return;
-    onMasterDataChange(data => mergeEquipment(data, mergeSelection, target));
-    setMergeSelection([]); setMergeTarget('');
+    const target = mergeTarget.trim() || selection[0];
+    if (!target || selection.length < 2) return;
+    onMasterDataChange(data => mergeEquipment(data, selection, target));
+    if (selection.some(owned)) update({ myEquipment: [...preferences.myEquipment.filter(item => !selection.includes(item)), target] });
+    setSelection([]); setMergeTarget('');
+  };
+  const rename = () => {
+    if (!renaming) return;
+    const to = renaming.to.trim();
+    if (to && to !== renaming.from) {
+      onMasterDataChange(data => mergeEquipment(data, [renaming.from], to));
+      if (owned(renaming.from)) update({ myEquipment: preferences.myEquipment.map(item => item === renaming.from ? to : item) });
+    }
+    setRenaming(undefined);
   };
   return <>
-    <section className={styles.card} aria-labelledby="my-equipment-title">
-      <h2 id="my-equipment-title">My equipment</h2>
-      <p className={styles.hint}>Tick what you have at home. The library’s “Only my equipment” filter then shows workouts that need nothing more.</p>
-      <div className={styles.chipRow}>{equipmentChoices.map(item => <Chip key={item} kind="neutral" pressed={preferences.myEquipment.includes(item)} onClick={() => update({ myEquipment: preferences.myEquipment.includes(item) ? preferences.myEquipment.filter(known => known !== item) : [...preferences.myEquipment, item] })}>{item}</Chip>)}</div>
-    </section>
     <section className={styles.card} aria-labelledby="equipment-title">
-      <h2 id="equipment-title">Equipment names</h2>
-      <p className={styles.hint}>Merge spellings that mean the same thing. Pick the names, type the one to keep, and every card, overview and filter uses it.</p>
-      <ul className={styles.usage} aria-label="Equipment in the library">{equipmentUsage.map(item => <li key={item.name}><label><input type="checkbox" checked={mergeSelection.includes(item.name)} onChange={event => setMergeSelection(current => event.target.checked ? [...current, item.name] : current.filter(name => name !== item.name))} /><span>{item.name}</span><small>{item.count} {item.count === 1 ? 'workout' : 'workouts'}</small></label></li>)}</ul>
-      <div className={styles.mergeRow}><label className={styles.field}>Keep as<input value={mergeTarget} placeholder={mergeSelection[0] ?? 'Name to keep'} list="equipment-names" onChange={event => setMergeTarget(event.target.value)} /></label><datalist id="equipment-names">{equipmentChoices.map(item => <option key={item} value={item} />)}</datalist><button type="button" className={shared.primaryButton} disabled={mergeSelection.length === 0} onClick={merge}><Icon name="check" />Merge {mergeSelection.length || ''}</button></div>
+      <div className={styles.cardHeading}><h2 id="equipment-title">Equipment</h2><span className={styles.hint}>{names.length} items · {preferences.myEquipment.length} at home</span></div>
+      <p className={styles.hint}>Tick what you have at home; the library’s “Only my equipment” filter then shows workouts that need nothing more. Rename an item, or tick two or more and merge them into one spelling used on every card, overview and filter.</p>
+      <div className={styles.listTop}><label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} placeholder="ball, bar, rower…" aria-label="Find equipment" onChange={event => setQuery(event.target.value)} /></label></div>
+      {selection.length >= 2 && <div className={styles.mergeBar} role="group" aria-label="Merge selected equipment">
+        <span>{selection.length} selected</span>
+        <label className={styles.field}>Keep as<input value={mergeTarget} placeholder={selection[0]} list="equipment-names" aria-label="Keep as" onChange={event => setMergeTarget(event.target.value)} /></label>
+        <datalist id="equipment-names">{names.map(item => <option key={item} value={item} />)}</datalist>
+        <button type="button" className={shared.primaryButton} onClick={merge}><Icon name="check" />Merge {selection.length}</button>
+        <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
+      </div>}
+      <MasterList label="Equipment in the library" selectable empty={`Nothing matches “${query}”.`}
+        columns={[{ key: 'name', caption: 'Name' }, { key: 'usage', caption: 'Workouts', width: '90px', align: 'end' }, { key: 'owned', caption: 'I have it', width: '80px' }]}
+        rows={visible.map(name => ({
+          id: name,
+          cells: { name: <strong>{name}</strong>, usage: usage.get(equipmentKey(name)) ?? 0, owned: <input type="checkbox" checked={owned(name)} aria-label={`I have ${name}`} onChange={event => setOwned(name, event.target.checked)} /> },
+          select: { checked: selection.includes(name), label: `Select ${name}`, onChange: checked => setSelection(current => checked ? [...current, name] : current.filter(item => item !== name)) },
+          actions: <button type="button" className={shared.quietButton} aria-label={`Rename ${name}`} onClick={() => setRenaming({ from: name, to: name })}><Icon name="edit" size={14} />Rename</button>,
+        }))} />
       {merges.length > 0 && <ul className={styles.merges} aria-label="Merged names">{merges.map(([key, name]) => <li key={key}><span>{key} → <strong>{name}</strong></span><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => unmergeEquipment(data, key))}><Icon name="undo" size={14} />Undo</button></li>)}</ul>}
     </section>
+    <FormDialog open={Boolean(renaming)} title={`Rename ${renaming?.from ?? ''}`} submitLabel="Rename" disabled={!renaming?.to.trim()} onSubmit={rename} onClose={() => setRenaming(undefined)}>
+      <label>Name<input value={renaming?.to ?? ''} maxLength={80} onChange={event => setRenaming(current => current && { ...current, to: event.target.value })} /></label>
+      <p className={shared.fieldNote}>Every workout that names “{renaming?.from}” shows the new spelling; the file text is not changed.</p>
+    </FormDialog>
   </>;
 }
 
@@ -135,12 +195,15 @@ type MovementForm = { id?: string; name: string; shortName: string; spokenName: 
 const emptyForm = (): MovementForm => ({ name: '', shortName: '', spokenName: '', aliases: '', family: '', category: '', equipment: '', notes: '' });
 const toForm = (record: Movement): MovementForm => ({ id: record.id, name: record.name, shortName: record.shortName ?? '', spokenName: record.spokenName ?? '', aliases: (record.aliases ?? []).join(', '), family: record.family ?? '', category: record.category ?? '', equipment: (record.equipment ?? []).join(', '), notes: record.notes ?? '' });
 const list = (text: string) => text.split(',').map(item => item.trim()).filter(Boolean);
+const plural = (count: number, noun: string) => `${count} ${count === 1 ? noun : `${noun}s`}`;
 
 function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }: SettingsProps) {
   const [query, setQuery] = useState('');
   const [selection, setSelection] = useState<string[]>([]);
   const [mergeTarget, setMergeTarget] = useState('');
   const [form, setForm] = useState<MovementForm>();
+  const [removing, setRemoving] = useState<Movement>();
+  const [restoring, setRestoring] = useState(false);
   const equipmentChoices = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
   // How many library workouts use each record, and the names no record knows.
   const { usage, unknown } = useMemo(() => {
@@ -154,7 +217,7 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
     return { usage, unknown: [...unknown.entries()].sort((a, b) => a[0].localeCompare(b[0], 'en')) };
   }, [entries, catalogue]);
   const heads = useMemo(() => catalogue.records.filter(record => !record.family), [catalogue]);
-  const rows = useMemo(() => query.trim() ? rankBySearch(catalogue.records, query, movementSearchFields(catalogue)).map(record => ({ record, variant: Boolean(record.family) })) : catalogue.grouped().flatMap(group => [{ record: group.head, variant: false }, ...group.variants.map(record => ({ record, variant: true }))]), [catalogue, query]);
+  const rows = useMemo(() => movementRows(catalogue, query), [catalogue, query]);
   const selectedRecords = selection.map(id => catalogue.get(id)).filter((record): record is Movement => Boolean(record));
   const customised = masterData.movements.length + masterData.hiddenMovements.length + Object.keys(masterData.movementAliases).length;
 
@@ -179,19 +242,24 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
     setSelection([]); setMergeTarget('');
   };
   const addUnknown = (names: string[]) => onMasterDataChange(data => { let next = data; for (const name of names) next = upsertMovement(next, recordForName(name, catalogue, [])); return next; });
+  const consequences = (record: Movement) => [
+    usage.get(record.id) ? `${plural(usage.get(record.id)!, 'workout')} name it; their text keeps the name and shows as unknown.` : 'No workout in your library names it.',
+    catalogue.variants(record.id).length ? `${plural(catalogue.variants(record.id).length, 'variant')} move up to stand alone.` : '',
+    seedIds.has(record.id) ? 'It is a bundled record: hidden, not deleted. Restore the bundled movements brings it back.' : '',
+  ].filter(Boolean).join(' ');
 
   return <>
     {unknown.length > 0 && <section className={styles.card} data-tone="notice" aria-labelledby="unknown-title">
       <h2 id="unknown-title">Not in your catalogue yet</h2>
       <p className={styles.hint}>Movements written in library workouts that no record matches. Add them as they are, or rename a record so its name or an alias matches.</p>
-      <ul className={styles.unknownList} aria-label="Movements without a record">{unknown.map(([name, count]) => <li key={name}><span>{name}</span><small>{count} {count === 1 ? 'workout' : 'workouts'}</small><button type="button" className={shared.quietButton} onClick={() => addUnknown([name])} aria-label={`Add ${name}`}><Icon name="plus" size={14} />Add</button></li>)}</ul>
+      <ul className={styles.unknownList} aria-label="Movements without a record">{unknown.map(([name, count]) => <li key={name}><span>{name}</span><small>{plural(count, 'workout')}</small><button type="button" className={shared.quietButton} onClick={() => addUnknown([name])} aria-label={`Add ${name}`}><Icon name="plus" size={14} />Add</button></li>)}</ul>
       {unknown.length > 1 && <div><button type="button" className={shared.quietButton} onClick={() => addUnknown(unknown.map(([name]) => name))}><Icon name="plus" size={14} />Add all {unknown.length}</button></div>}
     </section>}
 
     <section className={styles.card} aria-labelledby="movements-title">
-      <div className={styles.cardHeading}><h2 id="movements-title">Movements</h2><span className={styles.hint}>{catalogue.records.length} records{customised ? ` · ${customised} ${customised === 1 ? 'change' : 'changes'} of yours` : ''}</span></div>
+      <div className={styles.cardHeading}><h2 id="movements-title">Movements</h2><span className={styles.hint}>{catalogue.records.length} records{customised ? ` · ${plural(customised, 'change')} of yours` : ''}</span></div>
       <p className={styles.hint}>Variants sit under their family (Hang power cleans under Cleans). Tick two or more to merge them; every merged name keeps resolving to the one you keep.</p>
-      <div className={styles.movementTop}>
+      <div className={styles.listTop}>
         <label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} placeholder="thruster, clean, kettlebell…" aria-label="Find movements" onChange={event => setQuery(event.target.value)} /></label>
         <button type="button" className={shared.primaryButton} onClick={() => setForm(emptyForm())}><Icon name="plus" size={16} />New movement</button>
       </div>
@@ -201,73 +269,92 @@ function MovementSettings({ masterData, onMasterDataChange, catalogue, entries }
         <button type="button" className={shared.primaryButton} onClick={merge}><Icon name="check" />Merge {selection.length}</button>
         <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
       </div>}
-      <ul className={styles.movementList} aria-label="Movements">
-        {rows.map(({ record, variant }) => {
-          const count = usage.get(record.id) ?? 0;
-          const head = variant && record.family ? catalogue.get(record.family) : undefined;
-          return <li key={record.id} data-variant={variant || undefined} data-custom={!seedIds.has(record.id) || undefined}>
-            <label className={styles.select}><input type="checkbox" checked={selection.includes(record.id)} aria-label={`Select ${record.name}`} onChange={event => setSelection(current => event.target.checked ? [...current, record.id] : current.filter(id => id !== record.id))} /></label>
-            <div className={styles.movementName}>
-              <strong>{record.name}</strong>
-              <small>{[query && head ? `${head.name} variant` : '', record.shortName ? `short: ${record.shortName}` : '', record.aliases?.length ? `also ${record.aliases.join(', ')}` : '', record.category ? CATEGORY_LABELS[record.category] : ''].filter(Boolean).join(' · ')}</small>
-            </div>
-            <div className={styles.movementFacts}>
-              <span className={styles.chipRow}>{(record.equipment ?? []).map(item => <Chip key={item} kind="neutral">{item}</Chip>)}{!record.equipment?.length && <Chip kind="neutral">Bodyweight</Chip>}</span>
-              <small>{count ? `${count} ${count === 1 ? 'workout' : 'workouts'}` : 'unused'}</small>
-            </div>
-            <div className={styles.rowActions}>
-              <button type="button" className={shared.quietButton} onClick={() => setForm(toForm(record))} aria-label={`Edit ${record.name}`}>Edit</button>
-              <button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => removeMovement(data, record.id))} aria-label={`Remove ${record.name}`}><Icon name="trash" size={14} /></button>
-            </div>
-          </li>;
-        })}
-        {rows.length === 0 && <li className={styles.emptyRow}>Nothing matches “{query}”.</li>}
-      </ul>
+      <MasterList label="Movements" selectable empty={`Nothing matches “${query}”.`}
+        columns={[{ key: 'name', caption: 'Movement', width: 'minmax(180px, 1.3fr)' }, { key: 'equipment', caption: 'Equipment', width: 'minmax(0, 1fr)' }, { key: 'usage', caption: 'Workouts', width: '80px', align: 'end' }]}
+        rows={rows.map(({ record, variant, muted }) => ({
+          id: record.id, indent: variant, muted,
+          cells: {
+            name: <><strong>{record.name}</strong>{!seedIds.has(record.id) && <Badge tone="accent">yours</Badge>}<small>{[record.shortName ? `short: ${record.shortName}` : '', record.aliases?.length ? `also ${record.aliases.join(', ')}` : '', record.category ? CATEGORY_LABELS[record.category] : ''].filter(Boolean).join(' · ')}</small></>,
+            equipment: <span className={styles.chipRow}>{(record.equipment ?? []).map(item => <Chip key={item} kind="neutral">{item}</Chip>)}{!record.equipment?.length && <Chip kind="neutral">Bodyweight</Chip>}</span>,
+            usage: usage.get(record.id) ?? 0,
+          },
+          select: { checked: selection.includes(record.id), label: `Select ${record.name}`, onChange: checked => setSelection(current => checked ? [...current, record.id] : current.filter(id => id !== record.id)) },
+          actions: <>
+            <button type="button" className={shared.quietButton} onClick={() => setForm(toForm(record))} aria-label={`Edit ${record.name}`}><Icon name="edit" size={14} />Edit</button>
+            <button type="button" className={shared.quietButton} onClick={() => setRemoving(record)} aria-label={`Remove ${record.name}`}><Icon name="trash" size={14} /></button>
+          </>,
+        }))} />
       {Object.keys(masterData.movementAliases).length > 0 && <ul className={styles.merges} aria-label="Merged movement names">{Object.entries(masterData.movementAliases).map(([spelling, id]) => <li key={spelling}><span>{spelling} → <strong>{catalogue.get(id)?.name ?? id}</strong></span><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => removeMovementAlias(data, spelling))}><Icon name="undo" size={14} />Undo</button></li>)}</ul>}
-      {customised > 0 && <div><button type="button" className={shared.quietButton} onClick={() => onMasterDataChange(data => ({ ...data, movements: data.movements.filter(record => !seedIds.has(record.id)), hiddenMovements: [], movementAliases: {} }))}>Restore the bundled movements</button></div>}
+      {customised > 0 && <div><button type="button" className={shared.quietButton} onClick={() => setRestoring(true)}>Restore the bundled movements</button></div>}
     </section>
 
-    {form && <section className={styles.card} aria-labelledby="movement-form-title">
-      <h2 id="movement-form-title">{form.id ? `Edit ${catalogue.get(form.id)?.name ?? 'movement'}` : 'New movement'}</h2>
-      <div className={styles.formGrid}>
+    <FormDialog open={Boolean(form)} wide title={form?.id ? `Edit ${catalogue.get(form.id)?.name ?? 'movement'}` : 'New movement'} submitLabel={form?.id ? 'Save movement' : 'Add movement'} disabled={!form?.name.trim()} onSubmit={save} onClose={() => setForm(undefined)}>
+      {form && <div className={styles.formGrid}>
         <label className={styles.field}>Name<input value={form.name} maxLength={160} placeholder="Hang power cleans" onChange={event => setForm({ ...form, name: event.target.value })} /></label>
         <label className={styles.field}>Family<select value={form.family} onChange={event => setForm({ ...form, family: event.target.value })}><option value="">None (stands alone)</option>{heads.filter(head => head.id !== form.id).map(head => <option key={head.id} value={head.id}>{head.name}</option>)}</select></label>
         <label className={styles.field}>Short name<input value={form.shortName} maxLength={60} placeholder="HPC" onChange={event => setForm({ ...form, shortName: event.target.value })} /></label>
         <label className={styles.field}>Spoken name<input value={form.spokenName} maxLength={160} placeholder="hang power cleans" onChange={event => setForm({ ...form, spokenName: event.target.value })} /></label>
         <label className={styles.field}>Also known as<input value={form.aliases} maxLength={500} placeholder="HPC, hang power clean" onChange={event => setForm({ ...form, aliases: event.target.value })} /></label>
         <label className={styles.field}>Category<select value={form.category} onChange={event => setForm({ ...form, category: event.target.value as MovementForm['category'] })}><option value="">Unset</option>{MOVEMENT_CATEGORIES.map(category => <option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label>
-        <label className={styles.field}>Equipment<input value={form.equipment} maxLength={300} list="equipment-names" placeholder="Barbell" onChange={event => setForm({ ...form, equipment: event.target.value })} /><datalist id="equipment-names">{equipmentChoices.map(item => <option key={item} value={item} />)}</datalist></label>
+        <label className={styles.field}>Equipment<input value={form.equipment} maxLength={300} list="movement-equipment-names" placeholder="Barbell" onChange={event => setForm({ ...form, equipment: event.target.value })} /><datalist id="movement-equipment-names">{equipmentChoices.map(item => <option key={item} value={item} />)}</datalist></label>
         <label className={`${styles.field} ${styles.wide}`}>Notes<input value={form.notes} maxLength={500} placeholder="Standards, scaling, cues" onChange={event => setForm({ ...form, notes: event.target.value })} /></label>
-      </div>
-      <div className={styles.rowActions}><button type="button" className={shared.primaryButton} disabled={!form.name.trim()} onClick={save}><Icon name="check" />{form.id ? 'Save movement' : 'Add movement'}</button><button type="button" className={shared.quietButton} onClick={() => setForm(undefined)}>Cancel</button></div>
-    </section>}
+      </div>}
+    </FormDialog>
+    <ConfirmDialog open={Boolean(removing)} title={`Remove ${removing?.name ?? ''}?`} confirmLabel="Remove" cancelLabel="Keep it" onConfirm={() => { if (removing) onMasterDataChange(data => removeMovement(data, removing.id)); setRemoving(undefined); }} onClose={() => setRemoving(undefined)}>
+      <p>{removing && consequences(removing)}</p>
+    </ConfirmDialog>
+    <ConfirmDialog open={restoring} title="Restore the bundled movements?" confirmLabel="Restore" cancelLabel="Keep my changes" onConfirm={() => { onMasterDataChange(restoreBundledMovements); setRestoring(false); }} onClose={() => setRestoring(false)}>
+      <p>Edits to bundled records, removals and merged names are dropped. Movements you added yourself stay.</p>
+    </ConfirmDialog>
   </>;
 }
 
+type CollectionForm = { id?: string; title: string; description: string; workoutIds: string[] };
+
 function CollectionSettings({ masterData, onMasterDataChange, entries }: SettingsProps) {
-  const [collectionTitle, setCollectionTitle] = useState('');
-  const [collectionIds, setCollectionIds] = useState<string[]>([]);
-  const [editingCollection, setEditingCollection] = useState<string>();
-  const [collectionSearch, setCollectionSearch] = useState('');
+  const [form, setForm] = useState<CollectionForm>();
+  const [removing, setRemoving] = useState<Collection>();
+  const [search, setSearch] = useState('');
   const collections = allCollections(masterData);
-  const saveCollection = () => {
-    const title = collectionTitle.trim();
+  const save = () => {
+    if (!form) return;
+    const title = form.title.trim();
     if (!title) return;
-    const id = editingCollection ?? (() => { const base = slug(title); let candidate = base; for (let n = 2; collections.some(item => item.id === candidate); n++) candidate = `${base}-${n}`; return candidate; })();
-    onMasterDataChange(data => upsertCollection(data, { id, title, workoutIds: collectionIds }));
-    setCollectionTitle(''); setCollectionIds([]); setEditingCollection(undefined);
+    const id = form.id ?? (() => { const base = slug(title); let candidate = base; for (let n = 2; collections.some(item => item.id === candidate); n++) candidate = `${base}-${n}`; return candidate; })();
+    onMasterDataChange(data => upsertCollection(data, { id, title, ...(form.description.trim() ? { description: form.description.trim() } : {}), workoutIds: form.workoutIds }));
+    setForm(undefined);
   };
-  const editCollection = (collection: Collection) => { setEditingCollection(collection.id); setCollectionTitle(collection.title); setCollectionIds([...collection.workoutIds]); };
-  const visibleWorkouts = entries.filter(entry => !collectionSearch.trim() || entry.summary.title.toLowerCase().includes(collectionSearch.toLowerCase()));
-  return <section className={styles.card} aria-labelledby="collections-title">
-    <h2 id="collections-title">Collections</h2>
-    <p className={styles.hint}>Named lists of workouts, shown as chips on cards and as a filter. Bundled collections are read-only; make your own beside them.</p>
-    <ul className={styles.collectionList} aria-label="Collections">{collections.map(collection => <li key={collection.id}><div><strong>{collection.title}</strong><small>{collection.workoutIds.length} {collection.workoutIds.length === 1 ? 'workout' : 'workouts'}{collection.builtIn ? ' · bundled' : ''}{collection.description ? ` · ${collection.description}` : ''}</small></div>{!collection.builtIn && <div className={styles.rowActions}><button type="button" className={shared.quietButton} onClick={() => editCollection(collection)}>Edit</button><button type="button" className={shared.quietButton} aria-label={`Remove collection ${collection.title}`} onClick={() => onMasterDataChange(data => removeCollection(data, collection.id))}><Icon name="trash" size={14} />Remove</button></div>}</li>)}</ul>
-    <div className={styles.collectionForm}>
-      <label className={styles.field}>{editingCollection ? 'Collection title' : 'New collection'}<input value={collectionTitle} maxLength={120} placeholder="Tuesday favourites" onChange={event => setCollectionTitle(event.target.value)} /></label>
-      <label className={styles.field}>Find workouts<input type="search" value={collectionSearch} placeholder="Filter by title" onChange={event => setCollectionSearch(event.target.value)} /></label>
-      <div className={styles.chipRow} role="group" aria-label="Workouts in this collection">{visibleWorkouts.map(entry => <Chip key={entry.workout.id} kind="neutral" pressed={collectionIds.includes(entry.workout.id)} onClick={() => setCollectionIds(current => current.includes(entry.workout.id) ? current.filter(id => id !== entry.workout.id) : [...current, entry.workout.id])}>{entry.summary.title}</Chip>)}</div>
-      <div className={styles.rowActions}><button type="button" className={shared.primaryButton} disabled={!collectionTitle.trim()} onClick={saveCollection}><Icon name="check" />{editingCollection ? 'Save collection' : 'Create collection'}</button>{editingCollection && <button type="button" className={shared.quietButton} onClick={() => { setEditingCollection(undefined); setCollectionTitle(''); setCollectionIds([]); }}>Cancel</button>}<span className={styles.hint}>{collectionIds.length} selected</span></div>
-    </div>
-  </section>;
+  const open = (collection?: Collection) => { setSearch(''); setForm(collection ? { id: collection.id, title: collection.title, description: collection.description ?? '', workoutIds: [...collection.workoutIds] } : { title: '', description: '', workoutIds: [] }); };
+  const visibleWorkouts = entries.filter(entry => !search.trim() || entry.summary.title.toLowerCase().includes(search.toLowerCase()));
+  return <>
+    <section className={styles.card} aria-labelledby="collections-title">
+      <div className={styles.cardHeading}><h2 id="collections-title">Collections</h2><span className={styles.hint}>{collections.length} collections</span></div>
+      <p className={styles.hint}>Named lists of workouts, shown as chips on cards and as a filter. Bundled collections come with the app and are read-only; make your own beside them.</p>
+      <div className={styles.listTop}><span /><button type="button" className={shared.primaryButton} onClick={() => open()}><Icon name="plus" size={16} />New collection</button></div>
+      <MasterList label="Collections" empty="No collections yet."
+        columns={[{ key: 'title', caption: 'Collection' }, { key: 'count', caption: 'Workouts', width: '90px', align: 'end' }]}
+        rows={collections.map(collection => ({
+          id: collection.id,
+          cells: { title: <><strong>{collection.title}</strong>{collection.builtIn && <Badge>bundled</Badge>}{collection.description && <small>{collection.description}</small>}</>, count: collection.workoutIds.length },
+          actions: collection.builtIn ? undefined : <>
+            <button type="button" className={shared.quietButton} aria-label={`Edit collection ${collection.title}`} onClick={() => open(collection)}><Icon name="edit" size={14} />Edit</button>
+            <button type="button" className={shared.quietButton} aria-label={`Remove collection ${collection.title}`} onClick={() => setRemoving(collection)}><Icon name="trash" size={14} /></button>
+          </>,
+        }))} />
+    </section>
+    <FormDialog open={Boolean(form)} wide title={form?.id ? `Edit ${collections.find(item => item.id === form.id)?.title ?? 'collection'}` : 'New collection'} submitLabel={form?.id ? 'Save collection' : 'Create collection'} disabled={!form?.title.trim()} onSubmit={save} onClose={() => setForm(undefined)}>
+      {form && <>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>Title<input value={form.title} maxLength={120} placeholder="Tuesday favourites" onChange={event => setForm({ ...form, title: event.target.value })} /></label>
+          <label className={styles.field}>Description<input value={form.description} maxLength={500} placeholder="Optional, shown under the title" onChange={event => setForm({ ...form, description: event.target.value })} /></label>
+          <label className={`${styles.field} ${styles.wide}`}>Find workouts<input type="search" value={search} placeholder="Filter by title" onChange={event => setSearch(event.target.value)} /></label>
+        </div>
+        <div className={styles.chipRow} role="group" aria-label="Workouts in this collection">{visibleWorkouts.map(entry => <Chip key={entry.workout.id} kind="neutral" pressed={form.workoutIds.includes(entry.workout.id)} onClick={() => setForm({ ...form, workoutIds: form.workoutIds.includes(entry.workout.id) ? form.workoutIds.filter(id => id !== entry.workout.id) : [...form.workoutIds, entry.workout.id] })}>{entry.summary.title}</Chip>)}</div>
+        <p className={shared.fieldNote}>{plural(form.workoutIds.length, 'workout')} selected</p>
+      </>}
+    </FormDialog>
+    <ConfirmDialog open={Boolean(removing)} title={`Remove ${removing?.title ?? ''}?`} confirmLabel="Remove" cancelLabel="Keep it" onConfirm={() => { if (removing) onMasterDataChange(data => removeCollection(data, removing.id)); setRemoving(undefined); }} onClose={() => setRemoving(undefined)}>
+      <p>The collection disappears from cards and filters. Its {plural(removing?.workoutIds.length ?? 0, 'workout')} stay in the library.</p>
+    </ConfirmDialog>
+  </>;
 }

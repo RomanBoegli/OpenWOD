@@ -1,0 +1,27 @@
+.wrap { display: grid; gap: 8px; }
+.wrap button { width: 100%; }
+/* The miniature uses the player's phase tokens; --ring and --wash come from the settings. */
+.panel { --color: var(--phase-work); position: relative; display: grid; align-content: start; gap: 2px; height: 132px; padding: 10px 12px; border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--color) calc(var(--wash) * 100%), var(--surface-1)); color: var(--ink); transition: background-color 200ms linear; }
+.panel[data-warning=amber] { --color: var(--phase-amber); }
+.panel[data-warning=red] { --color: var(--phase-red); }
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; pointer-events: none; }
+.track { stroke: var(--accent-track); stroke-width: var(--ring); vector-effect: non-scaling-stroke; }
+.mark { stroke-width: var(--ring); vector-effect: non-scaling-stroke; opacity: .85; }
+.mark[data-mark=amber] { stroke: var(--phase-amber); }
+.mark[data-mark=red] { stroke: var(--phase-red); }
+.panel[data-phase=work] .mark { opacity: .35; }
+.progress { stroke: var(--color); stroke-width: var(--ring); vector-effect: non-scaling-stroke; transition: stroke 200ms linear; }
+.top { display: flex; justify-content: space-between; font-size: 7px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-2); }
+.dot { display: inline-block; width: 5px; height: 5px; margin-right: 4px; border-radius: 50%; background: var(--color); vertical-align: middle; }
+.phase { font-size: 7px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--color); text-align: center; filter: brightness(.85); }
+.time { text-align: center; font-size: 34px; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+.panel[data-view=context] .time { font-size: 22px; letter-spacing: -1px; }
+.lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+.lane { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 7px; background: color-mix(in srgb, var(--surface-5) 70%, transparent); font-size: 9px; font-weight: 600; }
+.lane b { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 4px; background: var(--lane-a-bg); color: var(--lane-a); font-size: 8px; }
+.lane:last-child b { background: var(--lane-b-bg); color: var(--lane-b); }
+.rows { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: 8.5px; }
+.rows li { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; padding: 3px 6px; border-radius: 5px; color: var(--ink-2); }
+.rows li[data-active] { background: var(--accent-soft); color: var(--ink); box-shadow: inset 2px 0 var(--accent); font-weight: 600; }
+.rows li span, .rows li small { color: var(--ink-3); font-size: 7.5px; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .panel, .progress { transition: none; } }

@@ -40,12 +40,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 43
+                    women: 30
                     unit: kg
                   heavy:
                     value: 60
+                    women: 42.5
                     unit: kg
           - id: ladder-ft-hang-cleans-1
             type: task
@@ -56,12 +59,15 @@ workout:
                 load:
                   light:
                     value: 30
+                    women: 20
                     unit: kg
                   medium:
                     value: 43
+                    women: 30
                     unit: kg
                   heavy:
                     value: 60
+                    women: 42.5
                     unit: kg
           - id: ladder-ft-rest-1
             type: rest
@@ -84,12 +90,15 @@ workout:
                 load:
                   light:
                     value: 35
+                    women: 25
                     unit: kg
                   medium:
                     value: 50
+                    women: 35
                     unit: kg
                   heavy:
                     value: 70
+                    women: 47.5
                     unit: kg
           - id: ladder-ft-hang-cleans-2
             type: task
@@ -100,12 +109,15 @@ workout:
                 load:
                   light:
                     value: 35
+                    women: 25
                     unit: kg
                   medium:
                     value: 50
+                    women: 35
                     unit: kg
                   heavy:
                     value: 70
+                    women: 47.5
                     unit: kg
           - id: ladder-ft-rest-2
             type: rest
@@ -127,12 +139,15 @@ workout:
                 load:
                   light:
                     value: 40
+                    women: 30
                     unit: kg
                   medium:
                     value: 60
+                    women: 42.5
                     unit: kg
                   heavy:
                     value: 85
+                    women: 60
                     unit: kg
           - id: ladder-ft-hang-cleans-3
             type: task
@@ -143,10 +158,13 @@ workout:
                 load:
                   light:
                     value: 40
+                    women: 30
                     unit: kg
                   medium:
                     value: 60
+                    women: 42.5
                     unit: kg
                   heavy:
                     value: 85
+                    women: 60
                     unit: kg

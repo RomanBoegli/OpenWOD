@@ -21,7 +21,7 @@ import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import styles from './App.module.css';
 import own from './Player.module.css';
 
-function Perimeter({ progress }: { progress: RefObject<SVGPathElement | null> }) {
+function Perimeter({ progress, width }: { progress: RefObject<SVGPathElement | null>; width: number }) {
   const svg = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 1000, height: 700 });
   useLayoutEffect(() => {
@@ -30,8 +30,11 @@ function Perimeter({ progress }: { progress: RefObject<SVGPathElement | null> })
     return () => observer.disconnect();
   }, []);
   const { width: w, height: h } = size;
-  const d = `M${w / 2} 4H${w - 25}Q${w - 4} 4 ${w - 4} 25V${h - 25}Q${w - 4} ${h - 4} ${w - 25} ${h - 4}H25Q4 ${h - 4} 4 ${h - 25}V25Q4 4 25 4H${w / 2}`;
-  return <svg className={styles.perimeter} ref={svg} aria-hidden="true"><path className={styles.borderTrack} d={d} /><path ref={progress} className={styles.borderProgress} pathLength="1" strokeDasharray="1 1" d={d} /></svg>;
+  // The stroke is centred on the path, so the inset grows with the width and the corner radius shrinks to keep the outer edge on the panel's rounding.
+  const i = width / 2 + 2;
+  const c = Math.max(4, 25 - i);
+  const d = `M${w / 2} ${i}H${w - c - i}Q${w - i} ${i} ${w - i} ${c + i}V${h - c - i}Q${w - i} ${h - i} ${w - c - i} ${h - i}H${c + i}Q${i} ${h - i} ${i} ${h - c - i}V${c + i}Q${i} ${i} ${c + i} ${i}H${w / 2}`;
+  return <svg className={styles.perimeter} ref={svg} aria-hidden="true" data-perimeter=""><path className={styles.borderTrack} d={d} /><path ref={progress} className={styles.borderProgress} pathLength="1" strokeDasharray="1 1" d={d} /></svg>;
 }
 
 export function exportWorkoutFile(workout: Workout) {
@@ -76,7 +79,7 @@ interface PlayerProps {
 }
 
 export function Player({ workout, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
-  const { names, view, loadsFor, loadUnit } = preferences;
+  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs } = preferences;
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
   const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
@@ -194,10 +197,10 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
       if (player.current.style.getPropertyValue('--drained') !== drained) player.current.style.setProperty('--drained', drained);
     }
     if (player.current) {
-      const warning = clockScope === 'elapsed' || status === 'ready' || status === 'awaitingReady' ? 'normal' : warningLevel(clocks.remainingMs, clocks.durationMs);
+      const warning = clockScope === 'elapsed' || status === 'ready' || status === 'awaitingReady' ? 'normal' : warningLevel(clocks.remainingMs, clocks.durationMs, { amberMs, redMs });
       if (player.current.dataset.warning !== warning) player.current.dataset.warning = warning;
     }
-  }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp]);
+  }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp, amberMs, redMs]);
 
   useEffect(() => {
     if (following && view === 'context' && activeRow.current && context.current) {
@@ -257,8 +260,8 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
 
-    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash}>
-      <Perimeter progress={border} />
+    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600) } as CSSProperties}>
+      <Perimeter progress={border} width={perimeterWidth} />
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span>{positionLabel}{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
@@ -293,8 +296,8 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
             {can('count:rep') && <button className={own.counterButton} onClick={() => send('count', projection.occurrenceId, { unit: 'rep' })}><Icon name="plus" size={18} />Rep</button>}
             <button className={own.counterButton} disabled={!can('undoCount')} aria-label="Undo last count" onClick={() => send('undoCount', projection.occurrenceId)}><Icon name="undo" size={18} /></button>
           </div>}
-          {can('skipTurn') && <button className={styles.quietButton} onClick={() => send('skipTurn', projection.occurrenceId)}><Icon name="skip" size={16} />Skip turn</button>}
-          {can('finish') && <button className={styles.quietButton} data-testid="finish" onClick={() => send('finish', projection.occurrenceId)}><Icon name="flag" size={16} />Finish section</button>}
+          {can('skipTurn') && <button className={own.secondaryAction} onClick={() => send('skipTurn', projection.occurrenceId)}><Icon name="skip" size={18} />Skip turn</button>}
+          {can('finish') && <button className={own.secondaryAction} data-testid="finish" onClick={() => send('finish', projection.occurrenceId)}><Icon name="flag" size={18} />Finish section</button>}
         </div>}
         <div className={styles.nextStrip}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next section, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>
       </>}
@@ -318,15 +321,15 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
           <button className={styles.iconButton} aria-label="Next interval" disabled={!can('next')} onClick={() => send('next', projection.occurrenceId)}><Icon name="next" /></button>
         </div>
         {terminal ? <button className={styles.primaryButton} onClick={restart}><Icon name="play" />Train again</button> : <button className={styles.primaryButton} onClick={() => send(status === 'ready' ? 'play' : status === 'paused' ? 'resume' : status === 'awaitingReady' ? 'ready' : 'pause', projection.occurrenceId)}><Icon name={active ? 'pause' : 'play'} />{status === 'ready' ? 'Start workout' : status === 'paused' ? 'Resume workout' : status === 'awaitingReady' ? 'Start next section' : 'Pause workout'}</button>}
-        <button className={styles.stopButton} disabled={editable} onClick={() => stopDialog.current?.showModal()}>End session</button>
+        <button className={styles.stopButton} disabled={editable} onClick={() => stopDialog.current?.showModal()}><Icon name="close" size={16} />End session</button>
       </div>
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
       <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
     </div>
 
-    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={styles.quietButton} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Read through</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
+    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={styles.quietButton} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Details</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
 
     <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
-    <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={styles.primaryButton} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
+    <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={`${styles.primaryButton} ${styles.dangerFill}`} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
   </div>;
 }

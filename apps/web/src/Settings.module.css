@@ -17,54 +17,23 @@
 .field input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
 .field input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .twoUp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* Workout view: a live miniature of the ring and the pulse beside its controls. */
+.previewRow { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: start; }
+.previewFields { display: grid; gap: 12px; }
 .athleteRow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; }
 .athleteRow fieldset[data-two] { grid-template-columns: 1fr 1fr; margin: 0; }
 .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
-.usage { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px; max-height: 320px; overflow-y: auto; }
-.usage label { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; }
-.usage label:hover { background: var(--hover); }
-.usage input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent-fill); }
-.usage small { color: var(--ink-3); margin-left: auto; white-space: nowrap; }
-.mergeRow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .merges { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .merges li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0 4px 8px; border-bottom: 1px solid var(--line); }
-.levelRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.levelInput { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 6px; }
-.levelInput span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #fff; }
-.levelInput[data-level=light] span { background: var(--level-light); }
-.levelInput[data-level=medium] span { background: var(--level-medium); }
-.levelInput[data-level=heavy] span { background: var(--level-heavy); border: 1px solid var(--level-heavy-border); }
-.levelInput input { width: 100%; min-width: 0; min-height: 40px; padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font-size: 14px; }
-.collectionList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.collectionList li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.collectionList strong { display: block; font-size: 15px; }
-.collectionList small { color: var(--ink-3); font-size: 12px; }
-.collectionForm { display: grid; gap: 12px; padding-top: 6px; }
 .rowActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-/* Movements */
-.movementTop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+/* Master-data lists */
+.listTop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; }
 .search { position: relative; }
 .mergeBar { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 12px 14px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; font-size: 13px; }
 .mergeBar > span { align-self: center; font-weight: 600; color: var(--accent-text); }
 .mergeBar .field { min-width: 220px; }
-.movementList { list-style: none; margin: 0; padding: 0; display: grid; }
-.movementList li { display: grid; grid-template-columns: 28px minmax(180px, 1.2fr) minmax(0, 1.6fr) auto; gap: 12px; align-items: center; padding: 10px 6px; border-bottom: 1px solid var(--line); }
-.movementList li[data-variant] { padding-left: 30px; }
-.movementList li[data-variant] .movementName strong { font-weight: 500; }
-.movementList li[data-variant]::before { content: ''; grid-column: 1; width: 10px; height: 10px; margin-left: 2px; border-left: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); border-radius: 0 0 0 4px; }
-.movementList li[data-variant] .select { grid-column: 1; }
-.movementList li[data-custom] .movementName strong::after { content: 'yours'; margin-left: 8px; padding: 1px 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; vertical-align: middle; }
-.select { display: grid; place-items: center; }
-.select input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent-fill); }
-.movementName { display: grid; gap: 2px; min-width: 0; }
-.movementName strong { font-size: 15px; font-weight: 600; }
-.movementName small { font-size: 11.5px; color: var(--ink-3); overflow-wrap: anywhere; }
-.movementFacts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
-.movementFacts small { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.movementList .rowActions { flex-wrap: nowrap; gap: 2px; }
-.emptyRow { display: block !important; padding: 20px 6px; color: var(--ink-3); font-size: 13px; }
 .unknownList { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .unknownList li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 4px 0 4px 8px; border-bottom: 1px solid var(--notice-border); font-size: 14px; }
 .unknownList small { color: var(--ink-3); white-space: nowrap; }
@@ -75,7 +44,5 @@
   .layout { grid-template-columns: 1fr; gap: 16px; }
   .nav { position: static; grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding: 4px; }
   .nav a { min-height: 40px; padding: 6px 12px; white-space: nowrap; }
-  .movementList li { grid-template-columns: 28px minmax(0, 1fr) auto; }
-  .movementList li .movementFacts { grid-column: 2 / -1; }
 }
-@media (max-width: 620px) { .card { padding: 18px 16px; } .athleteRow, .twoUp, .mergeRow, .formGrid, .movementTop { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .card { padding: 18px 16px; } .athleteRow, .twoUp, .formGrid, .listTop, .previewRow { grid-template-columns: 1fr; } }

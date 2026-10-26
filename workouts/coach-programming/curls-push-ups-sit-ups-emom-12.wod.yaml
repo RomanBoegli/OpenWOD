@@ -28,9 +28,22 @@ workout:
             type: task
             assignments:
               A:
-                notes: 14-12-10-8 across the rounds; add weight each round
+                notes: "Per dumbbell, a starting weight: 14-12-10-8 across the rounds, add weight each round"
                 name: Biceps curls
                 reps: 8
+                load:
+                  light:
+                    value: 7.5
+                    women: 5
+                    unit: kg
+                  medium:
+                    value: 10
+                    women: 7.5
+                    unit: kg
+                  heavy:
+                    value: 15
+                    women: 10
+                    unit: kg
           - id: summer-push-ups
             type: task
             assignments:
