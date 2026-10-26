@@ -1,11 +1,12 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.8 · 26 October 2026 · Desktop-first development, portable workout sharing, and implementation optimisations
+Version 1.9 · 26 October 2026 · Desktop-first development, portable workout sharing, and the planned static deployment shape
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
 The core interaction is synchronised workout content: the execution engine identifies the relevant row, athlete assignments, or exercise block; the player highlights and presents that content with what comes next. Repeated execution revisits the same content with a new round context. Timers must never invent progress through repetitions or distance-based work.
 Deployment is a product requirement: a GitHub repository must be deployable through Portainer using its root Compose file, a prebuilt application image, and persistent SQLite storage.
+A second shape, the same build served as a static site with the library kept in the browser, is planned for version 1.1.0 (section 15.5).
 
 **Reading guide for implementers.** Sections 5–14 are normative; sections 11, 15, and 16 hold the architecture choices, the order of work, and the open risks. Start with the backlog in section 15.1 and the fixture in section 6.4, which is the first executable test. Where an architecture note says SHOULD or MAY, the behaviour it protects remains mandatory; only the technique is optional.
 
@@ -435,6 +436,10 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **DAT-09** Archiving/deleting a workout SHALL not invalidate session snapshots. Clearing browser storage SHALL not erase already-synchronised server data; unsynchronised data is local-only and must be labelled accordingly.
 
+**DAT-10** (planned for 1.1.0) In the static shape the library SHALL live in IndexedDB of the browser profile, behind the same `Backend` interface as the server client, with the same revision, import and correction semantics, and the Settings page SHALL say where the data lives and offer persistent storage.
+
+**DAT-11** (planned for 1.1.0) The `openwod.export` JSON SHALL restore into either shape, replacing everything after an explicit confirmation that shows the counts and export date. The server SHALL write a pre-restore SQLite backup first. Restore SHALL be validated and all-or-nothing.
+
 ## 10.1 Portable WOD sharing
 
 SQLite remains the live datastore. JSON files are portable exchange documents; sharing a workout SHALL NOT require copying the database, accessing the container filesystem, or running another service.
@@ -558,6 +563,12 @@ The implementation SHALL document exact environment names in .env.example and th
 
 **DEP-14** The README SHALL contain a short Portainer walkthrough, configuration table, HTTPS example, backup/restore instructions, upgrade/rollback procedure, and troubleshooting for permissions, private images, audio, wake lock, and unhealthy startup. Exact tested Portainer/Docker versions SHALL be recorded for each release.
 
+**DEP-15** (planned for 1.1.0) A static build target (`vite build --mode static`, define `__OPENWOD_STATIC__`, relative base `./`, output `dist/static`) SHALL produce a site that runs from any static web root and from `https://<owner>.github.io/<repo>/` without rewrites, from the same sources and the same cue scripts as the image.
+
+**DEP-16** (planned for 1.1.0) Every `v*` tag SHALL publish the static site to GitHub Pages and attach `openwod-static-<tag>.zip` to a GitHub Release whose body is `docs/releases/<tag>.md`, both gated on the browser smoke. Existing releases SHALL never be overwritten.
+
+**DEP-17** (planned for 1.1.0) The production smoke SHALL run in both shapes and SHALL be base-path safe, so the same spec checks the container, a `vite preview` of the static build, and the live Pages URL.
+
 ## 12.1 Portainer acceptance path
 
 1. Publish a tested version to the chosen registry.
@@ -673,7 +684,8 @@ Recorded 26 October 2026 after version 1.8. "Done" means implemented with automa
 | 2 Initial household version | Done (versions 1.3 to 1.8) | The import of the full application export (restore is the SQLite backup). |
 | 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
 | 4 Release hardening | Rehearsed locally (version 1.8) | User-side: push the tag so the multi-architecture workflow publishes, the Portainer walkthrough with the digest, the 60-minute real run, the device checklist, the digest and hardware lines of the release notes. |
-| 5 Follow-up improvements | Open | Prioritised from real training sessions. |
+| 5 Static shape and Pages | Planned (version 1.9, section 15.5) | Starts after the 1.0.0 tag. |
+| 6 Follow-up improvements | Open | Prioritised from real training sessions. |
 
 ## 15.4 Waves
 
@@ -687,8 +699,38 @@ Decisions taken along the way: collections and programs (LIB-03) are one concept
 | 2c Registry, polish and master-data flow | The YAML workout registry with a content pass, women's loads and kg/lb display, the Training view settings with the Look & feel miniature, one CRUD flow for master data, exclusive collections, the end of the working title, the structured editor row. | 1.7 |
 | 3 Persistence and sharing | The SQLite household server and API, device cache and outbox, checkpoints and recovery, single-tab control, history with corrections, packs with provenance, backup and restore, the device-library migration. | 1.8 |
 | 4 Release hardening | Version 1.0.0, the named stack, volume and environment, deployment docs with backup, restore, upgrade and rollback, the restore rehearsal, the device checklist, release notes; the user-side gates are in 15.3. | 1.8 |
+| 5 Static shape and Pages | Planned: the static build target, the browser-only library behind a `Backend` interface, one household core shared by SQLite and IndexedDB, restore from the JSON export in both shapes, voices rendered in CI, Pages and a GitHub Release on every tag. See 15.5. | 1.9 |
 
 Out of scope by decision: teams of three or four athletes; celebrity or Australian voices (Piper ships British and American English only); default loads on movement records.
+
+## 15.5 Planned wave 5: the static deployment shape (version 1.1.0)
+
+Recorded in version 1.9 before any code.
+The user decided: ship in 1.1.0 after the 1.0.0 tag, voices rendered in CI, Pages on every `v*` tag with a zip on the GitHub Release, and a JSON backup with restore.
+
+**Decisions.**
+
+- Mode by Vite mode: `static` and `static-test` set `__OPENWOD_STATIC__`, `base: './'` and `dist/static`, without the `/api` proxy. `test` and `static-test` set `__OPENWOD_TEST__`. Hash routing keeps the pathname constant, so relative URLs work on Pages, from a zip and under `vite preview`.
+- `Backend` interface in `apps/web/src/data/backend.ts` with today's `remote` (HTTP) and a new `local-backend.ts` (IndexedDB), chosen at module load by `DATA_MODE`. The local backend throws the client `ApiError`, never `NetworkError`, so the hook and outbox stay unchanged.
+- One household core: the semantics of `apps/server/src/store.ts` move to `packages/household/src/core.ts` as `class Household` over a synchronous `HouseholdTables` port. SQLite implements the port with prepared statements inside `Store.transaction`, the browser with Maps inside one IndexedDB transaction. A shared conformance suite pins both.
+- IndexedDB version 2 adds `workouts`, `master` and `sessions` (indexes `byFinished`, `byWorkout`), corrections embedded in the session record. Inside a transaction only `settle()` of that transaction is awaited, so imports and restore are atomic.
+- Restore replaces everything after a confirmation with counts and export date. `parseExportDocument` checks `format` and `formatVersion <= EXPORT_VERSION`, compiles every workout and snapshot, sanitises master data. The server writes `pre-restore-<ts>.sqlite` under `/data/backups` first. The client clears the outbox and refetches.
+- Legacy pre-1.0 localStorage data migrates automatically in the static shape with one notice. The server shape keeps the banner.
+- Limits: 100 saved workouts as today, 2000 sessions in the static shape with the oldest pruned.
+- Voices in CI with `scripts/generate-cues.ts` and `PIPER_PYTHON=python3`, cached by `actions/cache` keyed on the two cue scripts and `movements.ts`, warmed on `main` by a `cues.yml` workflow because tag caches are invisible to later tags.
+
+**Phases.**
+
+| Phase | Work | Gate |
+| - | - | - |
+| A Household core | `packages/household/src/{types,errors,core,export}.ts`, `Store` becomes `SqliteTables` plus delegation, `Store.restore`, route `POST /api/v1/import/restore`, shared suite `tests/unit/helpers/household-suite.ts`. | Existing server suites pass unchanged, then the split suite passes. |
+| B Local backend | `vite.config.ts` mode matrix, `apps/web/src/globals.d.ts`, `data/mode.ts`, `data/backend.ts`, `idb.ts` v2 with `closeIdb`, `local-backend.ts`, `remote.exportAll/restore`, `clearOutbox`, static branches in `use-library-data.ts` (`mode`, `exportAll`, `restore`, `stats`). | `fake-indexeddb` suite: shared cases plus pagination, pruning, 409 as `ApiError`, atomic import, v1 to v2 upgrade. |
+| C UI | `settings/RestoreDialog.tsx`, `ServerCard` and `BrowserCard` in `GeneralSettings.tsx` ("This browser": storage estimate, Keep data on this device, counts, JSON backup, restore), `downloadBlob`, header pill only in server mode, `BASE_URL` for cues and LICENSE, mode-specific strings in Library, History, Editor. | Screenshot pass in WebKit, both themes, 1024 and 390. |
+| D Build and tests | Scripts `build:static`, `dev:static`, `preview:static`, `test:e2e:static`, `check-production.mjs` with a dist argument, Playwright webServer on 5175 with `static-*` projects reusing player, editor, settings, screens, tabs, library and recovery, `tests/e2e/static/` (library, packs, history, backup, migration, strings, settings), base-path-safe production spec with `OPENWOD_PRODUCTION_MODE`. | Firefox and WebKit in both project groups, preview smoke in static mode, container smoke unchanged. |
+| E Workflows | `release.yml` jobs `static`, `release`, `pages`, `check.yml` builds static and runs `static-chromium`, `cues.yml` warms the voice cache. | A `workflow_dispatch` run builds and smokes without publishing. |
+| F Docs and version | `docs/deploy.md` static section, README features and "Just open it", architecture, development, validation, `docs/releases/v1.1.0.md`, this document, version 1.1.0 in `package.json`, lock, `CITATION.cff`, `.env.example`, `Dockerfile`. | Markdown rules, version grep. |
+
+**User-side gates.** Enable Pages with source "GitHub Actions", push `main` or dispatch `cues.yml`, tag `v1.1.0`, open the Pages URL and check the footer version and five voices, serve the zip from a plain web root once.
 
 # 16 Risks and decisions to validate
 
@@ -733,6 +775,11 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 
 # 18 Plan revision record
+
+## Version 1.9 — 26 October 2026
+
+- Wave 5 planned, not built: the static deployment shape for version 1.1.0 (section 15.5, DEP-15 to DEP-17, DAT-10 and DAT-11), with the user's decisions on release, voices, publishing and backup recorded there.
+- Housekeeping after 1.0.0: the `.gitignore` rule `data/` had hidden `apps/web/src/data/` from every commit and is now anchored to the root, the dead pre-1.0 storage writers and the unused helpers were removed, the frozen `workout.v1` schema was dropped, and the footer links to the GitHub repository and the release of the running version.
 
 ## Version 1.8 — 26 October 2026
 
