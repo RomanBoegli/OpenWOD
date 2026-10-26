@@ -92,4 +92,7 @@ Tags do not trigger the Check workflow on their own.
 8. Create the GitHub release from the tag with the notes as its body.
 
 Existing tags are never overwritten.
+
+The workflow is the only publishing route.
+As an emergency exit the same multi-architecture image can be built and pushed from a machine logged into GHCR with `docker buildx build --platform linux/amd64,linux/arm64 --push`, with the `VERSION`, `REVISION` and `SOURCE_URL` build arguments the workflow passes, and the tag's later workflow run then stops at the manifest it refuses to overwrite.
 A mistake after the push means a new patch version, not a moved tag.

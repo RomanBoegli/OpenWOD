@@ -1,7 +1,10 @@
 ARG NODE_IMAGE=node:24.22.1-bookworm-slim
 
+# The deps, cues and build stages produce JavaScript, MP3 and other files that are the same for every architecture, so they
+# run on the building machine's own platform: a multi-architecture build on one machine renders the voices once instead of
+# once per target under emulation. In the release workflow each runner builds its own architecture, so nothing changes there.
 # Dependencies once: the build stage uses this layer and only a package.json or lockfile change rebuilds it.
-FROM ${NODE_IMAGE} AS deps
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --include=dev
@@ -10,7 +13,7 @@ RUN npm ci --include=dev
 # update never re-renders them: only the two cue scripts and the movement catalogue reach this layer. The runner (tsx)
 # is pinned here and installed on its own because the script needs nothing else from the app's node_modules.
 # CUES=1 renders them with Piper (offline text-to-speech); CUES=0 skips them for fast local builds.
-FROM ${NODE_IMAGE} AS cues
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS cues
 ARG CUES=1
 WORKDIR /app
 RUN if [ "$CUES" = "1" ]; then \
