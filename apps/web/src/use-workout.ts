@@ -26,7 +26,8 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   const clockOffset = useRef(0);
   const [session, setSession] = useState(0);
   const [checkpointStatus, setCheckpointStatus] = useState<CheckpointStatus>('unknown');
-  const now = useCallback(() => performance.now() + clockOffset.current, []);
+  // Browser tests advance only this injected clock; time spent waiting for UI or storage never moves it.
+  const now = useCallback(() => __OPENWOD_TEST__ ? clockOffset.current : performance.now(), []);
   // One engine per (workout, session). Compile and session identity happen exactly once per session; a recovery only applies to the first.
   const engine = useMemo(() => {
     const plan = compileWorkout(workout);
@@ -85,8 +86,8 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
       // One timeout for the next semantic deadline; frames only repaint clocks in between. Open-ended manual work has no
       // deadline but its elapsed clocks still move, so frames continue while running.
       const live = () => engine.nextDeadline !== undefined || engine.project().status === 'running';
-      if (live() && !document.hidden && !disposed) {
-        if (engine.nextDeadline !== undefined) deadline = setTimeout(schedule, Math.max(1, engine.nextDeadline - (performance.now() + clockOffset.current)));
+      if (!__OPENWOD_TEST__ && live() && !document.hidden && !disposed) {
+        if (engine.nextDeadline !== undefined) deadline = setTimeout(schedule, Math.max(1, engine.nextDeadline - now()));
         const animate = () => {
           if (disposed || document.hidden) return;
           refresh();
@@ -113,7 +114,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
       checkpointRevision: () => checkpointRevision.current,
     };
     return () => { disposed = true; if (deadline) clearTimeout(deadline); cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); if (__OPENWOD_TEST__) delete window.__openwodTest; };
-  }, [engine, refresh, audio, queues]);
+  }, [engine, refresh, audio, queues, now]);
 
   useEffect(() => {
     let lock: WakeLockSentinel | undefined;

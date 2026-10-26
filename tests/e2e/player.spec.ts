@@ -26,6 +26,18 @@ test.describe('player', () => {
     await expect(page.getByTestId('primary-timer')).toHaveText('00:10');
   });
 
+  test('the injected clock stays fixed while the browser waits, then advances exactly', async ({ page }) => {
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 30_000);
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:20');
+    await page.waitForTimeout(1_100);
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:20');
+    expect(await page.evaluate(() => window.__openwodTest!.snapshot().clocks.activeMs)).toBe(20_000);
+    await advance(page, 20_000);
+    await expect(page.getByRole('status')).toHaveText('Transition');
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:10');
+  });
+
   test('pause freezes the clock across a 30-second delay and resumes the same interval', async ({ page }) => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__openwodTest!.advance(27_100));

@@ -200,7 +200,7 @@ test.describe('workout view settings', () => {
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__openwodTest!.advance(30_000));
-    expect(Number(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--drained')))).toBeGreaterThan(0.3);
+    await expect.poll(async () => Number(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--drained')))).toBeGreaterThan(0.3);
     const overall = page.getByTestId('overall-progress');
     await expect(overall).toContainText('SECTION 1 / 1');
     await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-weight', 'light');

@@ -73,6 +73,16 @@ export const SessionRecordSchema = Type.Object({
 }, { $id: 'SessionRecord', additionalProperties: false });
 export type SessionRecordDocument = Static<typeof SessionRecordSchema>;
 
+/** Round persisted durations to the API's whole milliseconds while the engine keeps its full clock precision. */
+export function roundSessionTimes(record: SessionRecord): SessionRecord {
+  return {
+    ...record,
+    activeMs: Math.round(record.activeMs),
+    results: record.results.map(result => ({ ...result, sectionMs: Math.round(result.sectionMs) })),
+    events: record.events.map(event => ({ ...event, activeMs: Math.round(event.activeMs) })),
+  };
+}
+
 /** Completed unless the engine aborted, capped when any section ran into its cap. */
 export function sessionOutcome(status: Status, results: SectionResult[]): SessionOutcome {
   if (status === 'aborted') return 'aborted';

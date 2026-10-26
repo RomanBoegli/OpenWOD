@@ -17,7 +17,7 @@ import { AthletesChip, FormatChips } from './Chip';
 import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import { collectPrescriptions } from '../../../packages/domain/src/library';
 import { countsAsDone, type SessionRecord } from './session-log';
-import { sessionOutcome } from '../../../packages/engine/src/records';
+import { roundSessionTimes, sessionOutcome } from '../../../packages/engine/src/records';
 import { deviceId } from './data/device';
 import { PACK_EXTENSION, serialisePackFile, type WorkoutPack } from '../../../packages/domain/src/pack';
 import { elapsedText, type Recovery } from './data/checkpoints';
@@ -178,7 +178,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     const interrupted = engine.events.some(event => event.type === 'recovered');
     if (!interrupted && !countsAsDone(outcome, activeMs, plan.durationMs, plan.durationKind === 'open')) { onSessionClear?.(engine.sessionId); return; }
     const finishedAt = new Date().toISOString();
-    onSessionEnd({ id: engine.sessionId, workoutId: workout.id, workoutRevision: workout.revision, title: workout.title, startedAt: startedAt.current ?? finishedAt, finishedAt, outcome, interrupted, modified: projection.modified, completion: outcome === 'aborted' ? Math.min(1, activeMs / plan.durationMs) : 1, activeMs, results: projection.results, events: engine.events, workout, deviceId: deviceId() });
+    onSessionEnd(roundSessionTimes({ id: engine.sessionId, workoutId: workout.id, workoutRevision: workout.revision, title: workout.title, startedAt: startedAt.current ?? finishedAt, finishedAt, outcome, interrupted, modified: projection.modified, completion: outcome === 'aborted' ? Math.min(1, activeMs / plan.durationMs) : 1, activeMs, results: projection.results, events: engine.events, workout, deviceId: deviceId() }));
   }, [terminal, status, engine, plan, workout, projection.results, projection.modified, onSessionEnd, onSessionClear, startedAt]);
 
   // Checkpoints make leaving safe; only when they fail does leaving mean losing the session, so ask then (AT-16).

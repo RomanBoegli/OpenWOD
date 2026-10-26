@@ -44,7 +44,7 @@ test.describe('household server', () => {
   test('history lists sessions newest first, repeats one, and corrects a score keeping the earlier value', async ({ page, api }) => {
     await page.goto('/#/wod/cindy/play'); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await advance(page, 10_000);
+    await advance(page, 10_000.125); // Real browser clocks include fractional milliseconds in event timestamps.
     await page.getByRole('button', { name: 'Round', exact: true }).click();
     await page.getByRole('button', { name: 'Round', exact: true }).click();
     await advance(page, 1_200_000);

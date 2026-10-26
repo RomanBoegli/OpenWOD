@@ -11,7 +11,7 @@ test.describe('checkpoints and recovery', () => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 10_000);
     for (let i = 0; i < 5; i++) { await advance(page, 20_000); await page.evaluate(() => window.__openwodTest!.command('switch')); }
-    await advance(page, 7_000);
+    await advance(page, 7_000.125);
     const before = await snapshot(page);
     expect(before.projection.turn).toMatchObject({ athlete: 'B', teamRound: 2 });
     const timerBefore = await page.getByTestId('primary-timer').textContent();
@@ -38,7 +38,7 @@ test.describe('checkpoints and recovery', () => {
   test('ending from the recovery prompt records Aborted and Interrupted, and the library banner offers the session until then', async ({ page, api }) => {
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await advance(page, 10_000 + 65_000);
+    await advance(page, 10_000 + 65_000.125);
     await flush(page);
     await page.goto('/');
     const banner = page.getByRole('status', { name: 'Interrupted session' });
