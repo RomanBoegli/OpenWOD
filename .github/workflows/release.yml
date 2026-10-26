@@ -54,7 +54,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Cache production test browsers
+        uses: actions/cache@v6
+        with:
+          path: .cache/ms-playwright
+          key: browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
+      # Bounded: during a GitHub Actions incident this step once hung on the amd64 runner until the 40-minute job timeout.
       - name: Install production test browsers
+        timeout-minutes: 10
         run: npm run browsers:install -- --with-deps
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"

@@ -66,7 +66,7 @@ Browser storage is a convenience until the server milestone and every read is va
 The image is built and published by the **Release image** workflow (`.github/workflows/release.yml`) when a `v*` tag is pushed.
 The workflow refuses a tag whose version is not the one in `package.json`, and a tag without release notes.
 It does not repeat the browser suite: the **Check** workflow that ran on the same commit when it was pushed to `main` counts, and only a commit without a green Check is tested inside the release.
-The browser suite is paused in the Check workflow for now, behind the `BROWSER_SUITE` switch at the top of the file, and runs locally as before.
+The browser suite can be paused with the `BROWSER_SUITE` switch at the top of the Check workflow, which keeps lint, typecheck, unit tests and build running.
 Tags do not trigger the Check workflow on their own.
 
 1. Pick the version, `vX.Y.Z`, and put `X.Y.Z` in `package.json`, `package-lock.json` (both `version` fields), `CITATION.cff` (with the release date) and the `ARG VERSION` default of the `Dockerfile`.
@@ -81,6 +81,8 @@ Tags do not trigger the Check workflow on their own.
 
 5. Watch the workflow.
    It validates, builds the image natively for amd64 and arm64 (the voice layer comes from the build cache unless a cue script or the catalogue changed), smoke-tests each architecture against a running container, and publishes the manifest `ghcr.io/<owner>/<repository>:vX.Y.Z`.
+   The browser suite does not gate the release, but the smoke test does: every candidate image is tested in Chromium, Firefox and WebKit before it is pushed.
+   When one architecture's job fails or times out, re-run the failed jobs of that run: the other architecture's candidate image is already pushed and the manifest picks it up.
    The job summary of the manifest step prints the digest.
 6. The first time: open the package on GitHub (Packages → the repository's image) and set its visibility, or add registry credentials to the Portainer stack.
    A fresh package is private.

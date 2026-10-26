@@ -1,5 +1,5 @@
 name: Check
-# Lint, typecheck, build and the browser suite (paused with BROWSER_SUITE below). Runs on every branch push and pull request, and as the validation step of the
+# Lint, typecheck, build and the browser suite (BROWSER_SUITE below pauses the suite). Runs on every branch push and pull request, and as the validation step of the
 # Release image workflow when the tagged commit has no green run of its own. Tags themselves do not trigger it.
 on:
   push:
@@ -9,8 +9,8 @@ on:
 permissions:
   contents: read
 env:
-  # The browser suite is paused for now: set to "true" to run it again on every push and inside the release.
-  BROWSER_SUITE: "false"
+  # Set to "false" to pause the browser suite on every push and inside the release.
+  BROWSER_SUITE: "true"
 jobs:
   check:
     runs-on: ubuntu-latest
