@@ -9,12 +9,16 @@ import { bundledCollections } from '../../../packages/domain/src/bundled';
  * presentation and organisation; it never changes a workout file.
  */
 export interface Collection { id: string; title: string; description?: string; workoutIds: string[]; builtIn?: boolean }
+/** Your changes to a bundled collection, kept as a delta so a workout added to the registry later still shows up. */
+export interface CollectionEdit { title?: string; description?: string; added: string[]; removed: string[] }
 export type { Movement };
 export type { Sex } from '../../../packages/domain/src/prescription';
 export interface MasterData {
   /** Equipment key (see equipmentKey) → canonical display name. */
   equipmentAliases: Record<string, string>;
   collections: Collection[];
+  /** Edits to bundled collections by id. */
+  collectionEdits: Record<string, CollectionEdit>;
   /** Your movement records: new ones, and overrides of bundled records with the same id. */
   movements: Movement[];
   /** Bundled record ids you removed. */
@@ -30,12 +34,18 @@ const KEY = 'openwod.master.v1';
 /** Collections that ship with the app: one per registry folder with a collection.yaml. They are not editable; your own collections sit beside them. */
 export const builtInCollections: Collection[] = bundledCollections.map(collection => ({ ...collection, builtIn: true }));
 
-/** Bundled collections first (with your edits applied as overrides of the same id), then your own. */
-export const allCollections = (data: MasterData): Collection[] => [
-  ...builtInCollections.map(collection => { const override = data.collections.find(item => item.id === collection.id); return override ? { ...override, builtIn: true } : collection; }),
-  ...data.collections.filter(collection => !builtInCollections.some(item => item.id === collection.id)),
-];
-export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], movements: [], hiddenMovements: [], movementAliases: {}, committed: [] });
+/** Bundled collections first with your edits applied, then your own. A workout in one of your collections is not shown under a bundled one. */
+export const allCollections = (data: MasterData): Collection[] => {
+  const own = data.collections.filter(collection => !builtInCollections.some(item => item.id === collection.id));
+  const claimed = new Set(own.flatMap(collection => collection.workoutIds));
+  const bundled = builtInCollections.map(collection => {
+    const edit = data.collectionEdits[collection.id];
+    const workoutIds = [...collection.workoutIds.filter(id => !edit?.removed.includes(id)), ...(edit?.added ?? []).filter(id => !collection.workoutIds.includes(id))].filter(id => !claimed.has(id));
+    return { ...collection, ...(edit?.title ? { title: edit.title } : {}), ...(edit?.description !== undefined ? { description: edit.description } : {}), workoutIds, builtIn: true };
+  });
+  return [...bundled, ...own];
+};
+export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], collectionEdits: {}, movements: [], hiddenMovements: [], movementAliases: {}, committed: [] });
 
 const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
@@ -71,7 +81,11 @@ export function loadMasterData(): MasterData {
     const hiddenMovements = strings(stored.hiddenMovements, MOVEMENT_LIMIT);
     const movementAliases: Record<string, string> = {};
     if (stored.movementAliases && typeof stored.movementAliases === 'object') for (const [key, id] of Object.entries(stored.movementAliases)) if (text(key, 160) && text(id, 80)) movementAliases[text(key, 160)] = text(id, 80);
-    return { equipmentAliases: aliases, collections, movements, hiddenMovements, movementAliases, committed: strings(stored.committed, 2000, 200) };
+    const collectionEdits: Record<string, CollectionEdit> = {};
+    if (stored.collectionEdits && typeof stored.collectionEdits === 'object') for (const [id, edit] of Object.entries(stored.collectionEdits as Record<string, Partial<CollectionEdit>>)) if (builtInCollections.some(item => item.id === id) && edit && typeof edit === 'object') collectionEdits[id] = { ...(text(edit.title, 120) ? { title: text(edit.title, 120) } : {}), ...(typeof edit.description === 'string' ? { description: text(edit.description, 500) } : {}), added: strings(edit.added, 500, 120), removed: strings(edit.removed, 500, 120) };
+    // Earlier builds stored an edited bundled collection as a full copy under its id; that becomes a delta.
+    for (const copy of collections.filter(item => builtInCollections.some(bundled => bundled.id === item.id))) collectionEdits[copy.id] = editFor(builtInCollections.find(bundled => bundled.id === copy.id)!, copy);
+    return { equipmentAliases: aliases, collections: collections.filter(item => !builtInCollections.some(bundled => bundled.id === item.id)), collectionEdits, movements, hiddenMovements, movementAliases, committed: strings(stored.committed, 2000, 200) };
   } catch { return emptyMasterData(); }
 }
 
@@ -193,16 +207,35 @@ export function removeMovementAlias(data: MasterData, spelling: string): MasterD
  * Replaces a collection in place (so editing never reorders the list) or appends a new one. A workout belongs to one
  * of your collections at a time: the ids it now holds leave every other collection of yours.
  */
+/** The delta between a bundled collection and the version the user saved. */
+function editFor(bundled: Collection, edited: Collection): CollectionEdit {
+  return {
+    ...(edited.title.trim() && edited.title.trim() !== bundled.title ? { title: edited.title.trim() } : {}),
+    ...((edited.description ?? '') !== (bundled.description ?? '') ? { description: edited.description ?? '' } : {}),
+    added: edited.workoutIds.filter(id => !bundled.workoutIds.includes(id)),
+    removed: bundled.workoutIds.filter(id => !edited.workoutIds.includes(id)),
+  };
+}
+
+/**
+ * Saves a collection: a bundled one as a delta against the registry, your own in place (so editing never reorders
+ * the list) or appended. A workout belongs to one collection at a time, so the ids it now holds leave every other
+ * collection of yours and are marked removed on every bundled one that listed them.
+ */
 export function upsertCollection(data: MasterData, collection: Collection): MasterData {
-  const strip = (item: Collection): Collection => { const { builtIn: _flag, ...rest } = item; return rest; };
-  const stored = strip(collection);
-  const others = (item: Collection): Collection => ({ ...item, workoutIds: item.workoutIds.filter(id => !stored.workoutIds.includes(id)) });
-  // A bundled collection that still holds one of these workouts gets an override without them.
-  const touched: Collection[] = builtInCollections.filter(item => item.id !== stored.id && !data.collections.some(own => own.id === item.id) && item.workoutIds.some(id => stored.workoutIds.includes(id))).map(strip);
-  const base: Collection[] = [...data.collections, ...touched];
-  const index = base.findIndex(item => item.id === stored.id);
-  const collections = index === -1 ? [...base.map(others), stored] : base.map((item, at) => at === index ? stored : others(item));
-  return { ...data, collections };
+  const { builtIn: _flag, ...stored } = collection;
+  const bundled = builtInCollections.find(item => item.id === stored.id);
+  const ids = new Set(stored.workoutIds);
+  const collectionEdits = Object.fromEntries(builtInCollections.filter(item => item.id !== stored.id).map(item => {
+    const edit = data.collectionEdits[item.id] ?? { added: [], removed: [] };
+    const removed = [...new Set([...edit.removed, ...item.workoutIds.filter(id => ids.has(id))])];
+    return [item.id, { ...edit, added: edit.added.filter(id => !ids.has(id)), removed }];
+  }).filter(([, edit]) => (edit as CollectionEdit).added.length || (edit as CollectionEdit).removed.length || (edit as CollectionEdit).title || (edit as CollectionEdit).description !== undefined));
+  const others = (item: Collection): Collection => ({ ...item, workoutIds: item.workoutIds.filter(id => !ids.has(id)) });
+  if (bundled) return { ...data, collections: data.collections.map(others), collectionEdits: { ...collectionEdits, [bundled.id]: editFor(bundled, stored) } };
+  const index = data.collections.findIndex(item => item.id === stored.id);
+  const collections = index === -1 ? [...data.collections.map(others), stored] : data.collections.map((item, at) => at === index ? stored : others(item));
+  return { ...data, collections, collectionEdits };
 }
 
 /** The one collection a workout is shown under: yours first, then the bundled one its file sits in. */

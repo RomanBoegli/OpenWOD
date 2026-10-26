@@ -96,7 +96,7 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
   }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, onlyMine, preferences.myEquipment, sort, sessions]);
   const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || onlyMine);
   const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
-  const previewSummary = useMemo(() => preview && summariseWorkout(preview), [preview]);
+  const previewSummary = useMemo(() => preview && summariseWorkout(preview, { difficulty: preferences.difficulty }), [preview, preferences.difficulty]);
   const conflict = preview && entries.find(entry => entry.workout.id === preview.id);
 
   async function importFile(file?: File) {

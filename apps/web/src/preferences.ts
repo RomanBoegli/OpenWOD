@@ -1,5 +1,6 @@
 import type { CueSource, SoundMode } from './audio';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
+import { DEFAULT_CALIBRATION, normaliseCalibration, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
 
 export type ThemePreference = 'auto' | 'light' | 'dark';
 export interface Preferences {
@@ -30,9 +31,11 @@ export interface Preferences {
   /** Equipment available at home; the library can hide anything that needs more. */
   myEquipment: string[];
   onlyMyEquipment: boolean;
+  /** The knobs of the projected difficulty, so the ratings can be calibrated to the person reading them. */
+  difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, myEquipment: [], onlyMyEquipment: false };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -67,6 +70,7 @@ export function loadPreferences(): Preferences {
       markColors: { first: color(stored.markColors?.first), second: color(stored.markColors?.second) },
       myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,
+      difficulty: normaliseCalibration(stored.difficulty),
     };
   } catch { return structuredClone(defaultPreferences); }
 }

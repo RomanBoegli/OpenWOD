@@ -18,7 +18,40 @@ export interface Difficulty {
   label: DifficultyLabel;
   /** 0 to 100. */
   score: number;
-  factors: { density: number; intensity: number; duration: number; load: number };
+  factors: { density: number; intensity: number; duration: number; load: number; length: number };
+}
+
+/**
+ * The knobs of the formula, calibrated on the bundled workouts by default and adjustable per device so the
+ * judgements match the person reading them.
+ */
+export interface DifficultyCalibration {
+  /** Minutes of content at which effort counts in full; shorter pieces are discounted by the square root of their share, so two minutes of anything stays Light. */
+  fullEffortMinutes: number;
+  /** Minutes of content at which the length factor reaches its top. */
+  longMinutes: number;
+  /** Relative weights of effort, length and load; only their proportions matter. */
+  weights: { effort: number; duration: number; load: number };
+  /** Scores (0..100) at which Moderate, Hard and Brutal start. */
+  thresholds: { moderate: number; hard: number; brutal: number };
+}
+
+export const DEFAULT_CALIBRATION: DifficultyCalibration = { fullEffortMinutes: 15, longMinutes: 60, weights: { effort: 75, duration: 15, load: 10 }, thresholds: { moderate: 25, hard: 45, brutal: 62 } };
+export const CALIBRATION_RANGES = { fullEffortMinutes: [3, 60], longMinutes: [20, 180], weight: [0, 100], threshold: [1, 100] } as const;
+
+const bounded = (value: unknown, [min, max]: readonly [number, number], fallback: number) => typeof value === 'number' && Number.isFinite(value) ? Math.round(Math.min(max, Math.max(min, value))) : fallback;
+
+/** Clamps every knob into its range, keeps the long mark above the full-effort mark, orders the thresholds, and never lets all weights be zero. */
+export function normaliseCalibration(value: unknown): DifficultyCalibration {
+  const raw = (value && typeof value === 'object' ? value : {}) as Partial<DifficultyCalibration> & { weights?: Partial<DifficultyCalibration['weights']>; thresholds?: Partial<DifficultyCalibration['thresholds']> };
+  const fullEffortMinutes = bounded(raw.fullEffortMinutes, CALIBRATION_RANGES.fullEffortMinutes, DEFAULT_CALIBRATION.fullEffortMinutes);
+  const longMinutes = Math.max(fullEffortMinutes + 5, bounded(raw.longMinutes, CALIBRATION_RANGES.longMinutes, DEFAULT_CALIBRATION.longMinutes));
+  const weights = { effort: bounded(raw.weights?.effort, CALIBRATION_RANGES.weight, DEFAULT_CALIBRATION.weights.effort), duration: bounded(raw.weights?.duration, CALIBRATION_RANGES.weight, DEFAULT_CALIBRATION.weights.duration), load: bounded(raw.weights?.load, CALIBRATION_RANGES.weight, DEFAULT_CALIBRATION.weights.load) };
+  if (weights.effort + weights.duration + weights.load === 0) weights.effort = 1;
+  const moderate = bounded(raw.thresholds?.moderate, CALIBRATION_RANGES.threshold, DEFAULT_CALIBRATION.thresholds.moderate);
+  const hard = Math.max(moderate, bounded(raw.thresholds?.hard, CALIBRATION_RANGES.threshold, DEFAULT_CALIBRATION.thresholds.hard));
+  const brutal = Math.max(hard, bounded(raw.thresholds?.brutal, CALIBRATION_RANGES.threshold, DEFAULT_CALIBRATION.thresholds.brutal));
+  return { fullEffortMinutes, longMinutes, weights, thresholds: { moderate, hard, brutal } };
 }
 
 export const DIFFICULTY_LABELS: Record<DifficultyLevel, DifficultyLabel> = { 1: 'Light', 2: 'Moderate', 3: 'Hard', 4: 'Brutal' };
@@ -48,7 +81,7 @@ function volumeBoost(lanes: Prescription[]): number {
   return lanes.some(lane => (lane.reps ?? 0) >= 15 || (lane.calories ?? 0) >= 15) ? 0.1 : 0;
 }
 
-export function rateDifficulty(plan: ExecutionPlan): Difficulty {
+export function rateDifficulty(plan: ExecutionPlan, calibration: DifficultyCalibration = DEFAULT_CALIBRATION): Difficulty {
   let workMs = 0;
   let restMs = 0;
   let weightedIntensity = 0;
@@ -77,18 +110,24 @@ export function rateDifficulty(plan: ExecutionPlan): Difficulty {
     weightedIntensity += intensity * ms;
     if (lanes.some(lane => lane.load)) loadMs += ms;
   }
+  const { fullEffortMinutes, longMinutes, weights, thresholds } = calibration;
+  const totalMinutes = (workMs + restMs) / 60_000;
   // Density: share of (nominal) content that is work. Pure strength/skill rests pull it down; Tabata pushes it up.
   const density = workMs + restMs ? workMs / (workMs + restMs) : 0;
   const intensity = workMs ? weightedIntensity / workMs : 0;
-  // Duration: 10 minutes of active content counts little; 60 minutes is the top of the scale.
-  const duration = clamp01(((workMs + restMs) / 60_000 - 10) / 50);
-  const load = workMs ? loadMs / workMs : 0;
-  const factors = { density, intensity, duration, load };
+  // Length: a short piece cannot be hard however dense it is. Below the full-effort mark the effort and the load are
+  // discounted by the square root of the share (a quarter of the length keeps half the effort).
+  const length = Math.sqrt(clamp01(totalMinutes / fullEffortMinutes));
+  // Duration: content beyond the full-effort mark adds its own points, up to the long mark.
+  const duration = clamp01((totalMinutes - fullEffortMinutes) / (longMinutes - fullEffortMinutes));
+  const load = (workMs ? loadMs / workMs : 0) * length;
+  const factors = { density, intensity, duration, load, length };
   // Effort: how hard the work is, amplified by how little rest surrounds it. Continuous easy work stays easy.
-  const effort = intensity * (0.5 + 0.5 * density);
-  const score = Math.round(100 * clamp01(0.75 * effort + 0.15 * duration + 0.1 * load));
-  // Calibration: stretching ~11, Tabata This ~37, a 20-minute 40s/10s partner circuit ~45, Fight Gone Bad ~53, a 20-minute
-  // row/burpee EMOM ~59, 40 minutes of burpee Tabata ~65, a 47-minute HYROX run/station session ~70.
-  const level: DifficultyLevel = score < 25 ? 1 : score < 45 ? 2 : score < 62 ? 3 : 4;
+  const effort = intensity * (0.5 + 0.5 * density) * length;
+  const weightSum = weights.effort + weights.duration + weights.load;
+  const score = Math.round(100 * clamp01((weights.effort * effort + weights.duration * duration + weights.load * load) / weightSum));
+  // Default calibration: stretching ~11, a single Tabata ~29, Fran ~47, a 20-minute 40s/10s partner circuit ~45,
+  // Fight Gone Bad ~53, Murph ~69, 40 minutes of burpee Tabata ~66, a 47-minute HYROX run/station session ~70.
+  const level: DifficultyLevel = score < thresholds.moderate ? 1 : score < thresholds.hard ? 2 : score < thresholds.brutal ? 3 : 4;
   return { level, label: DIFFICULTY_LABELS[level], score, factors };
 }

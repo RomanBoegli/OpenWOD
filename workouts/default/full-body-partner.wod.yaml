@@ -111,7 +111,7 @@ workout:
                       name: Jump squats
                     B:
                       notes: One dumbbell held at the chest
-                      name: Goblet squats
+                      name: Dumbbell goblet squats
                       load:
                         light:
                           value: 7.5
@@ -133,7 +133,7 @@ workout:
                       name: Mountain climbers
                     B:
                       notes: With dumbbells, one per hand
-                      name: Romanian deadlifts
+                      name: Dumbbell Romanian deadlifts
                       load:
                         light:
                           value: 7.5
@@ -185,7 +185,7 @@ workout:
                       name: Push-ups
                     B:
                       notes: With dumbbells, one per hand
-                      name: Bent-over rows
+                      name: Dumbbell rows
                       load:
                         light:
                           value: 7.5
@@ -207,7 +207,7 @@ workout:
                       name: Plank shoulder taps
                     B:
                       notes: With dumbbells, one per hand
-                      name: Shoulder press
+                      name: Dumbbell shoulder press
                       load:
                         light:
                           value: 5
@@ -325,7 +325,7 @@ workout:
                       name: Plank
                     B:
                       notes: One dumbbell per hand, march on the spot
-                      name: Farmer march
+                      name: Dumbbell farmer march
                       load:
                         light:
                           value: 7.5

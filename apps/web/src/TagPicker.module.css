@@ -1,6 +1,6 @@
 .picker { position: relative; min-width: 0; }
 .field { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 44px; padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); cursor: text; }
-.field:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.field:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .field input { flex: 1 1 120px; min-width: 0; min-height: 30px !important; margin: 0; padding: 2px 4px !important; border: 0 !important; background: transparent !important; color: var(--ink); font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400; }
 .field input:focus { outline: none; }
 .tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--line-2); color: var(--ink); font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; white-space: nowrap; }
@@ -10,3 +10,4 @@
 .list li { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ink); cursor: pointer; }
 .list li[data-active=true] { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent); }
 .list li[data-kind=new] { color: var(--accent-text); font-weight: 600; }
+.list li small { margin-left: auto; font-size: 11px; font-weight: 500; color: var(--notice-text); white-space: nowrap; }

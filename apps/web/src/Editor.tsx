@@ -2,18 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDuration, parseDuration } from '../../../packages/domain/src';
 import { builderToWorkout, emptySection, emptySlot, LIST_FORMATS, MANUAL_FORMATS, validateDraft, type BuilderDraft, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
 import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src/compiler';
-import { rateDifficulty } from '../../../packages/domain/src/difficulty';
+import { rateDifficulty, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat } from '../../../packages/domain/src/schema';
 import { displayTime } from '../../../packages/engine/src';
 import type { Catalogue, Movement } from '../../../packages/domain/src/catalogue';
-import { equipmentKey } from '../../../packages/domain/src/library';
+import { equipmentKey, inferEquipment } from '../../../packages/domain/src/library';
 import { recordForName, unmatchedMovements } from './catalogue-link';
 import { MovementPicker } from './MovementPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
-import { TagPicker } from './TagPicker';
-import { equipmentRepertoire } from './equipment';
+import { Chip } from './Chip';
 import { LEVEL_LABELS, LEVEL_LETTERS } from './LevelChip';
 import styles from './Editor.module.css';
 import shared from './App.module.css';
@@ -75,6 +74,8 @@ interface EditorProps {
   /** Set when the draft came from an imported file; the editor then says so and points at unmatched movements. */
   importedFrom?: string;
   catalogue: Catalogue;
+  /** The device's difficulty calibration for the live summary. */
+  difficulty: DifficultyCalibration;
   onAddMovement: (record: Movement) => void;
   savedAt?: string;
   onAutosave: (draft: BuilderDraft) => void;
@@ -91,29 +92,44 @@ const FORMAT_HELP: Record<SectionFormat, string> = {
   strength: 'Sets at your own pace, each ended by Done, with a timed rest between sets. Loads can be levelled or a percentage of 1RM.',
 };
 
-export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
+const lanesOf = (draft: BuilderDraft) => draft.sections.flatMap(section => section.slots.flatMap(slot => [slot.A, slot.B])).filter((lane): lane is Prescription => Boolean(lane?.name.trim()));
+const derivedEquipment = (lanes: Prescription[], catalogue: Catalogue) => [...lanes.flatMap(lane => catalogue.equipmentOf(lane)), ...inferEquipment(lanes.filter(lane => !catalogue.resolve(lane)).map(lane => lane.name))];
+
+export function Editor({ mode, initial, importedFrom, catalogue, difficulty: calibration, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
   const [draft, setDraft] = useState(initial);
   const [dirty, setDirty] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const first = useRef(true);
   const autosave = useRef(onAutosave);
   autosave.current = onAutosave; // The latest callback without re-arming the debounce on every parent render.
-  const issues = useMemo(() => validateDraft(draft), [draft]);
+  // Equipment is derived, never typed: the catalogue records of the movements in the lanes, keyword inference for
+  // names no record knows, plus whatever the opened workout declared that no movement accounts for (a wall, a
+  // running route, a squat rack), which is carried as it was.
+  const [extras] = useState(() => initial.equipment.filter(item => item.trim() && !derivedEquipment(lanesOf(initial), catalogue).some(known => equipmentKey(known) === equipmentKey(item)))); // Fixed when the editor opens; the parent hands in a fresh `initial` after every autosave.
+  const board = useMemo(() => {
+    const lanes = lanesOf(draft);
+    const movements = [...new Map(lanes.map(lane => [lane.name.trim().toLowerCase(), lane.name.trim()])).values()];
+    const seen = new Map<string, string>();
+    for (const item of [...derivedEquipment(lanes, catalogue), ...extras]) if (!seen.has(equipmentKey(item))) seen.set(equipmentKey(item), item.trim());
+    return { movements, equipment: [...seen.values()] };
+  }, [draft, extras, catalogue]);
+  /** The draft as it is compiled, autosaved and saved: the derived equipment replaces whatever the draft carries. */
+  const effective = useMemo<BuilderDraft>(() => ({ ...draft, equipment: board.equipment }), [draft, board.equipment]);
+  const issues = useMemo(() => validateDraft(effective), [effective]);
   const compiled = useMemo<{ plan?: ExecutionPlan; error?: string }>(() => {
     if (issues.length) return {};
-    try { return { plan: compileWorkout(builderToWorkout(draft, { id: 'draft', revision: 1 })) }; } catch (error) { return { error: error instanceof Error ? error.message : 'This workout cannot be compiled.' }; }
-  }, [draft, issues]);
-  const difficulty = useMemo(() => compiled.plan && rateDifficulty(compiled.plan), [compiled.plan]);
+    try { return { plan: compileWorkout(builderToWorkout(effective, { id: 'draft', revision: 1 })) }; } catch (error) { return { error: error instanceof Error ? error.message : 'This workout cannot be compiled.' }; }
+  }, [effective, issues]);
+  const difficulty = useMemo(() => compiled.plan && rateDifficulty(compiled.plan, calibration), [compiled.plan, calibration]);
   const canSave = issues.length === 0 && Boolean(compiled.plan);
   const unmatched = useMemo(() => unmatchedMovements(draft, catalogue), [draft, catalogue]);
-  const equipmentNames = useMemo(() => equipmentRepertoire(catalogue, [], draft.equipment), [catalogue, draft.equipment]);
 
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     setDirty(true);
-    const timer = setTimeout(() => { autosave.current(draft); setDirty(false); }, 500);
+    const timer = setTimeout(() => { autosave.current(effective); setDirty(false); }, 500);
     return () => clearTimeout(timer);
-  }, [draft]);
+  }, [effective]);
 
   const update = (patch: Partial<BuilderDraft>) => setDraft(value => ({ ...value, ...patch }));
   const updateSection = (index: number, patch: Partial<BuilderSection>) => setDraft(value => ({ ...value, sections: value.sections.map((section, i) => i === index ? { ...section, ...patch } : section) }));
@@ -124,15 +140,9 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
   const setFormat = (s: number, format: SectionFormat) => updateSection(s, { format, ...(LIST_FORMATS.includes(format) ? { rounds: 1, betweenSlotsRestMs: 0, trailingRestMs: 0, blockRestMs: 0, slotRepeats: 1 } : {}), ...(format === 'amrap' && !draft.sections[s].capMs ? { capMs: 600_000 } : {}), ...(format !== 'timedCircuit' ? { slotRepeats: 1 } : {}) });
   const issueFor = (path: string) => issues.find(issue => issue.path === path)?.message;
   const pair = draft.participants === 2;
-  /** A picked record's equipment joins the workout's declared equipment. */
-  const addEquipment = (items: string[] = []) => {
-    const missing = items.filter(item => !draft.equipment.some(known => equipmentKey(known) === equipmentKey(item)));
-    if (!missing.length) return;
-    update({ equipment: [...draft.equipment, ...missing] });
-  };
   /** Creates records for names the catalogue does not know and links every lane that uses them. */
   const addToCatalogue = (names: string[]) => {
-    const created = names.map(name => { const record = recordForName(name, catalogue, draft.equipment); onAddMovement(record); return record; });
+    const created = names.map(name => { const record = recordForName(name, catalogue, board.equipment); onAddMovement(record); return record; });
     setDraft(value => ({ ...value, sections: value.sections.map(section => ({ ...section, slots: section.slots.map(slot => {
       const link = (item?: Prescription) => { if (!item) return item; const record = created.find(entry => entry.name.toLowerCase() === item.name.trim().toLowerCase()); return record ? { ...item, movement: record.id } : item; };
       return { ...slot, A: link(slot.A)!, ...(slot.B ? { B: link(slot.B) } : {}) };
@@ -147,7 +157,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
     const loadMode = loadModeOf(value);
     const levelled = levelledOf(value);
     return <td key={role} className={styles.laneCell}>
-      <MovementPicker value={value} label={label} catalogue={catalogue} invalid={Boolean(issueFor(`sections.${s}.slots.${i}.${role}`))} onChange={change => updateLane(s, i, role, change)} onPick={record => addEquipment(record.equipment)} onAdd={name => addToCatalogue([name])[0]} />
+      <MovementPicker value={value} label={label} catalogue={catalogue} invalid={Boolean(issueFor(`sections.${s}.slots.${i}.${role}`))} onChange={change => updateLane(s, i, role, change)} onAdd={name => addToCatalogue([name])[0]} />
       <div className={styles.laneGrid}>
         <div className={styles.group}>
           <span className={styles.caption}>Target</span>
@@ -198,9 +208,8 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
           <label className={styles.field}>Title<input value={draft.title} maxLength={160} onChange={event => update({ title: event.target.value })} aria-invalid={issueFor('title') ? true : undefined} /></label>
           <label className={styles.field}>Description<textarea rows={2} maxLength={2000} value={draft.description} onChange={event => update({ description: event.target.value })} /></label>
           <div className={styles.row}>
-            <fieldset className={styles.choice}><legend>Athletes</legend>{([1, 2] as const).map(count => <label key={count} data-checked={draft.participants === count}><input type="radio" name="participants" checked={draft.participants === count} onChange={() => setParticipants(count)} /><Icon name={count === 2 ? 'users' : 'user'} size={15} />{count === 2 ? 'Pair' : 'Solo'}</label>)}</fieldset>
+            <fieldset className={styles.choice}><legend>Athletes</legend><div className={styles.choiceBox}>{([1, 2] as const).map(count => <label key={count} data-checked={draft.participants === count}><input type="radio" name="participants" checked={draft.participants === count} onChange={() => setParticipants(count)} /><Icon name={count === 2 ? 'users' : 'user'} size={15} />{count === 2 ? 'Pair' : 'Solo'}</label>)}</div></fieldset>
             <DurationField label="Prep countdown" value={draft.prepMs} onChange={prepMs => update({ prepMs })} />
-            <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={draft.equipment} options={equipmentNames} placeholder="Dumbbells, Kettlebell…" onChange={equipment => update({ equipment })} /></div>
           </div>
           <details className={styles.details}><summary>Source and attribution</summary>
             <div className={styles.row}>
@@ -282,6 +291,10 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
             <div><dt>With prep</dt><dd>{compiled.plan ? compiled.plan.durationKind === 'open' ? 'Open' : displayTime(compiled.plan.durationMs + draft.prepMs) : '—'}</dd></div>
           </dl>
           {difficulty && <DifficultyChip difficulty={difficulty} detailed />}
+          <div className={styles.board}>
+            <div><span className={shared.eyebrow}>NEEDS</span><div className={styles.boardChips} role="group" aria-label="Equipment needed">{board.equipment.length ? board.equipment.map(item => <Chip key={item} kind="neutral">{item}</Chip>) : <Chip kind="neutral">{board.movements.length ? 'Bodyweight only' : 'Nothing yet'}</Chip>}</div></div>
+            <div><span className={shared.eyebrow}>MOVEMENTS · {board.movements.length}</span><div className={styles.boardChips}>{board.movements.map(item => <Chip key={item} kind="neutral">{item}</Chip>)}</div></div>
+          </div>
           {compiled.plan && <ul className={styles.sectionList}>{compiled.plan.sections.map(section => <li key={section.id}><span>{section.title} <small>· {FORMAT_LABELS[section.format]}</small></span><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span></li>)}</ul>}
           {unmatched.length > 0 && <div className={styles.unmatched} role="status" aria-label="Movements not in your catalogue">
             <strong>{unmatched.length === 1 ? '1 movement is' : `${unmatched.length} movements are`} not in your movement catalogue</strong>
@@ -292,7 +305,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
           {(issues.length > 0 || compiled.error) && <ul className={styles.issues} role="alert">{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}
           <p className={styles.status} aria-live="polite">{dirty ? 'Unsaved changes…' : savedAt ? `Draft saved on this device · ${new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Drafts save automatically on this device.'}</p>
           <div className={styles.saveActions}>
-            <button type="button" className={shared.primaryButton} disabled={!canSave} onClick={() => onSave(draft)}><Icon name="check" />{mode === 'replace' ? 'Save changes' : 'Save to library'}</button>
+            <button type="button" className={shared.primaryButton} disabled={!canSave} onClick={() => onSave(effective)}><Icon name="check" />{mode === 'replace' ? 'Save changes' : 'Save to library'}</button>
             <button type="button" className={shared.quietButton} onClick={() => setDiscarding(true)}>Discard draft</button>
           </div>
         </div>

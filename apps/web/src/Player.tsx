@@ -106,7 +106,7 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
   const showing = isRest ? nextWork?.assignments : current.assignments;
   const round = (isRest ? nextWork : current)?.rounds.at(-1) ?? current.rounds.at(-1);
   const bundled = bundledWorkouts.some(item => item.id === workout.id);
-  const difficulty = useMemo(() => rateDifficulty(plan), [plan]);
+  const difficulty = useMemo(() => rateDifficulty(plan, preferences.difficulty), [plan, preferences.difficulty]);
   const can = (control: Control) => controls.includes(control);
   const pair = workout.participants === 2;
 

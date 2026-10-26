@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: If you use OpenWOD in your work, please cite it as below.
+type: software
+title: "OpenWOD: a workout player for training at home"
+authors:
+  - family-names: Boegli
+    given-names: Roman
+repository-code: https://github.com/RomanBoegli/wodva
+url: https://github.com/RomanBoegli/wodva
+license: GPL-3.0
+version: 0.1.0
+date-released: "2026-10-26"
+keywords:
+  - workout timer
+  - CrossFit
+  - HYROX
+  - self-hosted
+  - training

@@ -282,7 +282,7 @@ workout:
             duration: 1m
             assignments:
               A:
-                notes: Heavy is the open standard; women's medium is already the 10 kg race bag
+                notes: Heavy is the open standard (the 10 kg race bag for women); medium is a training step below it
                 name: Sandbag lunges
                 load:
                   light:
@@ -291,7 +291,7 @@ workout:
                     unit: kg
                   medium:
                     value: 15
-                    women: 10
+                    women: 7.5
                     unit: kg
                   heavy:
                     value: 20

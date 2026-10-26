@@ -1,6 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { normalise } from '../../../packages/domain/src/library';
-import { rankBySearch } from '../../../packages/domain/src/search';
+import { editDistance, rankBySearch } from '../../../packages/domain/src/search';
 import { Icon } from './Icon';
 import styles from './TagPicker.module.css';
 
@@ -26,6 +26,8 @@ export function TagPicker({ label, value, options, placeholder, maxLength = 80, 
   const matches = query.trim() ? rankBySearch(free, query, option => [{ text: option, weight: 1 }], 7) : free.slice(0, 7);
   const exact = options.find(option => key(option) === key(query));
   const choices: Choice[] = [...matches.map(text => ({ kind: 'pick' as const, text })), ...(query.trim() && !exact && !chosen.has(key(query)) ? [{ kind: 'new' as const, text: query.trim() }] : [])];
+  // A new name within a typo of a known one gets a nudge, so the repertoire does not fill with near-duplicate spellings.
+  const near = query.trim().length >= 4 ? options.find(option => editDistance(key(option), key(query), 2) <= 2) : undefined;
   const current = Math.min(active, Math.max(choices.length - 1, 0));
   const showing = open && choices.length > 0;
   // The list is fixed to the viewport (not absolute inside a dialog), so an open list never adds scroll height to its container.
@@ -58,7 +60,7 @@ export function TagPicker({ label, value, options, placeholder, maxLength = 80, 
     </div>
     {showing && anchor && <ul id={listId} role="listbox" className={styles.list} style={anchor} aria-label={`${label} suggestions`}>
       {choices.map((choice, index) => <li key={`${choice.kind}:${choice.text}`} id={`${listId}-${index}`} role="option" aria-selected={index === current} data-active={index === current} data-kind={choice.kind} onPointerDown={event => event.preventDefault()} onClick={() => commit(choice)} onPointerEnter={() => setActive(index)}>
-        {choice.kind === 'new' ? <><Icon name="plus" size={13} />Add “{choice.text}”</> : choice.text}
+        {choice.kind === 'new' ? <><Icon name="plus" size={13} />Add “{choice.text}”{near && <small>not “{near}”?</small>}</> : choice.text}
       </li>)}
     </ul>}
   </div>;

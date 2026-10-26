@@ -17,6 +17,11 @@
 .field input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
 .field input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .twoUp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.threeUp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.references { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.references li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; padding: 0 2px; border-bottom: 1px solid var(--line); }
+.references li:last-child { border-bottom: 0; }
+@media (max-width: 520px) { .threeUp { grid-template-columns: 1fr; } }
 /* Training view: a live miniature of the ring and the pulse beside its controls. */
 .previewRow { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: start; }
 .previewFields { display: grid; gap: 12px; }

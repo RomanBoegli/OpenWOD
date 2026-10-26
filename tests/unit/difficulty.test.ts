@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { movementIntensity, rateDifficulty } from '../../packages/domain/src/difficulty';
+import { movementIntensity, normaliseCalibration, rateDifficulty } from '../../packages/domain/src/difficulty';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
 import type { Workout } from '../../packages/domain/src';
 const fullBodyPartner = bundledWorkout('full-body-partner');
@@ -19,11 +19,11 @@ describe('projected difficulty', () => {
     expect(movementIntensity('Something unusual')).toBe(0.5);
   });
 
-  it('rates stretching as Light and dense high-intensity intervals as Brutal', () => {
+  it('rates stretching as Light, one short Tabata as Moderate and forty minutes of it as Brutal', () => {
     const stretch = rateDifficulty(compileWorkout(soloTimed('stretch', ['Quad stretch', 'Hamstring stretch', 'Deep breathing'], 60_000)));
     expect(stretch.label).toBe('Light');
     const tabata = rateDifficulty(compileWorkout(soloTimed('tabata', Array(8).fill('Burpees'), 20_000, 10_000)));
-    expect(tabata.label).toBe('Hard');
+    expect(tabata.label).toBe('Moderate');
     expect(tabata.factors.density).toBeCloseTo(160 / 230, 5);
     const fortyMinutes = rateDifficulty(compileWorkout(soloTimed('long-tabata', Array(80).fill('Burpees'), 20_000, 10_000)));
     expect(fortyMinutes.label).toBe('Brutal');
@@ -38,9 +38,29 @@ describe('projected difficulty', () => {
     for (const rating of [circuit, fullBody]) { expect(rating.score).toBeGreaterThanOrEqual(0); expect(rating.score).toBeLessThanOrEqual(100); }
   });
 
+  it('discounts short pieces and honours the device calibration', () => {
+    const short = compileWorkout(soloTimed('short', ['Dumbbell front rack lunges', 'Dumbbell front rack lunges'], 70_000));
+    const rating = rateDifficulty(short);
+    expect(rating.label).toBe('Light');
+    expect(rating.factors.length).toBeCloseTo(Math.sqrt(140 / 60 / 15), 5);
+    const eager = rateDifficulty(short, normaliseCalibration({ fullEffortMinutes: 3, thresholds: { moderate: 10, hard: 20, brutal: 30 } }));
+    expect(eager.score).toBeGreaterThan(rating.score);
+    expect(eager.label).toBe('Brutal');
+    expect(rateDifficulty(short, normaliseCalibration({ weights: { effort: 0, duration: 100, load: 0 } })).score).toBe(0);
+  });
+
+  it('normalises a calibration: clamps, orders the thresholds, keeps the long mark above the full-effort mark', () => {
+    expect(normaliseCalibration(undefined)).toEqual({ fullEffortMinutes: 15, longMinutes: 60, weights: { effort: 75, duration: 15, load: 10 }, thresholds: { moderate: 25, hard: 45, brutal: 62 } });
+    const odd = normaliseCalibration({ fullEffortMinutes: 400, longMinutes: 5, weights: { effort: 0, duration: 0, load: 0 }, thresholds: { moderate: 80, hard: 40, brutal: 20 } });
+    expect(odd.fullEffortMinutes).toBe(60);
+    expect(odd.longMinutes).toBe(65);
+    expect(odd.weights.effort).toBe(1);
+    expect(odd.thresholds).toEqual({ moderate: 80, hard: 80, brutal: 80 });
+  });
+
   it('is monotonic in work density, duration and prescribed load', () => {
     const base = soloTimed('base', ['Push-ups', 'Air squats'], 40_000, 20_000);
-    const denser = soloTimed('denser', ['Push-ups', 'Air squats'], 40_000, 5_000);
+    const denser = soloTimed('denser', ['Push-ups', 'Air squats'], 50_000, 0); // The same 100 seconds with the rest turned into work.
     expect(rateDifficulty(compileWorkout(denser)).score).toBeGreaterThan(rateDifficulty(compileWorkout(base)).score);
     const longer = soloTimed('longer', Array(30).fill('Push-ups'), 60_000, 20_000);
     expect(rateDifficulty(compileWorkout(longer)).score).toBeGreaterThan(rateDifficulty(compileWorkout(base)).score);

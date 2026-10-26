@@ -1,10 +1,8 @@
 .wrap { display: grid; gap: 8px; }
 .wrap button { width: 100%; }
-/* The miniature uses the player's phase tokens; --ring and --wash come from the settings. */
-.panel { --color: var(--phase-work); position: relative; display: grid; align-content: start; gap: 2px; height: 132px; padding: 10px 12px; border-radius: 16px; overflow: hidden; background: color-mix(in srgb, var(--color) calc(var(--wash) * 100%), var(--surface-1)); color: var(--ink); transition: background-color var(--t-slow) var(--ease); }
-.panel[data-warning=amber] { --color: var(--phase-amber); }
-.panel[data-warning=red] { --color: var(--phase-red); }
-.ring { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; pointer-events: none; }
+/* The miniature is painted by the shared .wash overlay of App.module.css with the player's own phase tokens; --ring, --wash-gain, --wash-min and --drained come from the settings and the preview run. */
+.panel { --color: var(--phase-color); display: grid; align-content: start; gap: 2px; height: 132px; padding: 10px 12px; border-radius: 16px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); color: var(--ink); }
+.panel > .ring { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; fill: none; pointer-events: none; }
 .track { stroke: var(--accent-track); stroke-width: var(--ring); vector-effect: non-scaling-stroke; }
 .mark { stroke-width: var(--ring); vector-effect: non-scaling-stroke; opacity: .85; }
 .mark[data-mark=amber] { stroke: var(--phase-amber); }
@@ -24,4 +22,4 @@
 .rows li { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; padding: 3px 6px; border-radius: 5px; color: var(--ink-2); }
 .rows li[data-active] { background: var(--accent-soft); color: var(--ink); box-shadow: inset 2px 0 var(--accent); font-weight: 600; }
 .rows li span, .rows li small { color: var(--ink-3); font-size: 7.5px; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: reduce) { .panel, .progress { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .progress { transition: none; } }

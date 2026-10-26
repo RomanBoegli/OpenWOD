@@ -1,7 +1,7 @@
 import type { Catalogue } from './catalogue';
 import { compileWorkout, type DurationKind } from './compiler';
 import { searchScore, type SearchField } from './search';
-import { rateDifficulty, type Difficulty, type DifficultyLevel } from './difficulty';
+import { rateDifficulty, type Difficulty, type DifficultyCalibration, type DifficultyLevel } from './difficulty';
 import type { Prescription, SectionFormat, Workout, WorkoutNode } from './schema';
 
 /** Presentation-ready facts about a workout, computed once per library entry. */
@@ -114,6 +114,8 @@ export interface SummaryOptions {
   collections?: string[];
   /** When given, equipment comes from the movement records of recognised movements; keywords only cover the rest. */
   catalogue?: Catalogue;
+  /** The device's difficulty calibration; the defaults otherwise. */
+  difficulty?: DifficultyCalibration;
 }
 
 export function summariseWorkout(workout: Workout, options: SummaryOptions = {}): WorkoutSummary {
@@ -131,7 +133,7 @@ export function summariseWorkout(workout: Workout, options: SummaryOptions = {})
   return {
     id: workout.id, title: workout.title, description: workout.description ?? '', participants: workout.participants,
     equipment: [...workout.equipment], equipmentNeeded, movements, formats, sections: workout.sections.length,
-    activeMs: plan.durationMs, totalMs: plan.durationMs + workout.prepMs, durationKind: plan.durationKind, difficulty: rateDifficulty(plan),
+    activeMs: plan.durationMs, totalMs: plan.durationMs + workout.prepMs, durationKind: plan.durationKind, difficulty: rateDifficulty(plan, options.difficulty),
     collections: options.collections ?? [],
   };
 }
