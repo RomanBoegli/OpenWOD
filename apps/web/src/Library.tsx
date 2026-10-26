@@ -60,7 +60,8 @@ interface LibraryProps {
 
 type Sort = LibrarySort | 'longestAgo' | 'random';
 const DURATIONS: [DurationBucket, string][] = [['short', 'Up to 20 min'], ['medium', '20 to 40 min'], ['long', 'Over 40 min']];
-export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.totalMs)}`;
+/** The timed content without the prep countdown: a tile says what the workout is, the overview adds the prep. */
+export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.activeMs)}`;
 const toggle = <T,>(list: T[], item: T) => list.includes(item) ? list.filter(value => value !== item) : [...list, item];
 
 /** A seeded Fisher–Yates shuffle stays stable across renders and library navigation. */

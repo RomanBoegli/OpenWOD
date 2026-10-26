@@ -146,6 +146,19 @@ The settings miniature then switched from its own flat tint to the player's wash
 
 Not run in this round: the real-hour and physical-device checks listed above.
 
+## Release 1.1.0 polish, 26 October 2026
+
+The `v1.0.0` tag never published: its workflow failed in validation because the ignore rule `data/` had hidden `apps/web/src/data/` from every commit.
+The rule is anchored to the root, the data layer is tracked, and the clean checkout check (`git archive` into an empty directory, then `npm run check`) passed.
+
+| Check | Result |
+| - | - |
+| Unit tests | 153 passed in 21 files, including the accent derivation. |
+| Browser scenarios | Library, packs, settings, screens, player and footer specs in Firefox and WebKit after each change, including whole-card clicks and the sound-test probe. |
+| Sound test probe | In headless Firefox and WebKit every part of the test comes from the recorded pack and speech synthesis is never called. The device-voice fallback now reports itself. |
+| Layout | Screenshots at 1280, 1024 and 390 px of the three-column feed, the accent swatches in both themes, the player with a pink and a blue accent, and the footer. |
+| Release workflow | Not yet exercised past validation on GitHub runners. A manual run of the Release image workflow is the dry run before the tag. |
+
 ## Persistence, sharing and release rehearsal (Wave 3), 26 October 2026
 
 | Check | Result |

@@ -1,12 +1,12 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.9 · 26 October 2026 · Desktop-first development, portable workout sharing, and the planned static deployment shape
+Version 1.10 · 26 October 2026 · Desktop-first development, portable workout sharing, and the planned static deployment shape
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
 The core interaction is synchronised workout content: the execution engine identifies the relevant row, athlete assignments, or exercise block; the player highlights and presents that content with what comes next. Repeated execution revisits the same content with a new round context. Timers must never invent progress through repetitions or distance-based work.
 Deployment is a product requirement: a GitHub repository must be deployable through Portainer using its root Compose file, a prebuilt application image, and persistent SQLite storage.
-A second shape, the same build served as a static site with the library kept in the browser, is planned for version 1.1.0 (section 15.5).
+A second shape, the same build served as a static site with the library kept in the browser, is planned for version 1.2.0 (section 15.5).
 
 **Reading guide for implementers.** Sections 5–14 are normative; sections 11, 15, and 16 hold the architecture choices, the order of work, and the open risks. Start with the backlog in section 15.1 and the fixture in section 6.4, which is the first executable test. Where an architecture note says SHOULD or MAY, the behaviour it protects remains mandatory; only the technique is optional.
 
@@ -436,9 +436,9 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **DAT-09** Archiving/deleting a workout SHALL not invalidate session snapshots. Clearing browser storage SHALL not erase already-synchronised server data; unsynchronised data is local-only and must be labelled accordingly.
 
-**DAT-10** (planned for 1.1.0) In the static shape the library SHALL live in IndexedDB of the browser profile, behind the same `Backend` interface as the server client, with the same revision, import and correction semantics, and the Settings page SHALL say where the data lives and offer persistent storage.
+**DAT-10** (planned for 1.2.0) In the static shape the library SHALL live in IndexedDB of the browser profile, behind the same `Backend` interface as the server client, with the same revision, import and correction semantics, and the Settings page SHALL say where the data lives and offer persistent storage.
 
-**DAT-11** (planned for 1.1.0) The `openwod.export` JSON SHALL restore into either shape, replacing everything after an explicit confirmation that shows the counts and export date. The server SHALL write a pre-restore SQLite backup first. Restore SHALL be validated and all-or-nothing.
+**DAT-11** (planned for 1.2.0) The `openwod.export` JSON SHALL restore into either shape, replacing everything after an explicit confirmation that shows the counts and export date. The server SHALL write a pre-restore SQLite backup first. Restore SHALL be validated and all-or-nothing.
 
 ## 10.1 Portable WOD sharing
 
@@ -563,11 +563,11 @@ The implementation SHALL document exact environment names in .env.example and th
 
 **DEP-14** The README SHALL contain a short Portainer walkthrough, configuration table, HTTPS example, backup/restore instructions, upgrade/rollback procedure, and troubleshooting for permissions, private images, audio, wake lock, and unhealthy startup. Exact tested Portainer/Docker versions SHALL be recorded for each release.
 
-**DEP-15** (planned for 1.1.0) A static build target (`vite build --mode static`, define `__OPENWOD_STATIC__`, relative base `./`, output `dist/static`) SHALL produce a site that runs from any static web root and from `https://<owner>.github.io/<repo>/` without rewrites, from the same sources and the same cue scripts as the image.
+**DEP-15** (planned for 1.2.0) A static build target (`vite build --mode static`, define `__OPENWOD_STATIC__`, relative base `./`, output `dist/static`) SHALL produce a site that runs from any static web root and from `https://<owner>.github.io/<repo>/` without rewrites, from the same sources and the same cue scripts as the image.
 
-**DEP-16** (planned for 1.1.0) Every `v*` tag SHALL publish the static site to GitHub Pages and attach `openwod-static-<tag>.zip` to a GitHub Release whose body is `docs/releases/<tag>.md`, both gated on the browser smoke. Existing releases SHALL never be overwritten.
+**DEP-16** (planned for 1.2.0) Every `v*` tag SHALL publish the static site to GitHub Pages and attach `openwod-static-<tag>.zip` to a GitHub Release whose body is `docs/releases/<tag>.md`, both gated on the browser smoke. Existing releases SHALL never be overwritten.
 
-**DEP-17** (planned for 1.1.0) The production smoke SHALL run in both shapes and SHALL be base-path safe, so the same spec checks the container, a `vite preview` of the static build, and the live Pages URL.
+**DEP-17** (planned for 1.2.0) The production smoke SHALL run in both shapes and SHALL be base-path safe, so the same spec checks the container, a `vite preview` of the static build, and the live Pages URL.
 
 ## 12.1 Portainer acceptance path
 
@@ -683,7 +683,7 @@ Recorded 26 October 2026 after version 1.8. "Done" means implemented with automa
 | 1 Dependable saved workout | Done (version 1.8) | Login deferred by decision; the server is for a trusted network. |
 | 2 Initial household version | Done (versions 1.3 to 1.8) | The import of the full application export (restore is the SQLite backup). |
 | 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
-| 4 Release hardening | Rehearsed locally (version 1.8) | User-side: push the tag so the multi-architecture workflow publishes, the Portainer walkthrough with the digest, the 60-minute real run, the device checklist, the digest and hardware lines of the release notes. |
+| 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the 60-minute real run, the device checklist, the digest and hardware lines of the release notes. |
 | 5 Static shape and Pages | Planned (version 1.9, section 15.5) | Starts after the 1.0.0 tag. |
 | 6 Follow-up improvements | Open | Prioritised from real training sessions. |
 
@@ -703,10 +703,10 @@ Decisions taken along the way: collections and programs (LIB-03) are one concept
 
 Out of scope by decision: teams of three or four athletes; celebrity or Australian voices (Piper ships British and American English only); default loads on movement records.
 
-## 15.5 Planned wave 5: the static deployment shape (version 1.1.0)
+## 15.5 Planned wave 5: the static deployment shape (version 1.2.0)
 
 Recorded in version 1.9 before any code.
-The user decided: ship in 1.1.0 after the 1.0.0 tag, voices rendered in CI, Pages on every `v*` tag with a zip on the GitHub Release, and a JSON backup with restore.
+The user decided: ship it in the release after the first published image (1.2.0, since 1.1.0 became the release that repairs the 1.0.0 tag), voices rendered in CI, Pages on every `v*` tag with a zip on the GitHub Release, and a JSON backup with restore.
 
 **Decisions.**
 
@@ -730,7 +730,7 @@ The user decided: ship in 1.1.0 after the 1.0.0 tag, voices rendered in CI, Page
 | E Workflows | `release.yml` jobs `static`, `release`, `pages`, `check.yml` builds static and runs `static-chromium`, `cues.yml` warms the voice cache. | A `workflow_dispatch` run builds and smokes without publishing. |
 | F Docs and version | `docs/deploy.md` static section, README features and "Just open it", architecture, development, validation, `docs/releases/v1.1.0.md`, this document, version 1.1.0 in `package.json`, lock, `CITATION.cff`, `.env.example`, `Dockerfile`. | Markdown rules, version grep. |
 
-**User-side gates.** Enable Pages with source "GitHub Actions", push `main` or dispatch `cues.yml`, tag `v1.1.0`, open the Pages URL and check the footer version and five voices, serve the zip from a plain web root once.
+**User-side gates.** Enable Pages with source "GitHub Actions", push `main` or dispatch `cues.yml`, tag `v1.2.0`, open the Pages URL and check the footer version and five voices, serve the zip from a plain web root once.
 
 # 16 Risks and decisions to validate
 
@@ -775,6 +775,11 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 
 # 18 Plan revision record
+
+## Version 1.10 — 26 October 2026
+
+- Release 1.1.0 prepared: the `v1.0.0` tag had failed in validation (the ignored data layer), so 1.1.0 carries everything from 1.0.0 plus the accent colour setting, the three-column library feed with whole-card clicks and the collection beside the title, the Advanced collection (formerly Coach programming), the footer with the repository link, and the hardened sound test.
+- The static deployment shape (15.5) moves to 1.2.0.
 
 ## Version 1.9 — 26 October 2026
 
