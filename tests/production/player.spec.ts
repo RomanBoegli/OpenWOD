@@ -51,3 +51,17 @@ test('the production container ships the recorded cue packs', async ({ page, req
   const options = await page.getByRole('combobox', { name: 'Voice', exact: true }).locator('option').allTextContents();
   expect(options).toEqual(['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)', 'Device voice only']);
 });
+
+test('the production container is installable from a phone\'s home screen', async ({ page, request }) => {
+  const manifest = await request.get('/manifest.webmanifest');
+  expect(manifest.ok()).toBe(true);
+  expect(manifest.headers()['content-type']).toContain('application/manifest+json');
+  const body = (await manifest.json()) as { display: string; start_url: string; icons: { src: string }[] };
+  expect(body.display).toBe('standalone');
+  expect(body.start_url).toBe('./');
+  for (const icon of [...body.icons.map(icon => icon.src), 'icons/apple-touch-icon.png']) expect((await request.get(`/${icon}`)).ok(), icon).toBe(true);
+  await page.goto('/');
+  await expect(page.locator('link[rel=manifest]')).toHaveAttribute('href', '/manifest.webmanifest');
+  await expect(page.locator('link[rel=apple-touch-icon]')).toHaveAttribute('href', '/icons/apple-touch-icon.png');
+  await expect(page.locator('meta[name=apple-mobile-web-app-capable]')).toHaveAttribute('content', 'yes');
+});

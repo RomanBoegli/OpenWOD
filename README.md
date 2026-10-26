@@ -67,6 +67,7 @@ Pick a session from the library, press Start, and put the phone down.
 - [x] Recovery after a reload or a killed browser, and one tab in control of a session
 - [x] History with Repeat and score corrections, backups through the SQLite backup API, versioned migrations
 - [x] Workout packs with sharing provenance: reimports recognised, newer revisions can replace
+- [x] Installs on a phone's home screen as a web app, with the training view laid out to fit the screen
 - [ ] Login (the server stays on a trusted network until then)
 
 > [!NOTE]

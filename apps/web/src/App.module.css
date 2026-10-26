@@ -53,6 +53,7 @@
 .playerTop { display: flex; justify-content: space-between; gap: 15px; font-size: 11px; color: var(--ink-2); font-weight: 600; letter-spacing: .35px; }
 .playerTop > span { display: flex; align-items: center; gap: 9px; }
 .playerTop > span:last-child { font-size: 10px; letter-spacing: 1.5px; color: var(--ink-3); }
+.position { display: inline; }
 .liveDot { width: 6px; height: 6px; border-radius: 50%; background: var(--phase-color); }
 .clockBlock { text-align: center; padding: 29px 0 28px; }
 /* The overall line: where the session stands across every section and round. */
@@ -215,15 +216,22 @@
 .screen[data-performing=true][data-view=context] .contextRow { font-size: 21px; }
 .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 28px; font-weight: 600; }
 @media (max-width: 620px) {
-  .screen[data-performing=true] .player { padding: 12px 18px 16px; }
-  .screen[data-performing=true] .clockBlock { padding: 10px 0 16px; }
-  .screen[data-performing=true] .timer { font-size: clamp(90px, 15vh, 128px); }
-  .screen[data-performing=true] .lane { min-height: 0; padding: 12px 16px; }
-  .screen[data-performing=true] .lane h2 { font-size: 34px; margin-top: 10px; margin-bottom: 7px; }
-  .screen[data-performing=true] .athleteLabel { font-size: 16px; }
-  .screen[data-performing=true] .athleteBadge { min-width: 30px; height: 30px; font-size: 18px; }
-  .screen[data-performing=true] .nextStrip { font-size: 12px; min-height: 45px; padding: 13px 0; }
-  .screen[data-performing=true] .controls { padding-top: 13px; }
+  /* Performing on a phone: a session fits the screen without scrolling, so everything sits tighter and nothing is said twice. */
+  .screen[data-performing=true] .player { padding: 10px 14px 12px; }
+  .screen[data-performing=true] .playerTop { min-height: 36px; }
+  /* The overall line already names the section and the round, so the header keeps the title and the view switch. */
+  .screen[data-performing=true] .player[data-progress=detail] .position, .screen[data-performing=true] .player[data-progress=percent] .position { display: none; }
+  .screen[data-performing=true] .overall { margin-top: 4px; gap: 3px; }
+  .screen[data-performing=true] .clockBlock { padding: 4px 0 6px; }
+  .screen[data-performing=true] .timer { font-size: clamp(72px, 11vh, 112px); line-height: 1; margin: 4px 0 5px; }
+  .screen[data-performing=true] .laneHeading { margin-bottom: 6px; }
+  .screen[data-performing=true] .lanes { gap: 8px; }
+  .screen[data-performing=true] .lane { min-height: 0; padding: 8px 12px 10px; }
+  .screen[data-performing=true] .lane h2 { font-size: 28px; margin: 6px 0 2px; }
+  .screen[data-performing=true] .athleteLabel { font-size: 14px; gap: 8px; }
+  .screen[data-performing=true] .athleteBadge { min-width: 26px; height: 26px; font-size: 15px; }
+  .screen[data-performing=true] .nextStrip { font-size: 12px; min-height: 0; padding: 8px 0; }
+  .screen[data-performing=true] .controls { padding-top: 10px; }
   /* On a phone the transport row goes under the centre pair: three buttons on each side still fit beside each other. */
   .controls { grid-template-columns: 1fr 1fr; gap: 8px; }
   .transportCentre { grid-column: 1 / -1; grid-row: 1; gap: 8px; min-width: 0; }
@@ -233,7 +241,11 @@
   .transport[data-side=back] { justify-self: start; }
   .transport[data-side=forward] { justify-self: end; }
   .transport .iconButton { min-width: 44px; padding: 8px 6px; }
-  .screen[data-performing=true] .sessionLine { margin-top: 6px; }
+  .screen[data-performing=true] .transportCentre .primaryButton, .screen[data-performing=true] .transportCentre .stopButton { min-height: 46px; }
+  .screen[data-performing=true] .transport .iconButton { min-width: 40px; min-height: 40px; padding: 6px 5px; }
+  /* The elapsed time stays; the coaching sentence beside it is the one line a phone can spare. */
+  .screen[data-performing=true] .sessionLine { margin-top: 4px; }
+  .screen[data-performing=true] .sessionLine > span:last-child { display: none; }
   .screen[data-performing=true][data-view=context] .timer { font-size: 90px; }
   .screen[data-performing=true][data-view=context] .contextColumns { grid-template-columns: 16px 1fr 1fr 28px; }
   .screen[data-performing=true][data-view=context] .contextRow { font-size: 17px; grid-template-columns: 16px 1fr 1fr 28px; }
@@ -244,3 +256,6 @@
 .player[data-scope=elapsed] { --phase-color: var(--neutral-track); }
 .player[data-scope=elapsed][data-phase=paused] { --phase-color: var(--phase-paused); }
 .player[data-scope=elapsed][data-phase=complete] { --phase-color: var(--phase-work); }
+
+/* Installed on a home screen the page runs down to the screen's edge, so the footer clears the home indicator (the player's fixed panel already does). */
+@media (display-mode: standalone) { .footer { padding-bottom: env(safe-area-inset-bottom); } }

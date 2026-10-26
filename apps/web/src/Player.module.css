@@ -58,4 +58,18 @@
   .taskCell strong { font-size: 22px; }
   .taskCell span { font-size: 15px; }
   .unit li { font-size: 20px; }
+  /* Performing on a phone: the amount and the movement share one line, the rest of the lane follows underneath. */
+  :global([data-performing=true]) .lane { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+  :global([data-performing=true]) .lane > * { flex: 0 0 100%; }
+  :global([data-performing=true]) .lane > .target { flex: 0 0 auto; margin: 4px 0 0; }
+  :global([data-performing=true]) .lane > h2 { flex: 1 1 0; min-width: 0; }
+  :global([data-performing=true]) .lane > .laneState { flex: 0 0 auto; margin-top: 6px; }
+  :global([data-performing=true]) .target strong { font-size: 34px; letter-spacing: -1.5px; }
+  :global([data-performing=true]) .target small { font-size: 12px; }
+  :global([data-performing=true]) .loadLine { margin-top: 2px; font-size: 13px; }
+  :global([data-performing=true]) .secondaryClock { margin-top: 4px; }
+  :global([data-performing=true]) .actionBar { gap: 8px; margin: 4px 0 6px; }
+  :global([data-performing=true]) .bigAction { min-height: 54px; font-size: 17px; }
+  :global([data-performing=true]) .secondaryAction { min-height: 42px; padding: 6px 16px; font-size: 14px; }
+  :global([data-performing=true]) .laneDone { margin-top: 8px; min-height: 56px; }
 }

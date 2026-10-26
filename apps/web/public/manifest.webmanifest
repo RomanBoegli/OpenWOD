@@ -1,0 +1,30 @@
+{
+  "id": "./",
+  "name": "OpenWOD",
+  "short_name": "OpenWOD",
+  "description": "A workout player for training at home, solo or in pairs. Not born. Made.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101613",
+  "theme_color": "#101613",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

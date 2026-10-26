@@ -75,6 +75,13 @@ This is the route for a home network without a reverse proxy, with a certificate
 The private key is a secret: anyone holding it can impersonate the server on your network.
 Keep the files out of the repository and renew them before the date mkcert prints.
 
+## On a phone's home screen
+
+The app installs as a web app: in Safari on iOS open the share sheet and choose Add to Home Screen, in Chrome on Android choose Install app or Add to Home screen from the menu.
+It then opens full screen under its own icon, with the status bar in the theme's colour and no browser bars around the training view.
+Install it from the HTTPS address when you have one, so the screen wake lock works in the installed app as well.
+The installed app still loads from the server on every start and keeps the device cache and outbox like the browser does, so it is not an offline copy.
+
 ## What the server stores
 
 Workouts, collections, the movement catalogue's edits and the session log of the household live in the database.
