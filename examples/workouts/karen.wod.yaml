@@ -1,0 +1,41 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: karen
+  revision: 1
+  title: Karen
+  description: One hundred and fifty wall-ball shots, nothing else. Break them into sets you can repeat from the first rep, because the last fifty decide the time. Scale the ball or the target height before you scale the count; the ten-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/karen
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Medicine ball
+    - Wall
+  participants: 1
+  prep: 10s
+  sections:
+    - id: karen-for-time
+      title: 150 wall balls
+      format: forTime
+      transitionAfter: manualReady
+      cap: 10m
+      body:
+        id: karen-wall-balls
+        type: task
+        assignments:
+          A:
+            notes: Rx 20 lb ball to a 10 ft target (14 lb to 9 ft)
+            name: Wall-ball shots
+            reps: 150
+            load:
+              light:
+                value: 4
+                unit: kg
+              medium:
+                value: 6
+                unit: kg
+              heavy:
+                value: 9
+                unit: kg

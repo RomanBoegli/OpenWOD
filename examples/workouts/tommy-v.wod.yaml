@@ -1,0 +1,95 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: tommy-v
+  revision: 1
+  title: Tommy V
+  description: Thrusters 21-15-9 paired with rope climbs 12-9-6 on a fifteen-foot rope. The climbs are the long part; use your legs, descend under control and treat each one as its own rep rather than racing. Scale the thruster load and swap climbs for rope pulls from the floor or a fixed count of pull-ups; the twenty-five-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/tommy-v
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Barbell
+    - Climbing rope
+  participants: 1
+  prep: 10s
+  sections:
+    - id: tommy-v-for-time
+      title: Thrusters and rope climbs
+      format: forTime
+      transitionAfter: manualReady
+      cap: 25m
+      body:
+        id: tommy-v-ladder
+        type: sequence
+        children:
+          - id: tommy-v-thrusters-21
+            type: task
+            assignments:
+              A:
+                notes: Published Rx 115 lb / 52 kg (75 lb / 35 kg)
+                name: Thrusters
+                reps: 21
+                load:
+                  light:
+                    value: 22.5
+                    unit: kg
+                  medium:
+                    value: 35
+                    unit: kg
+                  heavy:
+                    value: 52
+                    unit: kg
+          - id: tommy-v-rope-climbs-12
+            type: task
+            assignments:
+              A:
+                notes: 15 ft rope
+                name: Rope climbs
+                reps: 12
+          - id: tommy-v-thrusters-15
+            type: task
+            assignments:
+              A:
+                name: Thrusters
+                reps: 15
+                load:
+                  light:
+                    value: 22.5
+                    unit: kg
+                  medium:
+                    value: 35
+                    unit: kg
+                  heavy:
+                    value: 52
+                    unit: kg
+          - id: tommy-v-rope-climbs-9
+            type: task
+            assignments:
+              A:
+                name: Rope climbs
+                reps: 9
+          - id: tommy-v-thrusters-9
+            type: task
+            assignments:
+              A:
+                name: Thrusters
+                reps: 9
+                load:
+                  light:
+                    value: 22.5
+                    unit: kg
+                  medium:
+                    value: 35
+                    unit: kg
+                  heavy:
+                    value: 52
+                    unit: kg
+          - id: tommy-v-rope-climbs-6
+            type: task
+            assignments:
+              A:
+                name: Rope climbs
+                reps: 6

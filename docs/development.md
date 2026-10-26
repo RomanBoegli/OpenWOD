@@ -1,0 +1,43 @@
+# Developing OpenWOD
+
+```sh
+npm ci
+npm run dev
+```
+
+Open http://127.0.0.1:5173. Dependencies, a pinned Node 24 runtime, the npm cache and the test browsers all live inside the repository (`node_modules/`, `.cache/`); nothing is installed globally.
+
+## Layout
+
+| Path | Purpose |
+| --- | --- |
+| `apps/web/` | React app: library, overview, editor, player, settings, device storage (library, drafts, master data, session log), theme, audio, wake lock. |
+| `apps/server/` | Fastify asset server and health API. |
+| `packages/domain/` | TypeBox schema (the single source for types, validators and published JSON Schemas), YAML exchange, compiler, outline, difficulty, library summaries and filters, editor builder model, bundled workouts. |
+| `packages/engine/` | Pure session state machine with an injected clock. |
+| `schemas/`, `examples/workouts/` | Generated schemas and workout files; `npm run schemas:generate` after editing the schema or fixtures. |
+| `tests/` | Unit tests (Vitest), browser tests (Playwright) and the production smoke test; configs live beside them. |
+| `deploy/` | The source-build Compose file. The root `compose.yaml` and `Dockerfile` are the production route. |
+| `docs/` | Architecture decisions, validation records, this guide, deployment and the file format. |
+| `assets/brand/` | Logo sources. |
+
+## Checks
+
+```sh
+npm run check          # TypeScript, generated-file consistency, unit tests
+npm run build          # production bundle plus the test-hook exclusion check
+npm run browsers:install
+npm run test:e2e       # Chromium, Firefox and WebKit
+```
+
+Browser tests drive the player through an injected clock (`window.__wodvaTest`) that exists only in test builds, so a 20-minute workout runs in seconds. WebKit stands in for Safari's engine. `SCREENS=1 npx playwright test --project=webkit tests/e2e/screens.spec.ts` captures a screenshot set of every screen in both themes for visual review.
+
+The frozen traces under `tests/unit/traces/` pin the compiled timing of the original timed fixtures; a change there is a change in behaviour and must be deliberate.
+
+## Recorded cue voices
+
+`npm run cues:generate` renders the Go, Rest, countdown and other fixed cues with Piper into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`). The Docker build does the same with `CUES=1`. The rendered files are not committed; without them the app uses beeps and the device voice.
+
+## Conventions
+
+Formats stay a bounded set of shared behaviours (timed, interval, manual, cap) rather than one implementation per workout type. The engine never guesses: manual work has no deadline, and nothing is inferred from elapsed wall time. Browser storage is a convenience until the server milestone and every read is validated.

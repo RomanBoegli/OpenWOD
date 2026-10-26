@@ -1,0 +1,53 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: jerry
+  revision: 1
+  title: Jerry
+  description: "Run a mile, row two kilometres, run a mile. Three steady efforts with no movement to hide behind: hold the first run just under your threshold, row at a pace you could repeat, and empty the tank on the second run. Scale by shortening each piece rather than resting between them; the thirty-minute cap is a training suggestion, not part of the benchmark."
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/jerry
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Running route
+    - Rowing machine
+  participants: 1
+  prep: 10s
+  sections:
+    - id: jerry-for-time
+      title: Run, row, run
+      format: forTime
+      transitionAfter: manualReady
+      cap: 30m
+      body:
+        id: jerry-sequence
+        type: sequence
+        children:
+          - id: jerry-run-1
+            type: task
+            assignments:
+              A:
+                notes: One mile
+                name: Run
+                distance:
+                  value: 1.6
+                  unit: km
+          - id: jerry-row
+            type: task
+            assignments:
+              A:
+                name: Row
+                distance:
+                  value: 2
+                  unit: km
+          - id: jerry-run-2
+            type: task
+            assignments:
+              A:
+                notes: One mile
+                name: Run
+                distance:
+                  value: 1.6
+                  unit: km

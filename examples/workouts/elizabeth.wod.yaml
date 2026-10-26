@@ -1,0 +1,94 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: elizabeth
+  revision: 1
+  title: Elizabeth
+  description: Cleans and ring dips, 21-15-9. Squat cleans are the standard and they cook the legs, so settle into a cycle you can keep rather than chasing early speed; the dips fade fast once the triceps tire. Scale the bar or use power cleans, and swap ring dips for bar dips or push-ups; the fifteen-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/elizabeth
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Barbell
+    - Rings
+  participants: 1
+  prep: 10s
+  sections:
+    - id: elizabeth-for-time
+      title: 21-15-9
+      format: forTime
+      transitionAfter: manualReady
+      cap: 15m
+      body:
+        id: elizabeth-ladder
+        type: sequence
+        children:
+          - id: elizabeth-cleans-21
+            type: task
+            assignments:
+              A:
+                notes: Rx 135 lb (95 lb); squat cleans
+                name: Cleans
+                reps: 21
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 43
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+          - id: elizabeth-ring-dips-21
+            type: task
+            assignments:
+              A:
+                name: Ring dips
+                reps: 21
+          - id: elizabeth-cleans-15
+            type: task
+            assignments:
+              A:
+                name: Cleans
+                reps: 15
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 43
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+          - id: elizabeth-ring-dips-15
+            type: task
+            assignments:
+              A:
+                name: Ring dips
+                reps: 15
+          - id: elizabeth-cleans-9
+            type: task
+            assignments:
+              A:
+                name: Cleans
+                reps: 9
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 43
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+          - id: elizabeth-ring-dips-9
+            type: task
+            assignments:
+              A:
+                name: Ring dips
+                reps: 9

@@ -12,3 +12,7 @@ coverage/
 .DS_Store
 data/
 notes.md
+# Rendered cue packs come from the Docker build or `npm run cues:generate`, not from git.
+apps/web/public/cues/*/
+apps/web/public/cues/packs.json
+apps/web/public/cues/LICENSE.md

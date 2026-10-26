@@ -1,13 +1,16 @@
 import { useMemo, useRef, useState } from 'react';
 import { MAX_FILE_BYTES, parseWorkoutFile, type Workout } from '../../../packages/domain/src';
-import { equipmentOptions, matchesFilter, sortSummaries, summariseWorkout, type DurationBucket, type LibrarySort, type WorkoutSummary } from '../../../packages/domain/src/library';
+import { equipmentOptions, matchesFilter, sortSummaries, summariseWorkout, type DurationBucket, type LibraryFilter, type LibrarySort, type SummaryOptions, type WorkoutSummary } from '../../../packages/domain/src/library';
 import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
 import type { Preferences } from './preferences';
+import type { Collection } from './master-data';
+import { agoText, lastDone, timesDone, type SessionRecord } from './session-log';
 import { DifficultyChip } from './DifficultyChip';
+import { AthletesChip, Chip, FormatChips } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { exportWorkoutFile } from './Player';
-import { editHref, NEW_HREF, playHref, workoutHref } from './router';
+import { editHref, NEW_HREF, playHref, SETTINGS_HREF, workoutHref } from './router';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
 import { NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
@@ -17,12 +20,14 @@ import shared from './App.module.css';
 
 export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean }
 
-export function toEntry(workout: Workout, source: LibraryEntry['source']): LibraryEntry {
-  return { workout, summary: summariseWorkout(workout), source, editable: workoutToBuilder(workout) !== null };
+export function toEntry(workout: Workout, source: LibraryEntry['source'], options: SummaryOptions = {}): LibraryEntry {
+  return { workout, summary: summariseWorkout(workout, options), source, editable: workoutToBuilder(workout) !== null };
 }
 
 interface LibraryProps {
   entries: LibraryEntry[];
+  collections: Collection[];
+  sessions: SessionRecord[];
   onImport: (workout: Workout, mode: 'copy' | 'replace') => void;
   onRemove: (id: string) => void;
   storageError: string;
@@ -33,18 +38,20 @@ interface LibraryProps {
   onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
 }
 
-const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.totalMs)}`;
+type Sort = LibrarySort | 'longestAgo';
+const DURATIONS: [DurationBucket, string][] = [['short', 'Up to 20 min'], ['medium', '20 to 40 min'], ['long', 'Over 40 min']];
+export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.totalMs)}`;
+const toggle = <T,>(list: T[], item: T) => list.includes(item) ? list.filter(value => value !== item) : [...list, item];
 
-export function Library({ entries, onImport, onRemove, storageError, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange }: LibraryProps) {
+export function Library({ entries, collections, sessions, onImport, onRemove, storageError, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange }: LibraryProps) {
   const [query, setQuery] = useState('');
-  const [participants, setParticipants] = useState<'' | '1' | '2'>('');
-  const [equipment, setEquipment] = useState('');
-  const [duration, setDuration] = useState<'' | DurationBucket>('');
-  const [difficulty, setDifficulty] = useState<'' | DifficultyLevel>('');
-  const [format, setFormat] = useState<'' | SectionFormat>('');
-  const onlyMine = preferences.onlyMyEquipment;
-  const setOnlyMine = (value: boolean) => onPreferencesChange(current => ({ ...current, onlyMyEquipment: value }));
-  const [sort, setSort] = useState<LibrarySort>('title');
+  const [participants, setParticipants] = useState<'' | 1 | 2>('');
+  const [equipment, setEquipment] = useState<string[]>([]);
+  const [duration, setDuration] = useState<DurationBucket[]>([]);
+  const [difficulty, setDifficulty] = useState<DifficultyLevel[]>([]);
+  const [format, setFormat] = useState<SectionFormat[]>([]);
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
+  const [sort, setSort] = useState<Sort>('title');
   const [preview, setPreview] = useState<Workout>();
   const [importError, setImportError] = useState('');
   const [removing, setRemoving] = useState<LibraryEntry>();
@@ -52,14 +59,23 @@ export function Library({ entries, onImport, onRemove, storageError, missingId, 
   const importDialog = useRef<HTMLDialogElement>(null);
   const removeDialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const onlyMine = preferences.onlyMyEquipment;
+  const setOnlyMine = (value: boolean) => onPreferencesChange(current => ({ ...current, onlyMyEquipment: value }));
 
   const equipmentList = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
-  const filter = { query, participants: participants ? Number(participants) as 1 | 2 : undefined, equipment: equipment || undefined, duration: duration || undefined, difficulty: difficulty || undefined, format: format || undefined, onlyEquipment: onlyMine ? preferences.myEquipment : undefined };
-  const visible = useMemo(() => sortSummaries(entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry })), sort).map(item => item.entry), [entries, query, participants, equipment, duration, difficulty, format, onlyMine, preferences.myEquipment, sort]);
-  const filtering = Boolean(query || participants || equipment || duration || difficulty || format || onlyMine);
-  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment(''); setDuration(''); setDifficulty(''); setFormat(''); setOnlyMine(false); };
+  const filter: LibraryFilter = { query, participants: participants || undefined, equipment, duration, difficulty, format, collections: collectionIds, onlyEquipment: onlyMine ? preferences.myEquipment : undefined };
+  const visible = useMemo(() => {
+    const matching = entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry }));
+    if (sort !== 'longestAgo') return sortSummaries(matching, sort).map(item => item.entry);
+    // Never done first (alphabetically), then the longest-ago session first.
+    const stamp = (id: string) => lastDone(sessions, id)?.finishedAt ?? '';
+    return [...matching].sort((a, b) => (stamp(a.id) === stamp(b.id) ? a.title.localeCompare(b.title, 'en') : stamp(a.id).localeCompare(stamp(b.id)))).map(item => item.entry);
+  }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, onlyMine, preferences.myEquipment, sort, sessions]);
+  const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || onlyMine);
+  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
   const previewSummary = useMemo(() => preview && summariseWorkout(preview), [preview]);
   const conflict = preview && entries.find(entry => entry.workout.id === preview.id);
+  const collectionsOf = (id: string) => collections.filter(collection => collection.workoutIds.includes(id));
 
   async function importFile(file?: File) {
     if (!file) return;
@@ -78,12 +94,14 @@ export function Library({ entries, onImport, onRemove, storageError, missingId, 
     setPreview(undefined);
   }
 
+  const group = (label: string, children: React.ReactNode) => <div className={styles.filterGroup} role="group" aria-label={label}><span className={styles.filterLabel}>{label}</span><div className={styles.chipRow}>{children}</div></div>;
+
   return <div className={styles.library}>
     <div className={styles.heading}>
       <div>
         <div className={shared.eyebrow}>YOUR LIBRARY <span>/</span> {entries.length} {entries.length === 1 ? 'WORKOUT' : 'WORKOUTS'}</div>
         <h1>Pick your next session</h1>
-        <p className={shared.description}>Bundled circuits and the WODs you’ve imported, all on this device. Filter, then press Start.</p>
+        <p className={shared.description}>Benchmarks, coach programming and the WODs you’ve built or imported, all on this device. Filter, then press Start.</p>
       </div>
       <div className={styles.headingActions}>
         <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
@@ -97,35 +115,48 @@ export function Library({ entries, onImport, onRemove, storageError, missingId, 
     {storageError && <p className={shared.notice} role="alert">{storageError}</p>}
 
     <div className={styles.filters} role="search" aria-label="Filter workouts">
-      <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
-      <label>Athletes<select value={participants} onChange={event => setParticipants(event.target.value as '' | '1' | '2')}><option value="">Any</option><option value="1">Solo</option><option value="2">Pair</option></select></label>
-      <label>Equipment<select value={equipment} onChange={event => setEquipment(event.target.value)}><option value="">Any</option>{equipmentList.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
-      <label>Duration<select value={duration} onChange={event => setDuration(event.target.value as '' | DurationBucket)}><option value="">Any</option><option value="short">Up to 20 min</option><option value="medium">20 to 40 min</option><option value="long">Over 40 min</option></select></label>
-      <label>Difficulty<select value={difficulty} onChange={event => setDifficulty(event.target.value ? Number(event.target.value) as DifficultyLevel : '')}><option value="">Any</option>{([1, 2, 3, 4] as const).map(level => <option key={level} value={level}>{DIFFICULTY_LABELS[level]}</option>)}</select></label>
-      <label>Format<select value={format} onChange={event => setFormat(event.target.value as '' | SectionFormat)}><option value="">Any</option>{SECTION_FORMATS.map(item => <option key={item} value={item}>{FORMAT_LABELS[item]}</option>)}</select></label>
-      <label>Sort<select value={sort} onChange={event => setSort(event.target.value as LibrarySort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option></select></label>
+      <div className={styles.filterTop}>
+        <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
+        <label className={styles.sort}>Sort<select value={sort} onChange={event => setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option></select></label>
+      </div>
+      {group('Athletes', <>{([[1, 'Solo'], [2, 'Pair']] as const).map(([value, label]) => <Chip key={value} kind={value === 2 ? 'pair' : 'solo'} icon={value === 2 ? 'users' : 'user'} pressed={participants === value} onClick={() => setParticipants(current => current === value ? '' : value)}>{label}</Chip>)}</>)}
+      {group('Format', SECTION_FORMATS.map(item => <Chip key={item} kind="format" pressed={format.includes(item)} onClick={() => setFormat(current => toggle(current, item))}>{FORMAT_LABELS[item]}</Chip>))}
+      {group('Collection', collections.map(collection => <Chip key={collection.id} kind="collection" pressed={collectionIds.includes(collection.id)} onClick={() => setCollectionIds(current => toggle(current, collection.id))}>{collection.title}</Chip>))}
+      {group('Duration', DURATIONS.map(([value, label]) => <Chip key={value} kind="neutral" pressed={duration.includes(value)} onClick={() => setDuration(current => toggle(current, value))}>{label}</Chip>))}
+      {group('Difficulty', ([1, 2, 3, 4] as const).map(level => <Chip key={level} kind="neutral" pressed={difficulty.includes(level)} onClick={() => setDifficulty(current => toggle(current, level))}>{DIFFICULTY_LABELS[level]}</Chip>))}
+      {group('Equipment', <>
+        <Chip kind="done" icon="check" pressed={onlyMine} title="Only workouts that need nothing beyond the gear ticked in settings" onClick={() => setOnlyMine(!onlyMine)}>Only my equipment</Chip>
+        {equipmentList.map(item => <Chip key={item} kind="neutral" pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</Chip>)}
+      </>)}
     </div>
-    <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}</span><label className={styles.toggle}><input type="checkbox" checked={onlyMine} onChange={event => setOnlyMine(event.target.checked)} />Only my equipment{preferences.myEquipment.length === 0 && onlyMine ? ' (bodyweight only — tick your gear in settings)' : ''}</label>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
+    <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}{onlyMine && preferences.myEquipment.length === 0 && <> · bodyweight only, <a href={SETTINGS_HREF}>tick your gear in settings</a></>}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
     {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
-      {visible.map(({ workout, summary, source, editable }) => <li key={workout.id} className={styles.card} data-source={source}>
-        <div className={styles.cardTop}><span className={styles.badges}><span className={styles.badge} data-kind={summary.participants === 2 ? 'pair' : 'solo'}><Icon name={summary.participants === 2 ? 'users' : 'user'} size={14} />{summary.participants === 2 ? 'Pair' : 'Solo'}</span>{summary.formats.map(item => <span key={item} className={styles.badge} data-kind="format">{FORMAT_LABELS[item]}</span>)}<DifficultyChip difficulty={summary.difficulty} /></span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
-        <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
-        {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
-        <dl className={styles.facts}>
-          <div><dt>Total</dt><dd>{durationLabel(summary)}</dd></div>
-          <div><dt>Sections</dt><dd>{summary.sections}</dd></div>
-          <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
-        </dl>
-        {summary.equipmentNeeded.length > 0 ? <div className={styles.tags}>{summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment === item} onClick={() => setEquipment(value => value === item ? '' : item)}>{item}</button>)}</div> : <div className={styles.tags}><span className={styles.tag} data-plain>Bodyweight only</span></div>}
-        <div className={styles.cardActions}>
-          <a className={shared.primaryButton} href={playHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
-          <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Read through ${summary.title}`}><Icon name="list" size={17} />Read through</a>
-          {editable && <a className={shared.quietButton} href={editHref(workout.id)} aria-label={`${source === 'saved' ? 'Edit' : 'Duplicate and edit'} ${summary.title}`}><Icon name="settings" size={16} />{source === 'saved' ? 'Edit' : 'Duplicate'}</a>}
-          <button className={shared.quietButton} onClick={() => exportWorkoutFile(workout)} aria-label={`Export ${summary.title}`}><Icon name="download" size={17} />Export</button>
-          {source === 'saved' && <button className={shared.quietButton} onClick={() => { setRemoving({ workout, summary, source, editable }); removeDialog.current?.showModal(); }} aria-label={`Remove ${summary.title}`}><Icon name="trash" size={17} />Remove</button>}
-        </div>
-      </li>)}
+      {visible.map(({ workout, summary, source, editable }) => {
+        const last = lastDone(sessions, workout.id);
+        const count = timesDone(sessions, workout.id);
+        return <li key={workout.id} className={styles.card} data-source={source}>
+          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} />{collectionsOf(workout.id).map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} /></span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
+          <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
+          {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
+          <dl className={styles.facts}>
+            <div><dt>Total</dt><dd>{durationLabel(summary)}</dd></div>
+            <div><dt>Sections</dt><dd>{summary.sections}</dd></div>
+            <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
+          </dl>
+          <div className={styles.tags}>
+            {last ? <Chip kind="done" icon="check" title={new Date(last.finishedAt).toLocaleString()}>{count === 1 ? 'Done once' : `Done ${count}×`} · {agoText(last.finishedAt)}</Chip> : <Chip kind="neutral">Not done yet</Chip>}
+            {summary.equipmentNeeded.length > 0 ? summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</button>) : <span className={styles.tag} data-plain>Bodyweight only</span>}
+          </div>
+          <div className={styles.cardActions}>
+            <a className={shared.primaryButton} href={playHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
+            <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Read through ${summary.title}`}><Icon name="list" size={17} />Read through</a>
+            {editable && <a className={shared.quietButton} href={editHref(workout.id)} aria-label={`${source === 'saved' ? 'Edit' : 'Duplicate and edit'} ${summary.title}`}><Icon name="settings" size={16} />{source === 'saved' ? 'Edit' : 'Duplicate'}</a>}
+            <button className={shared.quietButton} onClick={() => exportWorkoutFile(workout)} aria-label={`Export ${summary.title}`}><Icon name="download" size={17} />Export</button>
+            {source === 'saved' && <button className={shared.quietButton} onClick={() => { setRemoving({ workout, summary, source, editable }); removeDialog.current?.showModal(); }} aria-label={`Remove ${summary.title}`}><Icon name="trash" size={17} />Remove</button>}
+          </div>
+        </li>;
+      })}
     </ul>}
 
     <dialog ref={importDialog} className={shared.dialog} aria-labelledby="import-title"><div className={shared.dialogHeading}><h2 id="import-title">Preview your WOD</h2><button className={shared.iconButton} aria-label="Close import preview" onClick={() => importDialog.current?.close()}><Icon name="close" /></button></div>

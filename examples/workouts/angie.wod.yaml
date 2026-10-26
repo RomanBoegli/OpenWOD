@@ -1,0 +1,50 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: angie
+  revision: 1
+  title: Angie
+  description: One hundred each of pull-ups, push-ups, sit-ups and air squats, finishing one movement before starting the next. The pull-ups and push-ups are the whole workout; plan small, even sets from the first rep and keep the rest between them short. Scale the pull-ups with a band or ring rows and the push-ups from the knees; the twenty-five-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/angie
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: angie-for-time
+      title: Four hundreds
+      format: forTime
+      transitionAfter: manualReady
+      cap: 25m
+      body:
+        id: angie-chipper
+        type: sequence
+        children:
+          - id: angie-pull-ups
+            type: task
+            assignments:
+              A:
+                name: Pull-ups
+                reps: 100
+          - id: angie-push-ups
+            type: task
+            assignments:
+              A:
+                name: Push-ups
+                reps: 100
+          - id: angie-sit-ups
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 100
+          - id: angie-squats
+            type: task
+            assignments:
+              A:
+                name: Air squats
+                reps: 100

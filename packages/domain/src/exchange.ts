@@ -9,7 +9,9 @@ import { formatDuration, parseDuration } from './duration';
  * version 2. Version 1 is the earlier JSON form with integer-millisecond *Ms keys. YAML 1.2 is a superset of JSON,
  * so one parser reads all of them; the internal model is always integer milliseconds.
  */
-export const FILE_FORMAT = 'wodva.workout';
+export const FILE_FORMAT = 'openwod.workout';
+/** Files written before the rename; still read, never written. */
+export const LEGACY_FILE_FORMAT = 'wodva.workout';
 export const FILE_VERSION = 3;
 export const FILE_EXTENSION = '.wod.yaml';
 export const MAX_FILE_BYTES = 1_048_576;
@@ -51,7 +53,7 @@ function humaniseSchema(schema: unknown, version: number): unknown {
 /** Version 2: the version-1 model (timed circuits only, schemaVersion 1) with human durations. */
 export const WorkoutFileSchemaV2 = humaniseSchema(WorkoutFileSchema, 2) as Record<string, unknown>;
 /** Version 3: the current model with human durations. */
-export const WorkoutFileSchemaV3 = humaniseSchema({ ...WorkoutFileSchema, properties: { ...WorkoutFileSchema.properties, workout: WorkoutSchema } }, 3) as Record<string, unknown>;
+export const WorkoutFileSchemaV3 = humaniseSchema({ ...WorkoutFileSchema, properties: { ...WorkoutFileSchema.properties, format: { const: FILE_FORMAT, type: 'string' }, workout: WorkoutSchema } }, 3) as Record<string, unknown>;
 const validateFileV1 = compileSchema(WorkoutFileSchema);
 const validateFileV2 = compileSchema(WorkoutFileSchemaV2);
 const validateFileV3 = compileSchema(WorkoutFileSchemaV3);
@@ -88,7 +90,9 @@ export function parseWorkoutFile(text: string): Workout {
   try { document = YAML.parse(text, { maxAliasCount: 0, uniqueKeys: true, prettyErrors: false }); } catch { fail('/', 'Choose a valid YAML or JSON workout file.'); }
   assertBounded(document);
   const envelope = document && typeof document === 'object' ? document as { format?: unknown; formatVersion?: unknown; workout?: unknown } : {};
-  if (envelope.format !== FILE_FORMAT) fail('/format', 'This is not a Wodva workout file.');
+  if (envelope.format !== FILE_FORMAT && envelope.format !== LEGACY_FILE_FORMAT) fail('/format', 'This is not an OpenWOD workout file.');
+  // Either name is accepted for every version; the frozen version 1 and 2 schemas carry the earlier name, version 3 the current one.
+  envelope.format = envelope.formatVersion === FILE_VERSION ? FILE_FORMAT : LEGACY_FILE_FORMAT;
   if (envelope.formatVersion === 1) {
     if (!validateFileV1(document)) fail('/', UNSUPPORTED);
     return parseWorkout(envelope.workout);

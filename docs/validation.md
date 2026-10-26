@@ -69,3 +69,16 @@ Added: workout model version 2 and file version 3 (manual tasks, six section for
 | Visual pass | WebKit screenshots of library, overview, editor, the ready screen and the AMRAP, EMOM, For time, you-go-I-go, strength and finish screens in light and dark at 1024 × 768 and 390 × 844 inspected. |
 
 Not run in this round: the Docker production smoke test, the recorded cue clips, and the real-hour and physical-device checks listed above.
+
+## Library and identity wave, 26 October 2026
+
+Added: OpenWOD branding, inline load levels, 16 bundled benchmarks, collections, the Settings page with equipment and movement master data, the local session log, accumulative chip filters, equipment on the overview, one chip style, the timer wash and motion pass, three recorded cue packs rendered in the Docker build, and the repository cleanup with the README rewrite.
+
+| Check | Result |
+| --- | --- |
+| Unit tests | 95 passed (including coach and benchmark fixtures, library filters, audio packs). |
+| Accelerated browser integration | Firefox and WebKit: 25 scenarios each (50), including the settings page, master-data merge, collections, the session log and accumulative filters; Chromium runs in CI. |
+| Production build and test-hook exclusion | Passed. |
+| Visual pass | WebKit screenshots of the library (desktop and phone), the settings page and the player wash at work, warning and rest inspected. |
+
+Not run in this round: the Docker image build with the cue packs on both architectures (CI), the production smoke test, and the real-hour and physical-device checks listed above.

@@ -1,4 +1,4 @@
-format: wodva.workout
+format: openwod.workout
 formatVersion: 3
 workout:
   schemaVersion: 2

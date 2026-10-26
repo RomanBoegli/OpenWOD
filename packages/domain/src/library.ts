@@ -21,19 +21,25 @@ export interface WorkoutSummary {
   totalMs: number;
   durationKind: DurationKind;
   difficulty: Difficulty;
+  /** Ids of the collections this workout belongs to (set by the app, not the model). */
+  collections: string[];
 }
 
 export type DurationBucket = 'short' | 'medium' | 'long';
 export type LibrarySort = 'title' | 'shortest' | 'longest' | 'easiest' | 'hardest';
+/** Filters accumulate: a list matches when the workout has ANY of the chosen values; lists combine with AND. */
 export interface LibraryFilter {
   query?: string;
   participants?: 1 | 2;
-  equipment?: string;
+  /** Any of these equipment items is needed. */
+  equipment?: string[];
   /** Only workouts whose needed equipment is covered by this list; an empty list means bodyweight only. */
   onlyEquipment?: string[];
-  duration?: DurationBucket;
-  difficulty?: DifficultyLevel;
-  format?: SectionFormat;
+  duration?: DurationBucket[];
+  difficulty?: DifficultyLevel[];
+  format?: SectionFormat[];
+  /** Any of these collection ids. */
+  collections?: string[];
 }
 
 const SHORT_MAX_MS = 20 * 60_000;
@@ -94,32 +100,41 @@ export function inferEquipment(movements: string[], declared: string[] = []): st
   return found;
 }
 
-export function summariseWorkout(workout: Workout): WorkoutSummary {
+export interface SummaryOptions {
+  /** Maps an equipment name to its canonical spelling (master data merges). */
+  canonicalEquipment?: (name: string) => string;
+  collections?: string[];
+}
+
+export function summariseWorkout(workout: Workout, options: SummaryOptions = {}): WorkoutSummary {
   const plan = compileWorkout(workout);
   const movements: string[] = [];
   for (const section of workout.sections) collectMovements(section.body, movements);
-  const equipmentNeeded = [...workout.equipment];
-  for (const item of inferEquipment(movements, workout.equipment)) if (!equipmentNeeded.some(known => equipmentKey(known) === equipmentKey(item) || normalise(known).includes(normalise(item)))) equipmentNeeded.push(item);
+  const canonical = options.canonicalEquipment ?? ((name: string) => name);
+  const equipmentNeeded: string[] = [];
+  for (const item of [...workout.equipment, ...inferEquipment(movements, workout.equipment)].map(canonical)) if (!equipmentNeeded.some(known => equipmentKey(known) === equipmentKey(item) || normalise(known).includes(normalise(item)))) equipmentNeeded.push(item);
   const formats: SectionFormat[] = [];
   for (const section of workout.sections) if (!formats.includes(section.format)) formats.push(section.format);
   return {
     id: workout.id, title: workout.title, description: workout.description ?? '', participants: workout.participants,
     equipment: [...workout.equipment], equipmentNeeded, movements, formats, sections: workout.sections.length,
     activeMs: plan.durationMs, totalMs: plan.durationMs + workout.prepMs, durationKind: plan.durationKind, difficulty: rateDifficulty(plan),
+    collections: options.collections ?? [],
   };
 }
 
 /** Every whitespace-separated query token must appear in the title, description, a movement or an equipment item. */
 export function matchesFilter(summary: WorkoutSummary, filter: LibraryFilter): boolean {
   if (filter.participants && summary.participants !== filter.participants) return false;
-  if (filter.equipment && !summary.equipmentNeeded.some(item => equipmentKey(item) === equipmentKey(filter.equipment!))) return false;
+  if (filter.equipment?.length && !filter.equipment.some(wanted => summary.equipmentNeeded.some(item => equipmentKey(item) === equipmentKey(wanted)))) return false;
   if (filter.onlyEquipment) {
     const owned = filter.onlyEquipment.map(equipmentKey);
     if (!summary.equipmentNeeded.every(item => owned.includes(equipmentKey(item)))) return false;
   }
-  if (filter.duration && durationBucket(summary.totalMs) !== filter.duration) return false;
-  if (filter.difficulty && summary.difficulty.level !== filter.difficulty) return false;
-  if (filter.format && !summary.formats.includes(filter.format)) return false;
+  if (filter.duration?.length && !filter.duration.includes(durationBucket(summary.totalMs))) return false;
+  if (filter.difficulty?.length && !filter.difficulty.includes(summary.difficulty.level)) return false;
+  if (filter.format?.length && !filter.format.some(format => summary.formats.includes(format))) return false;
+  if (filter.collections?.length && !filter.collections.some(id => summary.collections.includes(id))) return false;
   const tokens = normalise(filter.query ?? '').split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
   const haystack = normalise([summary.title, summary.description, ...summary.movements, ...summary.equipmentNeeded].join('\n'));

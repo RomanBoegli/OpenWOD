@@ -1,0 +1,41 @@
+.settings { min-height: 60vh; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; }
+.card { display: grid; gap: 12px; padding: 22px 24px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border: 1px solid var(--line); border-radius: 20px; min-width: 0; }
+.card h2 { font-size: 20px; font-weight: 600; letter-spacing: -.5px; margin: 0; }
+.hint { margin: 0; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+.field { display: grid; gap: 7px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); min-width: 0; }
+.field input:not([type=range]), .field select { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); color: var(--ink); font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.field input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
+.twoUp { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.athleteRow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.athleteRow fieldset[data-two] { grid-template-columns: 1fr 1fr; margin: 0; }
+.chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.usage { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px; max-height: 280px; overflow-y: auto; }
+.usage label { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+.usage label:hover { background: var(--hover); }
+.usage input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent-fill); }
+.usage small { color: var(--ink-3); margin-left: auto; white-space: nowrap; }
+.mergeRow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+.merges { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.merges li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0 4px 8px; border-bottom: 1px solid var(--line); }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; padding: 6px 8px; font-size: 9px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--line-2); }
+.table td { padding: 6px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.table td:last-child { white-space: nowrap; text-align: right; }
+.loadsForm { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; align-items: end; }
+.loadsForm > :nth-child(n+4) { grid-column: 1 / -1; }
+.levelRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.levelInput { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 6px; }
+.levelInput span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #fff; }
+.levelInput[data-level=light] span { background: var(--level-light); }
+.levelInput[data-level=medium] span { background: var(--level-medium); }
+.levelInput[data-level=heavy] span { background: var(--level-heavy); border: 1px solid var(--level-heavy-border); }
+.levelInput input { width: 100%; min-width: 0; min-height: 40px; padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font-size: 14px; }
+.collectionList { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.collectionList li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.collectionList strong { display: block; font-size: 15px; }
+.collectionList small { color: var(--ink-3); font-size: 12px; }
+.collectionForm { display: grid; gap: 10px; padding-top: 6px; }
+.rowActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 620px) { .card { padding: 18px 16px; } .athleteRow, .twoUp, .mergeRow, .loadsForm { grid-template-columns: 1fr; } }

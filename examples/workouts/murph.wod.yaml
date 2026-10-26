@@ -1,0 +1,64 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: murph
+  revision: 1
+  title: Murph
+  description: Run a mile, then one hundred pull-ups, two hundred push-ups and three hundred air squats, then run another mile. Partition the middle any way you like (twenty rounds of 5-10-15 is the usual choice); the weight vest is optional and the first run should feel easy. Scale the volume to a half Murph if the full one is out of reach today; the sixty-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/murph
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Running route
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: murph-for-time
+      title: Murph
+      format: forTime
+      transitionAfter: manualReady
+      cap: 1h
+      body:
+        id: murph-chipper
+        type: sequence
+        children:
+          - id: murph-run-1
+            type: task
+            assignments:
+              A:
+                notes: One mile; 20 lb (14 lb) vest if you wear one
+                name: Run
+                distance:
+                  value: 1.6
+                  unit: km
+          - id: murph-pull-ups
+            type: task
+            assignments:
+              A:
+                notes: Partition freely with the push-ups and squats
+                name: Pull-ups
+                reps: 100
+          - id: murph-push-ups
+            type: task
+            assignments:
+              A:
+                name: Push-ups
+                reps: 200
+          - id: murph-squats
+            type: task
+            assignments:
+              A:
+                name: Air squats
+                reps: 300
+          - id: murph-run-2
+            type: task
+            assignments:
+              A:
+                notes: One mile
+                name: Run
+                distance:
+                  value: 1.6
+                  unit: km

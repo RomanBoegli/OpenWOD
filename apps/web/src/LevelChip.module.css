@@ -4,12 +4,3 @@
 .chip[data-level=heavy] { background: var(--level-heavy); color: var(--level-heavy-ink); border-color: var(--level-heavy-border); }
 .line { display: inline-flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; }
 .levels { display: inline-flex; flex-wrap: wrap; gap: 12px; }
-.picker { display: grid; gap: 12px; }
-.picker[data-compact=true] { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.group { border: 0; padding: 0; margin: 0; }
-.group legend { font-size: 11px; color: var(--ink-3); letter-spacing: 1px; text-transform: uppercase; padding: 0; margin-bottom: 7px; }
-.options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-3); }
-.options label { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 7px; color: var(--ink-3); font-size: 12px; cursor: pointer; }
-.options label[data-checked=true] { background: var(--surface-5); color: var(--ink); box-shadow: 0 1px 4px #0002; }
-.options input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.options label:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }

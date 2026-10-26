@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "properties": {
     "format": {
-      "const": "wodva.workout",
+      "const": "openwod.workout",
       "type": "string"
     },
     "formatVersion": {

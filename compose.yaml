@@ -8,7 +8,7 @@ services:
       NODE_ENV: production
       PORT: "8080"
     volumes:
-      - wodva-data:/data
+      - openwod-data:/data
     restart: unless-stopped
     stop_grace_period: 15s
     healthcheck:
@@ -19,4 +19,4 @@ services:
       retries: 3
 
 volumes:
-  wodva-data:
+  openwod-data:

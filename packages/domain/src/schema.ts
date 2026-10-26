@@ -98,7 +98,7 @@ export const WorkoutSchema = Type.Object({
 }, { $id: 'Workout', additionalProperties: false });
 export type Workout = Static<typeof WorkoutSchema>;
 
-/** Version 1 exchange envelope (JSON, integer-millisecond keys, schemaVersion 1). Versions 2 and 3 are derived in exchange.ts. */
+/** Version 1 exchange envelope (JSON, integer-millisecond keys, schemaVersion 1, written under the earlier product name). Versions 2 and 3 are derived in exchange.ts. */
 export const WorkoutFileSchema = Type.Object({
   format: Type.Literal('wodva.workout'),
   formatVersion: Type.Literal(1),

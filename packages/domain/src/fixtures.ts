@@ -1,7 +1,8 @@
 import type { LoadLevel, LoadValue, Prescription, Workout, WorkoutNode } from './schema';
 import { coachWorkouts } from './fixtures/coach';
+import { benchmarkWorkouts } from './fixtures/benchmarks';
 
-export { coachWorkouts };
+export { coachWorkouts, benchmarkWorkouts };
 
 const pair = (A: string, B: string) => ({ A: { name: A }, B: { name: B } });
 const slot = (id: string, A: string, B: string, durationMs = 40_000): WorkoutNode => ({ id, type: 'timed', durationMs, assignments: pair(A, B) });
@@ -316,4 +317,4 @@ export const mixedSession: Workout = {
 
 export const formatWorkouts = [cindy, fran, partnerEmom16, partnerSprints, runSledRun, backSquatFives, mixedSession];
 
-export const fixtureWorkouts = [...timedWorkouts, ...formatWorkouts, ...coachWorkouts];
+export const fixtureWorkouts = [...timedWorkouts, ...formatWorkouts, ...coachWorkouts, ...benchmarkWorkouts];

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { FILE_EXTENSION, serialiseWorkoutFile, type Workout } from '../../../packages/domain/src';
 import { fixtureWorkouts, prescriptionText } from '../../../packages/domain/src/fixtures';
 import type { Occurrence, TaskItem } from '../../../packages/domain/src/compiler';
-import { FORMAT_LABELS, type LoadLevel, type Prescription } from '../../../packages/domain/src/schema';
+import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
 import { displayTime, warningLevel, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
 import { useWorkout } from './use-workout';
 import type { WorkoutAudio } from './audio';
@@ -11,7 +11,10 @@ import { slugify } from './library-store';
 import { workoutHref } from './router';
 import { Icon } from './Icon';
 import { DifficultyChip } from './DifficultyChip';
-import { hasLevels, LevelPicker, LoadLine } from './LevelChip';
+import { LoadLevels } from './LevelChip';
+import { AthletesChip, FormatChips } from './Chip';
+import { effectiveLoad, type MasterData } from './master-data';
+import { countsAsDone, type SessionRecord } from './session-log';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import styles from './App.module.css';
 import own from './Player.module.css';
@@ -48,15 +51,9 @@ export function primaryTarget(value: Prescription): { amount: string; unit: stri
   return undefined;
 }
 
-/** Does any prescription in the workout offer per-level loads? */
-export function workoutHasLevels(workout: Workout): boolean {
-  const visit = (node: Workout['sections'][number]['body']): boolean => node.type === 'timed' || node.type === 'task' ? [node.assignments.A, node.assignments.B].some(lane => lane && hasLevels(lane.load)) : node.type === 'sequence' ? node.children.some(visit) : node.type === 'repeat' ? visit(node.body) : false;
-  return workout.sections.some(section => visit(section.body));
-}
-
 const CAPTIONS: Record<ClockScope, string> = { prep: 'PREP COUNTDOWN', slot: 'WORK REMAINING', interval: 'INTERVAL REMAINING', turn: 'TURN REMAINING', cap: 'TIME CAP REMAINING', elapsed: 'ELAPSED · NO CAP' };
 
-function resultText(result: SectionResult): string {
+export function resultText(result: SectionResult): string {
   const parts: string[] = [];
   if (result.counter) parts.push(`${result.counter.rounds} ${result.counter.rounds === 1 ? 'round' : 'rounds'}${result.counter.reps ? ` + ${result.counter.reps} reps` : ''}`);
   if (result.teamRounds !== undefined) parts.push(`${result.teamRounds} team ${result.teamRounds === 1 ? 'round' : 'rounds'}, ${result.turns} turns`);
@@ -70,17 +67,20 @@ interface PlayerProps {
   workout: Workout;
   audio: WorkoutAudio;
   preferences: Preferences;
+  masterData: MasterData;
   onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
   onPerformingChange: (performing: boolean) => void;
+  onSessionEnd: (record: SessionRecord) => void;
 }
 
-export function Player({ workout, audio, preferences, onPreferencesChange, onPerformingChange }: PlayerProps) {
-  const { names, view, levels } = preferences;
+export function Player({ workout, audio, preferences, masterData, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
+  const { names, view, loadsFor } = preferences;
+  const loadOf = (item: Prescription, role: 'A' | 'B') => effectiveLoad(masterData, item, loadsFor[role]);
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
-  const setLevels = (next: { A: LoadLevel; B: LoadLevel }) => onPreferencesChange(value => ({ ...value, levels: next }));
   const [following, setFollowing] = useState(true);
   const [highlight, setHighlight] = useState<string>();
   const stopDialog = useRef<HTMLDialogElement>(null);
+  const helpDialog = useRef<HTMLDialogElement>(null);
   const context = useRef<HTMLDivElement>(null);
   const activeRow = useRef<HTMLDivElement>(null);
   const timer = useRef<HTMLDivElement>(null);
@@ -101,7 +101,6 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
   const round = (isRest ? nextWork : current)?.rounds.at(-1) ?? current.rounds.at(-1);
   const bundled = fixtureWorkouts.some(item => item.id === workout.id);
   const difficulty = useMemo(() => rateDifficulty(plan), [plan]);
-  const usesLevels = useMemo(() => workoutHasLevels(workout), [workout]);
   const can = (control: Control) => controls.includes(control);
   const pair = workout.participants === 2;
 
@@ -124,6 +123,20 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
   useEffect(() => { void audio.preload(); }, [audio]); // Clips are decoded before Play so a session never waits on the network.
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
+  // Log the session once when it ends: completed always, an ended session when it covered enough of the plan.
+  const logged = useRef<string | undefined>(undefined);
+  const startedAt = useRef<string | undefined>(undefined);
+  useEffect(() => { if (status === 'preparing' || status === 'running') startedAt.current ??= new Date().toISOString(); if (status === 'ready') startedAt.current = undefined; }, [status]);
+  useEffect(() => {
+    if (!terminal || logged.current === engine.sessionId) return;
+    logged.current = engine.sessionId;
+    const activeMs = engine.readClocks().activeMs;
+    const outcome = status === 'completed' ? 'completed' : 'aborted';
+    if (!countsAsDone(outcome, activeMs, plan.durationMs, plan.durationKind === 'open')) return;
+    const finishedAt = new Date().toISOString();
+    onSessionEnd({ id: engine.sessionId, workoutId: workout.id, title: workout.title, startedAt: startedAt.current ?? finishedAt, finishedAt, outcome, completion: outcome === 'completed' ? 1 : Math.min(1, activeMs / plan.durationMs), activeMs, results: projection.results });
+  }, [terminal, status, engine, plan, workout, projection.results, onSessionEnd]);
+
   // Until checkpoints exist, leaving the page ends the session: ask first.
   useEffect(() => {
     if (editable) return;
@@ -140,6 +153,7 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
       if (document.querySelector('dialog[open]')) return;
       const id = engine.occurrenceId;
       const controlsNow = engine.project().controls;
+      if (event.key === '?') { helpDialog.current?.showModal(); return; }
       if (event.key === ' ') { event.preventDefault(); for (const control of ['pause', 'resume', 'ready', 'play'] as const) if (controlsNow.includes(control)) { send(control, id); return; } }
       else if (event.key === 'Enter') { event.preventDefault(); if (controlsNow.includes('done')) send('done', id); else if (controlsNow.includes('switch')) send('switch', id); }
       else if (event.key === 'ArrowRight' && controlsNow.includes('next')) send('next', id);
@@ -169,7 +183,12 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
       const text = displayTime(clocks.slotMs, 'floor');
       if (turnClock.current.textContent !== text) turnClock.current.textContent = text;
     }
-    if (border.current) border.current.style.strokeDashoffset = String(-(1 - (status === 'ready' || status === 'awaitingReady' || clockScope === 'elapsed' ? 1 : clocks.fraction)));
+    const fraction = status === 'ready' || status === 'awaitingReady' || clockScope === 'elapsed' ? 1 : clocks.fraction;
+    if (border.current) border.current.style.strokeDashoffset = String(-(1 - fraction));
+    if (player.current) {
+      const drained = (status === 'running' || status === 'paused') && clockScope !== 'elapsed' ? (1 - fraction).toFixed(3) : '0';
+      if (player.current.style.getPropertyValue('--drained') !== drained) player.current.style.setProperty('--drained', drained);
+    }
     if (player.current) {
       const warning = clockScope === 'elapsed' || status === 'ready' || status === 'awaitingReady' ? 'normal' : warningLevel(clocks.remainingMs, clocks.durationMs);
       if (player.current.dataset.warning !== warning) player.current.dataset.warning = warning;
@@ -211,12 +230,12 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
       <div className={styles.athleteLabel}><span className={styles.athleteBadge}>{role}</span><span>{names[role]}<small>{role === 'A' ? 'LEFT LANE' : 'RIGHT LANE'}</small></span>{timing !== 'manual' && <span className={styles.laneTime}>{Math.round((isRest ? nextWork?.durationMs ?? 0 : current.durationMs) / 1000)}s</span>}</div>
       {isBlock && format === 'youGoIGo' ? <>
         <h2 data-testid={`movement-${role}`}>{activeLane ? 'Your turn' : 'Rest'}</h2>
-        <ul className={own.unit}>{unitTasks.map(task => { const lanePrescription = task.assignments[role] ?? task.assignments.A; const amount = primaryTarget(lanePrescription); return <li key={task.nodeId}>{amount && <>{amount.amount}<small>{amount.unit}</small></>}<span>{lanePrescription.shortName ?? lanePrescription.name}</span><LoadLine load={lanePrescription.load} level={levels[role]} /></li>; })}</ul>
+        <ul className={own.unit}>{unitTasks.map(task => { const lanePrescription = task.assignments[role] ?? task.assignments.A; const amount = primaryTarget(lanePrescription); return <li key={task.nodeId}>{amount && <>{amount.amount}<small>{amount.unit}</small></>}<span>{lanePrescription.shortName ?? lanePrescription.name}</span><LoadLevels load={loadOf(lanePrescription, role)} /></li>; })}</ul>
       </> : <>
         {target && <div className={own.target}><strong>{target.amount}</strong><small>{target.unit}</small></div>}
         <h2 data-testid={`movement-${role}`}>{item?.shortName ?? item?.name ?? 'All done'}</h2>
-        {item?.load ? <LoadLine load={item.load} level={levels[role]} className={own.loadLine} /> : null}
-        <p>{item ? target || item.load ? item.notes ?? '' : prescriptionText(item, levels[role]) : 'You’re at the finish.'}</p>
+        {item && loadOf(item, role) ? <span className={own.loadLine}><LoadLevels load={loadOf(item, role)} /></span> : null}
+        <p>{item ? target || item.load ? item.notes ?? '' : prescriptionText(item) : 'You’re at the finish.'}</p>
       </>}
       {state && <span className={own.laneState} data-state={state.state}>{state.state === 'done' || state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
       {can(`done:${role}`) && <button className={`${styles.primaryButton} ${own.laneDone}`} onClick={() => send('done', projection.occurrenceId, { athlete: role })}><Icon name="check" />{names[role]} done</button>}
@@ -229,14 +248,12 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
         <div className={styles.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> <a href={workoutHref(workout.id)}>{pair ? 'PARTNER SESSION' : 'SOLO SESSION'}</a>{!bundled && <><span>/</span>SAVED ON THIS DEVICE</>}</div>
         <h1>{workout.title}</h1>
         {workout.description && <p className={styles.description}>{workout.description}</p>}
-        <div className={styles.metadata}><span><Icon name="clock" size={16} />{plan.durationKind === 'open' ? 'Open-ended' : `${plan.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(plan.durationMs + workout.prepMs)} incl. prep`}</span><span><Icon name={pair ? 'users' : 'user'} size={16} />{pair ? '2 athletes' : 'Solo'}</span><span>{[...new Set(plan.sections.map(item => FORMAT_LABELS[item.format]))].join(' · ')}</span>{workout.equipment.length > 0 && <span className={styles.equipment}>{workout.equipment.join(' + ')}</span>}<DifficultyChip difficulty={difficulty} /></div>
+        <div className={styles.metadata}><span><Icon name="clock" size={16} />{plan.durationKind === 'open' ? 'Open-ended' : `${plan.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(plan.durationMs + workout.prepMs)} incl. prep`}</span><AthletesChip participants={workout.participants} /><FormatChips formats={[...new Set(plan.sections.map(item => item.format))]} /><DifficultyChip difficulty={difficulty} /></div>
       </div>
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
 
-    {status === 'ready' && usesLevels && <div className={own.levelSetup}><h3>Today’s load level</h3><p>Each movement shows the weight for the chosen level: blue is light, red is medium, black is heavy. Change it any time in settings.</p><LevelPicker levels={levels} participants={workout.participants} names={names} onChange={setLevels} compact /></div>}
-
-    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal">
+    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash}>
       <Perimeter progress={border} />
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span>{positionLabel}{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
       <div className={styles.clockBlock}>
@@ -257,10 +274,10 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
           {fitWarning && <p className={own.fitWarning}>Long block: {unitTasks.length} movements may not all fit on a small screen. Use the Context view to scroll.</p>}
           <ul className={own.taskList} aria-label="AMRAP block">{unitTasks.map((task, index) => <li key={task.nodeId} className={own.taskRow} data-pair={pair} data-highlight={highlight === task.nodeId} onClick={() => setHighlight(value => value === task.nodeId ? undefined : task.nodeId)}>
             <span className={own.taskIndex}>{index + 1}</span>
-            {(['A', 'B'] as const).filter(role => role === 'A' || pair).map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLine load={item.load} level={levels[role]} /></span>; })}
+            {(['A', 'B'] as const).filter(role => role === 'A' || pair).map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLevels load={loadOf(item, role)} /></span>; })}
           </li>)}</ul>
           <p className={own.taskHint}>Tap a row to mark where you are. It never changes the clock.</p>
-        </> : <div className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}
+        </> : <div key={`${current.id}/${turn?.number ?? 0}`} className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}
 
         {(can('done') || can('switch') || can('finish') || can('count:round')) && <div className={own.actionBar}>
           {can('done') && <button className={own.bigAction} data-testid="done" onClick={() => send('done', projection.occurrenceId)}><Icon name="check" size={26} />{timing === 'interval' ? 'Done · rest until next' : format === 'strength' ? 'Set done' : 'Done'}</button>}
@@ -303,8 +320,9 @@ export function Player({ workout, audio, preferences, onPreferencesChange, onPer
       <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
     </div>
 
-    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><span>Space pauses · Enter is Done or Switch · arrows move</span></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Read through</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
+    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={styles.quietButton} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Read through</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
 
+    <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
     <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={styles.primaryButton} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
   </div>;
 }

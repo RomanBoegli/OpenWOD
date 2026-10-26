@@ -66,7 +66,7 @@ describe('canonical workout compiler', () => {
 
   it('exports self-contained YAML fixtures that round-trip without personal session settings', () => {
     const file = serialiseWorkoutFile(fullBodyPartner);
-    expect(file.startsWith('format: wodva.workout\nformatVersion: 3\nworkout:\n  schemaVersion: 2\n  id: full-body-partner\n')).toBe(true);
+    expect(file.startsWith('format: openwod.workout\nformatVersion: 3\nworkout:\n  schemaVersion: 2\n  id: full-body-partner\n')).toBe(true);
     expect(file).toContain('duration: 40s');
     expect(file).toContain('betweenChildrenRest: 20s');
     expect(file).toContain('prep: 10s');
@@ -75,9 +75,10 @@ describe('canonical workout compiler', () => {
     expect(parseWorkoutFile(file)).toEqual(fullBodyPartner);
     expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(3_000_000);
     expect(() => parseWorkoutFile(file.replace('formatVersion: 3', 'formatVersion: 99'))).toThrow(/newer than this app/);
-    expect(() => parseWorkoutFile(file.replace('format: wodva.workout', 'format: other'))).toThrow(/not a Wodva workout/);
-    expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/not a Wodva workout|valid YAML/);
-    expect(() => parseWorkoutFile('{"formatVersion":99}')).toThrow(/not a Wodva workout/);
+    expect(() => parseWorkoutFile(file.replace('format: openwod.workout', 'format: other'))).toThrow(/not an OpenWOD workout/);
+    expect(parseWorkoutFile(file.replace('format: openwod.workout', 'format: wodva.workout'))).toEqual(fullBodyPartner); // The earlier name is still read.
+    expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/not an OpenWOD workout|valid YAML/);
+    expect(() => parseWorkoutFile('{"formatVersion":99}')).toThrow(/not an OpenWOD workout/);
   });
 
   it('still reads version 1 JSON files and rejects YAML aliases and duplicate keys', () => {
@@ -85,11 +86,11 @@ describe('canonical workout compiler', () => {
     expect(parseWorkoutFile(legacy)).toEqual(partnerCircuit); // migrated to the current model version
     const version2 = serialiseWorkoutFile(partnerCircuit).replace('formatVersion: 3', 'formatVersion: 2').replace('schemaVersion: 2', 'schemaVersion: 1');
     expect(parseWorkoutFile(version2)).toEqual(partnerCircuit);
-    expect(() => parseWorkoutFile(JSON.stringify({ format: 'wodva.workout', formatVersion: 3, workout: { ...partnerCircuit, schemaVersion: 3 } }))).toThrow(/Unsupported|newer/);
-    const bomb = 'format: wodva.workout\nformatVersion: 2\nworkout: &w\n  title: x\nother: *w\n';
+    expect(() => parseWorkoutFile(JSON.stringify({ format: 'openwod.workout', formatVersion: 3, workout: { ...partnerCircuit, schemaVersion: 3 } }))).toThrow(/Unsupported|newer/);
+    const bomb = 'format: openwod.workout\nformatVersion: 2\nworkout: &w\n  title: x\nother: *w\n';
     expect(() => parseWorkoutFile(bomb)).toThrow(/valid YAML/);
-    expect(() => parseWorkoutFile('format: wodva.workout\nformat: wodva.workout\nformatVersion: 2\n')).toThrow(/valid YAML/);
-    expect(() => parseWorkoutFile(JSON.stringify({ format: 'wodva.workout', formatVersion: 3, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are version 1 only
+    expect(() => parseWorkoutFile('format: openwod.workout\nformat: openwod.workout\nformatVersion: 2\n')).toThrow(/valid YAML/);
+    expect(() => parseWorkoutFile(JSON.stringify({ format: 'openwod.workout', formatVersion: 3, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are version 1 only
   });
 
   it('reads human durations in version 2 files and rejects ambiguous ones', () => {

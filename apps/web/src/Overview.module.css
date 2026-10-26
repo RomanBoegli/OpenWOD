@@ -23,7 +23,14 @@
 .table td:last-child { color: var(--ink-3); font-size: 12px; }
 .table td small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 2px; }
 .restNote { margin: 10px 4px 0; color: var(--ink-3); font-size: 13px; }
-.movements { margin: 26px 0 8px; }
+.lists { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+.movements { margin: 26px 0 8px; min-width: 0; }
+.history { margin: 10px 0 8px; }
+.history h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
+.history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.history li { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 12px; padding: 10px 14px; border-radius: 10px; background: var(--surface-1); border: 1px solid var(--line); font-size: 13px; }
+.history li span:last-child { color: var(--ink-3); }
+@media (max-width: 620px) { .lists { grid-template-columns: 1fr; } .history li { grid-template-columns: 1fr; gap: 4px; } }
 .movements h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
 .movements ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .movements li { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 13px; }

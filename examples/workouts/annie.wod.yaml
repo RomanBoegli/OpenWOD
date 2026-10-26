@@ -1,0 +1,86 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: annie
+  revision: 1
+  title: Annie
+  description: "Double-unders and sit-ups, 50-40-30-20-10. It looks easy on paper and it is pure rhythm: relaxed shoulders on the rope, steady breathing on the floor, no rushing the transitions. Scale with single-unders at double the count if you are still learning the rope; the fifteen-minute cap is a training suggestion, not part of the benchmark."
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/annie
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Jump rope
+  participants: 1
+  prep: 10s
+  sections:
+    - id: annie-for-time
+      title: 50-40-30-20-10
+      format: forTime
+      transitionAfter: manualReady
+      cap: 15m
+      body:
+        id: annie-ladder
+        type: sequence
+        children:
+          - id: annie-double-unders-50
+            type: task
+            assignments:
+              A:
+                name: Double-unders
+                reps: 50
+          - id: annie-sit-ups-50
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 50
+          - id: annie-double-unders-40
+            type: task
+            assignments:
+              A:
+                name: Double-unders
+                reps: 40
+          - id: annie-sit-ups-40
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 40
+          - id: annie-double-unders-30
+            type: task
+            assignments:
+              A:
+                name: Double-unders
+                reps: 30
+          - id: annie-sit-ups-30
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 30
+          - id: annie-double-unders-20
+            type: task
+            assignments:
+              A:
+                name: Double-unders
+                reps: 20
+          - id: annie-sit-ups-20
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 20
+          - id: annie-double-unders-10
+            type: task
+            assignments:
+              A:
+                name: Double-unders
+                reps: 10
+          - id: annie-sit-ups-10
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 10

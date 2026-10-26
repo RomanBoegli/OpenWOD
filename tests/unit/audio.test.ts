@@ -33,7 +33,7 @@ function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
   vi.stubGlobal('AudioContext', function () { return context; });
   vi.stubGlobal('window', { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (utterance: { text: string }) => spoken.push(utterance.text) } });
   vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} });
-  vi.stubGlobal('fetch', async (url: string) => clips ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
+  vi.stubGlobal('fetch', async (url: string) => !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)' }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
   let now = 0;
   const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' });
@@ -86,6 +86,10 @@ it('uses recorded clips for countdown and boundary cues at the same instants as 
   expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'rest']);
   expect(spoken).toEqual(['A, Kettlebell swings. B, Row.']);
   expect(CUE_NAMES).toHaveLength(10);
+  expect(audio.packs.map(pack => pack.id)).toEqual(['british', 'american']);
+  audio.cuePack = 'american';
+  await audio.preload();
+  expect(audio.clipsReady).toBe(false); // The second pack has no clips in this fixture: back to beeps and device speech.
 });
 
 it('falls back to beeps and device speech when clips are missing', async () => {

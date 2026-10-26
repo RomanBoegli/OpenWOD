@@ -1,0 +1,11 @@
+.chip { --tone: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 10px; border-radius: 999px; font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .4px; line-height: 1; color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent); white-space: nowrap; text-decoration: none; }
+.chip[data-kind=pair] { --tone: var(--lane-a); }
+.chip[data-kind=solo] { --tone: var(--lane-b); }
+.chip[data-kind=format] { --tone: var(--ink-2); background: var(--surface-3); border-color: var(--line-2); }
+.chip[data-kind=collection] { --tone: var(--phase-rest); }
+.chip[data-kind=done] { --tone: var(--accent-text); }
+.chip[data-kind=source], .chip[data-kind=neutral] { --tone: var(--ink-3); background: transparent; border-style: dashed; }
+button.chip { cursor: pointer; min-height: 36px; padding: 6px 12px; font-size: 12px; transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
+button.chip:hover { background: color-mix(in srgb, var(--tone) 18%, transparent); }
+button.chip:active { transform: scale(.97); }
+button.chip[aria-pressed=true] { --tone: var(--accent-text); background: var(--accent-soft); border-color: var(--accent); }

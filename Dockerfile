@@ -1,17 +1,24 @@
 ARG NODE_IMAGE=node:24.22.1-bookworm-slim
 FROM ${NODE_IMAGE} AS build
+# CUES=1 renders the recorded cue packs with Piper (offline text-to-speech) during the build; CUES=0 skips it for fast local builds.
+ARG CUES=1
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --include=dev
 COPY . .
+RUN if [ "$CUES" = "1" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip && rm -rf /var/lib/apt/lists/* \
+      && pip3 install --no-cache-dir --break-system-packages piper-tts==1.8.0 \
+      && PIPER_RUNNER=piper node scripts/generate-cues.mjs; \
+    fi
 RUN npm run check && npm run build
 
 FROM ${NODE_IMAGE} AS runtime
 ARG VERSION=0.1.0
 ARG REVISION=unknown
 ARG SOURCE_URL=unknown
-LABEL org.opencontainers.image.title="Wodva" \
-      org.opencontainers.image.description="A responsive workout player for training together" \
+LABEL org.opencontainers.image.title="OpenWOD" \
+      org.opencontainers.image.description="OpenWOD: a workout player for training at home. Not born. Made." \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.source="${SOURCE_URL}" \

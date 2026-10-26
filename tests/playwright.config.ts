@@ -1,10 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 import { resolve } from 'node:path';
 
-process.env.PLAYWRIGHT_BROWSERS_PATH ??= resolve('.cache/ms-playwright');
+process.env.PLAYWRIGHT_BROWSERS_PATH ??= resolve(import.meta.dirname, '../.cache/ms-playwright');
 
 export default defineConfig({
-  testDir: 'tests/e2e',
+  testDir: './e2e',
+  outputDir: '../test-results',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

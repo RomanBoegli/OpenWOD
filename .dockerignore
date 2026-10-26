@@ -11,3 +11,9 @@ coverage
 !.env.example
 data
 *.log
+# Not needed inside the image
+docs
+assets
+AGENT.md
+.github
+test-results*

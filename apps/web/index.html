@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#101714" />
-    <meta name="description" content="Your space. Your pace. A workout player for training together." />
-    <title>Wodva — Train together</title>
+    <meta name="description" content="OpenWOD. Not born. Made. A workout player for training at home, solo or in pairs." />
+    <title>OpenWOD — Not born. Made.</title>
     <script>
       // Apply the saved or system theme before first paint to avoid a flash. Mirrors apps/web/src/theme.ts.
       (function () {
         var theme = 'dark';
         try {
-          var stored = localStorage.getItem('wodva.theme');
+          var stored = localStorage.getItem('openwod.theme') || localStorage.getItem('wodva.theme');
           theme = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         } catch (error) { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
         document.documentElement.dataset.theme = theme;

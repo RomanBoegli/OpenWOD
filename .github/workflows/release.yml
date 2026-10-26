@@ -56,7 +56,7 @@ jobs:
         env:
           CANDIDATE: ${{ env.IMAGE }}:candidate-${{ github.sha }}-${{ matrix.architecture }}
         run: |
-          docker run --detach --name wodva-smoke -p 8080:8080 "$CANDIDATE"
+          docker run --detach --name openwod-smoke -p 8080:8080 "$CANDIDATE"
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://localhost:8080/api/v1/health/ready; then break; fi
             sleep 1

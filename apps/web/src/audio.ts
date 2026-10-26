@@ -3,6 +3,7 @@ import type { ClockValues, Projection } from '../../../packages/engine/src';
 export type SoundMode = 'voice' | 'beeps' | 'silent';
 export type CueSource = 'clips' | 'device';
 export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' | 'one' | 'paused' | 'resume' | 'complete';
+export interface CuePack { id: string; label: string; voice?: string }
 export const CUE_NAMES: CueName[] = ['get-ready', 'go', 'rest', 'switch', 'three', 'two', 'one', 'paused', 'resume', 'complete'];
 const COUNTDOWN: Record<1 | 2 | 3, CueName> = { 1: 'one', 2: 'two', 3: 'three' };
 
@@ -36,11 +37,17 @@ export class WorkoutAudio {
   voiceURI = '';
   rate = 1;
   volume = .7;
-  /** Base URL for the pre-rendered cue clips. */
+  /** Base URL for the pre-rendered cue clips; packs live in subfolders listed by packs.json. */
   clipBase = '/cues/';
+  /** Chosen pack id; '' means the first available. */
+  cuePack = '';
+  packs: CuePack[] = [];
+  private loadedPack = '';
   onError?: (message: string) => void;
   /** Reports whether every clip decoded, once preloading finishes. */
   onClips?: (ready: boolean) => void;
+  /** Reports the installed packs once packs.json was read. */
+  onPacks?: (packs: CuePack[]) => void;
 
   private ensureContext() {
     this.context ??= new AudioContext();
@@ -53,13 +60,29 @@ export class WorkoutAudio {
 
   /** Fetches and decodes every clip once so a session never needs the network after Play (ENG-11). Failure is silent: beeps and device speech remain. */
   preload(): Promise<void> {
-    this.preloading ??= (async () => {
+    const wanted = this.cuePack || this.packs[0]?.id || '';
+    if (this.preloading && this.loadedPack === wanted && (this.packs.length || !this.clips.size)) return this.preloading;
+    this.preloading = (async () => {
       if (typeof fetch !== 'function') return;
       let context: AudioContext;
       try { context = this.ensureContext(); } catch { return; }
+      if (!this.packs.length) {
+        try {
+          const response = await fetch(`${this.clipBase}packs.json`);
+          if (response.ok) {
+            const listed: unknown = await response.json();
+            if (Array.isArray(listed)) this.packs = listed.filter((item): item is CuePack => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.label === 'string'));
+          }
+        } catch { /* No pack list: fall back to device speech. */ }
+        this.onPacks?.(this.packs);
+      }
+      const pack = this.packs.find(item => item.id === this.cuePack) ?? this.packs[0];
+      this.loadedPack = pack?.id ?? '';
+      this.clips.clear();
+      if (!pack) { this.onClips?.(false); return; }
       await Promise.all(CUE_NAMES.map(async name => {
         try {
-          const response = await fetch(`${this.clipBase}${name}.mp3`);
+          const response = await fetch(`${this.clipBase}${pack.id}/${name}.mp3`);
           if (!response.ok) return;
           this.clips.set(name, await context.decodeAudioData(await response.arrayBuffer()));
         } catch { /* Missing or undecodable clip: this cue falls back to beeps and device speech. */ }

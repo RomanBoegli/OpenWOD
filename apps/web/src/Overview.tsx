@@ -5,6 +5,10 @@ import { outlineWorkout } from '../../../packages/domain/src/outline';
 import { prescriptionText } from '../../../packages/domain/src/fixtures';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
 import { LoadLevels } from './LevelChip';
+import { AthletesChip, Chip, FormatChips } from './Chip';
+import { effectiveLoad, type Collection, type MasterData, type Sex } from './master-data';
+import { agoText, type SessionRecord } from './session-log';
+import { resultText } from './Player';
 import { displayTime } from '../../../packages/engine/src';
 import type { LibraryEntry } from './Library';
 import { exportWorkoutFile } from './Player';
@@ -18,15 +22,14 @@ import shared from './App.module.css';
 const REST_NAMES: Record<Phase, string> = { work: 'work', transition: 'transition', roundRest: 'round rest', blockRest: 'block rest' };
 const restText = (segments: { kind: Phase; ms: number }[]) => segments.map(segment => `${formatDuration(segment.ms)} ${REST_NAMES[segment.kind]}`).join(' + ');
 
-interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; onRemove: (id: string) => void }
+interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionRecord[]; masterData: MasterData; loadsFor: { A: Sex; B: Sex }; onRemove: (id: string) => void }
 
 /** The study view: everything the athletes will see, round by round, before anyone presses Start. */
 /** Targets only (no fallback hint), for table cells; loads are shown per level separately. */
 const targetText = (value: Prescription) => value.reps || value.calories || value.distance || value.timeMs ? prescriptionText({ ...value, load: undefined }) : '';
-const cell = (value?: Prescription) => value ? <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{value.load ? <small><LoadLevels load={value.load} /></small> : null}</> : null;
-
-export function Overview({ entry, names, onRemove }: OverviewProps) {
+export function Overview({ entry, names, collections, sessions, masterData, loadsFor, onRemove }: OverviewProps) {
   const { workout, summary, source, editable } = entry;
+  const cell = (value: Prescription | undefined, role: 'A' | 'B') => { if (!value) return null; const load = effectiveLoad(masterData, value, loadsFor[role]); return <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{load ? <small><LoadLevels load={load} /></small> : null}</>; };
   const [removing, setRemoving] = useState(false);
   const plan = useMemo(() => compileWorkout(workout), [workout]);
   const sections = useMemo(() => outlineWorkout(plan), [plan]);
@@ -45,7 +48,7 @@ export function Overview({ entry, names, onRemove }: OverviewProps) {
         <h1>{workout.title}</h1>
         {workout.description && <p className={shared.description}>{workout.description}</p>}
         {attribution && <p className={styles.attribution}>{attribution.author && <span>By {attribution.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
-        <div className={shared.metadata}><span><Icon name="clock" size={16} />{summary.durationKind === 'open' ? 'Open-ended' : `${summary.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(summary.totalMs)} incl. prep`}</span><span><Icon name={pair ? 'users' : 'user'} size={16} />{pair ? '2 athletes' : 'Solo'}</span><span>{summary.formats.map(item => FORMAT_LABELS[item]).join(' · ')}</span>{summary.equipmentNeeded.length > 0 && <span className={shared.equipment}>{summary.equipmentNeeded.join(' + ')}</span>}<DifficultyChip difficulty={summary.difficulty} detailed /></div>
+        <div className={shared.metadata}><span><Icon name="clock" size={16} />{summary.durationKind === 'open' ? 'Open-ended' : `${summary.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(summary.totalMs)} incl. prep`}</span><AthletesChip participants={workout.participants} /><FormatChips formats={summary.formats} />{collections.map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} detailed />{sessions.length > 0 && <Chip kind="done" icon="check">{sessions.length === 1 ? 'Done once' : `Done ${sessions.length}×`} · {agoText(sessions[0].finishedAt)}</Chip>}</div>
       </div>
       <div className={styles.actions}>
         <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
@@ -76,8 +79,8 @@ export function Overview({ entry, names, onRemove }: OverviewProps) {
             <thead><tr><th scope="col">#</th><th scope="col">{pair ? `A · ${names.A}` : 'Movement'}</th>{pair && <th scope="col">B · {names.B}</th>}<th scope="col">{round.block ? 'Clock' : 'Work'}</th><th scope="col">Then</th></tr></thead>
             <tbody>{round.rows.map((row, rowIndex) => <tr key={row.anchor + rowIndex}>
               <td>{String(rowIndex + 1).padStart(2, '0')}</td>
-              <td>{cell(row.A)}</td>
-              {pair && <td>{cell(row.B)}</td>}
+              <td>{cell(row.A, 'A')}</td>
+              {pair && <td>{cell(row.B, 'B')}</td>}
               <td>{row.workMs !== undefined ? formatDuration(row.workMs) : round.block ? 'Your pace' : row.completion === 'both' ? 'Until both tap Done' : 'Until Done'}</td>
               <td>{row.restAfter.length ? restText(row.restAfter) : rowIndex === round.rows.length - 1 ? (round.block ? 'Next round' : round.roundRestMs && round.repetitions > 1 ? section.format === 'strength' ? 'Rest' : 'Round rest' : '—') : 'Next'}</td>
             </tr>)}</tbody>
@@ -87,10 +90,20 @@ export function Overview({ entry, names, onRemove }: OverviewProps) {
       </li>)}
     </ol>
 
-    <section className={styles.movements} aria-label="Movements">
-      <h2>Movements</h2>
-      <ul>{movementCounts.map(([name, count]) => <li key={name}><span>{name}</span><small>×{count}</small></li>)}</ul>
-    </section>
+    <div className={styles.lists}>
+      <section className={styles.movements} aria-label="Movements">
+        <h2>Movements</h2>
+        <ul>{movementCounts.map(([name, count]) => <li key={name}><span>{name}</span><small>×{count}</small></li>)}</ul>
+      </section>
+      <section className={styles.movements} aria-label="Equipment">
+        <h2>Equipment</h2>
+        {summary.equipmentNeeded.length > 0 ? <ul>{summary.equipmentNeeded.map(item => <li key={item}><span>{item}</span></li>)}</ul> : <p className={styles.restNote}>Bodyweight only. Nothing to set up.</p>}
+      </section>
+    </div>
+    {sessions.length > 0 && <section className={styles.history} aria-label="Past sessions">
+      <h2>Past sessions</h2>
+      <ul>{sessions.slice(0, 10).map(session => <li key={session.id}><span>{new Date(session.finishedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{session.outcome === 'completed' ? 'Completed' : `Ended at ${Math.round(session.completion * 100)} %`} · {displayTime(session.activeMs, 'floor')} active</span><span>{session.results.map(result => resultText(result)).join(' · ')}</span></li>)}</ul>
+    </section>}
 
     <ConfirmDialog open={removing} title={`Remove “${summary.title}”?`} confirmLabel="Remove workout" cancelLabel="Keep it" onClose={() => setRemoving(false)} onConfirm={() => { setRemoving(false); onRemove(workout.id); window.location.hash = '#/'; }}>
       <p>It disappears from this device. Export it first if you want to keep a copy.</p>

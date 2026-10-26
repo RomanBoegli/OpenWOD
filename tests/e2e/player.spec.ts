@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { fixtureWorkouts, partnerCircuit } from '../../packages/domain/src/fixtures';
 const BUNDLED = fixtureWorkouts.length;
 import { serialiseWorkoutFile } from '../../packages/domain/src';
+import { matchesFilter, summariseWorkout, type LibraryFilter } from '../../packages/domain/src/library';
+const bundledCount = (filter: LibraryFilter) => fixtureWorkouts.filter(workout => matchesFilter(summariseWorkout(workout), filter)).length;
 
 const PLAYER = '/#/wod/partner-circuit/play';
 const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__wodvaTest));
@@ -125,10 +127,10 @@ test.describe('player', () => {
   });
 
   test('persists athlete names, sound and view preferences across a reload', async ({ page }) => {
-    await page.getByRole('button', { name: 'Player settings' }).click();
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.getByRole('textbox', { name: 'Athlete A' }).fill('Mia');
     await page.getByRole('combobox', { name: 'Sound', exact: true }).selectOption('beeps');
-    await page.getByRole('button', { name: 'Close settings' }).click();
+    await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Context', exact: true }).click();
     await page.reload(); await ready(page);
     await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('Mia');
@@ -224,7 +226,7 @@ test.describe('editor', () => {
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/copy-of-partner-circuit$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner circuit');
-    await page.goto('/#/wod/tabata-this/edit');
+    await page.goto('/#/wod/hyrox-doubles-circuit/edit');
     await expect(page.getByRole('status')).toContainText('cannot change yet');
   });
 });
@@ -252,7 +254,6 @@ test.describe('editor formats', () => {
     await expect(page.getByRole('main')).toContainText('AMRAP');
     await expect(page.getByRole('main')).toContainText('24 kg');
     await page.getByRole('link', { name: 'Start workout' }).click(); await ready(page);
-    await page.getByRole('radiogroup', { name: 'Load level for athlete A' }).getByRole('radio', { name: 'Heavy' }).check();
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__wodvaTest!.advance(10_000));
     await expect(page.getByRole('list', { name: 'AMRAP block' })).toContainText('24 kg');
@@ -273,20 +274,23 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(1);
     await expect(list).toContainText('Partner circuit');
     await page.getByRole('button', { name: 'Clear filters' }).click();
-    await page.getByRole('combobox', { name: 'Duration' }).selectOption('long');
-    await expect(list.getByRole('listitem')).toHaveCount(2);
+    const chip = (group: string, name: string) => page.getByRole('group', { name: group }).getByRole('button', { name, exact: true });
+    await chip('Duration', 'Over 40 min').click();
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long'] }));
     await expect(list).toContainText('Full body partner workout');
     await expect(list).toContainText('HYROX pace intervals');
-    await page.getByRole('combobox', { name: 'Duration' }).selectOption('');
-    await page.getByRole('combobox', { name: 'Equipment' }).selectOption('Dumbbells');
+    await chip('Duration', 'Up to 20 min').click(); // Accumulative: both buckets now match.
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long', 'short'] }));
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await chip('Equipment', 'Exercise mat').click();
     await expect(list.getByRole('listitem')).toHaveCount(1);
-    await page.getByRole('combobox', { name: 'Athletes' }).selectOption('1');
+    await chip('Athletes', 'Solo').click();
     await expect(page.getByText('Nothing matches yet')).toBeVisible();
     await page.getByRole('button', { name: 'Clear filters' }).click();
-    await page.getByRole('combobox', { name: 'Difficulty' }).selectOption('1');
-    await expect(list.getByRole('listitem')).toHaveCount(0);
-    await page.getByRole('combobox', { name: 'Athletes' }).selectOption('1');
-    await page.getByRole('combobox', { name: 'Difficulty' }).selectOption('');
+    await chip('Difficulty', 'Light').click();
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ difficulty: [1] }));
+    await chip('Difficulty', 'Light').click();
+    await chip('Athletes', 'Solo').click();
     await expect(list.getByRole('listitem')).toHaveCount(fixtureWorkouts.filter(workout => workout.participants === 1).length);
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await page.getByRole('link', { name: 'Start Full body partner workout' }).click();
@@ -347,10 +351,10 @@ test.describe('library', () => {
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(243, 245, 238)');
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect.poll(theme).toBe('dark');
-    await page.getByRole('button', { name: 'Player settings' }).click();
-    await page.getByRole('group', { name: 'Appearance' }).getByRole('radio', { name: 'Light' }).check();
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await page.getByRole('group', { name: 'Theme' }).getByRole('radio', { name: 'Light' }).check();
     await expect.poll(theme).toBe('light');
-    await page.getByRole('button', { name: 'Close settings' }).click();
+    await page.goto('/');
     await page.reload();
     await expect.poll(theme).toBe('light');
     expect(await page.evaluate(() => document.querySelector('meta[name="theme-color"]')?.getAttribute('content'))).toBe('#f3f5ee');
@@ -409,8 +413,8 @@ test.describe('formats', () => {
 
   test('For time counts up, advances on Done, shows big targets with the chosen load level, and finishes', async ({ page }) => {
     await page.goto('/#/wod/fran/play'); await ready(page);
-    await expect(page.getByRole('heading', { level: 3, name: 'Today’s load level' })).toBeVisible();
-    await page.getByRole('radiogroup', { name: 'Load level for athlete A' }).getByRole('radio', { name: 'Heavy' }).check();
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('20 kg');
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('30 kg');
     await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('43 kg');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 10_000);
@@ -427,8 +431,6 @@ test.describe('formats', () => {
     await page.getByTestId('done').click();
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await expect(page.getByRole('list', { name: 'Section results' })).toContainText('completed');
-    await page.reload(); await ready(page);
-    await expect(page.getByRole('radiogroup', { name: 'Load level for athlete A' }).getByRole('radio', { name: 'Heavy' })).toBeChecked();
   });
 
   test('You go, I go hands over on Switch and ignores a rapid second tap', async ({ page }) => {
@@ -451,18 +453,65 @@ test.describe('formats', () => {
 
   test('the library filters by format and by the equipment you own', async ({ page }) => {
     await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
-    await page.getByLabel('Format').selectOption('amrap');
+    const chip = (group: string, name: string) => page.getByRole('group', { name: group }).getByRole('button', { name, exact: true });
+    await chip('Format', 'AMRAP').click();
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Cindy');
     await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');
-    await page.getByLabel('Format').selectOption('');
-    await page.getByLabel('Only my equipment').check();
+    await chip('Format', 'For time').click();
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Fran');
+    await chip('Collection', 'Benchmarks').click();
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Karen');
+    await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Rack & Run');
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await chip('Equipment', 'Only my equipment').click();
     await expect(page.getByText('Nothing matches yet')).toBeVisible();
-    await page.getByRole('button', { name: 'Player settings' }).click();
-    await page.getByRole('checkbox', { name: 'Pull-up bar' }).check();
-    await page.getByRole('button', { name: 'Close settings' }).click();
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await page.getByRole('region', { name: 'My equipment' }).getByRole('button', { name: 'Pull-up bar', exact: true }).click();
+    await page.getByRole('link', { name: 'Back to library' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Cindy');
     await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');
     await page.reload();
-    await expect(page.getByLabel('Only my equipment')).toBeChecked();
+    await expect(chip('Equipment', 'Only my equipment')).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+test.describe('settings and log', () => {
+  test('logs a completed session and shows it on the card and the overview, sorted by longest ago', async ({ page }) => {
+    await page.goto('/#/wod/karen/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
+    await page.evaluate(() => window.__wodvaTest!.advance(200_000));
+    await page.getByTestId('done').click();
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await page.goto('/#/wod/karen');
+    await expect(page.getByRole('region', { name: 'Past sessions' })).toContainText('Completed');
+    await expect(page.getByRole('region', { name: 'Past sessions' })).toContainText('03:20 active');
+    await expect(page.getByRole('main')).toContainText('Done once · today');
+    await page.goto('/');
+    await page.getByRole('combobox', { name: 'Sort' }).selectOption('longestAgo');
+    const titles = page.getByRole('list', { name: 'Workouts' }).getByRole('heading', { level: 2 });
+    await expect(titles.last()).toHaveText('Karen');
+  });
+
+  test('merges equipment names and keeps a collection on the settings page', async ({ page }) => {
+    await page.goto('/#/settings'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
+    const usage = page.getByRole('list', { name: 'Equipment in the library' });
+    await usage.getByLabel('Medicine ball', { exact: false }).check();
+    await usage.getByLabel('Slam ball', { exact: false }).check();
+    await page.getByRole('combobox', { name: 'Keep as' }).fill('Wall ball');
+    await page.getByRole('button', { name: /^Merge/ }).click();
+    await expect(page.getByRole('list', { name: 'Merged names' })).toContainText('Wall ball');
+    await page.getByRole('textbox', { name: 'New collection' }).fill('Short and sharp');
+    await page.getByRole('group', { name: 'Workouts in this collection' }).getByRole('button', { name: 'Karen', exact: true }).click();
+    await page.getByRole('group', { name: 'Workouts in this collection' }).getByRole('button', { name: 'Fran', exact: true }).click();
+    await page.getByRole('button', { name: 'Create collection' }).click();
+    await expect(page.getByRole('list', { name: 'Collections' })).toContainText('Short and sharp');
+    await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
+    await page.getByRole('group', { name: 'Collection' }).getByRole('button', { name: 'Short and sharp' }).click();
+    await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(2);
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Wall ball');
+    await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Medicine ball');
+    await page.goto('/#/wod/karen');
+    await expect(page.getByRole('region', { name: 'Equipment' })).toContainText('Wall ball');
   });
 });

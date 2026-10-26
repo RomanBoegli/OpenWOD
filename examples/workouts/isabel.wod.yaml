@@ -1,0 +1,40 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: isabel
+  revision: 1
+  title: Isabel
+  description: Thirty snatches for time at the same load as Grace. The snatch punishes sloppy pulls when you are tired, so choose a rhythm you can hold and keep the bar close. Power snatches are fine; scale the load well before the technique breaks. The eight-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/isabel
+    notes: Follows the published benchmark. Heavy is the published men’s Rx, medium the women’s Rx, light a common scaling, rounded to kilograms.
+  equipment:
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: isabel-for-time
+      title: 30 snatches
+      format: forTime
+      transitionAfter: manualReady
+      cap: 8m
+      body:
+        id: isabel-snatches
+        type: task
+        assignments:
+          A:
+            notes: Rx 135 lb (95 lb); ground to overhead in one movement
+            name: Snatches
+            reps: 30
+            load:
+              light:
+                value: 30
+                unit: kg
+              medium:
+                value: 43
+                unit: kg
+              heavy:
+                value: 61
+                unit: kg

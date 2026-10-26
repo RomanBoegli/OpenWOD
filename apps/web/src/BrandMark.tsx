@@ -1,0 +1,5 @@
+/** The OpenWOD symbol: code brackets around a barbell (assets/brand). Colours come from the theme tokens. */
+export function BrandMark({ size = 32 }: { size?: number }) {
+  const bracket = 'M89 2H94Q99 2 99 7V38L45 90L99 142V173Q99 178 94 178H89Q83 178 78 173L9 108Q0 100 0 90Q0 80 9 72L78 7Q83 2 89 2Z';
+  return <span className="brandMark" style={{ display: 'inline-grid', placeItems: 'center' }}><svg width={size} height={size} viewBox="0 0 400 400" aria-hidden="true" focusable="false"><g transform="translate(20 110)"><path d={bracket} /><path transform="translate(360 0) scale(-1 1)" d={bracket} /><rect x="110" y="44" width="30" height="92" rx="5" /><rect x="220" y="44" width="30" height="92" rx="5" /><rect x="91" y="66" width="14" height="48" rx="3" /><rect x="255" y="66" width="14" height="48" rx="3" /><path d="M148 79H212V101H148Z" /></g></svg></span>;
+}
