@@ -101,7 +101,7 @@ Open http://127.0.0.1:5173, pick a workout, press Start.
 ### 3. Check your change
 
 ```sh
-npm run check      # types, generated schemas and workout bundle, no legacy names, unit tests
+npm run check      # types, generated schemas and workout bundle, unit tests
 npm run test:e2e   # Playwright in Chromium, Firefox and WebKit
 ```
 

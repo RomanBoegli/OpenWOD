@@ -26,7 +26,7 @@ Nothing is installed globally.
 ## Checks
 
 ```sh
-npm run check          # TypeScript, schema and workout-bundle consistency, no legacy product name, unit tests
+npm run check          # TypeScript, schema and workout-bundle consistency, unit tests
 npm run build          # production bundle plus the test-hook exclusion check
 npm run browsers:install
 npm run test:e2e       # Chromium, Firefox and WebKit
