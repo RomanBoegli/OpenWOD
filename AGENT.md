@@ -183,7 +183,7 @@ flowchart TD
 
 **MOD-03** A content anchor MAY represent one activity, a paired row, or a whole block. AMRAP normally anchors the block. Advancing the timer SHALL NOT falsely select the next AMRAP exercise.
 
-**MOD-04** The compiler SHALL produce a deterministic execution graph or lazy plan. Fully timed paths may be flattened; manual gates and unknown-duration blocks SHALL remain explicit. A guessed schedule for manual work is forbidden. For a flattened timed run the compiler SHOULD precompute cumulative start offsets so that resolving the current occurrence for any section time is a lookup rather than a step-by-step replay; this is how a late callback resolves several due boundaries at once (ENG-02). The compiled plan SHALL be computed once per session and shared by preview, engine, audio, and checkpoints.
+**MOD-04** The compiler SHALL produce a deterministic execution graph or lazy plan. Fully timed paths may be flattened; manual gates and unknown-duration blocks SHALL remain explicit. A guessed schedule for manual work is forbidden. For a flattened timed run the compiler SHOULD precompute cumulative start offsets so that resolving the current occurrence for any section time is a lookup rather than a step-by-step replay; a late callback uses that lookup to find the current occurrence and SHALL still record every crossed semantic boundary exactly once and in order, so the transition history stays complete while stale announcements are skipped (ENG-02, AUD-06). The compiled plan SHALL be computed once per session and shared by preview, engine, audio, and checkpoints.
 
 **MOD-05** Clock policy, presentation mode, athlete participation, and completion rule SHALL be separate concepts. For example, paired participation can occur inside an AMRAP or a timed circuit; it is not a mutually exclusive workout type.
 
@@ -205,7 +205,7 @@ Implement named formats using a bounded set of shared behaviours: sequence/repea
 
 All executable durations SHALL be integer milliseconds internally; user-facing entry may use minutes and seconds. Quantity values SHALL include units. Missing scores SHALL remain null/unrecorded, never become zero. Timestamp storage SHALL use UTC; display uses the configured local timezone.
 
-Session snapshots SHOULD be stored once per distinct content and referenced by a hash of their canonical JSON form (SHR-06 defines the canonical serialisation); repeating the same workout revision then adds a reference rather than another copy. A snapshot remains immutable and self-contained regardless of how it is stored.
+Immutable, self-contained session snapshots are the requirement. Storing each distinct snapshot once and referencing it by a hash of its canonical JSON form (SHR-06 defines the canonical serialisation) is an optional later optimisation, adopted only when storage measurements justify it; the first implementation MAY store one copy per session.
 
 ## 6.3 Required clock distinctions
 
@@ -284,11 +284,19 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 ## 6.5 User-provided Markdown workout
 
-[example-wod.md](example-wod.md) is a real authoring and display reference. Preserve the original document as supplied. It contains a five-minute warm-up, four paired four-row blocks labelled ten minutes each, and a five-minute cooldown. Work is prescribed as 40 seconds with 20-second transitions; the bodyweight/dumbbell task columns exchange athlete assignments after each round. Column headings describe task groups, not permanent athlete identities.
+[example-wod.md](example-wod.md) is a real authoring and display reference and the second canonical timing fixture. It contains a five-minute warm-up, four paired four-row blocks of ten minutes each, and a five-minute cool-down; the title states the sum, 50 minutes, excluding prep and Ready waits. Work is prescribed as 40 seconds with 20-second transitions; the bodyweight/dumbbell task columns exchange athlete assignments after each round. Column headings describe task groups, not permanent athlete identities.
 
-The example is intentionally not yet a canonical executable timing fixture: the title says 40 minutes, while the listed sections total 50 minutes before manual readiness waits. Four 40s/20s slots form four minutes only when all four transition periods are included; ten-minute blocks do not define a whole number of those rounds. Omitting final transition rest changes that duration again. Before converting it to executable JSON, explicitly resolve the intended overall duration, round counts versus hard block caps, trailing transitions, and section handoffs. A capped partial round SHALL NOT be described as a complete round or an equal A/B role rotation.
+The resolved timing is explicit in the document: each block is two rounds of four slots at 40s/20s including the transition after the last slot (4:00 per round, the last transition doubling as the column switch), followed by a 2-minute block rest that every block, including Block 4, keeps, giving 2 × 4:00 + 2:00 = 10:00 per block and 40:00 for the WOD. Warm-up and cool-down are 1-minute solo-style timed slots performed together without transitions. The builder SHALL show the authored trailing rests explicitly (BLD-04); the columns swap through BLD-12 alternation after each complete round. The general rule stands for any future prose conversion: a capped partial round SHALL NOT be described as a complete round or an equal A/B role rotation, and missing timing semantics are resolved by the author, never guessed.
 
-Use this document to test paired table/context layout, long movement names, multi-section navigation, and per-round assignment alternation. Markdown remains a human authoring/reference format; automatic interpretation of arbitrary Markdown or natural language is outside P0. The editor or a reviewed manual conversion produces validated portable JSON; imported executable files SHALL never guess missing timing semantics from prose.
+| Section | Expected timed duration |
+| - | - |
+| Warm-up | 5:00 |
+| Each block | 10:00, of which 8:00 work/transition and 2:00 rest |
+| WOD | 40:00 |
+| Cool-down | 5:00 |
+| Session | 50:00 excluding prep and Ready waits |
+
+Use this document to test paired table/context layout, long movement names, multi-section navigation, trailing rest display, and per-round assignment alternation. Markdown remains a human authoring/reference format; automatic interpretation of arbitrary Markdown or natural language is outside P0. The editor or a reviewed manual conversion produces validated portable JSON; imported executable files SHALL never guess missing timing semantics from prose.
 
 # 7 Session engine and timing requirements
 
@@ -326,7 +334,7 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **ENG-10** All user commands SHALL carry an occurrence ID and unique command ID. Duplicate commands and commands targeting a stale occurrence SHALL be rejected or ignored safely. Rapid double taps SHALL NOT skip two steps or create two scores.
 
-**ENG-11** An active session SHALL continue locally during server/network failure. Remote persistence SHALL not sit on the timing path. The app SHALL persist a full checkpoint on every command and every transition; while running it SHALL additionally overwrite one small progress record holding the current clock offsets at most once per second. Between events the engine state is fully determined by the last checkpoint plus the monotonic offset, so nothing else needs writing. Derived cue events such as countdown numbers and spoken previews are not semantic events and SHALL NOT be persisted or uploaded. An explicit local-storage failure indicator SHALL appear when writes fail. Everything the player route needs after Play, including lazily loaded code and audio assets, SHALL be loaded before the session starts so a server outage or redeploy cannot interrupt a running session.
+**ENG-11** An active session SHALL continue locally during server/network failure. Remote persistence SHALL not sit on the timing path. The app SHALL persist a full checkpoint on every command and every transition; while running it SHALL additionally write one small progress record holding the current clock offsets and the ID of the checkpoint it extends, with a target of one durable progress update per second. Recovery SHALL apply a progress record only to the checkpoint it names, so incompatible records are never combined. Between events the engine state is fully determined by the last checkpoint plus the monotonic offset, so nothing else needs writing. Derived cue events such as countdown numbers and spoken previews are not semantic events and SHALL NOT be persisted or uploaded. An explicit local-storage failure indicator SHALL appear when checkpoint or progress writes fail or fall behind the one-second target. Everything the player route needs after Play, including lazily loaded code and audio assets, SHALL be loaded before the session starts so a server outage or redeploy cannot interrupt a running session.
 
 **ENG-12** After reload or process termination, the app SHALL recover paused from the last durable checkpoint, display its age, and mark the session interrupted. Unsaved time since that checkpoint may be lost; the app SHALL not infer completed physical tasks from elapsed wall time. Restore SHALL include round path, active athlete, acknowledgements, scores, and clock offsets.
 
@@ -398,7 +406,7 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **AUD-06** Cue IDs SHALL include session, execution occurrence, cue type, and threshold. Re-renders SHALL not repeat cues. After a delay, missed countdown numbers SHALL not play as a burst; stale previews SHALL be dropped. A repeated round produces new cues for its new occurrence.
 
-**AUD-07** Exact-boundary beeps SHOULD use preloaded/local audio or Web Audio scheduling. Because every timed deadline is known in advance, boundary and countdown beeps SHOULD be scheduled on the AudioContext clock when the slot starts, using a recorded mapping between the monotonic clock and AudioContext time, and cancelled on pause, navigation, or recovery; this removes JavaScript timer latency from the audible boundary. Browser speech is best-effort and SHALL not be the clock source. Speech support and available voices vary by device; browser speech is a supported starting approach, not a guarantee of identical voice quality or fully offline voices. [S4]
+**AUD-07** Exact-boundary beeps SHOULD use preloaded/local audio or Web Audio scheduling. Because every timed deadline is known in advance, boundary and countdown beeps SHOULD be scheduled on the AudioContext clock when the slot starts, using a recorded mapping between the monotonic clock and AudioContext time, and cancelled on pause, navigation, or recovery; this removes JavaScript timer latency from the audible boundary. The AudioContext clock stops while the context is suspended and is not synchronised with the monotonic clock, so the mapping SHALL be re-established after every suspend/resume, visibility return, or recovery, and every cue scheduled under a previous mapping SHALL be cancelled before rescheduling. Browser speech is best-effort and SHALL not be the clock source. Speech support and available voices vary by device; browser speech is a supported starting approach, not a guarantee of identical voice quality or fully offline voices. [S4]
 
 **AUD-08** The app SHALL initialise/unlock audio from an explicit user gesture and detect speech/audio errors where possible. Failure SHALL not stop the workout. A visible sound status and working local beep fallback SHALL remain available. No runtime call to a cloud AI service is required.
 
@@ -438,7 +446,7 @@ SQLite remains the live datastore. JSON files are portable exchange documents; s
 
 **SHR-05** Workouts SHALL support optional sharing provenance (stable sharing ID and source revision), author, source URL, description, and licence/permission text. Imports and re-exports SHALL preserve declared attribution and provenance; edited derivatives SHALL record their source and receive a distinct sharing identity. Local database identity and local edit revision SHALL remain separate from source provenance. An absent content licence SHALL remain unspecified; the application's code licence SHALL NOT be applied automatically to contributed workouts. A central directory, public accounts, and in-app publishing are deferred; users may distribute files through existing channels or Git repositories.
 
-**SHR-06** The repository SHALL publish the versioned exchange/domain JSON Schemas, readable format documentation, and valid single-workout/pack examples. JSON export SHALL use one canonical serialisation, with fixed key order and two-space indentation, for reading and stable diffs, without volatile export timestamps; the same canonical form serves snapshot hashing (section 6.2) and round-trip equality tests. Import SHALL accept older supported versions through explicit migrations, reject unknown newer versions, and identify unsupported workout capabilities in partial releases. Round-trip and cross-installation fixtures SHALL verify semantic equivalence of prescriptions, timing, attribution, and program references after ID remapping. Parsing and expansion SHALL enforce BLD-10/NFR-10 limits before writes; source URLs SHALL be treated as metadata and SHALL NOT be fetched automatically.
+**SHR-06** The repository SHALL publish the versioned exchange/domain JSON Schemas, readable format documentation, and valid single-workout/pack examples. JSON export SHALL use one canonical serialisation, with fixed key order and two-space indentation, for reading and stable diffs, without volatile export timestamps; the same canonical form serves the optional snapshot hashing of section 6.2. Import SHALL accept older supported versions through explicit migrations, reject unknown newer versions, and identify unsupported workout capabilities in partial releases. Round-trip and cross-installation fixtures SHALL verify semantic equivalence of prescriptions, timing, attribution, and program references after ID remapping, by comparing a normalised representation of workout meaning with local IDs and local revision mapped out; import intentionally changes IDs, so byte equality of canonical JSON is not the test. Parsing and expansion SHALL enforce BLD-10/NFR-10 limits before writes; source URLs SHALL be treated as metadata and SHALL NOT be fetched automatically.
 
 Example filename: `partner-circuit.wod.json`. Its workout payload is the complete fixture in section 6.4, wrapped with `format: "wodva.workout"` and `formatVersion: 1`; `workout.schemaVersion` versions the workout model independently of the exchange envelope. Program packs embed referenced workouts rather than depending on another installation's library. The public schemas SHALL specify required fields, optional metadata, ID remapping, and migration behaviour before the first sharing release.
 
@@ -569,7 +577,7 @@ The implementation SHALL document exact environment names in .env.example and th
 | NFR-02 | A delayed callback test SHALL produce correct state with no accumulated tick drift and no replay burst of obsolete cues. |
 | NFR-03 | At two metres, both users SHALL correctly identify current task, primary time, A/B role, and next task in at least 9 of 10 random screen states each, under normal room lighting. |
 | NFR-04 | With 1,000 workouts and 10,000 session summaries, library search SHOULD respond within 500ms and a preloaded workout SHOULD enter prep within 300ms on the reference hardware/LAN. Search SHOULD use SQLite full-text search or an indexed search column with server-side pagination; the client SHALL NOT download the whole library to filter it. |
-| NFR-05 | A 60-minute session SHALL remain usable with network disabled after setup; reconnection SHALL synchronise one result without duplicates. |
+| NFR-05 | A 60-minute session SHALL remain usable with network disabled after setup; reconnection SHALL synchronise one result without duplicates. This is a real-duration run and is not satisfied by an accelerated clock. |
 | NFR-06 | Server idle memory SHOULD remain below 256MiB and routine household use below 512MiB, excluding optional future TTS. Measure on the recorded deployment hardware. |
 | NFR-07 | Initial player and editing acceptance SHALL pass in desktop Safari and Firefox, including a recorded half-monitor-width window and responsive tablet/phone viewports. Automated browser tests SHALL cover Chromium, Firefox, and WebKit, with WebKit described as engine coverage rather than the installed Safari browser. Later physical iPad/iPhone smoke tests SHALL record device/OS/browser versions and cover touch, sound, wake lock, safe areas, and performance; home-screen mode SHALL be tested if offered. Physical-device checks SHALL NOT gate initial implementation or desktop UX review. |
 | NFR-08 | Essential controls SHALL be keyboard accessible with visible focus and accessible names. Screen-reader output SHALL announce phase changes without reading every second. |
@@ -584,7 +592,7 @@ Desktop reference hardware, browser versions, and actual CSS viewport sizes are 
 
 # 14 Acceptance scenarios and traceability
 
-Tests below define release gates at their applicable milestones. Unit tests use a fake monotonic clock; desktop/browser tests verify integration and responsive behaviour; later real-device tests verify visibility and platform behaviour. The browser build SHALL accept an injected clock and audio stub behind an explicit test flag so timing scenarios such as AT-01 run in seconds under Playwright rather than in real time; only NFR-01 and AT-18 are real-time measurements. Browser tests SHOULD replay the same fixture traces as the engine unit tests.
+Tests below define release gates at their applicable milestones. Unit tests use a fake monotonic clock; desktop/browser tests verify integration and responsive behaviour; later real-device tests verify visibility and platform behaviour. The browser build SHALL accept an injected clock and audio stub behind an explicit test flag so timing scenarios such as AT-01 run in seconds under Playwright rather than in real time. Accelerated runs do not replace real-duration runs: NFR-01, AT-18, and one real 60-minute reliability run combining timing, network loss, recovery, and memory observation (NFR-05/06) remain real time. The clock and audio injection SHALL exist only in test builds and SHALL NOT be reachable in the production image. Browser tests SHOULD replay the same fixture traces as the engine unit tests.
 
 | Test | Scenario and expected outcome | Requirements |
 | - | - | - |
@@ -616,7 +624,7 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-26 | Import a file twice and import another file with colliding local IDs. Preview identifies known provenance, offers Skip/Import another copy, remaps copied IDs/references, and leaves existing workouts and session snapshots unchanged. A title match alone never overwrites content. | SHR-04/05, DAT-06/09 |
 | AT-27 | Export/import a program pack with two workouts sharing an exercise reference. All required movement definitions and program references resolve on a fresh installation; attribution/provenance survive re-export. Editing a derivative gives it a distinct sharing identity while recording its source. | SHR-02/05/06, LIB-02/03 |
 | AT-28 | Import malformed, oversized, unknown-version or unsupported-capability sharing files. Preview reports actionable failures and no records are written. Validate published examples against schemas and round-trip supported older fixtures through migrations. | SHR-04/06, BLD-10, NFR-10 |
-| AT-29 | Review example-wod.md without inventing a round count or resolving its 40/50-minute discrepancy automatically. On a separate normalised two-round fixture, alternate bodyweight/dumbbell assignments after the complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
+| AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 4:00 plus 2:00 rest, WOD 40:00, session 50:00 excluding prep and Ready waits, trailing rests shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
 
 # 15 Implementation plan and release gates
 
@@ -635,7 +643,7 @@ A minimal image, CI publishing and Compose file start in Phase 0: the production
 
 ## 15.1 First implementation backlog
 
-1. Record architecture decisions for the selected stack, shared domain/exchange schemas, clock policy, rest/rotation semantics, single-device control, and image publishing. Capture desktop browsers and full/half-window CSS viewport dimensions; review example-wod.md without guessing its unresolved timing.
+1. Record architecture decisions for the selected stack, shared domain/exchange schemas, clock policy, rest/rotation semantics, single-device control, and image publishing. Capture desktop browsers and full/half-window CSS viewport dimensions; encode example-wod.md as the second fixture using the timing resolved in section 6.5.
 
 2. Create the repository skeleton, lockfile, Vitest/Playwright setup, CI check, initial Dockerfile and compose.yaml. Publish an initial image and document the Portainer/HTTPS path.
 
@@ -647,7 +655,7 @@ A minimal image, CI publishing and Compose file start in Phase 0: the production
 
 6. Add cue scheduling and audio preflight; test first in desktop Safari/Firefox. Record platform capability status and schedule physical mobile smoke checks when hardware is available.
 
-7. Add the thin authenticated SQLite API, hash-deduplicated session snapshots and results, IndexedDB event checkpoints with the per-second progress record, an outbox with batched idempotent upload, recovery, Web Locks single-tab control, and basic backup/restore. Verify server/container restart and redeploy behaviour before full editor work.
+7. Add the thin authenticated SQLite API, immutable session snapshots and results, IndexedDB event checkpoints with the per-second progress record, an outbox with batched idempotent upload, recovery, Web Locks single-tab control, and basic backup/restore. Verify server/container restart and redeploy behaviour before full editor work.
 
 8. Build the simple circuit library/editor on the tested schema/compiler, including explicit per-round assignment alternation, overrides, history and preview.
 
@@ -694,9 +702,9 @@ A minimal image, CI publishing and Compose file start in Phase 0: the production
 | Shared files depend on another installation or expose household data | Self-contained copied prescriptions, role labels, separate administrative export, schemas and cross-installation tests. | Exchange schema in Phase 0; sharing delivery in Phase 2. |
 | Schema drift between TypeScript types, validators and published JSON Schema | One schema source in packages/domain with generated artefacts and a CI drift check. | Phase 0 schema setup. |
 | Timing tests take as long as the workouts they test | Injected clock and audio stub behind a test flag; fixture traces shared by unit and browser tests. | Phase 0 test setup. |
-| Prose workout leaves timing or assignment rotation ambiguous | Preserve example-wod.md; request explicit timing decisions during conversion and validate authored repeats/caps/rests. | Before making the example executable; editor validation in Phases 2–3. |
+| Prose workout leaves timing or assignment rotation ambiguous | Resolved for example-wod.md in version 1.2 by stating rounds, transitions, block rest, and column swap explicitly; future conversions request the same decisions from the author and validate authored repeats/caps/rests. | Editor validation in Phases 2–3. |
 
-No further product decision is required to begin Phase 0 with the unambiguous timed fixture. The first review examines desktop Safari/Firefox full/half-window UX, responsive A/B layouts, foreground timing/audio and pause behaviour. The real Markdown example informs content layout immediately; resolving its timing is required only before converting that example into an executable workout. Physical iPad/iPhone checks follow without holding up desktop development.
+No further product decision is required to begin Phase 0 with the unambiguous timed fixture. The first review examines desktop Safari/Firefox full/half-window UX, responsive A/B layouts, foreground timing/audio and pause behaviour. The real Markdown example informs content layout immediately and, with its timing now explicit, serves as the second executable fixture. Physical iPad/iPhone checks follow without holding up desktop development.
 
 # 17 Source references
 
@@ -728,11 +736,13 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - ENG-11 and DAT-03: checkpoints are written on every command and transition plus one small per-second progress record; derived cue events are neither persisted nor uploaded; uploads are batched. The player preloads all code and audio it needs before Play, reinforced in NFR-13 with content-hashed assets.
 - AUD-07: boundary and countdown beeps are scheduled ahead of time on the AudioContext clock from known deadlines.
 - ENG-14: suggested Web Locks plus BroadcastChannel for single-tab control.
-- Section 6.2 and SHR-06: session snapshots are deduplicated by a hash of one canonical JSON serialisation shared with export.
+- Section 6.2 and SHR-06: one canonical JSON serialisation for export; snapshot deduplication by content hash is an optional later optimisation, and round-trip tests compare normalised workout meaning with IDs mapped out.
 - Section 11, SHR-06, DEP-05: one schema source of truth generates types, validators, and published JSON Schemas with a CI drift check; prefer a SQLite driver without per-architecture native builds; run multi-architecture smoke tests natively.
 - Section 14: the browser build accepts an injected clock and audio stub under a test flag so acceptance scenarios run in seconds; only NFR-01 and AT-18 remain real-time.
 - NFR-04: library search uses SQLite full-text search or an indexed column with server-side pagination.
 - Section 15: Phase 0 ships the final-shape Dockerfile and Compose rather than a throwaway; backlog items 3–7 updated to match; two risks added. Requirement IDs unchanged.
+- example-wod.md: resolved the 40/50-minute discrepancy. The title now states the sum of its sections, 50 minutes; each block is two 4:00 rounds at 40s/20s including the last transition, plus a 2-minute block rest; the column swap after each round and stable partner positions are stated. Section 6.5, AT-29, backlog item 1, and the section 16 risk row updated; the example is now the second canonical fixture.
+- Review corrections: ENG-11 targets one durable progress update per second with progress records bound to their checkpoint and failure reporting; AUD-07 re-establishes the audio clock mapping after suspend/resume and cancels cues scheduled under an old mapping; section 14 and NFR-05 keep a real 60-minute reliability run and confine clock/audio injection to test builds; MOD-04 requires every crossed boundary to be recorded exactly once even when a late callback jumps to the current occurrence.
 
 ## Version 1.1 — 26 October 2026
 
