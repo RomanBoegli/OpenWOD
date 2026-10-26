@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+    image: wodva:local
+    init: true
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:8080"
+    volumes:
+      - wodva-data:/data
+    restart: unless-stopped
+
+volumes:
+  wodva-data:

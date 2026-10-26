@@ -1,0 +1,155 @@
+.app { min-height: 100svh; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background: radial-gradient(ellipse at 50% 25%, #1b251b55, transparent 65%); }
+.header { height: 88px; border-bottom: 1px solid #ffffff0c; display: flex; align-items: center; gap: 34px; padding: 0 max(32px, calc((100vw - 1280px)/2)); }
+.brand { display: flex; align-items: center; gap: 10px; font-size: 30px; font-weight: 800; letter-spacing: -1.6px; text-decoration: none; }
+.brandDot { color: #c8ee91; margin-left: -9px; }
+.brandMark { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 10px; background: #c8ee91; }
+.brandMark svg { width: 28px; fill: none; stroke: #182015; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.headerNote { color: #9aa498; font-size: 13px; }
+.headerActions { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.quietButton, .iconButton { display: inline-flex; justify-content: center; align-items: center; gap: 9px; background: none; color: #bdc6b8; border: 0; min-height: 48px; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+.quietButton:hover:not(:disabled), .iconButton:hover:not(:disabled) { background: #ffffff08; color: #f3f7ee; }
+.iconButton { min-width: 48px; padding: 10px; }
+.main { max-width: 1192px; padding: 38px 36px 24px; margin: auto; }
+.workoutHeading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 28px; }
+.eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 2.1px; color: #a8b69d; }
+.eyebrow span { margin: 0 9px; color: #66745e; }
+.titleRow { display: flex; align-items: center; gap: 5px; margin-top: 7px; }
+.titleRow h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 6px 0; }
+.description { color: #a6b09f; max-width: 650px; font-size: 13px; line-height: 1.7; margin: 7px 0 14px; }
+.metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; color: #acb5a6; font-size: 11px; }
+.metadata > span { display: flex; align-items: center; gap: 7px; }
+.equipment { padding-left: 18px; border-left: 1px solid #ffffff1a; }
+.viewSwitch { display: flex; gap: 4px; background: #1c241c; border: 1px solid #ffffff0c; padding: 4px; border-radius: 11px; flex-shrink: 0; }
+.viewSwitch button { display: flex; gap: 7px; align-items: center; min-height: 42px; border: 0; border-radius: 7px; background: none; color: #a5b09d; padding: 10px 13px; font-size: 12px; }
+.viewSwitch button[aria-pressed=true] { background: #35402f; color: #e4eddd; box-shadow: 0 1px 4px #0002; }
+.workoutPicker { position: relative; }
+.pickerMenu { position: absolute; top: 44px; left: 0; width: 275px; padding: 8px; background: #263023; border: 1px solid #ffffff20; border-radius: 12px; box-shadow: 0 15px 35px #0008; z-index: 5; }
+.pickerMenu button { display: block; text-align: left; width: 100%; color: #f1f5e9; background: none; border: 0; padding: 14px; border-radius: 7px; }
+.pickerMenu button:hover { background: #ffffff08; }
+.pickerMenu small { display: block; color: #a9b69e; margin-top: 6px; }
+.player { --phase-color: #c8ee91; position: relative; overflow: hidden; padding: 27px 34px 22px; background: linear-gradient(150deg, #20291e, #192119 80%); border-radius: 25px; }
+.player[data-phase=rest] { --phase-color: #a3cbf0; }
+.player[data-phase=paused] { --phase-color: #d1ccb8; }
+.player[data-phase=complete] { --phase-color: #c8ee91; }
+.player[data-phase=work][data-warning=amber] { --phase-color: #f4ca80; }
+.player[data-phase=work][data-warning=red] { --phase-color: #ff998c; }
+.perimeter { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); pointer-events: none; fill: none; stroke-width: 3px; }
+.borderTrack { stroke: #c8ee911e; }
+.borderProgress { stroke: var(--phase-color); }
+.playerTop { display: flex; justify-content: space-between; gap: 15px; font-size: 11px; color: #d0d9c8; font-weight: 600; letter-spacing: .35px; }
+.playerTop > span { display: flex; align-items: center; gap: 9px; }
+.playerTop > span:last-child { font-size: 10px; letter-spacing: 1.5px; color: #bac6af; }
+.liveDot { width: 6px; height: 6px; border-radius: 50%; background: var(--phase-color); }
+.clockBlock { text-align: center; padding: 29px 0 28px; }
+.phase { color: var(--phase-color); font-size: 11px; letter-spacing: 2.3px; text-transform: uppercase; font-weight: 700; }
+.timer { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: clamp(112px, 12.5vw, 156px); line-height: 1.1; letter-spacing: -7px; font-variant-numeric: tabular-nums; font-weight: 650; color: #f2f5e9; margin: 4px 0 7px; }
+.clockCaption { color: #adb9a3; font-size: 9px; letter-spacing: 2.5px; }
+.laneHeading { display: flex; justify-content: space-between; color: #a7b39c; font-size: 9px; font-weight: 600; letter-spacing: 1.7px; margin-bottom: 12px; }
+.laneHeading > span { color: #b0bba7; letter-spacing: 1.5px; }
+.lanes { display: grid; grid-template-columns: repeat(var(--lane-count), minmax(0, 1fr)); gap: 16px; }
+.lane { --athlete: #d0ebaa; padding: 23px 24px 22px; min-height: 193px; border: 1px solid #c6dfac22; border-radius: 14px; background: #29332188; }
+.lane[data-athlete=B] { --athlete: #c9c0eb; background: #2b2c2f77; border-color: #c9c0eb22; }
+.athleteLabel { display: flex; align-items: center; color: var(--athlete); font-size: 13px; font-weight: 600; gap: 11px; }
+.athleteBadge { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--athlete) 30%, transparent); border-radius: 9px; font-weight: 700; background: color-mix(in srgb, var(--athlete) 8%, transparent); }
+.athleteLabel small { display: block; font-size: 8px; font-weight: 500; margin-top: 4px; color: #b0b8a7; letter-spacing: 1.2px; }
+.laneTime { margin-left: auto; color: #b6bfab; font-size: 12px; font-weight: 400; }
+.lane h2 { margin: 21px 0 10px; font-size: clamp(40px, 3.5vw, 48px); letter-spacing: -1.1px; line-height: 1.08; font-weight: 600; overflow-wrap: anywhere; }
+.lane p { color: #b2bea6; font-size: 12px; line-height: 1.6; margin: 0; }
+.nextStrip { display: flex; align-items: center; justify-content: center; gap: 15px; text-align: center; min-height: 65px; color: #c0cbb4; font-size: 13px; padding: 15px 5px; }
+.nextLabel { display: flex; align-items: center; gap: 10px; font-size: 8px; letter-spacing: 1.7px; color: #adb8a3; white-space: nowrap; }
+.controls { display: grid; grid-template-columns: 1fr auto 1fr; gap: 15px; align-items: center; border-top: 1px solid #ffffff0c; padding-top: 20px; }
+.secondaryControls { display: flex; gap: 4px; }
+.primaryButton { display: inline-flex; gap: 12px; align-items: center; justify-content: center; background: #c8ee91; color: #172014; border: 1px solid #d6f3b3; border-radius: 11px; min-height: 56px; padding: 14px 35px; font-size: 14px; font-weight: 700; }
+.primaryButton:hover:not(:disabled) { background: #d6f5ad; }
+.stopButton { justify-self: end; color: #b7bba9; background: none; border: 0; min-height: 48px; padding: 10px; font-size: 11px; }
+.stopButton:hover:not(:disabled) { color: #ffb0a4; }
+.sessionLine { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-top: 19px; color: #a7b39a; font-size: 9px; }
+.sessionLine > span:first-child { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+.sessionLine > span:first-child > span { color: #c9d4be; margin-left: 8px; font-size: 10px; }
+.modified { color: #f3cf9e !important; }
+.bottomBar { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 15px 0 9px; }
+.readiness { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #a7b39b; font-size: 10px; }
+.smallDot { width: 5px; height: 5px; border-radius: 50%; background: #c8ee91; }
+.readinessDivider { color: #65775b; margin: 0 3px; }
+.sharing { display: flex; gap: 2px; }
+.sharing button { font-size: 10px; }
+.footer { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid #ffffff0b; padding-top: 23px; margin-top: 12px; color: #97a38a; font-size: 9px; }
+.footer > span:first-child { letter-spacing: 1.7px; }
+.footer a { text-underline-offset: 3px; }
+.contextSection { margin-top: 27px; padding: 25px; background: #192019; border: 1px solid #ffffff0e; border-radius: 17px; }
+.contextHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.contextHeading h2 { font-size: 22px; font-weight: 500; margin: 6px 0 0; letter-spacing: -.5px; }
+.contextHeading .quietButton { font-size: 11px; }
+.contextList { position: relative; max-height: 325px; overflow-y: auto; scroll-margin: 20px; }
+.contextColumns, .contextRow { display: grid; grid-template-columns: 35px 1fr 1fr 48px; align-items: center; gap: 16px; padding: 14px 12px; }
+.contextColumns { color: #aab69e; font-size: 9px; letter-spacing: 1px; border-bottom: 1px solid #ffffff13; }
+.contextRow { font-size: 15px; color: #c1cbb8; border-bottom: 1px solid #ffffff09; border-radius: 7px; line-height: 1.45; }
+.contextRow > span:first-child, .contextRow > span:last-child { font-size: 11px; color: #a8b49b; }
+.contextRow[data-active=true] { background: #c8ee9110; color: #e0f0cb; box-shadow: inset 2px 0 #c8ee91; }
+.contextFootnote { color: #a0ae93; font-size: 10px; margin-top: 19px; }
+.dialog { color: #eff3e8; background: #222c20; border: 1px solid #d2e6bd30; border-radius: 20px; padding: 28px; width: min(480px, calc(100% - 32px)); box-shadow: 0 25px 100px #0009; }
+.dialog::backdrop { background: #060c08bd; backdrop-filter: blur(5px); }
+.dialogHeading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.dialog h2 { font-size: 25px; font-weight: 600; letter-spacing: -.7px; margin: 0; }
+.dialog h3 { font-size: 23px; }
+.dialog p { font-size: 14px; line-height: 1.7; color: #c0cbb5; }
+.dialog .dialogIntro { font-size: 12px; color: #adbba1; margin: 12px 0 23px; }
+.dialog label { display: grid; gap: 9px; font-size: 12px; color: #c7d3bc; margin-bottom: 19px; }
+.dialog input:not([type=range]), .dialog select { width: 100%; min-width: 0; background: #151e14; border: 1px solid #ffffff20; color: #eff4e7; border-radius: 8px; padding: 13px 11px; min-height: 48px; }
+.dialog input[type=range] { accent-color: #c8ee91; width: 100%; min-height: 35px; }
+.nameFields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.dialogActions { display: flex; justify-content: end; gap: 15px; margin-top: 25px; }
+.importError { color: #ffc3b7 !important; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice { background: #f6c78a10; border: 1px solid #f6c78a33; border-radius: 10px; padding: 14px; color: #edcda3; font-size: 12px; }
+.finishMessage { text-align: center; padding: 5px 10px 30px; }
+.finishIcon { display: inline-grid; place-items: center; color: #c8ee91; width: 55px; height: 55px; border-radius: 50%; background: #c8ee9110; }
+.finishMessage h2 { font-size: 28px; margin-bottom: 9px; }
+.finishMessage p { font-size: 14px; color: #b9c5ae; }
+@media (min-width: 1500px) { .main { padding-top: 46px; } .player { padding: 30px 38px 24px; } .clockBlock { padding: 32px 0; } }
+@media (max-width: 900px) { .header { height: 75px; padding: 0 25px; } .main { padding: 27px 24px 22px; } .headerNote { display: none; } .workoutHeading { align-items: start; gap: 16px; } .description { max-width: 500px; } .viewSwitch { margin-top: 32px; } .viewSwitch button { padding: 8px; font-size: 11px; } .viewSwitch svg { display: none; } .player { padding: 24px 25px 20px; } .lane { padding: 20px; } .lane h2 { font-size: 40px; } .bottomBar { flex-wrap: wrap; } .footer { font-size: 8px; } }
+@media (max-width: 620px) { .header { height: 70px; padding: 0 18px; } .headerActions { gap: 3px; } .headerActions .quietButton { font-size: 11px; } .brand { font-size: 27px; } .brandMark { width: 31px; height: 31px; } .main { padding: 24px 15px 20px; } .workoutHeading { display: block; margin-bottom: 20px; } .titleRow h1 { font-size: 30px; } .eyebrow { font-size: 8px; letter-spacing: 1.5px; } .description { font-size: 12px; } .metadata { gap: 12px; font-size: 10px; } .equipment { border: 0; padding: 0; } .viewSwitch { margin-top: 18px; width: fit-content; } .viewSwitch button { padding: 7px 14px; } .viewSwitch svg { display: block; } .player { padding: 22px 20px 20px; border-radius: 20px; } .playerTop { font-size: 10px; } .playerTop > span:last-child { font-size: 9px; letter-spacing: 1px; } .clockBlock { padding: 27px 0 24px; } .timer { font-size: 112px; letter-spacing: -6px; } .phase { font-size: 10px; } .lanes { grid-template-columns: minmax(0, 1fr); gap: 12px; } .lane { min-height: 0; padding: 17px 18px; } .lane h2 { margin-top: 16px; font-size: 40px; } .lane p { font-size: 11px; } .athleteLabel small { display: none; } .athleteLabel { font-size: 12px; } .athleteBadge { width: 30px; height: 30px; } .nextStrip { align-items: start; padding: 21px 0; text-align: left; font-size: 12px; line-height: 1.6; gap: 12px; } .nextLabel { font-size: 8px; margin-top: 3px; gap: 6px; } .controls { grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 16px; } .controls > .primaryButton { grid-row: 1; grid-column: 1/-1; width: 100%; min-height: 58px; } .secondaryControls { grid-row: 2; } .stopButton { grid-row: 2; } .sessionLine { margin-top: 11px; font-size: 9px; align-items: start; line-height: 1.5; } .sessionLine > span:last-child { text-align: right; max-width: 155px; } .bottomBar { padding-top: 17px; gap: 8px; } .readiness { width: 100%; font-size: 9px; } .sharing { margin-left: -10px; } .footer { flex-direction: column; gap: 10px; padding-top: 20px; } .contextSection { padding: 20px 12px; } .contextHeading { padding: 0 5px; } .contextHeading h2 { font-size: 20px; } .contextHeading .quietButton { max-width: 140px; font-size: 10px; } .contextColumns, .contextRow { grid-template-columns: 20px 1fr 1fr 28px; gap: 10px; padding: 14px 8px; } .contextColumns { font-size: 8px; } .contextRow { font-size: 12px; overflow-wrap: anywhere; } .contextRow > span:first-child, .contextRow > span:last-child { font-size: 10px; } .contextFootnote { padding: 0 5px; line-height: 1.7; } .dialog { padding: 23px; } .dialogActions { flex-wrap: wrap; } }
+@media (max-width: 360px) { .headerActions .quietButton span { display: none; } .timer { font-size: 96px; } .lane h2 { font-size: 36px; } .player { padding: 20px 17px; } }
+
+/* During training, the player owns the usable viewport; controls stay in view. */
+.app[data-performing=true] { height: 100svh; overflow: hidden; }
+.app[data-performing=true] .header, .app[data-performing=true] .workoutHeading, .app[data-performing=true] .bottomBar, .app[data-performing=true] .footer { display: none; }
+.app[data-performing=true] .main { padding: 0; }
+.app[data-performing=true] .player { position: fixed; inset: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); display: flex; flex-direction: column; padding: 18px 30px; overflow-y: auto; }
+.app[data-performing=true] .playerTop { min-height: 40px; flex-shrink: 0; }
+.app[data-performing=true] .playerTop .iconButton { margin: -8px -6px -8px 8px; }
+.app[data-performing=true] .clockBlock { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 12px 0 20px; }
+.app[data-performing=true] .timer { font-size: clamp(112px, 19vh, 180px); }
+.app[data-performing=true] .lane { min-height: 155px; padding: 18px 22px; }
+.app[data-performing=true] .lane h2 { margin-top: 17px; }
+.app[data-performing=true] .athleteLabel { font-size: 28px; }
+.app[data-performing=true] .athleteLabel > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app[data-performing=true] .athleteBadge { min-width: 42px; height: 42px; font-size: 28px; }
+.app[data-performing=true] .nextStrip { font-size: 28px; line-height: 1.25; }
+.app[data-performing=true] .controls { flex-shrink: 0; }
+.app[data-performing=true] .sessionLine { flex-shrink: 0; }
+.app[data-performing=true][data-view=context] .lanes, .app[data-performing=true][data-view=context] .laneHeading { display: none; }
+.app[data-performing=true][data-view=context] .clockBlock { padding-bottom: 5px; flex: 0 0 auto; }
+.app[data-performing=true][data-view=context] .timer { font-size: 112px; }
+.app[data-performing=true][data-view=context] .contextSection { flex: 1 1 0; min-height: 170px; display: flex; flex-direction: column; padding: 12px; margin: 0 0 16px; }
+.app[data-performing=true][data-view=context] .contextHeading { margin-bottom: 6px; }
+.app[data-performing=true][data-view=context] .contextHeading h2, .app[data-performing=true][data-view=context] .contextFootnote { display: none; }
+.app[data-performing=true][data-view=context] .contextList { flex: 1; max-height: none; }
+.app[data-performing=true][data-view=context] .contextRow { font-size: 21px; }
+.app[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 28px; font-weight: 600; }
+@media (max-width: 620px) {
+  .app[data-performing=true] .player { padding: 12px 18px 16px; }
+  .app[data-performing=true] .clockBlock { padding: 10px 0 16px; }
+  .app[data-performing=true] .timer { font-size: clamp(90px, 15vh, 128px); }
+  .app[data-performing=true] .lane { min-height: 0; padding: 12px 16px; }
+  .app[data-performing=true] .lane h2 { font-size: 34px; margin-top: 10px; margin-bottom: 7px; }
+  .app[data-performing=true] .athleteLabel { font-size: 16px; }
+  .app[data-performing=true] .athleteBadge { min-width: 30px; height: 30px; font-size: 18px; }
+  .app[data-performing=true] .nextStrip { font-size: 12px; }
+  .app[data-performing=true] .nextStrip { min-height: 45px; padding: 13px 0; }
+  .app[data-performing=true] .controls { padding-top: 13px; }
+  .app[data-performing=true] .sessionLine { margin-top: 6px; }
+  .app[data-performing=true][data-view=context] .timer { font-size: 90px; }
+  .app[data-performing=true][data-view=context] .contextColumns { grid-template-columns: 16px 1fr 1fr 28px; }
+  .app[data-performing=true][data-view=context] .contextRow { font-size: 17px; grid-template-columns: 16px 1fr 1fr 28px; }
+  .app[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 22px; }
+}

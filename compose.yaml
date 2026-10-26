@@ -1,0 +1,22 @@
+services:
+  app:
+    image: ${APP_IMAGE:?Set APP_IMAGE to a published release image or digest}
+    init: true
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+    volumes:
+      - wodva-data:/data
+    restart: unless-stopped
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  wodva-data:

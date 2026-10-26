@@ -1,0 +1,13 @@
+@font-face { font-family: 'system-workout'; src: local('Avenir Next'), local('Segoe UI'); font-display: swap; }
+:root { font-family: 'system-workout', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #edf1e9; background: #101613; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select { font: inherit; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .35; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #d7f6a9; outline-offset: 5px; }
+button { touch-action: manipulation; }
+a { color: inherit; }
+::selection { background: #c8ee91; color: #111a14; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

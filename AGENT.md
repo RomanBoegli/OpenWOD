@@ -223,7 +223,7 @@ The player SHALL identify which clock it displays. Paused or manually altered sc
 
 ## 6.4 Representative semantic fixture
 
-This is an illustrative data contract to be formalised as JSON Schema during implementation. Identifiers are examples, not production records. Each slot lasts 40 seconds and contains simultaneous assignments.
+This Phase 0 data contract is formalised in schemas/workout.v1.schema.json and implemented as a canonical fixture in packages/domain/src/fixtures.ts. Identifiers are examples, not production records. Each slot lasts 40 seconds and contains simultaneous assignments. Additional workout capabilities extend the model in later milestones.
 
 ```json
 {
@@ -231,9 +231,12 @@ This is an illustrative data contract to be formalised as JSON Schema during imp
   "id": "partner-circuit",
   "revision": 1,
   "title": "Partner circuit",
+  "participants": 2,
+  "equipment": ["Rowing machine", "Kettlebell"],
   "prepMs": 10000,
   "sections": [{
     "id": "conditioning",
+    "title": "Conditioning",
     "format": "timedCircuit",
     "transitionAfter": "manualReady",
     "body": {
@@ -586,7 +589,7 @@ The implementation SHALL document exact environment names in .env.example and th
 | NFR-11 | Core operation SHALL not require third-party accounts, analytics, cloud AI, or an external exercise API. Browser/OS speech behaviour is a separately tested capability. |
 | NFR-12 | Schema migrations, domain validation, and engine transitions SHALL have automated tests. Production errors SHALL include actionable diagnostics without secrets. |
 | NFR-13 | Application upgrades SHALL not replace a running player's assets mid-session. An available frontend update SHALL apply at idle/reload after the session ends. Assets SHALL use content-hashed filenames, and the player SHALL preload every chunk it can need before Play (ENG-11). |
-| NFR-14 | The repository SHALL include a licence selected before public release, a dependency lockfile, and documented asset/voice licensing. Suggested default: MIT for original application code. |
+| NFR-14 | The repository SHALL include a licence selected before public release, a dependency lockfile, and documented asset/voice licensing. The existing repository licence is GNU GPL version 3 and SHALL be retained; the suggested MIT default from version 1.0 is superseded by the existing project licence. |
 
 Desktop reference hardware, browser versions, and actual CSS viewport sizes are established in Phase 0. Record physical mobile hardware when available. These thresholds are targets to test, not measured performance claims. The two-metre recognition test applies to shared-display use, not handheld phone use.
 
@@ -727,6 +730,10 @@ Sources establish terminology and platform/deployment constraints. Workout seman
 Reference review date: 26 October 2026. Recheck platform support and deployment documentation when selecting implementation versions.
 
 # 18 Plan revision record
+
+## Implementation note — 26 October 2026
+
+Phase 0 implementation is underway: responsive timed player, pure engine/compiler, both canonical fixtures, schema generation, audio/wake-lock adapters, browser tests, and single-container build/CI. The repository's existing GPLv3 licence is preserved. See docs/architecture.md and docs/validation.md for implemented scope and evidence. Fixture file loading/export is a temporary preview capability; saved-library import, household authentication, SQLite, checkpoints/recovery, history, and packs remain future milestones. Initial desktop UX and container checks do not establish physical mobile or real-hour acceptance.
 
 ## Version 1.2 — 26 October 2026
 

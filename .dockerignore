@@ -1,0 +1,13 @@
+.git
+node_modules
+.cache
+dist
+test-results
+test-results-production
+playwright-report
+coverage
+.env
+.env.*
+!.env.example
+data
+*.log
