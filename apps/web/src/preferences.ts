@@ -28,6 +28,8 @@ export interface Preferences {
   redMs: number;
   /** Colours of the two milestone markers as #rrggbb, or '' for the theme's amber and red. */
   markColors: { first: string; second: string };
+  /** The accent colour as #rrggbb, or '' for the built-in green. Both themes derive their tints from it. */
+  accent: string;
   /** The overall progress line across every section and round: hidden, a bar, or a bar with the numbers. */
   progress: 'off' | 'bar' | 'detail';
   /** The big clock's digits. */
@@ -40,7 +42,7 @@ export interface Preferences {
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, progress: 'detail', clockWeight: 'bold', clockSize: 'large', myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: '', progress: 'detail', clockWeight: 'bold', clockSize: 'large', myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -73,6 +75,7 @@ export function loadPreferences(): Preferences {
       amberMs: Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs)),
       redMs: Math.min(Math.round(clamp(stored.redMs, 1000, 10_000, defaultPreferences.redMs)), Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs))),
       markColors: { first: color(stored.markColors?.first), second: color(stored.markColors?.second) },
+      accent: color(stored.accent),
       progress: oneOf(stored.progress, ['off', 'bar', 'detail'], 'detail'),
       clockWeight: oneOf(stored.clockWeight, ['bold', 'light'], 'bold'),
       clockSize: oneOf(stored.clockSize, ['large', 'compact'], 'large'),

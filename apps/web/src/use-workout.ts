@@ -51,7 +51,8 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   const listeners = useRef(new Set<(clocks: ClockValues) => void>());
   const scheduleRef = useRef<() => void>(() => {});
   const lastNavigation = useRef(-Infinity);
-  audio.onError = setSoundError;
+  // The player owns sound errors while mounted and hands the handler back to the app afterwards.
+  useEffect(() => { const previous = audio.onError; audio.onError = setSoundError; return () => { audio.onError = previous; }; }, [audio]);
 
   const refresh = useCallback(() => {
     engine.tick();

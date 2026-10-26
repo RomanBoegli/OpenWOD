@@ -189,11 +189,19 @@ export class WorkoutAudio {
 
   reset() { this.cancel(); this.spoken.clear(); }
 
+  /** The language of the chosen pack's voice (`en_GB-alan-medium` → en-GB), so a device-voice fallback stays in English. */
+  private get speechLang(): string {
+    const voice = this.packs.find(item => item.id === (this.loadedPack || this.cuePack))?.voice ?? '';
+    return /^en[_-]US/i.test(voice) ? 'en-US' : 'en-GB';
+  }
+
   speak(text: string) {
     if (this.mode !== 'voice' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    const voice = pickDefaultVoice(window.speechSynthesis.getVoices());
+    const lang = this.speechLang;
+    utterance.lang = lang;
+    const voice = pickDefaultVoice(window.speechSynthesis.getVoices(), lang) ?? pickDefaultVoice(window.speechSynthesis.getVoices());
     if (voice) utterance.voice = voice;
     utterance.rate = this.rate;
     utterance.volume = this.volume;
@@ -217,7 +225,7 @@ export class WorkoutAudio {
    * sequence when the pack has every name; otherwise the device voice reads the names after the lead clips.
    * Without a pack the device voice says everything, lead text included.
    */
-  private announce(assignment: Assignment, leadText: string, leadClips: CueName[] = [], at = this.context?.currentTime ?? 0) {
+  private announce(assignment: Assignment, leadText: string, leadClips: CueName[] = [], at = this.context?.currentTime ?? 0): 'clips' | 'mixed' | 'speech' {
     if (this.useClips && this.clipsReady) {
       let time = at;
       for (const name of leadClips) time = this.play(this.clips.get(name)!, time) + .1;
@@ -225,26 +233,30 @@ export class WorkoutAudio {
       const lanes: [CueName | undefined, Lane][] = assignment.B ? [['a', assignment.A], ['b', assignment.B]] : [[undefined, assignment.A]];
       const complete = lanes.every(([athlete, lane]) => {
         const id = this.resolveMovement?.(lane) ?? lane.movement;
-        const buffer = id ? this.names.get(id) : undefined;
+        const buffer = (id ? this.names.get(id) : undefined) ?? (lane.movement ? this.names.get(lane.movement) : undefined);
         if (!buffer) return false;
         if (athlete) sequence.push(this.clips.get(athlete)!);
         sequence.push(buffer);
         return true;
       });
-      if (complete) { for (const buffer of sequence) time = this.play(buffer, time) + .08; return; }
+      if (complete) { for (const buffer of sequence) time = this.play(buffer, time) + .08; return 'clips'; }
       this.speak(WorkoutAudio.assignmentText(assignment));
-      return;
+      return 'mixed';
     }
     this.speak(`${leadText} ${WorkoutAudio.assignmentText(assignment)}`.trim());
+    return 'speech';
   }
 
   async test() {
     await this.unlock();
     await this.preload();
     const sample: Assignment = { A: { name: 'Row', movement: 'row' }, B: { name: 'Kettlebell swings', movement: 'kettlebell-swing' } };
-    await this.prepareNames(['row', 'kettlebell-swing']);
+    // The same resolution as a session, so a hidden or replaced movement is prepared under the id that will be announced.
+    await this.prepareNames([sample.A, sample.B!].flatMap(lane => [this.resolveMovement?.(lane) ?? lane.movement!, lane.movement!]));
+    if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
     if (this.context && this.mode !== 'silent') this.beep(this.context.currentTime + .1, .15, 880);
-    this.announce(sample, 'Ready to train.', ['get-ready'], (this.context?.currentTime ?? 0) + .4);
+    const result = this.announce(sample, 'Ready to train.', ['get-ready'], (this.context?.currentTime ?? 0) + .4);
+    if (result === 'mixed') this.onError?.('The movement names were read by the device voice: their recordings could not be loaded. Reload the page and try again, or pick another voice.');
   }
 
   private lastTurn?: { key: string; number: number };

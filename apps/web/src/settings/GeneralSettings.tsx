@@ -7,6 +7,9 @@ import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { type SettingsProps } from './shared';
 
+/** Ready-made accents; the first is the built-in green. Any other colour comes from the picker. */
+const ACCENTS: [string, string][] = [['', 'Green'], ['#2a9d8f', 'Teal'], ['#3b82f6', 'Blue'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f97316', 'Orange']];
+
 /** Bundled sessions that span the scale, so a change to the knobs is visible at once. */
 const REFERENCE_IDS = ['tabata-this', 'cindy', 'fran', 'fight-gone-bad', 'murph', 'hyrox-engine-emom-24'];
 
@@ -20,6 +23,13 @@ export function GeneralSettings({ preferences, onPreferencesChange, entries, hou
     <section className={styles.card} aria-labelledby="appearance-title">
       <h2 id="appearance-title">Appearance</h2>
       <div className={styles.field}><span id="theme-label">Theme</span><div className={shared.segmented} role="radiogroup" aria-labelledby="theme-label">{([['auto', 'Auto', 'auto'], ['light', 'Light', 'sun'], ['dark', 'Dark', 'moon']] as const).map(([value, label, icon]) => <label key={value} data-checked={preferences.theme === value}><input type="radio" name="theme" value={value} checked={preferences.theme === value} onChange={() => update({ theme: value })} /><Icon name={icon} size={16} />{label}</label>)}</div></div>
+      <div className={styles.field}><span id="accent-label">Accent colour</span>
+        <div className={styles.swatches} role="group" aria-labelledby="accent-label">
+          {ACCENTS.map(([value, label]) => <button key={label} type="button" className={styles.swatch} style={value ? { background: value } : undefined} data-default={value === '' || undefined} aria-label={label} aria-pressed={preferences.accent === value} title={label} onClick={() => update({ accent: value })} />)}
+          <label className={styles.swatchPicker} title="Any colour"><input type="color" aria-label="Custom accent colour" value={preferences.accent || '#c8ee91'} onChange={event => update({ accent: event.target.value.toLowerCase() })} /><span>Custom</span></label>
+        </div>
+      </div>
+      <p className={styles.hint}>Buttons, links, the work-phase ring and the highlights follow this colour. Both themes derive their own shade from it.</p>
     </section>
     <section className={styles.card} aria-labelledby="athletes-title">
       <h2 id="athletes-title">Athletes</h2>

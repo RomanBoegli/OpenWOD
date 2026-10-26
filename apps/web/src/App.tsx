@@ -54,7 +54,7 @@ export default function App() {
   audio.rate = preferences.rate;
   audio.volume = preferences.volume;
 
-  useTheme(preferences.theme);
+  useTheme(preferences.theme, preferences.accent);
   useEffect(() => savePreferences(preferences), [preferences]);
   useEffect(() => { void audio.listPacks(); }, [audio]);
   useEffect(() => installFeel(), []);
@@ -76,6 +76,9 @@ export default function App() {
     setImportReport(summary ? `Import done: ${summary}.` : 'Nothing was imported.');
   }, [data]);
   const [importReport, setImportReport] = useState('');
+  // Sound problems outside a session (the Test sound button) land here; the player installs its own handler while it is mounted.
+  const [audioNotice, setAudioNotice] = useState('');
+  useEffect(() => { audio.onError = setAudioNotice; return () => { audio.onError = undefined; }; }, [audio]);
   /** A saved workout gets its sharing identity the first time it leaves the household (SHR-05); bundled ones carry theirs. */
   const ensureSharing = useCallback(async (workout: Workout): Promise<Workout> => {
     if (workout.sharing) return workout;
@@ -194,6 +197,7 @@ export default function App() {
     </header>
 
     <main className={styles.main}>
+      {audioNotice && route.name !== 'play' && <div className={styles.notice} role="status" style={{ marginBottom: 18 }}>{audioNotice} <button type="button" className={styles.quietButton} onClick={() => setAudioNotice('')}>Dismiss</button></div>}
       {route.name === 'play' && (!data.recoveriesReady || lockKnown === 'checking') ? <p className={styles.headerNote}>Checking for an interrupted session…</p>
         : route.name === 'play' && recovery && lockKnown === 'held' ? <section className={styles.recovery} role="region" aria-label="Session in another tab"><div><strong>“{recovery.checkpoint.workout.title}” is running in another tab.</strong><p>Only one tab controls a session. Take it over here and the other tab pauses and hands over, or go back and use that tab.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href={workoutHref(recovery.checkpoint.workoutId)}>Back to overview</a><button className={styles.primaryButton} onClick={() => void takeOver()}><Icon name="play" />Take over here</button></div></section>
         : route.name === 'play' && (recovery || current) ? <Player key={route.id} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
@@ -209,7 +213,7 @@ export default function App() {
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>
       </ConfirmDialog>
-      <footer className={styles.footer}><span>NOT BORN. MADE.</span><span><a href={__OPENWOD_REPO__} target="_blank" rel="noreferrer">OpenWOD on GitHub</a> · <a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a> · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
+      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer"><Icon name="github" size={15} />OpenWOD on GitHub</a> · <a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a> · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
     </main>
   </div>;
 }
