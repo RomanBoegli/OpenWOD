@@ -202,7 +202,7 @@ workouts/        The registry: one folder per collection, one .wod.yaml per work
 
 ### Releasing
 
-Pushing a `v*` tag runs the **Release image** workflow: it validates, runs the browser tests, builds native amd64 and arm64 images with the voices rendered inside, smoke-tests both, and publishes a multi-arch manifest.
+Pushing a `v*` tag runs the **Release image** workflow: it validates the tag, reuses the green **Check** of that commit (or runs it when there is none), builds native amd64 and arm64 images with the voices rendered inside, smoke-tests both, and publishes a multi-arch manifest.
 A manual run publishes `sha-<commit>` instead.
 The step-by-step process, from the version bump to the digest in the Portainer stack, is in [docs/development.md](docs/development.md#cutting-a-release).
 

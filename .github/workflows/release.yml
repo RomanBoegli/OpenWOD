@@ -9,25 +9,32 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      checked: ${{ steps.previous.outputs.checked }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
       - name: Tag must match package.json
         if: github.ref_type == 'tag'
         run: |
           version="v$(node -p "require('./package.json').version")"
           if [ "$version" != "$GITHUB_REF_NAME" ]; then echo "Tag $GITHUB_REF_NAME does not match package.json version $version"; exit 1; fi
           test -f "docs/releases/$GITHUB_REF_NAME.md" || { echo "docs/releases/$GITHUB_REF_NAME.md is missing"; exit 1; }
-      - run: npm run check
-      - run: npm run build
-      - run: npm run browsers:install -- --with-deps
-      - run: npm run test:e2e
-  image:
+      # A commit that already passed the Check workflow is not tested again: the release chains onto that run.
+      - name: Look for a green Check of this commit
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/check.yml/runs?head_sha=$GITHUB_SHA&status=success&per_page=1" --jq '.total_count')"
+          if [ "$runs" -gt 0 ]; then echo "Check already passed for $GITHUB_SHA"; echo "checked=true" >> "$GITHUB_OUTPUT"; else echo "No green Check for $GITHUB_SHA yet: running it here"; echo "checked=false" >> "$GITHUB_OUTPUT"; fi
+  check:
     needs: validate
+    if: needs.validate.outputs.checked != 'true'
+    uses: ./.github/workflows/check.yml
+  image:
+    needs: [validate, check]
+    # The skipped Check of an already-checked commit counts as passed; anything else stops the release.
+    if: always() && needs.validate.result == 'success' && (needs.check.result == 'success' || needs.check.result == 'skipped')
     timeout-minutes: 40
     strategy:
       fail-fast: false

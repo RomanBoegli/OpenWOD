@@ -64,6 +64,8 @@ Browser storage is a convenience until the server milestone and every read is va
 
 The image is built and published by the **Release image** workflow (`.github/workflows/release.yml`) when a `v*` tag is pushed.
 The workflow refuses a tag whose version is not the one in `package.json`, and a tag without release notes.
+It does not repeat the browser suite: the **Check** workflow that ran on the same commit when it was pushed to `main` counts, and only a commit without a green Check is tested inside the release.
+Tags do not trigger the Check workflow on their own.
 
 1. Pick the version, `vX.Y.Z`, and put `X.Y.Z` in `package.json`, `package-lock.json` (both `version` fields), `CITATION.cff` (with the release date) and the `ARG VERSION` default of the `Dockerfile`.
 2. Write `docs/releases/vX.Y.Z.md` from the previous one: what changed, supported browsers, hardware tested, known limitations, the schema version, and a digest line left to fill.

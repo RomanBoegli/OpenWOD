@@ -1,7 +1,11 @@
 name: Check
+# Lint, typecheck, build and the browser suite. Runs on every branch push and pull request, and as the validation step of the
+# Release image workflow when the tagged commit has no green run of its own. Tags themselves do not trigger it.
 on:
   push:
+    branches: ["**"]
   pull_request:
+  workflow_call:
 permissions:
   contents: read
 jobs:
