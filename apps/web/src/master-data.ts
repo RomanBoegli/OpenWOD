@@ -1,22 +1,21 @@
-import { Catalogue, movementKey, movementSlug, type Movement, type MovementLoads } from '../../../packages/domain/src/catalogue';
+import { Catalogue, movementKey, type Movement } from '../../../packages/domain/src/catalogue';
 import { equipmentKey } from '../../../packages/domain/src/library';
 import { seedMovements } from '../../../packages/domain/src/movements';
-import type { LoadLevel, LoadValue, Prescription } from '../../../packages/domain/src/schema';
-import { benchmarkWorkouts, coachWorkouts, fixtureWorkouts } from '../../../packages/domain/src/fixtures';
+import { bundledCollections, bundledWorkouts } from '../../../packages/domain/src/bundled';
 
 /**
  * Master data kept on this device until the server milestone: equipment spellings (merges), collections of workouts,
- * and the exercise catalogue (your own records, overrides of bundled ones, merges and removals). Everything here is
+ * and the movement catalogue (your own records, overrides of bundled ones, merges and removals). Everything here is
  * presentation and organisation; it never changes a workout file.
  */
 export interface Collection { id: string; title: string; description?: string; workoutIds: string[]; builtIn?: boolean }
-export type Sex = 'men' | 'women';
-export type { Movement, MovementLoads };
+export type { Movement };
+export type { Sex } from '../../../packages/domain/src/prescription';
 export interface MasterData {
   /** Equipment key (see equipmentKey) → canonical display name. */
   equipmentAliases: Record<string, string>;
   collections: Collection[];
-  /** Your exercise records: new ones, and overrides of bundled records with the same id. */
+  /** Your movement records: new ones, and overrides of bundled records with the same id. */
   movements: Movement[];
   /** Bundled record ids you removed. */
   hiddenMovements: string[];
@@ -26,29 +25,18 @@ export interface MasterData {
 
 const KEY = 'openwod.master.v1';
 
-/** Collections that ship with the app. They are not editable; your own collections sit beside them. */
+/** Collections that ship with the app: one per registry folder with a collection.yaml, plus every pair workout. They are not editable; your own collections sit beside them. */
 export const builtInCollections: Collection[] = [
-  { id: 'benchmarks', title: 'Benchmarks', description: 'The classic CrossFit girls and hero workouts, as published.', workoutIds: ['fran', 'cindy', ...benchmarkWorkouts.map(workout => workout.id)], builtIn: true },
-  { id: 'coach-programming', title: 'Coach programming', description: 'Standalone pieces curated from class programming.', workoutIds: coachWorkouts.map(workout => workout.id), builtIn: true },
-  { id: 'hyrox', title: 'HYROX', description: 'Training variations of the race structure.', workoutIds: fixtureWorkouts.filter(workout => workout.id.startsWith('hyrox-') || workout.id === 'run-sled-run').map(workout => workout.id), builtIn: true },
-  { id: 'partners', title: 'Partner sessions', description: 'Everything built for two.', workoutIds: fixtureWorkouts.filter(workout => workout.participants === 2).map(workout => workout.id), builtIn: true },
+  ...bundledCollections.map(collection => ({ ...collection, builtIn: true })),
+  { id: 'partners', title: 'Partner sessions', description: 'Everything built for two.', workoutIds: bundledWorkouts.filter(workout => workout.participants === 2).map(workout => workout.id), builtIn: true },
 ];
 
 export const allCollections = (data: MasterData): Collection[] => [...builtInCollections, ...data.collections];
 export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], movements: [], hiddenMovements: [], movementAliases: {} });
 
 const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
-const level = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.min(10_000, value) : 0;
 const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
 const MOVEMENT_LIMIT = 600;
-
-function readLoads(value: unknown): MovementLoads | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const loads = value as Partial<MovementLoads>;
-  const read = (group: unknown): Record<LoadLevel, number> => { const item = (group ?? {}) as Partial<Record<LoadLevel, unknown>>; return { light: level(item.light), medium: level(item.medium), heavy: level(item.heavy) }; };
-  const result = { unit: loads.unit === 'lb' ? 'lb' as const : 'kg' as const, men: read(loads.men), women: read(loads.women) };
-  return Object.values(result.men).some(Boolean) || Object.values(result.women).some(Boolean) ? result : undefined;
-}
 
 function readMovement(value: unknown): Movement | undefined {
   if (!value || typeof value !== 'object') return undefined;
@@ -65,8 +53,6 @@ function readMovement(value: unknown): Movement | undefined {
   const equipment = strings(item.equipment, 10);
   if (equipment.length) record.equipment = equipment;
   if (typeof item.category === 'string' && ['weightlifting', 'gymnastics', 'monostructural', 'strength', 'conditioning', 'mobility'].includes(item.category)) record.category = item.category;
-  const loads = readLoads(item.loads);
-  if (loads) record.loads = loads;
   if (text(item.notes, 500)) record.notes = text(item.notes, 500);
   return record;
 }
@@ -74,7 +60,7 @@ function readMovement(value: unknown): Movement | undefined {
 export function loadMasterData(): MasterData {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<MasterData> & { movementLoads?: unknown } : {};
+    const stored = raw ? JSON.parse(raw) as Partial<MasterData> : {};
     const aliases: Record<string, string> = {};
     if (stored.equipmentAliases && typeof stored.equipmentAliases === 'object') for (const [key, name] of Object.entries(stored.equipmentAliases)) if (text(key, 80) && text(name, 80)) aliases[equipmentKey(key)] = text(name, 80);
     const collections: Collection[] = Array.isArray(stored.collections) ? stored.collections.filter((item): item is Collection => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.workoutIds))).slice(0, 50).map(item => ({ id: text(item.id, 120), title: text(item.title, 120) || 'Collection', ...(item.description ? { description: text(item.description, 500) } : {}), workoutIds: item.workoutIds.filter((id): id is string => typeof id === 'string').slice(0, 500) })) : [];
@@ -82,19 +68,7 @@ export function loadMasterData(): MasterData {
     const hiddenMovements = strings(stored.hiddenMovements, MOVEMENT_LIMIT);
     const movementAliases: Record<string, string> = {};
     if (stored.movementAliases && typeof stored.movementAliases === 'object') for (const [key, id] of Object.entries(stored.movementAliases)) if (text(key, 160) && text(id, 80)) movementAliases[text(key, 160)] = text(id, 80);
-    let data: MasterData = { equipmentAliases: aliases, collections, movements, hiddenMovements, movementAliases };
-    // Earlier versions kept a separate movement-loads table; it becomes loads on the matching catalogue records.
-    if (Array.isArray(stored.movementLoads)) {
-      for (const legacy of stored.movementLoads as { name?: unknown }[]) {
-        const name = text(legacy?.name, 160);
-        const loads = readLoads(legacy);
-        if (!name || !loads) continue;
-        const catalogue = effectiveCatalogue(data);
-        const existing = catalogue.byName(name);
-        data = upsertMovement(data, existing ? { ...existing, loads } : { id: freeMovementId(movementSlug(name), catalogue), name, loads });
-      }
-    }
-    return data;
+    return { equipmentAliases: aliases, collections, movements, hiddenMovements, movementAliases };
   } catch { return emptyMasterData(); }
 }
 
@@ -124,7 +98,7 @@ export function unmergeEquipment(data: MasterData, key: string): MasterData {
   return { ...data, equipmentAliases: aliases };
 }
 
-// ---- Exercise catalogue ---------------------------------------------------------------------------------------
+// ---- Movement catalogue ---------------------------------------------------------------------------------------
 
 export const seedIds = new Set(seedMovements.map(record => record.id));
 
@@ -198,25 +172,6 @@ export function removeMovementAlias(data: MasterData, spelling: string): MasterD
   const movementAliases = { ...data.movementAliases };
   delete movementAliases[spelling];
   return { ...data, movementAliases };
-}
-
-/** Loads for a prescription from its record (or the record's family head), as prescription levels for the given sex. */
-export function defaultLoad(catalogue: Catalogue, prescription: { movement?: string; name: string }, sex: Sex): Prescription['load'] | undefined {
-  const record = catalogue.resolve(prescription);
-  if (!record) return undefined;
-  const loads = record.loads ?? catalogue.head(record).loads;
-  if (!loads) return undefined;
-  const group = loads[sex];
-  const toValue = (value: number): LoadValue | undefined => value > 0 ? { value, unit: loads.unit } : undefined;
-  const result = { light: toValue(group.light), medium: toValue(group.medium), heavy: toValue(group.heavy) };
-  const defined = Object.fromEntries(Object.entries(result).filter(([, value]) => value));
-  return Object.keys(defined).length ? defined as Prescription['load'] : undefined;
-}
-
-/** A workout's own levels win; a single value or no load falls back to the catalogue when it knows the movement. */
-export function effectiveLoad(catalogue: Catalogue, prescription: Prescription, sex: Sex): Prescription['load'] | undefined {
-  if (prescription.load && !('value' in prescription.load)) return prescription.load;
-  return defaultLoad(catalogue, prescription, sex) ?? prescription.load;
 }
 
 // ---- Collections ---------------------------------------------------------------------------------------------

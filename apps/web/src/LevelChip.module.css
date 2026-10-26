@@ -3,4 +3,6 @@
 .chip[data-level=medium] { background: var(--level-medium); color: var(--level-medium-ink); }
 .chip[data-level=heavy] { background: var(--level-heavy); color: var(--level-heavy-ink); border-color: var(--level-heavy-border); }
 .line { display: inline-flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; }
-.levels { display: inline-flex; flex-wrap: wrap; gap: 12px; }
+.levels { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.unit { color: var(--ink-3); font-size: .85em; margin-left: -2px; }
+.line .unit { margin-left: 0; }

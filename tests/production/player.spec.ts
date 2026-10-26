@@ -1,17 +1,17 @@
 import { expect, test } from '@playwright/test';
-import type { WorkoutFile } from '../../packages/domain/src';
+import { serialiseWorkoutFile } from '../../packages/domain/src';
 
 test('the production container plays a real interval without test injection', async ({ page }) => {
   await page.goto('/');
-  expect(await page.evaluate(() => typeof window.__wodvaTest)).toBe('undefined');
+  expect(await page.evaluate(() => typeof window.__openwodTest)).toBe('undefined');
   await page.goto('/#/settings/sound');
   await page.getByRole('combobox', { name: 'Sound', exact: true }).selectOption('silent');
   await page.goto('/');
-  const file: WorkoutFile = { format: 'wodva.workout', formatVersion: 1, workout: {
-    schemaVersion: 1, revision: 1, id: 'production-smoke', title: 'Production timing check', participants: 2, prepMs: 0, equipment: [],
+  const file = serialiseWorkoutFile({
+    schemaVersion: 2, revision: 1, id: 'production-smoke', title: 'Production timing check', participants: 2, prepMs: 0, equipment: [],
     sections: [{ id: 'section', title: 'Smoke check', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'movement', type: 'timed', durationMs: 1000, assignments: { A: { name: 'Air squats' }, B: { name: 'March in place' } } } }],
-  } };
-  await page.locator('input[type=file]').setInputFiles({ name: 'production.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
+  });
+  await page.locator('input[type=file]').setInputFiles({ name: 'production.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(file) });
   await page.getByRole('button', { name: 'Save to library' }).click();
   await expect(page).toHaveURL(/#\/wod\/production-timing-check$/);
   await page.goto('/');
@@ -19,7 +19,7 @@ test('the production container plays a real interval without test injection', as
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Workout complete', { timeout: 5000 });
   await expect(page.getByTestId('primary-timer')).toHaveText('00:01');
-  expect(await page.evaluate(() => typeof window.__wodvaTest)).toBe('undefined');
+  expect(await page.evaluate(() => typeof window.__openwodTest)).toBe('undefined');
 });
 
 test('the production container ships the recorded cue packs', async ({ page, request }) => {

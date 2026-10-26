@@ -91,6 +91,8 @@ function validatePrescription(value: Prescription | undefined, at: string, label
   if (value.distance && !(value.distance.value > 0)) issues.push({ path: `${at}.distance`, message: `${label}: distance must be above zero.` });
   const loads = value.load ? 'value' in value.load ? [value.load] : Object.values(value.load) : [];
   for (const load of loads) if (load && (!Number.isFinite(load.value) || load.value < 0)) issues.push({ path: `${at}.load`, message: `${label}: load cannot be negative.` });
+  for (const load of loads) if (load?.women !== undefined && (!Number.isFinite(load.women) || load.women < 0)) issues.push({ path: `${at}.load`, message: `${label}: the women’s load cannot be negative.` });
+  for (const load of loads) if (load?.unit === 'percent' && load.women !== undefined) issues.push({ path: `${at}.load`, message: `${label}: a percentage of 1RM takes no women’s value.` });
 }
 
 /** Field-level problems in the author's own terms, before the compiler's structural checks run. */

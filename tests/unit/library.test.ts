@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { durationBucket, equipmentOptions, matchesFilter, sortSummaries, summariseWorkout } from '../../packages/domain/src/library';
-import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
+const fullBodyPartner = bundledWorkout('full-body-partner');
+const partnerCircuit = bundledWorkout('partner-circuit');
 
 const circuit = summariseWorkout(partnerCircuit);
 const fullBody = summariseWorkout(fullBodyPartner);

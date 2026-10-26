@@ -1,9 +1,9 @@
 import type { Movement } from './catalogue';
 
 /**
- * Seed exercise catalogue: flat records, one per variant, grouped by family for readability. A family head is a real
+ * Seed movement catalogue: flat records, one per variant, grouped by family for readability. A family head is a real
  * movement whose plain name workouts use ("Cleans", "Pull-ups"); only "Squats", "Overhead presses" and "Dips" are
- * umbrella heads because no plain name exists. Loads are left to settings; `notes` only where a standard matters.
+ * umbrella heads because no plain name exists. Loads live in the workouts, never on records; `notes` only where a standard matters.
  */
 export const seedMovements: Movement[] = [
   // Cleans

@@ -5,7 +5,7 @@ import type { Prescription } from '../../../packages/domain/src/schema';
 import { Icon } from './Icon';
 import styles from './MovementPicker.module.css';
 
-/** Ranked fields for the exercise picker and the settings search: the name first, then aliases, the family head, equipment. */
+/** Ranked fields for the movement picker and the settings search: the name first, then aliases, the family head, equipment. */
 export const movementSearchFields = (catalogue: Catalogue) => (record: Movement) => [
   { text: record.name, weight: 3 },
   { text: [record.shortName ?? '', ...(record.aliases ?? [])].join(' '), weight: 2 },
@@ -25,7 +25,7 @@ interface MovementPickerProps {
   onAdd: (name: string) => Movement;
 }
 
-/** The movement name input with an exercise picker: type, arrow down, Enter. Picking fills the names and links the record. */
+/** The movement name input with a catalogue picker: type, arrow down, Enter. Picking fills the names and links the record. */
 export function MovementPicker({ value, label, catalogue, invalid, onChange, onPick, onAdd }: MovementPickerProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -67,7 +67,7 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onP
         else if (event.key === 'Enter' && open && options[active]) { event.preventDefault(); pick(options[active]); }
         else if (event.key === 'Escape') setOpen(false);
       }} />
-    {open && options.length > 0 && <ul id={listId} role="listbox" className={styles.list} aria-label={`Exercises matching ${query}`}>
+    {open && options.length > 0 && <ul id={listId} role="listbox" className={styles.list} aria-label={`Movements matching ${query}`}>
       {options.map((option, index) => {
         const head = option.family ? catalogue.head(option) : undefined;
         return <li key={option.id} id={`${listId}-${index}`} role="option" aria-selected={index === active} data-active={index === active} onPointerDown={event => event.preventDefault()} onClick={() => pick(option)} onPointerEnter={() => setActive(index)}>
@@ -78,7 +78,7 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onP
     </ul>}
     <div className={styles.status} aria-live="polite">
       {record ? <span className={styles.matched}><Icon name="check" size={12} />{record.name}{record.equipment?.length ? ` · ${record.equipment.join(', ')}` : ''}</span>
-        : unmatched ? <span className={styles.unmatchedNote}><Icon name="alert" size={12} />Not in your exercises<button type="button" onClick={add} aria-label={`Add ${query} to exercises`}>Add</button></span>
+        : unmatched ? <span className={styles.unmatchedNote}><Icon name="alert" size={12} />Not in your catalogue<button type="button" onClick={add} aria-label={`Add ${query} to the catalogue`}>Add</button></span>
         : null}
     </div>
   </div>;

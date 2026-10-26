@@ -1,0 +1,61 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: jackie
+  revision: 1
+  title: Jackie
+  description: A thousand metres on the rower, fifty thrusters with an empty bar, thirty pull-ups. Row hard but not all out, because the thrusters are light and are meant to be done in big sets; save a little for the pull-ups. Scale the thruster bar and break the pull-ups early; the fifteen-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/jackie
+    notes: Follows the published benchmark. Heavy is the published Rx for men with the women’s Rx in brackets; medium and light are common scalings, rounded to plate and kettlebell sizes.
+  equipment:
+    - Rowing machine
+    - Barbell
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: jackie-for-time
+      title: Row, thrusters, pull-ups
+      format: forTime
+      transitionAfter: manualReady
+      cap: 15m
+      body:
+        id: jackie-chipper
+        type: sequence
+        children:
+          - id: jackie-row
+            type: task
+            assignments:
+              A:
+                name: Row
+                distance:
+                  value: 1000
+                  unit: m
+          - id: jackie-thrusters
+            type: task
+            assignments:
+              A:
+                name: Thrusters
+                reps: 50
+                load:
+                  light:
+                    value: 10
+                    women: 8
+                    unit: kg
+                  medium:
+                    value: 15
+                    women: 12
+                    unit: kg
+                  heavy:
+                    value: 20
+                    women: 16
+                    unit: kg
+          - id: jackie-pull-ups
+            type: task
+            assignments:
+              A:
+                name: Pull-ups
+                reps: 30

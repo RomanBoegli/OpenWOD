@@ -30,7 +30,7 @@ npm run browsers:install
 npm run test:e2e       # Chromium, Firefox and WebKit
 ```
 
-Browser tests drive the player through an injected clock (`window.__wodvaTest`) that exists only in test builds, so a 20-minute workout runs in seconds. WebKit stands in for Safari's engine. `SCREENS=1 npx playwright test --project=webkit tests/e2e/screens.spec.ts` captures a screenshot set of every screen in both themes for visual review.
+Browser tests drive the player through an injected clock (`window.__openwodTest`) that exists only in test builds, so a 20-minute workout runs in seconds. WebKit stands in for Safari's engine. `SCREENS=1 npx playwright test --project=webkit tests/e2e/screens.spec.ts` captures a screenshot set of every screen in both themes for visual review.
 
 The frozen traces under `tests/unit/traces/` pin the compiled timing of the original timed fixtures; a change there is a change in behaviour and must be deliberate.
 

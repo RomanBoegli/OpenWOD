@@ -1,0 +1,109 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: mixed-session
+  revision: 1
+  title: Mixed session
+  description: Three minutes of timed warm-up, three sets of deadlifts at your own pace with ninety seconds between, then a ten-minute AMRAP of kettlebell swings, box step-ups and sit-ups. Ready gates separate the three parts.
+  attribution:
+    author: OpenWOD
+  equipment:
+    - Barbell
+    - Kettlebell
+    - Plyo box
+  participants: 1
+  prep: 10s
+  sections:
+    - id: mixed-warm-up
+      title: Warm-up
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: mixed-warm-up-sequence
+        type: sequence
+        children:
+          - id: mixed-jacks
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Jumping jacks
+          - id: mixed-squats
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Air squats
+          - id: mixed-hinges
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Hip hinges
+    - id: mixed-strength
+      title: Deadlifts
+      format: strength
+      transitionAfter: manualReady
+      body:
+        id: mixed-deadlift-sets
+        type: repeat
+        count: 3
+        betweenIterationsRest: 1m30s
+        body:
+          id: mixed-deadlift
+          type: task
+          assignments:
+            A:
+              name: Deadlift
+              reps: 5
+              load:
+                light:
+                  value: 60
+                  unit: percent
+                medium:
+                  value: 70
+                  unit: percent
+                heavy:
+                  value: 80
+                  unit: percent
+    - id: mixed-amrap
+      title: AMRAP 10
+      format: amrap
+      transitionAfter: manualReady
+      cap: 10m
+      body:
+        id: mixed-amrap-round
+        type: sequence
+        children:
+          - id: mixed-swings
+            type: task
+            assignments:
+              A:
+                name: Kettlebell swings
+                reps: 15
+                load:
+                  light:
+                    value: 12
+                    women: 8
+                    unit: kg
+                  medium:
+                    value: 16
+                    women: 12
+                    unit: kg
+                  heavy:
+                    value: 24
+                    women: 16
+                    unit: kg
+          - id: mixed-step-ups
+            type: task
+            assignments:
+              A:
+                name: Box step-ups
+                reps: 12
+          - id: mixed-sit-ups
+            type: task
+            assignments:
+              A:
+                name: Sit-ups
+                reps: 15

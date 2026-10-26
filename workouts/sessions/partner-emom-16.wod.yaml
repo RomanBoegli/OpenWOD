@@ -1,0 +1,46 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: partner-emom-16
+  revision: 1
+  title: Partner EMOM 16
+  description: "Every minute for sixteen minutes. Odd minutes: A rows twelve calories while B does ten burpees. Even minutes: swap. Tap Done when both of you are finished and rest until the next minute; the clock does not wait."
+  attribution:
+    author: OpenWOD
+    notes: "An EMOM in the CrossFit sense: work starts on each minute boundary whether or not the previous set was reported."
+  equipment:
+    - Rowing machine
+  participants: 2
+  prep: 10s
+  sections:
+    - id: emom16
+      title: EMOM 16
+      format: emom
+      transitionAfter: manualReady
+      interval: 1m
+      intervals: 16
+      body:
+        id: emom16-minutes
+        type: sequence
+        children:
+          - id: emom16-odd
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Row
+                calories: 12
+              B:
+                name: Burpees
+                reps: 10
+          - id: emom16-even
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Burpees
+                reps: 10
+              B:
+                name: Row
+                calories: 12

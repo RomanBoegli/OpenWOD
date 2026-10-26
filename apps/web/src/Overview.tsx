@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { formatDuration } from '../../../packages/domain/src';
 import { compileWorkout, type Phase } from '../../../packages/domain/src/compiler';
 import { outlineWorkout } from '../../../packages/domain/src/outline';
-import { prescriptionText } from '../../../packages/domain/src/fixtures';
+import { prescriptionText } from '../../../packages/domain/src/prescription';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
 import { LoadLevels } from './LevelChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
-import type { Catalogue } from '../../../packages/domain/src/catalogue';
-import { effectiveLoad, type Collection, type Sex } from './master-data';
+import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
+import type { Collection } from './master-data';
 import { agoText, type SessionRecord } from './session-log';
 import { resultText } from './Player';
 import { displayTime } from '../../../packages/engine/src';
@@ -23,14 +23,14 @@ import shared from './App.module.css';
 const REST_NAMES: Record<Phase, string> = { work: 'work', transition: 'transition', roundRest: 'round rest', blockRest: 'block rest' };
 const restText = (segments: { kind: Phase; ms: number }[]) => segments.map(segment => `${formatDuration(segment.ms)} ${REST_NAMES[segment.kind]}`).join(' + ');
 
-interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionRecord[]; catalogue: Catalogue; loadsFor: { A: Sex; B: Sex }; onRemove: (id: string) => void }
+interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionRecord[]; loadsFor: { A: Sex; B: Sex }; loadUnit: LoadUnit; onRemove: (id: string) => void }
 
 /** The study view: everything the athletes will see, round by round, before anyone presses Start. */
 /** Targets only (no fallback hint), for table cells; loads are shown per level separately. */
 const targetText = (value: Prescription) => value.reps || value.calories || value.distance || value.timeMs ? prescriptionText({ ...value, load: undefined }) : '';
-export function Overview({ entry, names, collections, sessions, catalogue, loadsFor, onRemove }: OverviewProps) {
+export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove }: OverviewProps) {
   const { workout, summary, source, editable } = entry;
-  const cell = (value: Prescription | undefined, role: 'A' | 'B') => { if (!value) return null; const load = effectiveLoad(catalogue, value, loadsFor[role]); return <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{load ? <small><LoadLevels load={load} /></small> : null}</>; };
+  const cell = (value: Prescription | undefined, role: 'A' | 'B') => value ? <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{value.load ? <small><LoadLevels load={value.load} unit={loadUnit} sex={workout.participants === 2 ? loadsFor[role] : undefined} /></small> : null}</> : null;
   const [removing, setRemoving] = useState(false);
   const plan = useMemo(() => compileWorkout(workout), [workout]);
   const sections = useMemo(() => outlineWorkout(plan), [plan]);

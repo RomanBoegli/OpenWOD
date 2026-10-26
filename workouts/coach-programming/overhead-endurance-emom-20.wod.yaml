@@ -1,0 +1,59 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: overhead-endurance-emom-20
+  revision: 1
+  title: Overhead endurance EMOM 20
+  description: "Four stations, five rounds: thirty seconds of strict handstand push-ups, ten dumbbell overhead walking lunge steps, thirty seconds of kipping handstand push-ups, twenty wall balls. Pick a handstand push-up variation you can keep moving for the full thirty seconds."
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Wall
+    - Dumbbells
+    - Medicine ball
+  participants: 1
+  prep: 10s
+  sections:
+    - id: overhead
+      title: EMOM 20
+      format: emom
+      transitionAfter: manualReady
+      interval: 1m
+      intervals: 20
+      body:
+        id: overhead-stations
+        type: sequence
+        children:
+          - id: overhead-strict-hspu
+            type: task
+            assignments:
+              A:
+                notes: 30 s of work; pike push-ups to scale
+                name: Strict handstand push-ups
+                shortName: Strict HSPU
+                time: 30s
+          - id: overhead-lunges
+            type: task
+            assignments:
+              A:
+                notes: Two dumbbells overhead; 45 s cap
+                name: Dumbbell overhead walking lunges
+                shortName: DB overhead lunges
+                reps: 10
+          - id: overhead-kipping-hspu
+            type: task
+            assignments:
+              A:
+                notes: 30 s of work
+                name: Kipping handstand push-ups
+                shortName: Kipping HSPU
+                time: 30s
+          - id: overhead-wall-balls
+            type: task
+            assignments:
+              A:
+                notes: Standard ball and target; 45 s cap
+                name: Wall balls
+                reps: 20

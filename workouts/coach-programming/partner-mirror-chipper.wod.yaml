@@ -1,0 +1,209 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: partner-mirror-chipper
+  revision: 1
+  title: Partner mirror chipper
+  description: "A chipper for two that climbs down and back up: row, wall balls, slam balls, handstand push-ups, burpees over the rower, then the same steps in reverse. One athlete works at a time; split every step however you like and tap Done when a step is finished."
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Rowing machine
+    - Medicine ball
+    - Slam ball
+    - Wall
+  participants: 2
+  prep: 10s
+  sections:
+    - id: mirror
+      title: Chipper
+      format: forTime
+      transitionAfter: manualReady
+      body:
+        id: mirror-steps
+        type: sequence
+        children:
+          - id: mirror-row-1
+            type: task
+            completion: team
+            assignments:
+              A:
+                notes: Split as you like
+                name: Row
+                calories: 50
+              B:
+                notes: Split as you like
+                name: Row
+                calories: 50
+          - id: mirror-wall-balls-1
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Wall balls
+                reps: 40
+                load:
+                  light:
+                    value: 6
+                    unit: kg
+                  medium:
+                    value: 9
+                    unit: kg
+                  heavy:
+                    value: 12
+                    unit: kg
+              B:
+                name: Wall balls
+                reps: 40
+                load:
+                  light:
+                    value: 6
+                    unit: kg
+                  medium:
+                    value: 9
+                    unit: kg
+                  heavy:
+                    value: 12
+                    unit: kg
+          - id: mirror-slam-balls-1
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Slam ball ground-to-overhead
+                shortName: Slam ball G2OH
+                reps: 30
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 20
+                    unit: kg
+                  heavy:
+                    value: 30
+                    unit: kg
+              B:
+                name: Slam ball ground-to-overhead
+                shortName: Slam ball G2OH
+                reps: 30
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 20
+                    unit: kg
+                  heavy:
+                    value: 30
+                    unit: kg
+          - id: mirror-hspu-1
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Handstand push-ups
+                shortName: HSPU
+                reps: 20
+              B:
+                name: Handstand push-ups
+                shortName: HSPU
+                reps: 20
+          - id: mirror-burpees
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Burpees over rower
+                reps: 10
+              B:
+                name: Burpees over rower
+                reps: 10
+          - id: mirror-hspu-2
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Handstand push-ups
+                shortName: HSPU
+                reps: 20
+              B:
+                name: Handstand push-ups
+                shortName: HSPU
+                reps: 20
+          - id: mirror-slam-balls-2
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Slam ball ground-to-overhead
+                shortName: Slam ball G2OH
+                reps: 30
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 20
+                    unit: kg
+                  heavy:
+                    value: 30
+                    unit: kg
+              B:
+                name: Slam ball ground-to-overhead
+                shortName: Slam ball G2OH
+                reps: 30
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 20
+                    unit: kg
+                  heavy:
+                    value: 30
+                    unit: kg
+          - id: mirror-wall-balls-2
+            type: task
+            completion: team
+            assignments:
+              A:
+                name: Wall balls
+                reps: 40
+                load:
+                  light:
+                    value: 6
+                    unit: kg
+                  medium:
+                    value: 9
+                    unit: kg
+                  heavy:
+                    value: 12
+                    unit: kg
+              B:
+                name: Wall balls
+                reps: 40
+                load:
+                  light:
+                    value: 6
+                    unit: kg
+                  medium:
+                    value: 9
+                    unit: kg
+                  heavy:
+                    value: 12
+                    unit: kg
+          - id: mirror-row-2
+            type: task
+            completion: team
+            assignments:
+              A:
+                notes: Split as you like
+                name: Row
+                calories: 50
+              B:
+                notes: Split as you like
+                name: Row
+                calories: 50

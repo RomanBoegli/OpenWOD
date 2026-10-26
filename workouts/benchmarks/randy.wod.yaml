@@ -1,0 +1,42 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: randy
+  revision: 1
+  title: Randy
+  description: Seventy-five power snatches with a light bar, for time. It is a sprint that turns into a shoulder and grip test, so pick a set size early and stick to it rather than going out unbroken and stalling. Scale the load so the bar keeps cycling; the ten-minute cap is a training suggestion, not part of the benchmark.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/randy
+    notes: Follows the published benchmark. Heavy is the published Rx for men with the women’s Rx in brackets; medium and light are common scalings, rounded to plate and kettlebell sizes.
+  equipment:
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: randy-for-time
+      title: 75 power snatches
+      format: forTime
+      transitionAfter: manualReady
+      cap: 10m
+      body:
+        id: randy-power-snatches
+        type: task
+        assignments:
+          A:
+            name: Power snatches
+            reps: 75
+            load:
+              light:
+                value: 15
+                women: 12
+                unit: kg
+              medium:
+                value: 25
+                women: 19
+                unit: kg
+              heavy:
+                value: 34
+                women: 25
+                unit: kg

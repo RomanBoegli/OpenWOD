@@ -112,7 +112,7 @@ export interface SummaryOptions {
   /** Maps an equipment name to its canonical spelling (master data merges). */
   canonicalEquipment?: (name: string) => string;
   collections?: string[];
-  /** When given, equipment comes from the exercise records of recognised movements; keywords only cover the rest. */
+  /** When given, equipment comes from the movement records of recognised movements; keywords only cover the rest. */
   catalogue?: Catalogue;
 }
 

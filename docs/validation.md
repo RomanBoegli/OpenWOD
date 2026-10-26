@@ -17,9 +17,9 @@ Recorded 26 October 2026. This records the initial timed-player milestone, not c
 | Domain/compiler, engine, audio and server unit checks | 17 passed. |
 | Accelerated browser integration | 27 passed: nine scenarios in each of Chromium, Firefox and WebKit. |
 | Real production-container browser smoke | Three passed: actual one-second workout in each browser engine; no clock injection available. |
-| Native arm64 Docker build and startup | Passed; `wodva-preview-app-1` running healthy at `http://127.0.0.1:8080`. |
+| Native arm64 Docker build and startup | Passed; `openwod-preview-app-1` running healthy at `http://127.0.0.1:8080`. |
 | Served frontend, JS asset and readiness endpoint | HTTP 200; hashed asset caching is immutable; readiness explicitly reports no persistence. |
-| Production test-hook exclusion | Build assertion passed; fetched served JS contains no `__wodvaTest`; production browser checks confirm it is undefined. |
+| Production test-hook exclusion | Build assertion passed; fetched served JS contains no `__openwodTest`; production browser checks confirm it is undefined. |
 | Idle runtime memory | One short sample approximately 33 MiB; not a real-hour or memory-pressure test. |
 | Git whitespace checks | Passed for staged and working changes. |
 

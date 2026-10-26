@@ -4,10 +4,10 @@ import type { Workout } from '../../../packages/domain/src';
 import { WorkoutEngine, type ClockValues, type Command, type CommandType } from '../../../packages/engine/src';
 import type { WorkoutAudio } from './audio';
 
-declare const __WODVA_TEST__: boolean;
+declare const __OPENWOD_TEST__: boolean;
 declare global {
   interface Window {
-    __wodvaTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] }; command: (type: CommandType, extra?: Partial<Command>) => boolean };
+    __openwodTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] }; command: (type: CommandType, extra?: Partial<Command>) => boolean };
   }
 }
 
@@ -36,7 +36,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
       setProjected({ engine, projection: next });
     }
     const clocks = engine.readClocks();
-    if (!__WODVA_TEST__) audio.update(next, clocks);
+    if (!__OPENWOD_TEST__) audio.update(next, clocks);
     for (const listener of listeners.current) listener(clocks);
   }, [engine, audio]);
 
@@ -72,12 +72,12 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
       schedule();
     };
     document.addEventListener('visibilitychange', hidden);
-    if (__WODVA_TEST__) window.__wodvaTest = {
+    if (__OPENWOD_TEST__) window.__openwodTest = {
       advance(ms) { clockOffset.current += ms; schedule(); },
       snapshot() { return { projection: engine.project(), clocks: engine.readClocks(), events: engine.events }; },
       command(type, extra = {}) { const accepted = engine.command({ id: crypto.randomUUID(), occurrenceId: engine.occurrenceId, type, ...extra }); schedule(); return accepted; },
     };
-    return () => { disposed = true; if (deadline) clearTimeout(deadline); cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); if (__WODVA_TEST__) delete window.__wodvaTest; };
+    return () => { disposed = true; if (deadline) clearTimeout(deadline); cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); if (__OPENWOD_TEST__) delete window.__openwodTest; };
   }, [engine, refresh, audio]);
 
   useEffect(() => {
@@ -104,7 +104,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
       if (performance.now() - lastNavigation.current < 350) return;
       lastNavigation.current = performance.now();
     }
-    if (['play', 'resume', 'ready'].includes(type) && !__WODVA_TEST__) void audio.unlock();
+    if (['play', 'resume', 'ready'].includes(type) && !__OPENWOD_TEST__) void audio.unlock();
     engine.command({ id: crypto.randomUUID(), occurrenceId, type, ...extra });
     scheduleRef.current();
   }, [engine, audio]);

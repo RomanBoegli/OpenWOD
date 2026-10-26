@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { WorkoutValidationError, type Workout } from '../../packages/domain/src';
-import { cindy, fran, mixedSession, partnerCircuit, partnerEmom16, partnerSprints, runSledRun } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
 import { WorkoutEngine, type Command, type CommandType } from '../../packages/engine/src';
+const cindy = bundledWorkout('cindy');
+const fran = bundledWorkout('fran');
+const mixedSession = bundledWorkout('mixed-session');
+const partnerCircuit = bundledWorkout('partner-circuit');
+const partnerEmom16 = bundledWorkout('partner-emom-16');
+const partnerSprints = bundledWorkout('you-go-i-go-sprints');
+const runSledRun = bundledWorkout('run-sled-run');
 
 function fixture(workout: Workout) {
   let now = 0;

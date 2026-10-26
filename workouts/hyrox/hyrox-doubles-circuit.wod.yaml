@@ -1,0 +1,106 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: hyrox-doubles-circuit
+  revision: 1
+  title: HYROX doubles circuit
+  description: "Run together, then split the stations the way a doubles team does: 45 seconds on, 15 to swap, and the columns trade after each round so both of you touch every station."
+  attribution:
+    author: OpenWOD
+    sourceUrl: https://hyrox.com/the-fitness-race/
+    notes: "A training variation of the published HYROX race structure (8 runs, 8 stations). Timed intervals replace race distances and loads; nothing here is an official prescription. Swap stations you lack: a heavy carry for the sled, a treadmill or shuttle for the run."
+  equipment:
+    - SkiErg
+    - Sled
+    - Rowing machine
+    - Kettlebells
+    - Sandbag
+    - Medicine ball
+  participants: 2
+  prep: 10s
+  sections:
+    - id: doubles-1
+      title: Block 1
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: doubles-1-body
+        type: sequence
+        children:
+          - id: doubles-1-run
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                name: Run together
+              B:
+                name: Run together
+          - id: doubles-1-rounds
+            type: repeat
+            count: 2
+            assignmentPolicy: alternate
+            body:
+              id: doubles-1-stations
+              type: sequence
+              betweenChildrenRest: 15s
+              trailingRest: 15s
+              children:
+                - id: doubles-1-skierg
+                  type: timed
+                  duration: 45s
+                  assignments:
+                    A:
+                      name: SkiErg
+                    B:
+                      name: Sled push
+                - id: doubles-1-sled-pull
+                  type: timed
+                  duration: 45s
+                  assignments:
+                    A:
+                      name: Sled pull
+                    B:
+                      name: Burpee broad jumps
+    - id: doubles-2
+      title: Block 2
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: doubles-2-body
+        type: sequence
+        children:
+          - id: doubles-2-run
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                name: Run together
+              B:
+                name: Run together
+          - id: doubles-2-rounds
+            type: repeat
+            count: 2
+            assignmentPolicy: alternate
+            body:
+              id: doubles-2-stations
+              type: sequence
+              betweenChildrenRest: 15s
+              trailingRest: 15s
+              children:
+                - id: doubles-2-row
+                  type: timed
+                  duration: 45s
+                  assignments:
+                    A:
+                      name: Row
+                    B:
+                      name: Farmers carry
+                - id: doubles-2-sandbag-lunges
+                  type: timed
+                  duration: 45s
+                  assignments:
+                    A:
+                      name: Sandbag lunges
+                    B:
+                      name: Wall balls

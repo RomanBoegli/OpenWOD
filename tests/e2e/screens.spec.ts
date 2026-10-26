@@ -1,14 +1,14 @@
 import { test, type Page } from '@playwright/test';
 /** Screenshot pass for the visual review; runs only when SCREENS=1. */
 const OUT = process.env.SCREENS_DIR ?? 'test-results/screens';
-const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__wodvaTest));
-const advance = (page: Page, ms: number) => page.evaluate(ms => window.__wodvaTest!.advance(ms), ms);
+const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__openwodTest));
+const advance = (page: Page, ms: number) => page.evaluate(ms => window.__openwodTest!.advance(ms), ms);
 const shots: [string, (page: Page) => Promise<void>][] = [
   ['library', async page => { await page.goto('/'); await page.getByRole('heading', { level: 1 }).waitFor(); }],
   ['overview-cindy', async page => { await page.goto('/#/wod/cindy'); await page.getByRole('heading', { level: 1 }).waitFor(); }],
   ['overview-fran', async page => { await page.goto('/#/wod/fran'); await page.getByRole('heading', { level: 1 }).waitFor(); }],
   ['editor-fran', async page => { await page.goto('/#/wod/fran/edit'); await page.getByRole('heading', { level: 1 }).waitFor(); }],
-  ['settings-exercises', async page => { await page.goto('/#/settings/exercises'); await page.getByRole('heading', { level: 1 }).waitFor(); await page.getByRole('searchbox', { name: 'Find exercises' }).fill('clean'); }],
+  ['settings-movements', async page => { await page.goto('/#/settings/movements'); await page.getByRole('heading', { level: 1 }).waitFor(); await page.getByRole('searchbox', { name: 'Find movements' }).fill('clean'); }],
   ['settings-general', async page => { await page.goto('/#/settings'); await page.getByRole('heading', { level: 1 }).waitFor(); }],
   ['editor-picker', async page => { await page.goto('/#/new'); await page.getByRole('heading', { level: 1 }).waitFor(); await page.getByRole('combobox', { name: 'Section 1 slot 1 athlete A' }).fill('clea'); await page.getByRole('combobox', { name: 'Section 1 slot 1 athlete B' }).fill('Pogo hops'); await page.getByRole('combobox', { name: 'Section 1 slot 1 athlete A' }).focus(); }],
   ['ready-fran', async page => { await page.goto('/#/wod/fran/play'); await ready(page); }],

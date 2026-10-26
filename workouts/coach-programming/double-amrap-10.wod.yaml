@@ -1,0 +1,108 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: double-amrap-10
+  revision: 1
+  title: Double AMRAP 10
+  description: Two ten-minute AMRAPs of row, toes-to-bar, front squats and burpees over the bar, scored as rounds plus reps. Rest two minutes between the two, then tap Ready. Aim to match the first score in the second half.
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Rowing machine
+    - Pull-up bar
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: double-amrap-1
+      title: AMRAP 10, part 1
+      format: amrap
+      transitionAfter: manualReady
+      cap: 10m
+      counter: roundsAndReps
+      body:
+        id: double-amrap-1-round
+        type: sequence
+        children:
+          - id: double-amrap-1-row
+            type: task
+            assignments:
+              A:
+                notes: 17 cal if scaling
+                name: Row
+                calories: 21
+          - id: double-amrap-1-t2b
+            type: task
+            assignments:
+              A:
+                name: Toes-to-bar
+                reps: 12
+          - id: double-amrap-1-front-squats
+            type: task
+            assignments:
+              A:
+                name: Front squats
+                reps: 9
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 42.5
+                    unit: kg
+                  heavy:
+                    value: 60
+                    unit: kg
+          - id: double-amrap-1-burpees
+            type: task
+            assignments:
+              A:
+                name: Burpees over bar
+                reps: 6
+    - id: double-amrap-2
+      title: AMRAP 10, part 2
+      format: amrap
+      transitionAfter: manualReady
+      cap: 10m
+      counter: roundsAndReps
+      body:
+        id: double-amrap-2-round
+        type: sequence
+        children:
+          - id: double-amrap-2-row
+            type: task
+            assignments:
+              A:
+                notes: 17 cal if scaling
+                name: Row
+                calories: 21
+          - id: double-amrap-2-t2b
+            type: task
+            assignments:
+              A:
+                name: Toes-to-bar
+                reps: 12
+          - id: double-amrap-2-front-squats
+            type: task
+            assignments:
+              A:
+                name: Front squats
+                reps: 9
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 42.5
+                    unit: kg
+                  heavy:
+                    value: 60
+                    unit: kg
+          - id: double-amrap-2-burpees
+            type: task
+            assignments:
+              A:
+                name: Burpees over bar
+                reps: 6

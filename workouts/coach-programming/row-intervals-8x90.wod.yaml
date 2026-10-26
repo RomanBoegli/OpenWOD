@@ -1,0 +1,33 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: row-intervals-8x90
+  revision: 1
+  title: Row intervals 8 × 1:30
+  description: Eight rowing intervals of ninety seconds with a minute off between them. Pick a hard pace you can repeat eight times and hold it from the first stroke to the last; the score is how little the splits drift.
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Rowing machine
+  participants: 1
+  prep: 10s
+  sections:
+    - id: row-intervals
+      title: Row intervals
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: row-intervals-rounds
+        type: repeat
+        count: 8
+        betweenIterationsRest: 1m
+        body:
+          id: row-intervals-work
+          type: timed
+          duration: 1m30s
+          assignments:
+            A:
+              notes: Hard, constant pace
+              name: Row

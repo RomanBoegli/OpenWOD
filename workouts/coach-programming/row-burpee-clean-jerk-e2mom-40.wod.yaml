@@ -1,0 +1,42 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: row-burpee-clean-jerk-e2mom-40
+  revision: 1
+  title: Row, burpee, clean & jerk E2MOM 40
+  description: "Every two minutes for forty minutes: eighteen calories on the rower, four burpees over the rower and one clean and jerk at about seventy percent. Twenty rounds is long, so settle into a row pace that leaves time for a clean lift and a breath."
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Rowing machine
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: rbcj
+      title: E2MOM 40
+      format: emom
+      transitionAfter: manualReady
+      interval: 2m
+      intervals: 20
+      body:
+        id: rbcj-round
+        type: task
+        assignments:
+          A:
+            notes: Then 4 burpees over the rower and 1 clean & jerk at the load below; 15 cal if scaling
+            name: Row
+            shortName: Row, burpees, C&J
+            calories: 18
+            load:
+              light:
+                value: 65
+                unit: percent
+              medium:
+                value: 70
+                unit: percent
+              heavy:
+                value: 75
+                unit: percent

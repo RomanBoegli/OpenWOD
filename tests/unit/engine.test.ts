@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
 import { WorkoutEngine, displayTime, warningLevel, type CommandType } from '../../packages/engine/src';
+const fullBodyPartner = bundledWorkout('full-body-partner');
+const partnerCircuit = bundledWorkout('partner-circuit');
 
 function fixture(workout = partnerCircuit) {
   let now = 0;

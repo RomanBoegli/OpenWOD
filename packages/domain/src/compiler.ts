@@ -74,6 +74,7 @@ export function compileWorkout(input: unknown): ExecutionPlan {
       node.children.forEach(child => inspect(child, listOnly ? depth + 1 : depth, section));
     } else if (node.type === 'timed' || node.type === 'task') {
       if (Boolean(node.assignments.B) !== pair) fail(node.id, 'Every work slot must match the workout’s athlete count.');
+      for (const lane of [node.assignments.A, node.assignments.B]) for (const load of lane?.load ? 'value' in lane.load ? [lane.load] : Object.values(lane.load) : []) if (load.unit === 'percent' && load.women !== undefined) fail(node.id, 'A percentage of 1RM is each athlete’s own; it takes no women’s value.');
       if (node.type === 'task') {
         if (section.format === 'timedCircuit') fail(node.id, 'Timed circuits need durations. Use a For time, strength, AMRAP, EMOM or you-go-I-go section for manual tasks.');
         const standalone = section.format === 'forTime' || section.format === 'strength' || section.format === 'emom';

@@ -1,9 +1,8 @@
 import { normalise } from './library';
-import type { LoadLevel } from './schema';
 
 /**
- * Exercises as first-class records. The model is deliberately flat: every variant ("Hang power cleans",
- * "Kipping pull-ups") is its own record with its own names, equipment and loads, and an optional `family` links it
+ * Movements as first-class records. The model is deliberately flat: every variant ("Hang power cleans",
+ * "Kipping pull-ups") is its own record with its own names and equipment, and an optional `family` links it
  * to one parent record ("Cleans", "Pull-ups"). There is no modifier algebra and no generated naming; families only
  * group the picker, roll up search and give housekeeping a "variants of" view. Workout files keep their free-text
  * names and may carry a `movement` id beside them (SHR-02); editing a record never rewrites a workout (LIB-02).
@@ -11,8 +10,6 @@ import type { LoadLevel } from './schema';
 export type MovementCategory = 'weightlifting' | 'gymnastics' | 'monostructural' | 'strength' | 'conditioning' | 'mobility';
 export const MOVEMENT_CATEGORIES: MovementCategory[] = ['weightlifting', 'gymnastics', 'monostructural', 'strength', 'conditioning', 'mobility'];
 export const CATEGORY_LABELS: Record<MovementCategory, string> = { weightlifting: 'Weightlifting', gymnastics: 'Gymnastics', monostructural: 'Monostructural', strength: 'Strength', conditioning: 'Conditioning', mobility: 'Mobility' };
-
-export interface MovementLoads { unit: 'kg' | 'lb'; men: Record<LoadLevel, number>; women: Record<LoadLevel, number> }
 
 export interface Movement {
   /** Stable slug such as `hang-power-clean`; this is what a prescription's `movement` key points at. */
@@ -30,8 +27,6 @@ export interface Movement {
   /** Canonical equipment names as the library uses them ("Barbell", "Pull-up bar"). Empty means bodyweight. */
   equipment?: string[];
   category?: MovementCategory;
-  /** Default light/medium/heavy loads for men and women, applied when a workout names the movement without levels. */
-  loads?: MovementLoads;
   /** Standards, scaling, coaching notes. Never executed. */
   notes?: string;
 }

@@ -1,0 +1,61 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: nate
+  revision: 1
+  title: Nate
+  description: "As many rounds as possible in twenty minutes of two muscle-ups, four handstand push-ups and eight heavy kettlebell swings. The rounds are short, so the score is about never stopping: keep the gymnastics crisp and move straight to the bell. Scale muscle-ups to pull-ups plus dips, handstand push-ups to a box or pike, and the bell to a weight you can swing unbroken."
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/nate
+    notes: Follows the published benchmark. Heavy is the published Rx for men with the women’s Rx in brackets; medium and light are common scalings, rounded to plate and kettlebell sizes.
+  equipment:
+    - Rings
+    - Wall
+    - Kettlebell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: nate-amrap
+      title: AMRAP 20
+      format: amrap
+      transitionAfter: manualReady
+      cap: 20m
+      counter: roundsAndReps
+      body:
+        id: nate-round
+        type: sequence
+        children:
+          - id: nate-muscle-ups
+            type: task
+            assignments:
+              A:
+                name: Muscle-ups
+                reps: 2
+          - id: nate-hspu
+            type: task
+            assignments:
+              A:
+                name: Handstand push-ups
+                shortName: HSPU
+                reps: 4
+          - id: nate-swings
+            type: task
+            assignments:
+              A:
+                name: Kettlebell swings
+                reps: 8
+                load:
+                  light:
+                    value: 16
+                    women: 12
+                    unit: kg
+                  medium:
+                    value: 24
+                    women: 16
+                    unit: kg
+                  heavy:
+                    value: 32
+                    women: 24
+                    unit: kg

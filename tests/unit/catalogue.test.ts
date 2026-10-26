@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Catalogue, MOVEMENT_ID_PATTERN, movementKey } from '../../packages/domain/src/catalogue';
 import { seedMovements } from '../../packages/domain/src/movements';
-import { fixtureWorkouts } from '../../packages/domain/src/fixtures';
+import { bundledWorkouts } from '../../packages/domain/src/bundled';
 import type { WorkoutNode } from '../../packages/domain/src/schema';
 
 const catalogue = new Catalogue(seedMovements);
 
 const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes'];
-
-/** Bundled prescription names that combine several movements in one line; they cannot be a catalogue record. */
-const COMPOSITE_NAMES = ['Row 18 cal, 4 burpees over rower, 1 clean & jerk', 'Toes-to-bar into core hold'];
 
 function fixtureNames(): string[] {
   const names = new Set<string>();
@@ -18,7 +15,7 @@ function fixtureNames(): string[] {
     else if (node.type === 'sequence') node.children.forEach(walk);
     else if (node.type === 'repeat') walk(node.body);
   };
-  for (const workout of fixtureWorkouts) for (const section of workout.sections) walk(section.body);
+  for (const workout of bundledWorkouts) for (const section of workout.sections) walk(section.body);
   return [...names].sort();
 }
 
@@ -49,15 +46,10 @@ describe('seed movement catalogue', () => {
     for (const record of seedMovements) for (const item of record.equipment ?? []) expect(ALLOWED_EQUIPMENT, `${record.id} uses "${item}"`).toContain(item);
   });
 
-  it('resolves every movement name used by the bundled workouts, except the documented composites', () => {
+  it('resolves every movement name used by the bundled workouts (the registry bundle enforces this too)', () => {
     const names = fixtureNames();
     expect(names.length).toBeGreaterThan(50);
-    for (const composite of COMPOSITE_NAMES) {
-      expect(names).toContain(composite);
-      expect(catalogue.byName(composite)).toBeUndefined();
-    }
-    const unresolved = names.filter(name => !COMPOSITE_NAMES.includes(name) && !catalogue.byName(name));
-    expect(unresolved).toEqual([]);
+    expect(names.filter(name => !catalogue.byName(name))).toEqual([]);
   });
 
   it('matches loosely on name and groups variants under their head', () => {

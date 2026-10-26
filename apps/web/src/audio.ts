@@ -48,7 +48,7 @@ export class WorkoutAudio {
   /** Recorded movement names of the loaded pack, by movement id (see prepareNames). */
   private names = new Map<string, AudioBuffer>();
   private namesPack = '';
-  /** Maps a prescription to its exercise record id so its recorded name can be found; set by the app from the catalogue. */
+  /** Maps a prescription to its movement record id so its recorded name can be found; set by the app from the catalogue. */
   resolveMovement?: (lane: Lane) => string | undefined;
   onError?: (message: string) => void;
   /** Reports whether every clip decoded, once preloading finishes. */
@@ -110,7 +110,7 @@ export class WorkoutAudio {
     return this.preloading;
   }
 
-  /** Fetches and decodes the recorded names a session will announce. Names the pack lacks (your own exercises) fall back to device speech. */
+  /** Fetches and decodes the recorded names a session will announce. Names the pack lacks (your own movements) fall back to device speech. */
   async prepareNames(ids: string[]): Promise<void> {
     if (typeof fetch !== 'function' || this.cueSource !== 'clips') return;
     await this.listPacks();

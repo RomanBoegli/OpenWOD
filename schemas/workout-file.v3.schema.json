@@ -167,6 +167,11 @@
                                         "maximum": 10000,
                                         "minimum": 0,
                                         "type": "number"
+                                      },
+                                      "women": {
+                                        "maximum": 10000,
+                                        "minimum": 0,
+                                        "type": "number"
                                       }
                                     },
                                     "required": [
@@ -202,6 +207,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -233,6 +243,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -261,6 +276,11 @@
                                             ]
                                           },
                                           "value": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
+                                          },
+                                          "women": {
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
@@ -385,6 +405,11 @@
                                         "maximum": 10000,
                                         "minimum": 0,
                                         "type": "number"
+                                      },
+                                      "women": {
+                                        "maximum": 10000,
+                                        "minimum": 0,
+                                        "type": "number"
                                       }
                                     },
                                     "required": [
@@ -420,6 +445,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -451,6 +481,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -479,6 +514,11 @@
                                             ]
                                           },
                                           "value": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
+                                          },
+                                          "women": {
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
@@ -647,6 +687,11 @@
                                         "maximum": 10000,
                                         "minimum": 0,
                                         "type": "number"
+                                      },
+                                      "women": {
+                                        "maximum": 10000,
+                                        "minimum": 0,
+                                        "type": "number"
                                       }
                                     },
                                     "required": [
@@ -682,6 +727,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -713,6 +763,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -741,6 +796,11 @@
                                             ]
                                           },
                                           "value": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
+                                          },
+                                          "women": {
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
@@ -865,6 +925,11 @@
                                         "maximum": 10000,
                                         "minimum": 0,
                                         "type": "number"
+                                      },
+                                      "women": {
+                                        "maximum": 10000,
+                                        "minimum": 0,
+                                        "type": "number"
                                       }
                                     },
                                     "required": [
@@ -900,6 +965,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -931,6 +1001,11 @@
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"
+                                          },
+                                          "women": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
                                           }
                                         },
                                         "required": [
@@ -959,6 +1034,11 @@
                                             ]
                                           },
                                           "value": {
+                                            "maximum": 10000,
+                                            "minimum": 0,
+                                            "type": "number"
+                                          },
+                                          "women": {
                                             "maximum": 10000,
                                             "minimum": 0,
                                             "type": "number"

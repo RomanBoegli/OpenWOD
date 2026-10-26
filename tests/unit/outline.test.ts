@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
 import { outlineWorkout } from '../../packages/domain/src/outline';
+const fullBodyPartner = bundledWorkout('full-body-partner');
+const partnerCircuit = bundledWorkout('partner-circuit');
 
 describe('workout outline', () => {
   it('collapses five identical rounds of the partner circuit into one group with the between-round rest', () => {

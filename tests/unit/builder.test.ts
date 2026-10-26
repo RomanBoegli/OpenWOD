@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { builderToWorkout, emptyDraft, validateDraft, workoutToBuilder } from '../../packages/domain/src/builder';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { backSquatFives, cindy, fightGoneBad, fran, fullBodyPartner, hyroxDoublesCircuit, hyroxEngineEmom, hyroxPaceIntervals, mixedSession, partnerCircuit, partnerEmom16, partnerSprints, rowBurpeeEmom, runSledRun, tabataThis } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
+const backSquatFives = bundledWorkout('back-squat-5x5');
+const cindy = bundledWorkout('cindy');
+const fightGoneBad = bundledWorkout('fight-gone-bad');
+const fran = bundledWorkout('fran');
+const fullBodyPartner = bundledWorkout('full-body-partner');
+const hyroxDoublesCircuit = bundledWorkout('hyrox-doubles-circuit');
+const hyroxEngineEmom = bundledWorkout('hyrox-engine-emom-24');
+const hyroxPaceIntervals = bundledWorkout('hyrox-pace-intervals');
+const mixedSession = bundledWorkout('mixed-session');
+const partnerCircuit = bundledWorkout('partner-circuit');
+const partnerEmom16 = bundledWorkout('partner-emom-16');
+const partnerSprints = bundledWorkout('you-go-i-go-sprints');
+const rowBurpeeEmom = bundledWorkout('row-burpee-emom-20');
+const runSledRun = bundledWorkout('run-sled-run');
+const tabataThis = bundledWorkout('tabata-this');
 
 describe('editor builder model', () => {
   it('round-trips the editable fixtures with identical compiled timing and assignments', () => {
@@ -25,7 +40,7 @@ describe('editor builder model', () => {
     expect(workoutToBuilder(hyroxDoublesCircuit)).toBeNull(); // A timed run before an alternating repeat.
     expect(workoutToBuilder(tabataThis)?.sections[0]).toMatchObject({ slotRepeats: 8, slotRepeatRestMs: 10_000, betweenSlotsRestMs: 60_000 });
     expect(workoutToBuilder(fran)?.sections[0]).toMatchObject({ format: 'forTime', capMs: 600_000 });
-    expect(workoutToBuilder(fran)?.sections[0].slots[0].A.load).toEqual({ light: { value: 20, unit: 'kg' }, medium: { value: 30, unit: 'kg' }, heavy: { value: 43, unit: 'kg' } });
+    expect(workoutToBuilder(fran)?.sections[0].slots[0].A.load).toEqual({ light: { value: 20, women: 15, unit: 'kg' }, medium: { value: 30, women: 20, unit: 'kg' }, heavy: { value: 43, women: 29, unit: 'kg' } });
     expect(workoutToBuilder(partnerEmom16)?.sections[0]).toMatchObject({ format: 'emom', intervalMs: 60_000, intervals: 16 });
     expect(workoutToBuilder(partnerEmom16)?.sections[0].slots[0].completion).toBe('team');
     expect(workoutToBuilder(partnerSprints)?.sections[0]).toMatchObject({ format: 'youGoIGo', capMs: 720_000, teamRounds: 0 });

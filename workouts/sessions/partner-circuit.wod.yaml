@@ -1,0 +1,63 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: partner-circuit
+  revision: 1
+  title: Partner circuit
+  description: Four stations. Five rounds. A little friendly competition. Share the work and keep each other moving.
+  attribution:
+    author: OpenWOD
+    notes: "The first canonical fixture: four stations, five rounds, shared between two athletes."
+  equipment:
+    - Rowing machine
+    - Kettlebell
+  participants: 2
+  prep: 10s
+  sections:
+    - id: conditioning
+      title: Conditioning
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: circuit
+        type: repeat
+        count: 5
+        betweenIterationsRest: 1m
+        body:
+          id: stations
+          type: sequence
+          betweenChildrenRest: 10s
+          children:
+            - id: slot-1
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Row
+                B:
+                  name: Kettlebell swings
+            - id: slot-2
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Kettlebell swings
+                B:
+                  name: Row
+            - id: slot-3
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Burpees
+                B:
+                  name: Air squats
+            - id: slot-4
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Air squats
+                B:
+                  name: Burpees

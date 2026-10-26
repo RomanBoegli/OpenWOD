@@ -2,8 +2,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { CUE_NAMES, pickDefaultVoice, sortVoices, WorkoutAudio } from '../../apps/web/src/audio';
 import { WorkoutEngine } from '../../packages/engine/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { partnerCircuit, partnerEmom16, partnerSprints, runSledRun } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
 import type { Workout } from '../../packages/domain/src';
+const partnerCircuit = bundledWorkout('partner-circuit');
+const partnerEmom16 = bundledWorkout('partner-emom-16');
+const partnerSprints = bundledWorkout('you-go-i-go-sprints');
+const runSledRun = bundledWorkout('run-sled-run');
 
 afterEach(() => vi.unstubAllGlobals());
 

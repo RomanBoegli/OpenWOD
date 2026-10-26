@@ -1,18 +1,15 @@
 import YAML from 'yaml';
-import { WorkoutFileSchema, WorkoutSchema, type Workout } from './schema';
+import { FILE_FORMAT, FILE_VERSION, WorkoutFileSchema, type Workout } from './schema';
 import { assertBounded, compileSchema, issuesOf, parseWorkout, WorkoutValidationError } from './validate';
 import { formatDuration, parseDuration } from './duration';
 
 /**
- * Portable workout files. Versions 2 and 3 are YAML with human durations ("40s", "1m30s", "1:30" or seconds as a
- * number) under keys without the Ms suffix; version 3 adds the manual formats, targets and load levels of model
- * version 2. Version 1 is the earlier JSON form with integer-millisecond *Ms keys. YAML 1.2 is a superset of JSON,
- * so one parser reads all of them; the internal model is always integer milliseconds.
+ * Portable workout files: YAML with human durations ("40s", "1m30s", "1:30" or seconds as a number) under keys
+ * without the Ms suffix. YAML 1.2 is a superset of JSON, so one parser reads both spellings; the internal model is
+ * always integer milliseconds. Only the current file version is read: versions 1 and 2 existed before the first
+ * release under the product's working title and are rejected with a message.
  */
-export const FILE_FORMAT = 'openwod.workout';
-/** Files written before the rename; still read, never written. */
-export const LEGACY_FILE_FORMAT = 'wodva.workout';
-export const FILE_VERSION = 3;
+export { FILE_FORMAT, FILE_VERSION };
 export const FILE_EXTENSION = '.wod.yaml';
 export const MAX_FILE_BYTES = 1_048_576;
 
@@ -50,12 +47,8 @@ function humaniseSchema(schema: unknown, version: number): unknown {
   return walk(schema);
 }
 
-/** Version 2: the version-1 model (timed circuits only, schemaVersion 1) with human durations. */
-export const WorkoutFileSchemaV2 = humaniseSchema(WorkoutFileSchema, 2) as Record<string, unknown>;
 /** Version 3: the current model with human durations. */
-export const WorkoutFileSchemaV3 = humaniseSchema({ ...WorkoutFileSchema, properties: { ...WorkoutFileSchema.properties, format: { const: FILE_FORMAT, type: 'string' }, workout: WorkoutSchema } }, 3) as Record<string, unknown>;
-const validateFileV1 = compileSchema(WorkoutFileSchema);
-const validateFileV2 = compileSchema(WorkoutFileSchemaV2);
+export const WorkoutFileSchemaV3 = humaniseSchema(WorkoutFileSchema, FILE_VERSION) as Record<string, unknown>;
 const validateFileV3 = compileSchema(WorkoutFileSchemaV3);
 
 const fail = (path: string, message: string): never => { throw new WorkoutValidationError([{ path, message }]); };
@@ -90,17 +83,8 @@ export function parseWorkoutFile(text: string): Workout {
   try { document = YAML.parse(text, { maxAliasCount: 0, uniqueKeys: true, prettyErrors: false }); } catch { fail('/', 'Choose a valid YAML or JSON workout file.'); }
   assertBounded(document);
   const envelope = document && typeof document === 'object' ? document as { format?: unknown; formatVersion?: unknown; workout?: unknown } : {};
-  if (envelope.format !== FILE_FORMAT && envelope.format !== LEGACY_FILE_FORMAT) fail('/format', 'This is not an OpenWOD workout file.');
-  // Either name is accepted for every version; the frozen version 1 and 2 schemas carry the earlier name, version 3 the current one.
-  envelope.format = envelope.formatVersion === FILE_VERSION ? FILE_FORMAT : LEGACY_FILE_FORMAT;
-  if (envelope.formatVersion === 1) {
-    if (!validateFileV1(document)) fail('/', UNSUPPORTED);
-    return parseWorkout(envelope.workout);
-  }
-  if (envelope.formatVersion === 2) {
-    if (!validateFileV2(document)) throw new WorkoutValidationError([{ path: '/', message: UNSUPPORTED }, ...issuesOf(validateFileV2, 'Invalid value.')]);
-    return parseWorkout((toModelDurations(document) as { workout: unknown }).workout);
-  }
+  if (envelope.format !== FILE_FORMAT) fail('/format', 'This is not an OpenWOD workout file.');
+  if (envelope.formatVersion === 1 || envelope.formatVersion === 2) fail('/formatVersion', `Workout file version ${envelope.formatVersion} is no longer read; it predates the first release. Export the workout again from a current OpenWOD.`);
   if (envelope.formatVersion === FILE_VERSION) {
     if (!validateFileV3(document)) throw new WorkoutValidationError([{ path: '/', message: UNSUPPORTED }, ...issuesOf(validateFileV3, 'Invalid value.')]);
     return parseWorkout((toModelDurations(document) as { workout: unknown }).workout);
@@ -113,7 +97,7 @@ const KEY_ORDER = [
   'schemaVersion', 'id', 'revision', 'title', 'format', 'description', 'attribution', 'author', 'sourceUrl', 'licence', 'notes', 'equipment', 'participants', 'prep', 'prepMs', 'sections',
   'type', 'transitionAfter', 'cap', 'capMs', 'interval', 'intervalMs', 'intervals', 'counter', 'rounds', 'turn', 'turnMs',
   'count', 'assignmentPolicy', 'completion', 'betweenIterationsRest', 'betweenIterationsRestMs', 'betweenChildrenRest', 'betweenChildrenRestMs', 'trailingRest', 'trailingRestMs', 'duration', 'durationMs', 'kind',
-  'assignments', 'A', 'B', 'movement', 'name', 'shortName', 'spokenName', 'reps', 'calories', 'distance', 'time', 'timeMs', 'load', 'light', 'medium', 'heavy', 'value', 'unit', 'body', 'children',
+  'assignments', 'A', 'B', 'movement', 'name', 'shortName', 'spokenName', 'reps', 'calories', 'distance', 'time', 'timeMs', 'load', 'light', 'medium', 'heavy', 'value', 'women', 'unit', 'body', 'children',
 ];
 const rank = (order: string[], key: string) => { const index = order.indexOf(key); return index === -1 ? order.length : index; };
 

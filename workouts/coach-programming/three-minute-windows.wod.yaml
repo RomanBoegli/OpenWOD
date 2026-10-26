@@ -1,0 +1,122 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: three-minute-windows
+  revision: 1
+  title: Two 3-minute windows
+  description: Two three-minute windows with two minutes of rest between them. Finish the fixed work fast, then do as many toes-to-bar as you can before the clock runs out; the toes-to-bar count is your score, so tap the rep counter. Scale the handstand walk to wall walks or bear crawls.
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Barbell
+    - Plyo box
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: window-1
+      title: Window 1
+      format: amrap
+      transitionAfter: manualReady
+      cap: 3m
+      counter: roundsAndReps
+      body:
+        id: window-1-round
+        type: sequence
+        children:
+          - id: window-1-deadlifts
+            type: task
+            assignments:
+              A:
+                name: Deadlifts
+                reps: 12
+                load:
+                  light:
+                    value: 40
+                    unit: kg
+                  medium:
+                    value: 65
+                    unit: kg
+                  heavy:
+                    value: 85
+                    unit: kg
+          - id: window-1-box-jump-overs
+            type: task
+            assignments:
+              A:
+                notes: Step down
+                name: Box jump overs
+                reps: 12
+          - id: window-1-hs-walk
+            type: task
+            assignments:
+              A:
+                name: Handstand walk
+                distance:
+                  value: 14
+                  unit: m
+          - id: window-1-t2b
+            type: task
+            assignments:
+              A:
+                notes: "Max reps in the time left: count them as reps"
+                name: Toes-to-bar
+    - id: window-2
+      title: Window 2
+      format: amrap
+      transitionAfter: manualReady
+      cap: 3m
+      counter: roundsAndReps
+      body:
+        id: window-2-round
+        type: sequence
+        children:
+          - id: window-2-power-cleans
+            type: task
+            assignments:
+              A:
+                name: Power cleans
+                reps: 8
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 45
+                    unit: kg
+                  heavy:
+                    value: 65
+                    unit: kg
+          - id: window-2-s2oh
+            type: task
+            assignments:
+              A:
+                name: Shoulder-to-overhead
+                shortName: S2OH
+                reps: 8
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 45
+                    unit: kg
+                  heavy:
+                    value: 65
+                    unit: kg
+          - id: window-2-hs-walk
+            type: task
+            assignments:
+              A:
+                name: Handstand walk
+                distance:
+                  value: 14
+                  unit: m
+          - id: window-2-t2b
+            type: task
+            assignments:
+              A:
+                notes: "Max reps in the time left: count them as reps"
+                name: Toes-to-bar

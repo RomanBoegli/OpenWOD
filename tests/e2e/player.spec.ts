@@ -1,14 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
-import { fixtureWorkouts, partnerCircuit } from '../../packages/domain/src/fixtures';
-const BUNDLED = fixtureWorkouts.length;
+import { bundledWorkout, bundledWorkouts } from '../../packages/domain/src/bundled';
+const BUNDLED = bundledWorkouts.length;
 import { serialiseWorkoutFile } from '../../packages/domain/src';
 import { matchesFilter, summariseWorkout, type LibraryFilter } from '../../packages/domain/src/library';
-const bundledCount = (filter: LibraryFilter) => fixtureWorkouts.filter(workout => matchesFilter(summariseWorkout(workout), filter)).length;
+const partnerCircuit = bundledWorkout('partner-circuit');
+const bundledCount = (filter: LibraryFilter) => bundledWorkouts.filter(workout => matchesFilter(summariseWorkout(workout), filter)).length;
 
 const PLAYER = '/#/wod/partner-circuit/play';
-const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__wodvaTest));
+const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__openwodTest));
 const communityFile = (title = 'Community circuit', id = partnerCircuit.id) => ({ name: 'community.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile({ ...partnerCircuit, id, title })) });
-const legacyJsonFile = { name: 'legacy.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, schemaVersion: 1, id: 'legacy-circuit', title: 'Legacy circuit' } })) };
 
 test.describe('player', () => {
   test.beforeEach(async ({ page }) => { await page.goto(PLAYER); await ready(page); });
@@ -17,19 +17,19 @@ test.describe('player', () => {
     await expect(page.getByTestId('movement-A')).toHaveText('Row');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Get ready');
-    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
+    await page.evaluate(() => window.__openwodTest!.advance(10_000));
     await expect(page.getByRole('status')).toHaveText('Work');
     await expect(page.getByTestId('primary-timer')).toHaveText('00:40');
-    await page.evaluate(() => window.__wodvaTest!.advance(40_000));
+    await page.evaluate(() => window.__openwodTest!.advance(40_000));
     await expect(page.getByRole('status')).toHaveText('Transition');
     await expect(page.getByTestId('movement-A')).toHaveText('Kettlebell swings');
     await expect(page.getByTestId('movement-B')).toHaveText('Row');
-    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
+    await page.evaluate(() => window.__openwodTest!.advance(10_000));
     await expect(page.getByRole('status')).toHaveText('Work');
-    await page.evaluate(() => window.__wodvaTest!.advance(1_140_000));
+    await page.evaluate(() => window.__openwodTest!.advance(1_140_000));
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await expect(page.getByTestId('primary-timer')).toHaveText('19:50');
-    expect(await page.evaluate(() => window.__wodvaTest!.snapshot().clocks.activeMs)).toBe(1_190_000);
+    expect(await page.evaluate(() => window.__openwodTest!.snapshot().clocks.activeMs)).toBe(1_190_000);
     await page.getByRole('button', { name: 'Train again' }).click();
     await expect(page.getByRole('status')).toHaveText('Ready when you are');
     await expect(page.getByTestId('primary-timer')).toHaveText('00:10');
@@ -37,10 +37,10 @@ test.describe('player', () => {
 
   test('pause freezes the clock across a 30-second delay and resumes the same interval', async ({ page }) => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(27_100));
+    await page.evaluate(() => window.__openwodTest!.advance(27_100));
     await page.getByRole('button', { name: 'Pause workout', exact: true }).click();
     const before = await page.getByTestId('primary-timer').textContent();
-    await page.evaluate(() => window.__wodvaTest!.advance(30_000));
+    await page.evaluate(() => window.__openwodTest!.advance(30_000));
     await expect(page.getByTestId('primary-timer')).toHaveText(before!);
     await expect(page.getByRole('status')).toHaveText('Workout paused');
     await page.getByRole('button', { name: 'Resume workout', exact: true }).click();
@@ -50,7 +50,7 @@ test.describe('player', () => {
 
   test('restarts the first interval with Previous and skips with Next inside the section', async ({ page }) => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(25_000));
+    await page.evaluate(() => window.__openwodTest!.advance(25_000));
     await expect(page.getByTestId('primary-timer')).toHaveText('00:25');
     await page.getByRole('button', { name: 'Restart interval' }).click();
     await expect(page.getByTestId('primary-timer')).toHaveText('00:40');
@@ -87,7 +87,7 @@ test.describe('player', () => {
 
   test('keeps Pause visible in the training viewport and offers an in-player context switch', async ({ page }, testInfo) => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
+    await page.evaluate(() => window.__openwodTest!.advance(10_000));
     for (const [width, height] of [[1024, 768], [768, 900], [390, 844], [320, 740]]) {
       await page.setViewportSize({ width, height });
       const pause = page.getByRole('button', { name: 'Pause workout', exact: true });
@@ -104,7 +104,7 @@ test.describe('player', () => {
   test('keeps a loaded workout running with the network disabled', async ({ page, context }) => {
     await context.setOffline(true);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(1_200_000));
+    await page.evaluate(() => window.__openwodTest!.advance(1_200_000));
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await expect(page.getByTestId('primary-timer')).toHaveText('19:50');
   });
@@ -112,7 +112,7 @@ test.describe('player', () => {
   test('pauses on visibility loss and requires an explicit Resume after return', async ({ page }) => {
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => {
-      window.__wodvaTest!.advance(10_000);
+      window.__openwodTest!.advance(10_000);
       Object.defineProperty(document, 'hidden', { configurable: true, value: true });
       document.dispatchEvent(new Event('visibilitychange'));
     });
@@ -194,7 +194,7 @@ test.describe('editor', () => {
     await page.getByRole('link', { name: 'Start workout' }).click();
     await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(230_000));
+    await page.evaluate(() => window.__openwodTest!.advance(230_000));
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await expect(page.getByTestId('primary-timer')).toHaveText('03:40');
     await page.goto('/#/wod/garage-pair/edit');
@@ -256,11 +256,11 @@ test.describe('editor formats', () => {
     await expect(page.getByRole('main')).toContainText('24 kg');
     await page.getByRole('link', { name: 'Start workout' }).click(); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
+    await page.evaluate(() => window.__openwodTest!.advance(10_000));
     await expect(page.getByRole('list', { name: 'AMRAP block' })).toContainText('24 kg');
     await page.getByRole('button', { name: 'Round', exact: true }).click();
     await expect(page.getByTestId('rounds')).toHaveText('1');
-    await page.evaluate(() => window.__wodvaTest!.advance(720_000));
+    await page.evaluate(() => window.__openwodTest!.advance(720_000));
     await expect(page.getByRole('status')).toHaveText('Workout complete');
   });
 });
@@ -292,17 +292,17 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ difficulty: [1] }));
     await chip('Difficulty', 'Light').click();
     await chip('Athletes', 'Solo').click();
-    await expect(list.getByRole('listitem')).toHaveCount(fixtureWorkouts.filter(workout => workout.participants === 1).length);
+    await expect(list.getByRole('listitem')).toHaveCount(bundledWorkouts.filter(workout => workout.participants === 1).length);
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await page.getByRole('link', { name: 'Start Full body partner workout' }).click();
     await ready(page);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(310_000));
+    await page.evaluate(() => window.__openwodTest!.advance(310_000));
     await expect(page.getByRole('status')).toHaveText('Next section · ready?');
     await page.getByRole('button', { name: 'Start next section' }).click();
     await expect(page.getByTestId('movement-A')).toHaveText('Air squats');
-    await page.evaluate(() => window.__wodvaTest!.advance(240_000));
+    await page.evaluate(() => window.__openwodTest!.advance(240_000));
     await expect(page.getByTestId('movement-A')).toHaveText('Dumbbell thrusters');
     await expect(page.getByTestId('movement-B')).toHaveText('Air squats');
   });
@@ -312,7 +312,7 @@ test.describe('library', () => {
     await expect(page).toHaveURL(/#\/draft\/import-community-circuit$/);
     await expect(page.getByRole('main')).toContainText('Read from community.wod.yaml');
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Community circuit');
-    await expect(page.getByRole('status', { name: 'Movements not in your exercises' })).toHaveCount(0);
+    await expect(page.getByRole('status', { name: 'Movements not in your catalogue' })).toHaveCount(0);
     await page.goto('/');
     await expect(page.getByRole('region', { name: 'Drafts' })).toContainText('Imported from community.wod.yaml');
     await page.getByRole('link', { name: 'Continue editing' }).click();
@@ -341,16 +341,15 @@ test.describe('library', () => {
     await expect(page.getByRole('status')).toContainText('No workout with the ID');
   });
 
-  test('rejects invalid files without touching the library and still reads legacy JSON', async ({ page }) => {
-    await page.locator('input[type=file]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"wodva.workout","formatVersion":99}') });
+  test('rejects invalid, newer and pre-release files without touching the library', async ({ page }) => {
+    await page.locator('input[type=file]').setInputFiles({ name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"openwod.workout","formatVersion":99}') });
     await expect(page.getByRole('alert')).toContainText('newer than this app');
     await page.getByRole('button', { name: 'Close import preview' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(BUNDLED);
-    await page.locator('input[type=file]').setInputFiles(legacyJsonFile);
-    await page.getByRole('button', { name: 'Save to library' }).click();
-    await expect(page).toHaveURL(/#\/wod\/legacy-circuit$/);
-    await page.goto('/');
-    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Legacy circuit');
+    await page.locator('input[type=file]').setInputFiles({ name: 'old.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile(partnerCircuit).replace('formatVersion: 3', 'formatVersion: 2')) });
+    await expect(page.getByRole('alert')).toContainText('no longer read');
+    await page.getByRole('button', { name: 'Close import preview' }).click();
+    await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(BUNDLED);
   });
 
   test('follows the system colour scheme and honours an explicit choice across reloads', async ({ page }) => {
@@ -371,7 +370,7 @@ test.describe('library', () => {
 });
 
 test.describe('formats', () => {
-  const advance = (page: Page, ms: number) => page.evaluate(ms => window.__wodvaTest!.advance(ms), ms);
+  const advance = (page: Page, ms: number) => page.evaluate(ms => window.__openwodTest!.advance(ms), ms);
 
   test('AMRAP counts only what is tapped, never moves its block, and ends capped', async ({ page }) => {
     await page.goto('/#/wod/cindy/play'); await ready(page);
@@ -422,9 +421,9 @@ test.describe('formats', () => {
 
   test('For time counts up, advances on Done, shows big targets with the chosen load level, and finishes', async ({ page }) => {
     await page.goto('/#/wod/fran/play'); await ready(page);
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('20 kg');
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('30 kg');
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('43 kg');
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('20 (15)');
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('30 (20)');
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('43 (29) kg');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 10_000);
     await expect(page.getByRole('status')).toHaveText('Work · tap Done');
@@ -488,8 +487,8 @@ test.describe('settings and log', () => {
   test('logs a completed session and shows it on the card and the overview, sorted by longest ago', async ({ page }) => {
     await page.goto('/#/wod/karen/play'); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
-    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
-    await page.evaluate(() => window.__wodvaTest!.advance(200_000));
+    await page.evaluate(() => window.__openwodTest!.advance(10_000));
+    await page.evaluate(() => window.__openwodTest!.advance(200_000));
     await page.getByTestId('done').click();
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await page.goto('/#/wod/karen');
@@ -526,13 +525,13 @@ test.describe('settings and log', () => {
   });
 });
 
-test.describe('exercises and search', () => {
-  test('the editor picks exercises from the catalogue, declares their equipment, and adds unknown movements', async ({ page }) => {
+test.describe('movements and search', () => {
+  test('the editor picks movements from the catalogue, declares their equipment, and adds unknown movements', async ({ page }) => {
     await page.goto('/#/new');
     await page.getByLabel('Title', { exact: true }).fill('Picker check');
     const lane = page.getByRole('combobox', { name: 'Section 1 slot 1 athlete A', exact: true });
     await lane.pressSequentially('thru');
-    const options = page.getByRole('listbox', { name: 'Exercises matching thru' });
+    const options = page.getByRole('listbox', { name: 'Movements matching thru' });
     await expect(options.getByRole('option').first()).toContainText('Thrusters');
     await lane.press('Enter');
     await expect(lane).toHaveValue('Thrusters');
@@ -541,13 +540,13 @@ test.describe('exercises and search', () => {
     const partner = page.getByRole('combobox', { name: 'Section 1 slot 1 athlete B', exact: true });
     await partner.pressSequentially('Pogo hops');
     await partner.press('Escape');
-    const unknown = page.getByRole('status', { name: 'Movements not in your exercises' });
+    const unknown = page.getByRole('status', { name: 'Movements not in your catalogue' });
     await expect(unknown).toContainText('Pogo hops');
-    await page.getByRole('button', { name: 'Add Pogo hops to exercises' }).click();
+    await page.getByRole('button', { name: 'Add Pogo hops to the catalogue' }).click();
     await expect(unknown).toHaveCount(0);
-    await page.goto('/#/settings/exercises');
-    const list = page.getByRole('list', { name: 'Exercises' });
-    await page.getByRole('searchbox', { name: 'Find exercises' }).fill('pogo');
+    await page.goto('/#/settings/movements');
+    const list = page.getByRole('list', { name: 'Movements' });
+    await page.getByRole('searchbox', { name: 'Find movements' }).fill('pogo');
     await expect(list.getByRole('listitem')).toHaveCount(1);
     await expect(list).toContainText('Pogo hops');
   });
@@ -557,21 +556,21 @@ test.describe('exercises and search', () => {
     await page.goto('/');
     await page.locator('input[type=file]').setInputFiles(file);
     await expect(page).toHaveURL(/#\/draft\/import-odd-circuit$/);
-    const unknown = page.getByRole('status', { name: 'Movements not in your exercises' });
+    const unknown = page.getByRole('status', { name: 'Movements not in your catalogue' });
     await expect(unknown).toContainText('Pogo hops');
     await unknown.getByRole('button', { name: 'Add' }).click();
     await expect(unknown).toHaveCount(0);
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/odd-circuit$/);
-    await page.goto('/#/settings/exercises');
-    await page.getByRole('searchbox', { name: 'Find exercises' }).fill('pogo');
+    await page.goto('/#/settings/movements');
+    await page.getByRole('searchbox', { name: 'Find movements' }).fill('pogo');
     await page.getByRole('checkbox', { name: 'Select Pogo hops' }).check();
-    await page.getByRole('searchbox', { name: 'Find exercises' }).fill('box jumps');
+    await page.getByRole('searchbox', { name: 'Find movements' }).fill('box jumps');
     await page.getByRole('checkbox', { name: 'Select Box jumps', exact: true }).check();
     await page.getByRole('combobox', { name: 'Keep as' }).selectOption({ label: 'Box jumps' });
     await page.getByRole('button', { name: 'Merge 2' }).click();
     await expect(page.getByRole('list', { name: 'Merged movement names' })).toContainText('Pogo hops → Box jumps');
-    await page.getByRole('searchbox', { name: 'Find exercises' }).fill('pogo');
+    await page.getByRole('searchbox', { name: 'Find movements' }).fill('pogo');
     await expect(page.getByRole('checkbox', { name: 'Select Pogo hops' })).toHaveCount(0);
     await page.goto('/#/wod/odd-circuit');
     await expect(page.getByRole('region', { name: 'Equipment' })).toContainText('Plyo box');

@@ -1,0 +1,136 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: hyrox-pace-intervals
+  revision: 1
+  title: HYROX pace intervals
+  description: "The race shape at training length: eight three-minute runs, each followed by two minutes on the next station, with thirty seconds to transition. Hold the run pace you want on race day and keep the stations steady."
+  attribution:
+    author: OpenWOD
+    sourceUrl: https://hyrox.com/the-fitness-race/
+    notes: "A training variation of the published HYROX race structure (8 runs, 8 stations). Timed intervals replace race distances and loads; nothing here is an official prescription. Swap stations you lack: a heavy carry for the sled, a treadmill or shuttle for the run."
+  equipment:
+    - Treadmill or running route
+    - SkiErg
+    - Sled
+    - Rowing machine
+    - Kettlebells
+    - Sandbag
+    - Medicine ball
+  participants: 1
+  prep: 10s
+  sections:
+    - id: hyrox-sim
+      title: Runs and stations
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: hyrox-sim-sequence
+        type: sequence
+        betweenChildrenRest: 30s
+        children:
+          - id: hyrox-run-1
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-skierg
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: SkiErg
+          - id: hyrox-run-2
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-sled-push
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Sled push
+          - id: hyrox-run-3
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-sled-pull
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Sled pull
+          - id: hyrox-run-4
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-burpee-broad-jumps
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Burpee broad jumps
+          - id: hyrox-run-5
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-row
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Row
+          - id: hyrox-run-6
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-farmers-carry
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Farmers carry
+          - id: hyrox-run-7
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-sandbag-lunges
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Sandbag lunges
+          - id: hyrox-run-8
+            type: timed
+            duration: 3m
+            assignments:
+              A:
+                notes: Race pace
+                name: Run
+          - id: hyrox-wall-balls
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                name: Wall balls

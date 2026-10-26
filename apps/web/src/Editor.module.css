@@ -56,6 +56,10 @@
 .inlineCheck input { width: 16px !important; min-width: 16px; height: 16px; min-height: 0 !important; padding: 0 !important; accent-color: var(--accent-fill); margin: 0; }
 .loadRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 4px; margin-top: 4px; }
 .levelInput { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 4px; }
+.loadRow[data-women=true] .levelInput { grid-template-columns: 22px 1fr 1fr; }
+.loadRow[data-women=true] { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+.womenInput { border-style: dashed !important; }
+.womenInput::placeholder { font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
 .levelInput span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #fff; }
 .levelInput[data-level=light] span { background: var(--level-light); }
 .levelInput[data-level=medium] span { background: var(--level-medium); }

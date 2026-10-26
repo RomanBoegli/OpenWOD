@@ -5,9 +5,15 @@ const label = Type.String({ minLength: 1, maxLength: 160 });
 const duration = Type.Integer({ minimum: 1, maximum: 86_400_000 });
 const restDuration = Type.Integer({ minimum: 0, maximum: 86_400_000 });
 
-/** One load: an absolute weight, or a percentage of a one-rep max (display only, never executed). */
+/**
+ * One load: an absolute weight, or a percentage of a one-rep max (display only, never executed). `value` is the
+ * men's (or only) amount; `women` is the women's amount in the same unit, shown in brackets for solo workouts and
+ * on its own in a woman's lane of a pair workout. Percentages are of each athlete's own maximum, so they carry no
+ * `women` value (the compiler rejects it).
+ */
 export const LoadValueSchema = Type.Object({
   value: Type.Number({ minimum: 0, maximum: 10_000 }),
+  women: Type.Optional(Type.Number({ minimum: 0, maximum: 10_000 })),
   unit: Type.Union([Type.Literal('kg'), Type.Literal('lb'), Type.Literal('percent')]),
 }, { additionalProperties: false });
 export type LoadValue = Static<typeof LoadValueSchema>;
@@ -23,7 +29,7 @@ export const LOAD_LEVELS = ['light', 'medium', 'heavy'] as const;
 export type LoadLevel = typeof LOAD_LEVELS[number];
 
 export const PrescriptionSchema = Type.Object({
-  /** Optional id of the exercise record this prescription was picked from; the names below stay authoritative, so a file is complete without any catalogue. */
+  /** Optional id of the movement record this prescription was picked from; the names below stay authoritative, so a file is complete without any catalogue. */
   movement: Type.Optional(Type.String({ pattern: '^[a-z0-9][a-z0-9-]{0,79}$', maxLength: 80 })),
   name: label,
   shortName: Type.Optional(label),
@@ -100,10 +106,12 @@ export const WorkoutSchema = Type.Object({
 }, { $id: 'Workout', additionalProperties: false });
 export type Workout = Static<typeof WorkoutSchema>;
 
-/** Version 1 exchange envelope (JSON, integer-millisecond keys, schemaVersion 1, written under the earlier product name). Versions 2 and 3 are derived in exchange.ts. */
+export const FILE_FORMAT = 'openwod.workout';
+export const FILE_VERSION = 3;
+/** The exchange envelope on the model side (integer-millisecond keys); exchange.ts derives the human-duration file schema from it. */
 export const WorkoutFileSchema = Type.Object({
-  format: Type.Literal('wodva.workout'),
-  formatVersion: Type.Literal(1),
-  workout: Type.Object({ ...WorkoutSchema.properties, schemaVersion: Type.Literal(1) }, { $id: 'WorkoutV1', additionalProperties: false }),
+  format: Type.Literal(FILE_FORMAT),
+  formatVersion: Type.Literal(FILE_VERSION),
+  workout: WorkoutSchema,
 }, { $id: 'WorkoutFile', additionalProperties: false });
 export type WorkoutFile = Static<typeof WorkoutFileSchema>;

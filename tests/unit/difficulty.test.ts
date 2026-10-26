@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { movementIntensity, rateDifficulty } from '../../packages/domain/src/difficulty';
-import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
 import type { Workout } from '../../packages/domain/src';
+const fullBodyPartner = bundledWorkout('full-body-partner');
+const partnerCircuit = bundledWorkout('partner-circuit');
 
 const soloTimed = (id: string, names: string[], durationMs: number, restMs = 0): Workout => ({
   schemaVersion: 2, id, revision: 1, title: id, equipment: [], participants: 1, prepMs: 0,

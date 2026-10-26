@@ -1,7 +1,7 @@
 import { normalise } from './library';
 
 /**
- * One ranked full-text search for the library ("Pick your next session") and the exercise picker. Every query token
+ * One ranked full-text search for the library ("Pick your next session") and the movement picker. Every query token
  * must match somewhere; a token matches a word exactly, as a prefix, inside a word, or with a small typo
  * (one edit from four letters, two from eight). Fields carry weights so a title hit outranks a description hit.
  */

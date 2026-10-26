@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { formatDuration, parseDuration, parseWorkoutFile, serialiseWorkoutFile, WorkoutValidationError } from '../../packages/domain/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { readFileSync } from 'node:fs';
-import { fullBodyPartner, partnerCircuit, timedWorkouts } from '../../packages/domain/src/fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
+const fullBodyPartner = bundledWorkout('full-body-partner');
+const partnerCircuit = bundledWorkout('partner-circuit');
+/** The timed circuits with frozen traces under tests/unit/traces. */
+const timedWorkouts = ['partner-circuit', 'full-body-partner', 'tabata-this', 'fight-gone-bad', 'row-burpee-emom-20', 'hyrox-pace-intervals', 'hyrox-doubles-circuit', 'hyrox-engine-emom-24'].map(bundledWorkout);
 
 describe('canonical workout compiler', () => {
   it('AT-01: produces exactly 19:50 active and 20:00 with prep, with no trailing rest', () => {
@@ -76,24 +80,23 @@ describe('canonical workout compiler', () => {
     expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(3_000_000);
     expect(() => parseWorkoutFile(file.replace('formatVersion: 3', 'formatVersion: 99'))).toThrow(/newer than this app/);
     expect(() => parseWorkoutFile(file.replace('format: openwod.workout', 'format: other'))).toThrow(/not an OpenWOD workout/);
-    expect(parseWorkoutFile(file.replace('format: openwod.workout', 'format: wodva.workout'))).toEqual(fullBodyPartner); // The earlier name is still read.
     expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/not an OpenWOD workout|valid YAML/);
     expect(() => parseWorkoutFile('{"formatVersion":99}')).toThrow(/not an OpenWOD workout/);
   });
 
-  it('still reads version 1 JSON files and rejects YAML aliases and duplicate keys', () => {
-    const legacy = JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, schemaVersion: 1 } });
-    expect(parseWorkoutFile(legacy)).toEqual(partnerCircuit); // migrated to the current model version
+  it('rejects the pre-release file versions, YAML aliases and duplicate keys', () => {
+    const version1 = JSON.stringify({ format: 'openwod.workout', formatVersion: 1, workout: { ...partnerCircuit, schemaVersion: 1 } });
+    expect(() => parseWorkoutFile(version1)).toThrow(/version 1 is no longer read/);
     const version2 = serialiseWorkoutFile(partnerCircuit).replace('formatVersion: 3', 'formatVersion: 2').replace('schemaVersion: 2', 'schemaVersion: 1');
-    expect(parseWorkoutFile(version2)).toEqual(partnerCircuit);
+    expect(() => parseWorkoutFile(version2)).toThrow(/version 2 is no longer read/);
     expect(() => parseWorkoutFile(JSON.stringify({ format: 'openwod.workout', formatVersion: 3, workout: { ...partnerCircuit, schemaVersion: 3 } }))).toThrow(/Unsupported|newer/);
-    const bomb = 'format: openwod.workout\nformatVersion: 2\nworkout: &w\n  title: x\nother: *w\n';
+    const bomb = 'format: openwod.workout\nformatVersion: 3\nworkout: &w\n  title: x\nother: *w\n';
     expect(() => parseWorkoutFile(bomb)).toThrow(/valid YAML/);
-    expect(() => parseWorkoutFile('format: openwod.workout\nformat: openwod.workout\nformatVersion: 2\n')).toThrow(/valid YAML/);
-    expect(() => parseWorkoutFile(JSON.stringify({ format: 'openwod.workout', formatVersion: 3, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are version 1 only
+    expect(() => parseWorkoutFile('format: openwod.workout\nformat: openwod.workout\nformatVersion: 3\n')).toThrow(/valid YAML/);
+    expect(() => parseWorkoutFile(JSON.stringify({ format: 'openwod.workout', formatVersion: 3, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are not file keys
   });
 
-  it('reads human durations in version 2 files and rejects ambiguous ones', () => {
+  it('reads human durations and rejects ambiguous ones', () => {
     const file = serialiseWorkoutFile(partnerCircuit).replace('duration: 40s', 'duration: 0:40').replace('betweenIterationsRest: 1m', 'betweenIterationsRest: 60').replace('prep: 10s', 'prep: 10000ms');
     expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(1_190_000);
     expect(parseWorkoutFile(file).prepMs).toBe(10_000);

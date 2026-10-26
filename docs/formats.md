@@ -38,7 +38,7 @@ workout:
 
 | Key | Meaning |
 | --- | --- |
-| `format` | `openwod.workout`. Files written as `wodva.workout` (the earlier name) are still read. |
+| `format` | `openwod.workout`. Nothing else is accepted. |
 | `formatVersion` | `3`. Version 2 (timed circuits with human durations) and version 1 (JSON with `*Ms` keys) still import and migrate. Newer versions are refused with a clear message. |
 | `workout` | The workout model, version 2 (`schemaVersion: 2`). |
 
@@ -84,10 +84,10 @@ At most two repeat levels nest. Rests are only ever added where they are written
 
 | Key | Meaning |
 | --- | --- |
-| `movement` | Optional id of the exercise record the movement was picked from (`hang-power-clean`). The names below stay authoritative, so a file is complete without any catalogue; a reader that knows the id can attach its own equipment and default loads. |
+| `movement` | Optional id of the movement record the prescription was picked from (`hang-power-clean`). The names below stay authoritative, so a file is complete without any catalogue; a reader that knows the id can attach its own equipment. |
 | `name`, `shortName`, `spokenName` | What is shown and spoken. Short names keep the player readable from across the room. |
 | `reps`, `calories`, `distance` (`{ value, unit: m or km }`), `time` | Targets, shown big in the player. |
-| `load` | Either a single `{ value, unit }` or levels: `light`, `medium`, `heavy`, each `{ value, unit }` with `kg`, `lb` or `percent` (of a one-rep max). All levels are shown inline in the player and the overview. |
+| `load` | Either a single load or levels `light`, `medium`, `heavy`. A load is `{ value, unit, women? }` with `kg`, `lb` or `percent` (of a one-rep max): `value` is the men's (or only) amount and `women` the women's amount in the same unit. Solo workouts show both, women's in brackets (`H 34 (25) kg`); pair lanes show their athlete's amount; the app converts between kg and lb on display. Percentages take no `women` value. |
 | `notes` | Free text such as tempo, scaling or coaching cues; never executed. |
 
 ## Examples and schemas

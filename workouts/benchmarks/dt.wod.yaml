@@ -1,0 +1,88 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: dt
+  revision: 1
+  title: DT
+  description: "Five rounds of twelve deadlifts, nine hang power cleans and six push jerks on one barbell. Grip is the limiter: a common plan is eleven deadlifts, drop, one deadlift straight into the hang cleans, then eight cleans and a last clean into the jerks. Scale to a bar you can push jerk for six when tired; the twenty-minute cap is a training suggestion, not part of the benchmark."
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/dt
+    notes: Follows the published benchmark. Heavy is the published Rx for men with the women’s Rx in brackets; medium and light are common scalings, rounded to plate and kettlebell sizes.
+  equipment:
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: dt-for-time
+      title: Five rounds
+      format: forTime
+      transitionAfter: manualReady
+      cap: 20m
+      body:
+        id: dt-rounds
+        type: repeat
+        count: 5
+        body:
+          id: dt-rounds-round
+          type: sequence
+          children:
+            - id: dt-deadlifts
+              type: task
+              assignments:
+                A:
+                  notes: One bar for all three lifts
+                  name: Deadlifts
+                  reps: 12
+                  load:
+                    light:
+                      value: 30
+                      women: 20
+                      unit: kg
+                    medium:
+                      value: 47.5
+                      women: 32.5
+                      unit: kg
+                    heavy:
+                      value: 70
+                      women: 47.5
+                      unit: kg
+            - id: dt-hang-power-cleans
+              type: task
+              assignments:
+                A:
+                  name: Hang power cleans
+                  reps: 9
+                  load:
+                    light:
+                      value: 30
+                      women: 20
+                      unit: kg
+                    medium:
+                      value: 47.5
+                      women: 32.5
+                      unit: kg
+                    heavy:
+                      value: 70
+                      women: 47.5
+                      unit: kg
+            - id: dt-push-jerks
+              type: task
+              assignments:
+                A:
+                  name: Push jerks
+                  reps: 6
+                  load:
+                    light:
+                      value: 30
+                      women: 20
+                      unit: kg
+                    medium:
+                      value: 47.5
+                      women: 32.5
+                      unit: kg
+                    heavy:
+                      value: 70
+                      women: 47.5
+                      unit: kg

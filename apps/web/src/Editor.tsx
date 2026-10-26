@@ -47,6 +47,16 @@ type LoadMode = 'none' | 'kg' | 'lb' | 'percent';
 const loadModeOf = (value: Prescription): LoadMode => { const load = value.load; if (!load) return 'none'; const first = 'value' in load ? load : load.medium ?? load.light ?? load.heavy; return first?.unit ?? 'none'; };
 const levelledOf = (value: Prescription) => Boolean(value.load && !('value' in value.load));
 const loadValueOf = (value: Prescription, level?: LoadLevel): number | '' => { const load = value.load; if (!load) return ''; if ('value' in load) return load.value; const picked = level ? load[level] : load.medium; return picked ? picked.value : ''; };
+const womenOf = (value: Prescription, level?: LoadLevel): number | '' => { const load = value.load; if (!load) return ''; const picked = 'value' in load ? load : level ? load[level] : load.medium; return picked?.women ?? ''; };
+/** Sets or clears the women's amount on one load value (the single value, or the given level). */
+function withWomen(value: Prescription, level: LoadLevel | undefined, amount: number | ''): Prescription {
+  const load = value.load;
+  if (!load) return value;
+  const patch = (item: LoadValue): LoadValue => { const { women: _w, ...rest } = item; return amount === '' ? rest : { ...rest, women: amount }; };
+  if ('value' in load) return { ...value, load: patch(load) };
+  if (!level || !load[level]) return value;
+  return { ...value, load: { ...load, [level]: patch(load[level]!) } };
+}
 function withLoad(value: Prescription, mode: LoadMode, levelled: boolean, amounts: Partial<Record<LoadLevel, number | ''>> & { single?: number | '' }): Prescription {
   const { load: _l, ...rest } = value;
   if (mode === 'none') return rest;
@@ -144,7 +154,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
         <select aria-label={`${label} load unit`} value={loadMode} onChange={event => updateLane(s, i, role, current => withLoad(current, event.target.value as LoadMode, levelled, { single: loadValueOf(current) === '' ? 20 : loadValueOf(current) }))}><option value="none">No load</option><option value="kg">kg</option><option value="lb">lb</option><option value="percent">% of 1RM</option></select>
         {loadMode !== 'none' && <label className={styles.inlineCheck}><input type="checkbox" checked={levelled} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, event.target.checked, event.target.checked ? { light: Math.round(Number(loadValueOf(current) || 20) * .65), medium: Number(loadValueOf(current) || 20), heavy: Math.round(Number(loadValueOf(current) || 20) * 1.4) } : { single: loadValueOf(current, 'medium') }))} />Levels</label>}
       </div>
-      {loadMode !== 'none' && <div className={styles.loadRow}>{levelled ? LOAD_LEVELS.map(level => <label key={level} className={styles.levelInput} data-level={level}><span aria-hidden="true">{LEVEL_LETTERS[level]}</span><input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, true, { [level]: event.target.value === '' ? '' : Number(event.target.value) }))} /></label>) : <input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} load`} value={loadValueOf(value)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, false, { single: event.target.value === '' ? '' : Number(event.target.value) }))} />}</div>}
+      {loadMode !== 'none' && <div className={styles.loadRow} data-women={loadMode !== 'percent'}>{levelled ? LOAD_LEVELS.map(level => <span key={level} className={styles.levelInput} data-level={level}><span aria-hidden="true">{LEVEL_LETTERS[level]}</span><input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, true, { [level]: event.target.value === '' ? '' : Number(event.target.value) }))} />{loadMode !== 'percent' && <input type="number" inputMode="decimal" min={0} step="any" className={styles.womenInput} placeholder="women" title="Women’s load, shown in brackets" aria-label={`${label} ${level} women’s load`} value={womenOf(value, level)} disabled={loadValueOf(value, level) === ''} onChange={event => updateLane(s, i, role, current => withWomen(current, level, event.target.value === '' ? '' : Number(event.target.value)))} />}</span>) : <><input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} load`} value={loadValueOf(value)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, false, { single: event.target.value === '' ? '' : Number(event.target.value) }))} />{loadMode !== 'percent' && <input type="number" inputMode="decimal" min={0} step="any" className={styles.womenInput} placeholder="women" title="Women’s load, shown in brackets" aria-label={`${label} women’s load`} value={womenOf(value)} onChange={event => updateLane(s, i, role, current => withWomen(current, undefined, event.target.value === '' ? '' : Number(event.target.value)))} />}</>}</div>}
       <input className={styles.notes} aria-label={`${label} notes`} value={value.notes ?? ''} maxLength={500} placeholder="Notes, tempo, scaling" onChange={event => updateLane(s, i, role, current => ({ ...current, notes: event.target.value }))} />
     </td>;
   };
@@ -154,7 +164,7 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
       <div>
         <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {importedFrom ? 'IMPORTED WORKOUT' : mode === 'replace' ? 'EDIT WORKOUT' : 'NEW WORKOUT'}</div>
         <h1>{draft.title.trim() || (mode === 'replace' ? 'Edit workout' : 'Build a workout')}</h1>
-        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Sections of timed slots or manual movements with targets, in any of the six formats. Type a movement to pick it from your exercises; the summary on the right updates as you type.'}</p>
+        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Sections of timed slots or manual movements with targets, in any of the six formats. Type a movement to pick it from your catalogue; the summary on the right updates as you type.'}</p>
       </div>
     </div>
 
@@ -249,10 +259,10 @@ export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, 
           </dl>
           {difficulty && <DifficultyChip difficulty={difficulty} detailed />}
           {compiled.plan && <ul className={styles.sectionList}>{compiled.plan.sections.map(section => <li key={section.id}><span>{section.title} <small>· {FORMAT_LABELS[section.format]}</small></span><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span></li>)}</ul>}
-          {unmatched.length > 0 && <div className={styles.unmatched} role="status" aria-label="Movements not in your exercises">
-            <strong>{unmatched.length === 1 ? '1 movement is' : `${unmatched.length} movements are`} not in your exercises</strong>
+          {unmatched.length > 0 && <div className={styles.unmatched} role="status" aria-label="Movements not in your catalogue">
+            <strong>{unmatched.length === 1 ? '1 movement is' : `${unmatched.length} movements are`} not in your movement catalogue</strong>
             <ul>{unmatched.map(name => <li key={name}><span>{name}</span><button type="button" onClick={() => addToCatalogue([name])}>Add</button></li>)}</ul>
-            <small>Add them as they are, or pick the matching exercise in the form. You can tidy names later under Settings → Exercises.</small>
+            <small>Add them as they are, or pick the matching movement in the form. You can tidy names later under Settings → Movements.</small>
             {unmatched.length > 1 && <button type="button" className={shared.quietButton} onClick={() => addToCatalogue(unmatched)}><Icon name="plus" size={14} />Add all {unmatched.length}</button>}
           </div>}
           {(issues.length > 0 || compiled.error) && <ul className={styles.issues} role="alert">{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}

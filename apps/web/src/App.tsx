@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workout } from '../../../packages/domain/src';
-import { fixtureWorkouts } from '../../../packages/domain/src/fixtures';
+import { bundledWorkouts } from '../../../packages/domain/src/bundled';
 import { WorkoutAudio } from './audio';
 import { Library, toEntry, type LibraryEntry } from './Library';
 import { Player } from './Player';
@@ -52,7 +52,7 @@ export default function App() {
   const catalogue = useMemo(() => effectiveCatalogue(masterData), [masterData]);
   audio.resolveMovement = lane => catalogue.resolve(lane)?.id;
   const summaryOptions = useCallback((id: string) => ({ canonicalEquipment: canonicalEquipment(masterData.equipmentAliases), catalogue, collections: collections.filter(collection => collection.workoutIds.includes(id)).map(collection => collection.id) }), [masterData.equipmentAliases, catalogue, collections]);
-  const bundledEntries = useMemo(() => fixtureWorkouts.map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions]);
+  const bundledEntries = useMemo(() => bundledWorkouts.map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions]);
   const savedEntries = useMemo(() => saved.map(workout => toEntry(workout, 'saved', summaryOptions(workout.id))), [saved, summaryOptions]);
   const entries = useMemo<LibraryEntry[]>(() => [...bundledEntries, ...savedEntries], [bundledEntries, savedEntries]);
   const updateSaved = useCallback((next: Workout[]) => { setSaved(next); setStorageError(persistSavedWorkouts(next) ?? ''); }, []);
@@ -126,7 +126,7 @@ export default function App() {
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} onAddMovement={addMovement} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={draft => saveDraft(editing.id, editing.mode, draft)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
         : route.name === 'edit' && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
-        : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} catalogue={catalogue} loadsFor={preferences.loadsFor} onRemove={removeWorkout} />
+        : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} />
         : <Library entries={entries} collections={collections} sessions={sessions} onImport={importWorkout} onImportDraft={importDraft} onRemove={removeWorkout} storageError={storageError} missingId={route.name === 'library' ? undefined : (route as { id?: string }).id} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} />}
       <footer className={styles.footer}><span>NOT BORN. MADE.</span><span>Player preview · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
     </main>

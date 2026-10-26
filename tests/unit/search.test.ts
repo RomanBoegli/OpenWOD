@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { editDistance, rankBySearch, searchScore, searchTokens } from '../../packages/domain/src/search';
 import { matchesFilter, searchFields, summariseWorkout } from '../../packages/domain/src/library';
-import { fixtureWorkouts } from '../../packages/domain/src/fixtures';
+import { bundledWorkouts } from '../../packages/domain/src/bundled';
 
 describe('ranked search', () => {
   it('tokenises loosely and measures edit distance with an early exit', () => {
@@ -32,7 +32,7 @@ describe('ranked search', () => {
   });
 
   it('LIB-04: the library search forgives a typo and still requires every token', () => {
-    const summaries = fixtureWorkouts.map(workout => summariseWorkout(workout));
+    const summaries = bundledWorkouts.map(workout => summariseWorkout(workout));
     const fran = summaries.find(summary => summary.id === 'fran')!;
     expect(matchesFilter(fran, { query: 'thrustre' })).toBe(true);
     expect(matchesFilter(fran, { query: 'fran pullups' })).toBe(true);

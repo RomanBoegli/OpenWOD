@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { FILE_EXTENSION, serialiseWorkoutFile, type Workout } from '../../../packages/domain/src';
-import { fixtureWorkouts, prescriptionText } from '../../../packages/domain/src/fixtures';
+import { bundledWorkouts } from '../../../packages/domain/src/bundled';
+import { prescriptionText } from '../../../packages/domain/src/prescription';
 import type { Occurrence, TaskItem } from '../../../packages/domain/src/compiler';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
 import { displayTime, warningLevel, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
@@ -15,7 +16,6 @@ import { LoadLevels } from './LevelChip';
 import { AthletesChip, FormatChips } from './Chip';
 import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import { collectPrescriptions } from '../../../packages/domain/src/library';
-import { effectiveLoad } from './master-data';
 import { countsAsDone, type SessionRecord } from './session-log';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import styles from './App.module.css';
@@ -76,8 +76,9 @@ interface PlayerProps {
 }
 
 export function Player({ workout, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
-  const { names, view, loadsFor } = preferences;
-  const loadOf = (item: Prescription, role: 'A' | 'B') => effectiveLoad(catalogue, item, loadsFor[role]);
+  const { names, view, loadsFor, loadUnit } = preferences;
+  /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
+  const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
   const [following, setFollowing] = useState(true);
   const [highlight, setHighlight] = useState<string>();
@@ -101,7 +102,7 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
   const active = ['running', 'preparing'].includes(status);
   const showing = isRest ? nextWork?.assignments : current.assignments;
   const round = (isRest ? nextWork : current)?.rounds.at(-1) ?? current.rounds.at(-1);
-  const bundled = fixtureWorkouts.some(item => item.id === workout.id);
+  const bundled = bundledWorkouts.some(item => item.id === workout.id);
   const difficulty = useMemo(() => rateDifficulty(plan), [plan]);
   const can = (control: Control) => controls.includes(control);
   const pair = workout.participants === 2;
@@ -233,11 +234,11 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
       <div className={styles.athleteLabel}><span className={styles.athleteBadge}>{role}</span><span>{names[role]}<small>{role === 'A' ? 'LEFT LANE' : 'RIGHT LANE'}</small></span>{timing !== 'manual' && <span className={styles.laneTime}>{Math.round((isRest ? nextWork?.durationMs ?? 0 : current.durationMs) / 1000)}s</span>}</div>
       {isBlock && format === 'youGoIGo' ? <>
         <h2 data-testid={`movement-${role}`}>{activeLane ? 'Your turn' : 'Rest'}</h2>
-        <ul className={own.unit}>{unitTasks.map(task => { const lanePrescription = task.assignments[role] ?? task.assignments.A; const amount = primaryTarget(lanePrescription); return <li key={task.nodeId}>{amount && <>{amount.amount}<small>{amount.unit}</small></>}<span>{lanePrescription.shortName ?? lanePrescription.name}</span><LoadLevels load={loadOf(lanePrescription, role)} /></li>; })}</ul>
+        <ul className={own.unit}>{unitTasks.map(task => { const lanePrescription = task.assignments[role] ?? task.assignments.A; const amount = primaryTarget(lanePrescription); return <li key={task.nodeId}>{amount && <>{amount.amount}<small>{amount.unit}</small></>}<span>{lanePrescription.shortName ?? lanePrescription.name}</span><LoadLevels load={lanePrescription.load} unit={loadUnit} sex={loadSex(role)} /></li>; })}</ul>
       </> : <>
         {target && <div className={own.target}><strong>{target.amount}</strong><small>{target.unit}</small></div>}
         <h2 data-testid={`movement-${role}`}>{item?.shortName ?? item?.name ?? 'All done'}</h2>
-        {item && loadOf(item, role) ? <span className={own.loadLine}><LoadLevels load={loadOf(item, role)} /></span> : null}
+        {item?.load ? <span className={own.loadLine}><LoadLevels load={item.load} unit={loadUnit} sex={loadSex(role)} /></span> : null}
         <p>{item ? target || item.load ? item.notes ?? '' : prescriptionText(item) : 'You’re at the finish.'}</p>
       </>}
       {state && <span className={own.laneState} data-state={state.state}>{state.state === 'done' || state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
@@ -277,7 +278,7 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
           {fitWarning && <p className={own.fitWarning}>Long block: {unitTasks.length} movements may not all fit on a small screen. Use the Context view to scroll.</p>}
           <ul className={own.taskList} aria-label="AMRAP block">{unitTasks.map((task, index) => <li key={task.nodeId} className={own.taskRow} data-pair={pair} data-highlight={highlight === task.nodeId} onClick={() => setHighlight(value => value === task.nodeId ? undefined : task.nodeId)}>
             <span className={own.taskIndex}>{index + 1}</span>
-            {(['A', 'B'] as const).filter(role => role === 'A' || pair).map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLevels load={loadOf(item, role)} /></span>; })}
+            {(['A', 'B'] as const).filter(role => role === 'A' || pair).map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLevels load={item.load} unit={loadUnit} sex={loadSex(role)} /></span>; })}
           </li>)}</ul>
           <p className={own.taskHint}>Tap a row to mark where you are. It never changes the clock.</p>
         </> : <div key={`${current.id}/${turn?.number ?? 0}`} className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}

@@ -1,0 +1,204 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: triple-amrap-4
+  revision: 1
+  title: Triple AMRAP 4
+  description: "Three four-minute sprints: row, double dumbbell clean and jerks, bar muscle-ups, then as many farmers carry shuttles as you can in the time left. Ninety seconds of rest between the sprints, then tap Ready. Go hard; the rest is coming."
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Rowing machine
+    - Dumbbells
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: triple-amrap-1
+      title: AMRAP 4, part 1
+      format: amrap
+      transitionAfter: manualReady
+      cap: 4m
+      counter: roundsAndReps
+      body:
+        id: triple-amrap-1-round
+        type: sequence
+        children:
+          - id: triple-amrap-1-row
+            type: task
+            assignments:
+              A:
+                notes: 17 cal if scaling
+                name: Row
+                calories: 21
+          - id: triple-amrap-1-clean-jerks
+            type: task
+            assignments:
+              A:
+                notes: Load per dumbbell
+                name: Double dumbbell clean and jerks
+                shortName: DB clean & jerks
+                reps: 15
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 17.5
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    unit: kg
+          - id: triple-amrap-1-muscle-ups
+            type: task
+            assignments:
+              A:
+                notes: 15 pull-ups if scaling
+                name: Bar muscle-ups
+                reps: 9
+          - id: triple-amrap-1-shuttles
+            type: task
+            assignments:
+              A:
+                notes: Max lengths in the time left; count each as a rep
+                name: Farmers carry shuttles
+                shortName: Carry shuttles
+                distance:
+                  value: 7.5
+                  unit: m
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 17.5
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    unit: kg
+    - id: triple-amrap-2
+      title: AMRAP 4, part 2
+      format: amrap
+      transitionAfter: manualReady
+      cap: 4m
+      counter: roundsAndReps
+      body:
+        id: triple-amrap-2-round
+        type: sequence
+        children:
+          - id: triple-amrap-2-row
+            type: task
+            assignments:
+              A:
+                notes: 17 cal if scaling
+                name: Row
+                calories: 21
+          - id: triple-amrap-2-clean-jerks
+            type: task
+            assignments:
+              A:
+                notes: Load per dumbbell
+                name: Double dumbbell clean and jerks
+                shortName: DB clean & jerks
+                reps: 15
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 17.5
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    unit: kg
+          - id: triple-amrap-2-muscle-ups
+            type: task
+            assignments:
+              A:
+                notes: 15 pull-ups if scaling
+                name: Bar muscle-ups
+                reps: 9
+          - id: triple-amrap-2-shuttles
+            type: task
+            assignments:
+              A:
+                notes: Max lengths in the time left; count each as a rep
+                name: Farmers carry shuttles
+                shortName: Carry shuttles
+                distance:
+                  value: 7.5
+                  unit: m
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 17.5
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    unit: kg
+    - id: triple-amrap-3
+      title: AMRAP 4, part 3
+      format: amrap
+      transitionAfter: manualReady
+      cap: 4m
+      counter: roundsAndReps
+      body:
+        id: triple-amrap-3-round
+        type: sequence
+        children:
+          - id: triple-amrap-3-row
+            type: task
+            assignments:
+              A:
+                notes: 17 cal if scaling
+                name: Row
+                calories: 21
+          - id: triple-amrap-3-clean-jerks
+            type: task
+            assignments:
+              A:
+                notes: Load per dumbbell
+                name: Double dumbbell clean and jerks
+                shortName: DB clean & jerks
+                reps: 15
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 17.5
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    unit: kg
+          - id: triple-amrap-3-muscle-ups
+            type: task
+            assignments:
+              A:
+                notes: 15 pull-ups if scaling
+                name: Bar muscle-ups
+                reps: 9
+          - id: triple-amrap-3-shuttles
+            type: task
+            assignments:
+              A:
+                notes: Max lengths in the time left; count each as a rep
+                name: Farmers carry shuttles
+                shortName: Carry shuttles
+                distance:
+                  value: 7.5
+                  unit: m
+                load:
+                  light:
+                    value: 12
+                    unit: kg
+                  medium:
+                    value: 17.5
+                    unit: kg
+                  heavy:
+                    value: 22.5
+                    unit: kg

@@ -11,7 +11,7 @@
       (function () {
         var theme = 'dark';
         try {
-          var stored = localStorage.getItem('openwod.theme') || localStorage.getItem('wodva.theme');
+          var stored = localStorage.getItem('openwod.theme');
           theme = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         } catch (error) { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
         document.documentElement.dataset.theme = theme;
