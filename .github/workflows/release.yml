@@ -40,7 +40,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-latest
+          # Pinned like the arm64 runner: ubuntu-latest moved on to a newer image in October 2026.
+          - runner: ubuntu-24.04
             platform: linux/amd64
             architecture: amd64
           - runner: ubuntu-24.04-arm
@@ -59,7 +60,8 @@ jobs:
         with:
           path: .cache/ms-playwright
           key: browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
-      # Bounded: during a GitHub Actions incident this step once hung on the amd64 runner until the 40-minute job timeout.
+      # Bounded: the apt step inside --with-deps twice hung on a slow Ubuntu mirror until the 40-minute job timeout.
+      # A re-run lands on another runner with another mirror, so the step fails fast instead of retrying on the same one.
       - name: Install production test browsers
         timeout-minutes: 10
         run: npm run browsers:install -- --with-deps

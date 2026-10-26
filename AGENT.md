@@ -792,7 +792,7 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - The cue renderer normalises every clip in two passes (RMS to -18 dBFS, limiter at -1 dBFS) with a render version that discards older packs; single-pass loudnorm had peak-aligned the short clips about 15 dB too quiet and some 14 dB apart (AUD-03).
 - The cue renderer synthesises a clip again when it came out silent, up to three times, and names the clip when it stays silent: Piper samples noise on every synthesis, and the arm64 image build of `v1.1.0` had died on one silent clip after the amd64 build had passed (AUD-03, DEP-10).
 - The Check workflow gains a `BROWSER_SUITE` switch that pauses the browser suite while lint, typecheck, unit tests and build keep running; it is on (DEP-10).
-- The image job's browser install is bounded to ten minutes and the browsers are cached per Playwright version, runner OS and architecture: during a GitHub Actions incident the amd64 install had hung until the 40-minute job timeout while the arm64 candidate passed and was pushed (DEP-10).
+- The image job's amd64 runner is pinned to `ubuntu-24.04` like the arm64 one, its browser install is bounded to ten minutes and the browsers are cached per Playwright version, runner OS and architecture: the apt step of the install had twice hung on `ubuntu-latest` until the 40-minute job timeout while the arm64 candidate passed and was pushed (DEP-10).
 - Both Compose files read `DATABASE_PATH` from the stack variables with `/data/app.sqlite` as the default, as `.env.example` and the Portainer guide had implied all along (DEP-07).
 
 ## Version 1.10 — 26 October 2026
