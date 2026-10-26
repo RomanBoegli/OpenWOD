@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compileWorkout } from '../../../packages/domain/src/compiler';
 import type { Workout } from '../../../packages/domain/src';
-import { WorkoutEngine, type ClockValues, type CommandType } from '../../../packages/engine/src';
+import { WorkoutEngine, type ClockValues, type Command, type CommandType } from '../../../packages/engine/src';
 import type { WorkoutAudio } from './audio';
 
 declare const __WODVA_TEST__: boolean;
 declare global {
   interface Window {
-    __wodvaTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] } };
+    __wodvaTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] }; command: (type: CommandType, extra?: Partial<Command>) => boolean };
   }
 }
 
@@ -49,13 +49,15 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
       if (deadline) clearTimeout(deadline);
       if (frame) cancelAnimationFrame(frame);
       refresh();
-      if (engine.nextDeadline !== undefined && !document.hidden && !disposed) {
-        // One timeout for the next semantic deadline; frames only repaint clocks in between.
-        deadline = setTimeout(schedule, Math.max(1, engine.nextDeadline - (performance.now() + clockOffset.current)));
+      // One timeout for the next semantic deadline; frames only repaint clocks in between. Open-ended manual work has no
+      // deadline but its elapsed clocks still move, so frames continue while running.
+      const live = () => engine.nextDeadline !== undefined || engine.project().status === 'running';
+      if (live() && !document.hidden && !disposed) {
+        if (engine.nextDeadline !== undefined) deadline = setTimeout(schedule, Math.max(1, engine.nextDeadline - (performance.now() + clockOffset.current)));
         const animate = () => {
           if (disposed || document.hidden) return;
           refresh();
-          if (engine.nextDeadline !== undefined) frame = requestAnimationFrame(animate);
+          if (live()) frame = requestAnimationFrame(animate);
         };
         frame = requestAnimationFrame(animate);
       }
@@ -73,6 +75,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
     if (__WODVA_TEST__) window.__wodvaTest = {
       advance(ms) { clockOffset.current += ms; schedule(); },
       snapshot() { return { projection: engine.project(), clocks: engine.readClocks(), events: engine.events }; },
+      command(type, extra = {}) { const accepted = engine.command({ id: crypto.randomUUID(), occurrenceId: engine.occurrenceId, type, ...extra }); schedule(); return accepted; },
     };
     return () => { disposed = true; if (deadline) clearTimeout(deadline); cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); if (__WODVA_TEST__) delete window.__wodvaTest; };
   }, [engine, refresh, audio]);
@@ -96,13 +99,13 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
   useEffect(() => { audio.cancel(); scheduleRef.current(); }, [audio, audio.mode]);
   useEffect(() => () => audio.cancel(), [audio]);
 
-  const send = useCallback((type: CommandType, occurrenceId: string) => {
-    if (type === 'next' || type === 'previous') {
+  const send = useCallback((type: CommandType, occurrenceId: string, extra: Pick<Command, 'athlete' | 'unit' | 'delta'> = {}) => {
+    if (['next', 'previous', 'switch', 'skipTurn', 'finish'].includes(type)) {
       if (performance.now() - lastNavigation.current < 350) return;
       lastNavigation.current = performance.now();
     }
     if (['play', 'resume', 'ready'].includes(type) && !__WODVA_TEST__) void audio.unlock();
-    engine.command({ id: crypto.randomUUID(), occurrenceId, type });
+    engine.command({ id: crypto.randomUUID(), occurrenceId, type, ...extra });
     scheduleRef.current();
   }, [engine, audio]);
 

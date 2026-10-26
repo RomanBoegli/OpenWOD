@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { formatDuration, parseDuration, parseWorkoutFile, serialiseWorkoutFile, WorkoutValidationError } from '../../packages/domain/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtures';
+import { readFileSync } from 'node:fs';
+import { fullBodyPartner, partnerCircuit, timedWorkouts } from '../../packages/domain/src/fixtures';
 
 describe('canonical workout compiler', () => {
   it('AT-01: produces exactly 19:50 active and 20:00 with prep, with no trailing rest', () => {
@@ -65,7 +66,7 @@ describe('canonical workout compiler', () => {
 
   it('exports self-contained YAML fixtures that round-trip without personal session settings', () => {
     const file = serialiseWorkoutFile(fullBodyPartner);
-    expect(file.startsWith('format: wodva.workout\nformatVersion: 2\nworkout:\n  schemaVersion: 1\n  id: full-body-partner\n')).toBe(true);
+    expect(file.startsWith('format: wodva.workout\nformatVersion: 3\nworkout:\n  schemaVersion: 2\n  id: full-body-partner\n')).toBe(true);
     expect(file).toContain('duration: 40s');
     expect(file).toContain('betweenChildrenRest: 20s');
     expect(file).toContain('prep: 10s');
@@ -73,19 +74,22 @@ describe('canonical workout compiler', () => {
     expect(file).not.toContain('voiceURI');
     expect(parseWorkoutFile(file)).toEqual(fullBodyPartner);
     expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(3_000_000);
-    expect(() => parseWorkoutFile(file.replace('formatVersion: 2', 'formatVersion: 99'))).toThrow(/newer than this app/);
+    expect(() => parseWorkoutFile(file.replace('formatVersion: 3', 'formatVersion: 99'))).toThrow(/newer than this app/);
     expect(() => parseWorkoutFile(file.replace('format: wodva.workout', 'format: other'))).toThrow(/not a Wodva workout/);
     expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/not a Wodva workout|valid YAML/);
     expect(() => parseWorkoutFile('{"formatVersion":99}')).toThrow(/not a Wodva workout/);
   });
 
   it('still reads version 1 JSON files and rejects YAML aliases and duplicate keys', () => {
-    const legacy = JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: partnerCircuit });
-    expect(parseWorkoutFile(legacy)).toEqual(partnerCircuit);
+    const legacy = JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, schemaVersion: 1 } });
+    expect(parseWorkoutFile(legacy)).toEqual(partnerCircuit); // migrated to the current model version
+    const version2 = serialiseWorkoutFile(partnerCircuit).replace('formatVersion: 3', 'formatVersion: 2').replace('schemaVersion: 2', 'schemaVersion: 1');
+    expect(parseWorkoutFile(version2)).toEqual(partnerCircuit);
+    expect(() => parseWorkoutFile(JSON.stringify({ format: 'wodva.workout', formatVersion: 3, workout: { ...partnerCircuit, schemaVersion: 3 } }))).toThrow(/Unsupported|newer/);
     const bomb = 'format: wodva.workout\nformatVersion: 2\nworkout: &w\n  title: x\nother: *w\n';
     expect(() => parseWorkoutFile(bomb)).toThrow(/valid YAML/);
     expect(() => parseWorkoutFile('format: wodva.workout\nformat: wodva.workout\nformatVersion: 2\n')).toThrow(/valid YAML/);
-    expect(() => parseWorkoutFile(JSON.stringify({ format: 'wodva.workout', formatVersion: 2, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are version 1 only
+    expect(() => parseWorkoutFile(JSON.stringify({ format: 'wodva.workout', formatVersion: 3, workout: partnerCircuit }))).toThrow(/Unsupported/); // *Ms keys are version 1 only
   });
 
   it('reads human durations in version 2 files and rejects ambiguous ones', () => {
@@ -114,5 +118,18 @@ describe('canonical workout compiler', () => {
     repeat.body.children[0].id = 'stations:between:1';
     const plan = compileWorkout(workout);
     expect(new Set(plan.occurrences.map(item => item.id)).size).toBe(plan.occurrences.length);
+  });
+
+  it('keeps every timed fixture on its frozen trace (ids, offsets, durations, rounds, assignments)', () => {
+    for (const workout of timedWorkouts) {
+      const frozen = JSON.parse(readFileSync(new URL(`./traces/${workout.id}.json`, import.meta.url), 'utf8'));
+      const plan = compileWorkout(workout);
+      const trace = {
+        durationMs: plan.durationMs,
+        sections: plan.sections.map(({ id, startIndex, endIndex, startMs, durationMs, transitionAfter }) => ({ id, startIndex, endIndex, startMs, durationMs, transitionAfter })),
+        occurrences: plan.occurrences.map(({ id, anchor, sectionIndex, phase, startMs, durationMs, rounds, assignments }) => ({ id, anchor, sectionIndex, phase, startMs, durationMs, rounds, A: assignments?.A.name, B: assignments?.B?.name })),
+      };
+      expect(trace, workout.id).toEqual(frozen);
+    }
   });
 });

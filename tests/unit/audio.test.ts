@@ -2,13 +2,14 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { CUE_NAMES, pickDefaultVoice, sortVoices, WorkoutAudio } from '../../apps/web/src/audio';
 import { WorkoutEngine } from '../../packages/engine/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { partnerCircuit } from '../../packages/domain/src/fixtures';
+import { partnerCircuit, partnerEmom16, partnerSprints, runSledRun } from '../../packages/domain/src/fixtures';
+import type { Workout } from '../../packages/domain/src';
 
 afterEach(() => vi.unstubAllGlobals());
 
 interface Source { at?: number; cancelled: boolean; kind: 'beep' | 'clip'; clip?: string }
 
-function setup({ clips = false } = {}) {
+function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
   const sources: Source[] = [];
   const spoken: string[] = [];
   class FakeContext {
@@ -34,10 +35,12 @@ function setup({ clips = false } = {}) {
   vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} });
   vi.stubGlobal('fetch', async (url: string) => clips ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
   let now = 0;
-  const engine = new WorkoutEngine(compileWorkout(partnerCircuit), () => now, 'audio-test');
+  const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' });
   now = 10_000; engine.tick();
-  return { audio: new WorkoutAudio(), sources, spoken, context, engine, advance(ms: number) { now += ms; engine.tick(); } };
+  let n = 0;
+  const command = (type: Parameters<WorkoutEngine['command']>[0]['type'], extra: Partial<Parameters<WorkoutEngine['command']>[0]> = {}) => engine.command({ id: `c${++n}`, occurrenceId: engine.occurrenceId, type, ...extra });
+  return { audio: new WorkoutAudio(), sources, spoken, context, engine, command, advance(ms: number) { now += ms; engine.tick(); } };
 }
 
 it('schedules future cues on the audio clock and cancels/rebases them after pause and resume', async () => {
@@ -100,4 +103,37 @@ it('prefers enhanced voices in the interface language and never a novelty voice'
   expect(pickDefaultVoice(voices)?.name).toBe('Samantha (Enhanced)');
   expect(sortVoices(voices).map(item => item.name)).toEqual(['Samantha (Enhanced)', 'Daniel', 'Anna', 'Bahh']);
   expect(pickDefaultVoice([voice('Bahh', 'en-US')])).toBeUndefined();
+});
+
+it('plays the Switch clip on a handoff, confirms a Done with a short beep, and announces manual tasks', async () => {
+  const sprints = setup({ clips: true, workout: partnerSprints });
+  await sprints.audio.unlock(); await sprints.audio.preload();
+  sprints.audio.update(sprints.engine.project(), sprints.engine.readClocks());
+  sprints.sources.length = 0; sprints.spoken.length = 0;
+  sprints.advance(30_000);
+  sprints.command('switch');
+  sprints.audio.update(sprints.engine.project(), sprints.engine.readClocks());
+  expect(sprints.sources.filter(source => source.kind === 'clip').map(source => source.clip)).toContain('switch');
+  // The cap countdown is rescheduled against the cap, not a slot.
+  expect(sprints.sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(expect.arrayContaining(['three', 'two', 'one']));
+
+  const emom = setup({ workout: partnerEmom16 });
+  await emom.audio.unlock();
+  emom.audio.update(emom.engine.project(), emom.engine.readClocks());
+  emom.sources.length = 0; emom.spoken.length = 0;
+  emom.advance(20_000);
+  emom.command('done');
+  emom.audio.update(emom.engine.project(), emom.engine.readClocks());
+  expect(emom.sources.filter(source => source.kind === 'beep')).toHaveLength(1);
+  expect(emom.spoken).toEqual(['Next. A, Burpees. B, Row.']);
+
+  const manual = setup({ workout: runSledRun });
+  await manual.audio.unlock();
+  manual.audio.update(manual.engine.project(), manual.engine.readClocks());
+  manual.spoken.length = 0; manual.sources.length = 0;
+  manual.advance(300_000);
+  manual.command('done');
+  manual.audio.update(manual.engine.project(), manual.engine.readClocks());
+  expect(manual.spoken).toEqual(['Go.', 'Sled push.']);
+  expect(manual.sources.map(source => source.kind)).toEqual(['beep']); // The acknowledgement beep; nothing is scheduled for open-ended work.
 });

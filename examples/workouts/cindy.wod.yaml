@@ -1,0 +1,45 @@
+format: wodva.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: cindy
+  revision: 1
+  title: Cindy
+  description: As many rounds as possible in twenty minutes of five pull-ups, ten push-ups and fifteen air squats. Count rounds on the screen; the timer never tells you what to do next, you do.
+  attribution:
+    author: CrossFit
+    sourceUrl: https://www.crossfit.com/benchmark/cindy
+    notes: Follows the published benchmark. Scale pull-ups with a band or ring rows.
+  equipment:
+    - Pull-up bar
+  participants: 1
+  prep: 10s
+  sections:
+    - id: cindy-amrap
+      title: AMRAP 20
+      format: amrap
+      transitionAfter: manualReady
+      cap: 20m
+      counter: roundsAndReps
+      body:
+        id: cindy-round
+        type: sequence
+        children:
+          - id: cindy-pull-ups
+            type: task
+            assignments:
+              A:
+                name: Pull-ups
+                reps: 5
+          - id: cindy-push-ups
+            type: task
+            assignments:
+              A:
+                name: Push-ups
+                reps: 10
+          - id: cindy-squats
+            type: task
+            assignments:
+              A:
+                name: Air squats
+                reps: 15

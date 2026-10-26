@@ -1,0 +1,64 @@
+format: wodva.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: fourteens-amrap-14
+  revision: 1
+  title: Fourteens AMRAP 14
+  description: Fourteen minutes of fourteen toes-to-bar, fourteen calories on the rower, fourteen thrusters and fourteen lateral burpees over the bar. Break the toes-to-bar early and keep the thrusters to two sets at most.
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by Wodva.
+  equipment:
+    - Pull-up bar
+    - Rowing machine
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: fourteens
+      title: AMRAP 14
+      format: amrap
+      transitionAfter: manualReady
+      cap: 14m
+      counter: roundsAndReps
+      body:
+        id: fourteens-round
+        type: sequence
+        children:
+          - id: fourteens-t2b
+            type: task
+            assignments:
+              A:
+                name: Toes-to-bar
+                reps: 14
+          - id: fourteens-row
+            type: task
+            assignments:
+              A:
+                notes: 12 cal if scaling
+                name: Row
+                calories: 14
+          - id: fourteens-thrusters
+            type: task
+            assignments:
+              A:
+                name: Thrusters
+                reps: 14
+                load:
+                  light:
+                    value: 20
+                    unit: kg
+                  medium:
+                    value: 30
+                    unit: kg
+                  heavy:
+                    value: 43
+                    unit: kg
+          - id: fourteens-burpees
+            type: task
+            assignments:
+              A:
+                name: Lateral burpees over bar
+                shortName: Lateral burpees
+                reps: 14

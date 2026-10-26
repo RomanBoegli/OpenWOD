@@ -94,6 +94,13 @@
 .dialog .dialogIntro { font-size: 12px; color: var(--ink-3); margin: 12px 0 23px; }
 .dialog label { display: grid; gap: 9px; font-size: 12px; color: var(--ink-2); margin-bottom: 19px; }
 .fieldNote { color: var(--notice-text); font-size: 11px; line-height: 1.5; }
+.settingsBlock { display: grid; gap: 9px; margin-bottom: 19px; font-size: 12px; color: var(--ink-2); }
+.settingsLabel { font-size: 12px; color: var(--ink-2); }
+.chipGrid { display: flex; flex-wrap: wrap; gap: 6px; }
+.chipToggle { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-3); color: var(--ink-3); font-size: 12px; cursor: pointer; margin: 0 !important; }
+.chipToggle[data-checked=true] { background: var(--accent-soft); border-color: var(--accent-border); color: var(--ink); }
+.chipToggle input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.chipToggle:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
 .dialog input:not([type=range]):not([type=radio]), .dialog select { width: 100%; min-width: 0; background: var(--input-bg); border: 1px solid var(--line-2); color: var(--ink); border-radius: 8px; padding: 13px 11px; min-height: 48px; }
 .dialog input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
 .nameFields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -158,3 +165,8 @@
   .screen[data-performing=true][data-view=context] .contextRow { font-size: 17px; grid-template-columns: 16px 1fr 1fr 28px; }
   .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 22px; }
 }
+
+/* Open-ended work: a neutral, full border and no warning colours (UI-14). */
+.player[data-scope=elapsed] { --phase-color: var(--neutral-track); }
+.player[data-scope=elapsed][data-phase=paused] { --phase-color: var(--phase-paused); }
+.player[data-scope=elapsed][data-phase=complete] { --phase-color: var(--phase-work); }

@@ -1,7 +1,7 @@
 format: wodva.workout
-formatVersion: 2
+formatVersion: 3
 workout:
-  schemaVersion: 1
+  schemaVersion: 2
   id: hyrox-engine-emom-24
   revision: 1
   title: HYROX engine EMOM 24

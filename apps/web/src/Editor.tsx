@@ -1,26 +1,56 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDuration, parseDuration } from '../../../packages/domain/src';
-import { builderToWorkout, emptySection, emptySlot, validateDraft, type BuilderDraft, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
+import { builderToWorkout, emptySection, emptySlot, LIST_FORMATS, MANUAL_FORMATS, validateDraft, type BuilderDraft, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
 import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src/compiler';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
+import { FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat } from '../../../packages/domain/src/schema';
 import { displayTime } from '../../../packages/engine/src';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
+import { LEVEL_LETTERS } from './LevelChip';
 import styles from './Editor.module.css';
 import shared from './App.module.css';
 
 const toText = (ms: number) => ms % 1000 === 0 ? displayTime(ms, 'floor') : formatDuration(ms);
 
 /** A duration entered as m:ss, 40s, 1m30s or seconds; the model only ever receives valid milliseconds. */
-function DurationField({ value, onChange, label, min = 0, id }: { value: number; onChange: (ms: number) => void; label: string; min?: number; id?: string }) {
-  const [text, setText] = useState(() => toText(value));
+function DurationField({ value, onChange, label, min = 0, id, allowEmpty = false }: { value: number; onChange: (ms: number) => void; label: string; min?: number; id?: string; allowEmpty?: boolean }) {
+  const [text, setText] = useState(() => allowEmpty && !value ? '' : toText(value));
   const [invalid, setInvalid] = useState(false);
-  useEffect(() => { setText(current => { try { return parseDuration(current) === value ? current : toText(value); } catch { return toText(value); } }); }, [value]);
-  return <label className={styles.field}>{label}<input id={id} inputMode="numeric" value={text} aria-invalid={invalid || undefined} onChange={event => {
+  useEffect(() => { setText(current => { if (allowEmpty && !value && !current.trim()) return ''; try { return parseDuration(current) === value ? current : toText(value); } catch { return allowEmpty && !value ? '' : toText(value); } }); }, [value, allowEmpty]);
+  return <label className={styles.field}>{label}<input id={id} inputMode="numeric" value={text} placeholder={allowEmpty ? 'none' : undefined} aria-invalid={invalid || undefined} onChange={event => {
     setText(event.target.value);
+    if (allowEmpty && !event.target.value.trim()) { setInvalid(false); onChange(0); return; }
     try { const ms = parseDuration(event.target.value); if (ms < min) throw new Error('short'); setInvalid(false); onChange(ms); } catch { setInvalid(true); }
   }} /></label>;
+}
+
+type TargetKind = 'none' | 'reps' | 'calories' | 'm' | 'km' | 'time';
+const TARGET_LABELS: Record<TargetKind, string> = { none: 'No target', reps: 'Reps', calories: 'Calories', m: 'Metres', km: 'Kilometres', time: 'Seconds' };
+const targetKindOf = (value: Prescription): TargetKind => value.reps ? 'reps' : value.calories ? 'calories' : value.distance ? value.distance.unit : value.timeMs ? 'time' : 'none';
+const targetAmountOf = (value: Prescription): number | '' => value.reps ?? value.calories ?? (value.distance ? value.distance.value : value.timeMs ? value.timeMs / 1000 : '');
+function withTarget(value: Prescription, kind: TargetKind, amount: number | ''): Prescription {
+  const { reps: _r, calories: _c, distance: _d, timeMs: _t, ...rest } = value;
+  if (kind === 'none' || amount === '' || !(amount > 0)) return rest;
+  if (kind === 'reps') return { ...rest, reps: Math.round(amount) };
+  if (kind === 'calories') return { ...rest, calories: Math.round(amount) };
+  if (kind === 'time') return { ...rest, timeMs: Math.round(amount * 1000) };
+  return { ...rest, distance: { value: amount, unit: kind } };
+}
+
+type LoadMode = 'none' | 'kg' | 'lb' | 'percent';
+const loadModeOf = (value: Prescription): LoadMode => { const load = value.load; if (!load) return 'none'; const first = 'value' in load ? load : load.medium ?? load.light ?? load.heavy; return first?.unit ?? 'none'; };
+const levelledOf = (value: Prescription) => Boolean(value.load && !('value' in value.load));
+const loadValueOf = (value: Prescription, level?: LoadLevel): number | '' => { const load = value.load; if (!load) return ''; if ('value' in load) return load.value; const picked = level ? load[level] : load.medium; return picked ? picked.value : ''; };
+function withLoad(value: Prescription, mode: LoadMode, levelled: boolean, amounts: Partial<Record<LoadLevel, number | ''>> & { single?: number | '' }): Prescription {
+  const { load: _l, ...rest } = value;
+  if (mode === 'none') return rest;
+  const unit = mode;
+  if (!levelled) { const amount = amounts.single ?? loadValueOf(value); return amount === '' ? rest : { ...rest, load: { value: amount, unit } }; }
+  const levels: Partial<Record<LoadLevel, LoadValue>> = {};
+  for (const level of LOAD_LEVELS) { const amount = amounts[level] ?? loadValueOf(value, level); if (amount !== '') levels[level] = { value: amount, unit }; }
+  return Object.keys(levels).length ? { ...rest, load: levels } : rest;
 }
 
 interface EditorProps {
@@ -31,6 +61,15 @@ interface EditorProps {
   onSave: (draft: BuilderDraft) => void;
   onDiscard: () => void;
 }
+
+const FORMAT_HELP: Record<SectionFormat, string> = {
+  timedCircuit: 'Work slots with fixed seconds and explicit rests. The clock drives everything.',
+  amrap: 'One block of movements, repeated as many times as the cap allows. Athletes count rounds on the screen.',
+  emom: 'Work starts on every interval boundary. Done shows rest until the next one; the boundary never waits.',
+  forTime: 'Ordered movements, each ended by Done. The clock counts up, with an optional cap.',
+  youGoIGo: 'One athlete works through the unit while the other rests, then Switch. An A turn plus a B turn is one team round.',
+  strength: 'Sets at your own pace, each ended by Done, with a timed rest between sets. Loads can be levelled or a percentage of 1RM.',
+};
 
 export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
   const [draft, setDraft] = useState(initial);
@@ -57,18 +96,39 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
 
   const update = (patch: Partial<BuilderDraft>) => setDraft(value => ({ ...value, ...patch }));
   const updateSection = (index: number, patch: Partial<BuilderSection>) => setDraft(value => ({ ...value, sections: value.sections.map((section, i) => i === index ? { ...section, ...patch } : section) }));
-  const updateSlot = (s: number, i: number, patch: Partial<BuilderSlot>) => updateSection(s, { slots: draft.sections[s].slots.map((slot, j) => j === i ? { ...slot, ...patch } : slot) });
+  const updateSlot = (s: number, i: number, patch: Partial<BuilderSlot>) => setDraft(value => ({ ...value, sections: value.sections.map((section, j) => j === s ? { ...section, slots: section.slots.map((slot, k) => k === i ? { ...slot, ...patch } : slot) } : section) }));
+  const updateLane = (s: number, i: number, role: 'A' | 'B', change: (value: Prescription) => Prescription) => setDraft(value => ({ ...value, sections: value.sections.map((section, j) => j === s ? { ...section, slots: section.slots.map((slot, k) => k === i ? { ...slot, [role]: change(slot[role] ?? { name: '' }) } : slot) } : section) }));
   const move = <T,>(list: T[], from: number, to: number) => { if (to < 0 || to >= list.length) return list; const copy = [...list]; const [item] = copy.splice(from, 1); copy.splice(to, 0, item); return copy; };
   const setParticipants = (participants: 1 | 2) => setDraft(value => ({ ...value, participants, sections: value.sections.map(section => ({ ...section, alternate: participants === 2 && section.alternate, slots: section.slots.map(slot => participants === 2 ? { ...slot, B: slot.B ?? { name: '' } } : { A: slot.A, durationMs: slot.durationMs }) })) }));
+  const setFormat = (s: number, format: SectionFormat) => updateSection(s, { format, ...(LIST_FORMATS.includes(format) ? { rounds: 1, betweenSlotsRestMs: 0, trailingRestMs: 0, blockRestMs: 0, slotRepeats: 1 } : {}), ...(format === 'amrap' && !draft.sections[s].capMs ? { capMs: 600_000 } : {}), ...(format !== 'timedCircuit' ? { slotRepeats: 1 } : {}) });
   const issueFor = (path: string) => issues.find(issue => issue.path === path)?.message;
   const pair = draft.participants === 2;
+
+  const laneCell = (s: number, i: number, role: 'A' | 'B', slot: BuilderSlot, section: BuilderSection) => {
+    const value = slot[role] ?? { name: '' };
+    const label = `Section ${s + 1} ${MANUAL_FORMATS.includes(section.format) ? 'movement' : 'slot'} ${i + 1}${pair ? ` athlete ${role}` : ''}`;
+    const kind = targetKindOf(value);
+    const loadMode = loadModeOf(value);
+    const levelled = levelledOf(value);
+    return <td key={role} className={styles.laneCell}>
+      <input aria-label={label} value={value.name} maxLength={160} placeholder="Movement" aria-invalid={issueFor(`sections.${s}.slots.${i}.${role}`) ? true : undefined} onChange={event => updateLane(s, i, role, current => ({ ...current, name: event.target.value }))} />
+      <div className={styles.targetRow}>
+        <select aria-label={`${label} target kind`} value={kind} onChange={event => updateLane(s, i, role, current => withTarget(current, event.target.value as TargetKind, targetAmountOf(current) || (event.target.value === 'none' ? '' : 10)))}>{(Object.keys(TARGET_LABELS) as TargetKind[]).map(item => <option key={item} value={item}>{TARGET_LABELS[item]}</option>)}</select>
+        {kind !== 'none' && <input type="number" inputMode="decimal" min={0} step={kind === 'km' ? 0.1 : 1} aria-label={`${label} target amount`} value={targetAmountOf(value)} onChange={event => updateLane(s, i, role, current => withTarget(current, kind, event.target.value === '' ? '' : Number(event.target.value)))} />}
+        <select aria-label={`${label} load unit`} value={loadMode} onChange={event => updateLane(s, i, role, current => withLoad(current, event.target.value as LoadMode, levelled, { single: loadValueOf(current) === '' ? 20 : loadValueOf(current) }))}><option value="none">No load</option><option value="kg">kg</option><option value="lb">lb</option><option value="percent">% of 1RM</option></select>
+        {loadMode !== 'none' && <label className={styles.inlineCheck}><input type="checkbox" checked={levelled} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, event.target.checked, event.target.checked ? { light: Math.round(Number(loadValueOf(current) || 20) * .65), medium: Number(loadValueOf(current) || 20), heavy: Math.round(Number(loadValueOf(current) || 20) * 1.4) } : { single: loadValueOf(current, 'medium') }))} />Levels</label>}
+      </div>
+      {loadMode !== 'none' && <div className={styles.loadRow}>{levelled ? LOAD_LEVELS.map(level => <label key={level} className={styles.levelInput} data-level={level}><span aria-hidden="true">{LEVEL_LETTERS[level]}</span><input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, true, { [level]: event.target.value === '' ? '' : Number(event.target.value) }))} /></label>) : <input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} load`} value={loadValueOf(value)} onChange={event => updateLane(s, i, role, current => withLoad(current, loadMode, false, { single: event.target.value === '' ? '' : Number(event.target.value) }))} />}</div>}
+      <input className={styles.notes} aria-label={`${label} notes`} value={value.notes ?? ''} maxLength={500} placeholder="Notes, tempo, scaling" onChange={event => updateLane(s, i, role, current => ({ ...current, notes: event.target.value }))} />
+    </td>;
+  };
 
   return <div className={styles.editor}>
     <div className={shared.workoutHeading}>
       <div>
         <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {mode === 'replace' ? 'EDIT WORKOUT' : 'NEW WORKOUT'}</div>
         <h1>{draft.title.trim() || (mode === 'replace' ? 'Edit workout' : 'Build a workout')}</h1>
-        <p className={shared.description}>Timed circuits: sections of work slots with explicit rests, optional rounds, and a ready gate between sections. The summary on the right updates as you type.</p>
+        <p className={shared.description}>Sections of timed slots or manual movements with targets, in any of the six formats. The summary on the right updates as you type.</p>
       </div>
     </div>
 
@@ -93,45 +153,63 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
         </section>
 
         <ol className={styles.sections} aria-label="Sections">
-          {draft.sections.map((section, s) => <li key={s} className={styles.card}>
-            <div className={styles.sectionTop}>
-              <span className={shared.eyebrow}>SECTION {s + 1} OF {draft.sections.length}</span>
-              <div className={styles.toolbar}>
-                <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} up`} disabled={s === 0} onClick={() => update({ sections: move(draft.sections, s, s - 1) })}><Icon name="previous" size={16} /></button>
-                <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} down`} disabled={s === draft.sections.length - 1} onClick={() => update({ sections: move(draft.sections, s, s + 1) })}><Icon name="next" size={16} /></button>
-                <button type="button" className={shared.quietButton} aria-label={`Duplicate section ${s + 1}`} onClick={() => update({ sections: [...draft.sections.slice(0, s + 1), structuredClone(section), ...draft.sections.slice(s + 1)] })}>Duplicate</button>
-                <button type="button" className={shared.quietButton} aria-label={`Delete section ${s + 1}`} disabled={draft.sections.length === 1} onClick={() => update({ sections: draft.sections.filter((_, i) => i !== s) })}><Icon name="trash" size={15} />Delete</button>
+          {draft.sections.map((section, s) => {
+            const manual = MANUAL_FORMATS.includes(section.format);
+            const list = LIST_FORMATS.includes(section.format);
+            const standalone = section.format === 'forTime' || section.format === 'strength' || section.format === 'emom';
+            const ygig = section.format === 'youGoIGo';
+            const roundsWord = section.format === 'strength' ? 'Sets' : 'Rounds';
+            return <li key={s} className={styles.card}>
+              <div className={styles.sectionTop}>
+                <span className={shared.eyebrow}>SECTION {s + 1} OF {draft.sections.length}</span>
+                <div className={styles.toolbar}>
+                  <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} up`} disabled={s === 0} onClick={() => update({ sections: move(draft.sections, s, s - 1) })}><Icon name="previous" size={16} /></button>
+                  <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} down`} disabled={s === draft.sections.length - 1} onClick={() => update({ sections: move(draft.sections, s, s + 1) })}><Icon name="next" size={16} /></button>
+                  <button type="button" className={shared.quietButton} aria-label={`Duplicate section ${s + 1}`} onClick={() => update({ sections: [...draft.sections.slice(0, s + 1), structuredClone(section), ...draft.sections.slice(s + 1)] })}>Duplicate</button>
+                  <button type="button" className={shared.quietButton} aria-label={`Delete section ${s + 1}`} disabled={draft.sections.length === 1} onClick={() => update({ sections: draft.sections.filter((_, i) => i !== s) })}><Icon name="trash" size={15} />Delete</button>
+                </div>
               </div>
-            </div>
-            <div className={styles.row}>
-              <label className={styles.field}>Section title<input value={section.title} maxLength={160} onChange={event => updateSection(s, { title: event.target.value })} aria-invalid={issueFor(`sections.${s}.title`) ? true : undefined} /></label>
-              <label className={styles.field}>Rounds<input type="number" min={1} max={999} value={section.rounds} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>
-              {section.rounds > 1 && <DurationField label="Rest between rounds" value={section.betweenRoundsRestMs} onChange={betweenRoundsRestMs => updateSection(s, { betweenRoundsRestMs })} />}
-              {section.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={section.alternate} onChange={event => updateSection(s, { alternate: event.target.checked })} />Swap A/B tasks each round</label>}
-            </div>
-            <div className={styles.row}>
-              <DurationField label="Transition between slots" value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
-              <DurationField label="Transition after last slot" value={section.trailingRestMs} onChange={trailingRestMs => updateSection(s, { trailingRestMs })} />
-              <DurationField label="Rest after section" value={section.blockRestMs} onChange={blockRestMs => updateSection(s, { blockRestMs })} />
-              <label className={styles.field}>Then<select value={section.transitionAfter} onChange={event => updateSection(s, { transitionAfter: event.target.value as BuilderSection['transitionAfter'] })}><option value="manualReady">Wait for Ready</option><option value="automatic">Continue automatically</option></select></label>
-            </div>
-            <table className={styles.slots}>
-              <thead><tr><th scope="col">#</th><th scope="col">{pair ? 'Athlete A' : 'Movement'}</th>{pair && <th scope="col">Athlete B</th>}<th scope="col">Work</th><th scope="col"><span className={styles.srOnly}>Actions</span></th></tr></thead>
-              <tbody>{section.slots.map((slot, i) => <tr key={i}>
-                <td>{String(i + 1).padStart(2, '0')}</td>
-                <td><input aria-label={`Section ${s + 1} slot ${i + 1} ${pair ? 'athlete A' : 'movement'}`} value={slot.A.name} maxLength={160} placeholder="Movement" aria-invalid={issueFor(`sections.${s}.slots.${i}.A`) ? true : undefined} onChange={event => updateSlot(s, i, { A: { ...slot.A, name: event.target.value } })} /><input className={styles.notes} aria-label={`Section ${s + 1} slot ${i + 1} ${pair ? 'athlete A ' : ''}notes`} value={slot.A.notes ?? ''} maxLength={500} placeholder="Target or notes" onChange={event => updateSlot(s, i, { A: { ...slot.A, notes: event.target.value } })} /></td>
-                {pair && <td><input aria-label={`Section ${s + 1} slot ${i + 1} athlete B`} value={slot.B?.name ?? ''} maxLength={160} placeholder="Movement" aria-invalid={issueFor(`sections.${s}.slots.${i}.B`) ? true : undefined} onChange={event => updateSlot(s, i, { B: { ...slot.B, name: event.target.value } })} /><input className={styles.notes} aria-label={`Section ${s + 1} slot ${i + 1} athlete B notes`} value={slot.B?.notes ?? ''} maxLength={500} placeholder="Target or notes" onChange={event => updateSlot(s, i, { B: { name: slot.B?.name ?? '', ...slot.B, notes: event.target.value } })} /></td>}
-                <td><DurationField label="" id={`s${s}-slot${i}-duration`} value={slot.durationMs} min={1000} onChange={durationMs => updateSlot(s, i, { durationMs })} /></td>
-                <td><div className={styles.toolbar}>
-                  <button type="button" className={shared.iconButton} aria-label={`Move slot ${i + 1} up`} disabled={i === 0} onClick={() => updateSection(s, { slots: move(section.slots, i, i - 1) })}><Icon name="previous" size={15} /></button>
-                  <button type="button" className={shared.iconButton} aria-label={`Move slot ${i + 1} down`} disabled={i === section.slots.length - 1} onClick={() => updateSection(s, { slots: move(section.slots, i, i + 1) })}><Icon name="next" size={15} /></button>
-                  <button type="button" className={shared.iconButton} aria-label={`Duplicate slot ${i + 1}`} onClick={() => updateSection(s, { slots: [...section.slots.slice(0, i + 1), structuredClone(slot), ...section.slots.slice(i + 1)] })}><Icon name="grid" size={15} /></button>
-                  <button type="button" className={shared.iconButton} aria-label={`Delete slot ${i + 1}`} disabled={section.slots.length === 1} onClick={() => updateSection(s, { slots: section.slots.filter((_, j) => j !== i) })}><Icon name="trash" size={15} /></button>
-                </div></td>
-              </tr>)}</tbody>
-            </table>
-            <button type="button" className={shared.quietButton} onClick={() => updateSection(s, { slots: [...section.slots, emptySlot(draft.participants)] })}><Icon name="arrow" size={15} />Add slot</button>
-          </li>)}
+              <div className={styles.row}>
+                <label className={styles.field}>Section title<input value={section.title} maxLength={160} onChange={event => updateSection(s, { title: event.target.value })} aria-invalid={issueFor(`sections.${s}.title`) ? true : undefined} /></label>
+                <label className={styles.field}>Format<select value={section.format} aria-label={`Section ${s + 1} format`} onChange={event => setFormat(s, event.target.value as SectionFormat)}>{SECTION_FORMATS.map(format => <option key={format} value={format} disabled={format === 'youGoIGo' && !pair}>{FORMAT_LABELS[format]}</option>)}</select></label>
+                <label className={styles.field}>Then<select value={section.transitionAfter} onChange={event => updateSection(s, { transitionAfter: event.target.value as BuilderSection['transitionAfter'] })}><option value="manualReady">Wait for Ready</option><option value="automatic">Continue automatically</option></select></label>
+              </div>
+              <p className={styles.formatHelp}>{FORMAT_HELP[section.format]}</p>
+              <div className={styles.row}>
+                {(section.format === 'amrap' || section.format === 'forTime' || ygig) && <DurationField label={section.format === 'forTime' || ygig ? 'Time cap (optional)' : 'Time cap'} value={section.capMs} allowEmpty={section.format !== 'amrap'} onChange={capMs => updateSection(s, { capMs })} />}
+                {section.format === 'amrap' && <label className={styles.field}>Counter<select value={section.counter} onChange={event => updateSection(s, { counter: event.target.value as BuilderSection['counter'] })}><option value="roundsAndReps">Rounds and reps</option><option value="rounds">Rounds only</option><option value="none">No counter</option></select></label>}
+                {section.format === 'emom' && <><DurationField label="Every" value={section.intervalMs} min={1000} onChange={intervalMs => updateSection(s, { intervalMs })} /><label className={styles.field}>Intervals<input type="number" min={1} max={999} value={section.intervals} onChange={event => updateSection(s, { intervals: Number(event.target.value) })} /></label></>}
+                {ygig && <><label className={styles.field}>Team rounds (0 = by cap)<input type="number" min={0} max={999} value={section.teamRounds} onChange={event => updateSection(s, { teamRounds: Number(event.target.value) })} /></label><DurationField label="Fixed turn (optional)" value={section.turnMs} allowEmpty onChange={turnMs => updateSection(s, { turnMs })} /></>}
+                {!list && <label className={styles.field}>{roundsWord}<input type="number" min={1} max={999} value={section.rounds} aria-label={`Section ${s + 1} ${roundsWord.toLowerCase()}`} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>}
+                {!list && section.rounds > 1 && <DurationField label={`Rest between ${roundsWord.toLowerCase()}`} value={section.betweenRoundsRestMs} onChange={betweenRoundsRestMs => updateSection(s, { betweenRoundsRestMs })} />}
+                {!list && section.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={section.alternate} onChange={event => updateSection(s, { alternate: event.target.checked })} />Swap A/B tasks each round</label>}
+              </div>
+              {!list && <div className={styles.row}>
+                <DurationField label={manual ? 'Rest between movements' : 'Transition between slots'} value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
+                <DurationField label={manual ? 'Rest after last movement' : 'Transition after last slot'} value={section.trailingRestMs} onChange={trailingRestMs => updateSection(s, { trailingRestMs })} />
+                <DurationField label="Rest after section" value={section.blockRestMs} onChange={blockRestMs => updateSection(s, { blockRestMs })} />
+                {section.format === 'timedCircuit' && <label className={styles.field}>Repeat each slot<input type="number" min={1} max={999} value={section.slotRepeats} onChange={event => updateSection(s, { slotRepeats: Number(event.target.value) })} /></label>}
+                {section.format === 'timedCircuit' && section.slotRepeats > 1 && <DurationField label="Rest within repeats" value={section.slotRepeatRestMs} onChange={slotRepeatRestMs => updateSection(s, { slotRepeatRestMs })} />}
+              </div>}
+              <table className={styles.slots}>
+                <thead><tr><th scope="col">#</th><th scope="col">{ygig ? 'Work unit (both athletes)' : pair ? 'Athlete A' : 'Movement'}</th>{pair && !ygig && <th scope="col">Athlete B</th>}{!manual && <th scope="col">Work</th>}{pair && standalone && <th scope="col">Done by</th>}<th scope="col"><span className={styles.srOnly}>Actions</span></th></tr></thead>
+                <tbody>{section.slots.map((slot, i) => <tr key={i}>
+                  <td>{String(i + 1).padStart(2, '0')}</td>
+                  {laneCell(s, i, 'A', slot, section)}
+                  {pair && !ygig && laneCell(s, i, 'B', slot, section)}
+                  {!manual && <td><DurationField label="" id={`s${s}-slot${i}-duration`} value={slot.durationMs} min={1000} onChange={durationMs => updateSlot(s, i, { durationMs })} /></td>}
+                  {pair && standalone && <td><select aria-label={`Section ${s + 1} movement ${i + 1} completion`} value={slot.completion ?? 'team'} onChange={event => updateSlot(s, i, { completion: event.target.value as BuilderSlot['completion'] })}><option value="team">One Done</option><option value="both">Both tap Done</option></select></td>}
+                  <td><div className={styles.toolbar}>
+                    <button type="button" className={shared.iconButton} aria-label={`Move slot ${i + 1} up`} disabled={i === 0} onClick={() => updateSection(s, { slots: move(section.slots, i, i - 1) })}><Icon name="previous" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Move slot ${i + 1} down`} disabled={i === section.slots.length - 1} onClick={() => updateSection(s, { slots: move(section.slots, i, i + 1) })}><Icon name="next" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Duplicate slot ${i + 1}`} onClick={() => updateSection(s, { slots: [...section.slots.slice(0, i + 1), structuredClone(slot), ...section.slots.slice(i + 1)] })}><Icon name="grid" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Delete slot ${i + 1}`} disabled={section.slots.length === 1} onClick={() => updateSection(s, { slots: section.slots.filter((_, j) => j !== i) })}><Icon name="trash" size={15} /></button>
+                  </div></td>
+                </tr>)}</tbody>
+              </table>
+              <button type="button" className={shared.quietButton} onClick={() => updateSection(s, { slots: [...section.slots, emptySlot(draft.participants)] })}><Icon name="arrow" size={15} />{manual ? 'Add movement' : 'Add slot'}</button>
+            </li>;
+          })}
         </ol>
         <button type="button" className={shared.quietButton} onClick={() => update({ sections: [...draft.sections, emptySection(draft.participants)] })}><Icon name="arrow" size={15} />Add section</button>
       </div>
@@ -140,11 +218,11 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
         <div className={styles.summaryCard}>
           <span className={shared.eyebrow}>LIVE SUMMARY</span>
           <dl className={styles.facts}>
-            <div><dt>Active</dt><dd>{compiled.plan ? displayTime(compiled.plan.durationMs) : '—'}</dd></div>
-            <div><dt>With prep</dt><dd>{compiled.plan ? displayTime(compiled.plan.durationMs + draft.prepMs) : '—'}</dd></div>
+            <div><dt>{compiled.plan?.durationKind === 'open' ? 'Timed parts' : compiled.plan?.durationKind === 'capped' ? 'Up to' : 'Active'}</dt><dd>{compiled.plan ? displayTime(compiled.plan.durationMs) : '—'}</dd></div>
+            <div><dt>With prep</dt><dd>{compiled.plan ? compiled.plan.durationKind === 'open' ? 'Open' : displayTime(compiled.plan.durationMs + draft.prepMs) : '—'}</dd></div>
           </dl>
           {difficulty && <DifficultyChip difficulty={difficulty} detailed />}
-          {compiled.plan && <ul className={styles.sectionList}>{compiled.plan.sections.map(section => <li key={section.id}><span>{section.title}</span><span>{displayTime(section.durationMs)}</span></li>)}</ul>}
+          {compiled.plan && <ul className={styles.sectionList}>{compiled.plan.sections.map(section => <li key={section.id}><span>{section.title} <small>· {FORMAT_LABELS[section.format]}</small></span><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span></li>)}</ul>}
           {(issues.length > 0 || compiled.error) && <ul className={styles.issues} role="alert">{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}
           <p className={styles.status} aria-live="polite">{dirty ? 'Unsaved changes…' : savedAt ? `Draft saved on this device · ${new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Drafts save automatically on this device.'}</p>
           <div className={styles.saveActions}>

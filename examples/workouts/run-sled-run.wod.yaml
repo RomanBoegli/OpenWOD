@@ -1,0 +1,59 @@
+format: wodva.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: run-sled-run
+  revision: 1
+  title: Run, sled, run
+  description: "One kilometre run, fifty metres of sled push, one kilometre run. Tap Done when a distance is covered; the clock counts up and records each split. No cap: finish what you start."
+  attribution:
+    author: Wodva
+    notes: A HYROX-style run and station sequence. The sled load levels are training suggestions, not race prescriptions.
+  equipment:
+    - Running route
+    - Sled
+  participants: 1
+  prep: 10s
+  sections:
+    - id: rsr
+      title: Run, sled, run
+      format: forTime
+      transitionAfter: manualReady
+      body:
+        id: rsr-sequence
+        type: sequence
+        children:
+          - id: rsr-run-1
+            type: task
+            assignments:
+              A:
+                name: Run
+                distance:
+                  value: 1
+                  unit: km
+          - id: rsr-sled
+            type: task
+            assignments:
+              A:
+                name: Sled push
+                distance:
+                  value: 50
+                  unit: m
+                load:
+                  light:
+                    value: 50
+                    unit: kg
+                  medium:
+                    value: 75
+                    unit: kg
+                  heavy:
+                    value: 100
+                    unit: kg
+          - id: rsr-run-2
+            type: task
+            assignments:
+              A:
+                name: Run
+                distance:
+                  value: 1
+                  unit: km

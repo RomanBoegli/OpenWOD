@@ -5,7 +5,7 @@ import { fullBodyPartner, partnerCircuit } from '../../packages/domain/src/fixtu
 import type { Workout } from '../../packages/domain/src';
 
 const soloTimed = (id: string, names: string[], durationMs: number, restMs = 0): Workout => ({
-  schemaVersion: 1, id, revision: 1, title: id, equipment: [], participants: 1, prepMs: 0,
+  schemaVersion: 2, id, revision: 1, title: id, equipment: [], participants: 1, prepMs: 0,
   sections: [{ id: `${id}-s`, title: 'Main', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: `${id}-seq`, type: 'sequence', betweenChildrenRestMs: restMs, children: names.map((name, index) => ({ id: `${id}-${index}`, type: 'timed', durationMs, assignments: { A: { name } } })) } }],
 });
 

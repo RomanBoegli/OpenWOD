@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { MAX_FILE_BYTES, parseWorkoutFile, type Workout } from '../../../packages/domain/src';
 import { equipmentOptions, matchesFilter, sortSummaries, summariseWorkout, type DurationBucket, type LibrarySort, type WorkoutSummary } from '../../../packages/domain/src/library';
 import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
+import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
+import type { Preferences } from './preferences';
 import { DifficultyChip } from './DifficultyChip';
 import { displayTime } from '../../../packages/engine/src';
 import { exportWorkoutFile } from './Player';
@@ -27,14 +29,21 @@ interface LibraryProps {
   missingId?: string;
   drafts: StoredDraft[];
   onDiscardDraft: (id: string) => void;
+  preferences: Preferences;
+  onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
 }
 
-export function Library({ entries, onImport, onRemove, storageError, missingId, drafts, onDiscardDraft }: LibraryProps) {
+const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.totalMs)}`;
+
+export function Library({ entries, onImport, onRemove, storageError, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange }: LibraryProps) {
   const [query, setQuery] = useState('');
   const [participants, setParticipants] = useState<'' | '1' | '2'>('');
   const [equipment, setEquipment] = useState('');
   const [duration, setDuration] = useState<'' | DurationBucket>('');
   const [difficulty, setDifficulty] = useState<'' | DifficultyLevel>('');
+  const [format, setFormat] = useState<'' | SectionFormat>('');
+  const onlyMine = preferences.onlyMyEquipment;
+  const setOnlyMine = (value: boolean) => onPreferencesChange(current => ({ ...current, onlyMyEquipment: value }));
   const [sort, setSort] = useState<LibrarySort>('title');
   const [preview, setPreview] = useState<Workout>();
   const [importError, setImportError] = useState('');
@@ -45,10 +54,10 @@ export function Library({ entries, onImport, onRemove, storageError, missingId, 
   const fileInput = useRef<HTMLInputElement>(null);
 
   const equipmentList = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
-  const filter = { query, participants: participants ? Number(participants) as 1 | 2 : undefined, equipment: equipment || undefined, duration: duration || undefined, difficulty: difficulty || undefined };
-  const visible = useMemo(() => sortSummaries(entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry })), sort).map(item => item.entry), [entries, query, participants, equipment, duration, difficulty, sort]);
-  const filtering = Boolean(query || participants || equipment || duration || difficulty);
-  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment(''); setDuration(''); setDifficulty(''); };
+  const filter = { query, participants: participants ? Number(participants) as 1 | 2 : undefined, equipment: equipment || undefined, duration: duration || undefined, difficulty: difficulty || undefined, format: format || undefined, onlyEquipment: onlyMine ? preferences.myEquipment : undefined };
+  const visible = useMemo(() => sortSummaries(entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry })), sort).map(item => item.entry), [entries, query, participants, equipment, duration, difficulty, format, onlyMine, preferences.myEquipment, sort]);
+  const filtering = Boolean(query || participants || equipment || duration || difficulty || format || onlyMine);
+  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment(''); setDuration(''); setDifficulty(''); setFormat(''); setOnlyMine(false); };
   const previewSummary = useMemo(() => preview && summariseWorkout(preview), [preview]);
   const conflict = preview && entries.find(entry => entry.workout.id === preview.id);
 
@@ -93,21 +102,22 @@ export function Library({ entries, onImport, onRemove, storageError, missingId, 
       <label>Equipment<select value={equipment} onChange={event => setEquipment(event.target.value)}><option value="">Any</option>{equipmentList.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
       <label>Duration<select value={duration} onChange={event => setDuration(event.target.value as '' | DurationBucket)}><option value="">Any</option><option value="short">Up to 20 min</option><option value="medium">20 to 40 min</option><option value="long">Over 40 min</option></select></label>
       <label>Difficulty<select value={difficulty} onChange={event => setDifficulty(event.target.value ? Number(event.target.value) as DifficultyLevel : '')}><option value="">Any</option>{([1, 2, 3, 4] as const).map(level => <option key={level} value={level}>{DIFFICULTY_LABELS[level]}</option>)}</select></label>
+      <label>Format<select value={format} onChange={event => setFormat(event.target.value as '' | SectionFormat)}><option value="">Any</option>{SECTION_FORMATS.map(item => <option key={item} value={item}>{FORMAT_LABELS[item]}</option>)}</select></label>
       <label>Sort<select value={sort} onChange={event => setSort(event.target.value as LibrarySort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option></select></label>
     </div>
-    <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
+    <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}</span><label className={styles.toggle}><input type="checkbox" checked={onlyMine} onChange={event => setOnlyMine(event.target.checked)} />Only my equipment{preferences.myEquipment.length === 0 && onlyMine ? ' (bodyweight only — tick your gear in settings)' : ''}</label>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
     {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
       {visible.map(({ workout, summary, source, editable }) => <li key={workout.id} className={styles.card} data-source={source}>
-        <div className={styles.cardTop}><span className={styles.badges}><span className={styles.badge} data-kind={summary.participants === 2 ? 'pair' : 'solo'}><Icon name={summary.participants === 2 ? 'users' : 'user'} size={14} />{summary.participants === 2 ? 'Pair' : 'Solo'}</span><DifficultyChip difficulty={summary.difficulty} /></span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
+        <div className={styles.cardTop}><span className={styles.badges}><span className={styles.badge} data-kind={summary.participants === 2 ? 'pair' : 'solo'}><Icon name={summary.participants === 2 ? 'users' : 'user'} size={14} />{summary.participants === 2 ? 'Pair' : 'Solo'}</span>{summary.formats.map(item => <span key={item} className={styles.badge} data-kind="format">{FORMAT_LABELS[item]}</span>)}<DifficultyChip difficulty={summary.difficulty} /></span><span className={styles.source}>{source === 'bundled' ? 'Bundled' : 'Saved on this device'}</span></div>
         <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
         {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
         <dl className={styles.facts}>
-          <div><dt>Total</dt><dd>{displayTime(summary.totalMs)}</dd></div>
+          <div><dt>Total</dt><dd>{durationLabel(summary)}</dd></div>
           <div><dt>Sections</dt><dd>{summary.sections}</dd></div>
           <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
         </dl>
-        {summary.equipment.length > 0 && <div className={styles.tags}>{summary.equipment.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment === item} onClick={() => setEquipment(value => value === item ? '' : item)}>{item}</button>)}</div>}
+        {summary.equipmentNeeded.length > 0 ? <div className={styles.tags}>{summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment === item} onClick={() => setEquipment(value => value === item ? '' : item)}>{item}</button>)}</div> : <div className={styles.tags}><span className={styles.tag} data-plain>Bodyweight only</span></div>}
         <div className={styles.cardActions}>
           <a className={shared.primaryButton} href={playHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
           <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Read through ${summary.title}`}><Icon name="list" size={17} />Read through</a>
@@ -122,8 +132,8 @@ export function Library({ entries, onImport, onRemove, storageError, missingId, 
       {importError ? <p role="alert" className={shared.importError}>{importError}</p> : preview && previewSummary && <>
         <h3>{preview.title}</h3>
         {preview.description && <p>{preview.description}</p>}
-        <p>{displayTime(previewSummary.totalMs)} incl. prep · {preview.participants === 2 ? '2 athletes' : 'Solo'} · {previewSummary.sections} {previewSummary.sections === 1 ? 'section' : 'sections'} · {previewSummary.movements.length} movements · projected {previewSummary.difficulty.label.toLowerCase()}</p>
-        {preview.equipment.length > 0 && <p>{preview.equipment.join(' + ')}</p>}
+        <p>{durationLabel(previewSummary)} incl. prep · {preview.participants === 2 ? '2 athletes' : 'Solo'} · {previewSummary.formats.map(item => FORMAT_LABELS[item]).join(', ')} · {previewSummary.sections} {previewSummary.sections === 1 ? 'section' : 'sections'} · {previewSummary.movements.length} movements · projected {previewSummary.difficulty.label.toLowerCase()}</p>
+        {previewSummary.equipmentNeeded.length > 0 && <p>{previewSummary.equipmentNeeded.join(' + ')}</p>}
         {conflict ? <p className={shared.notice} role="status">{conflict.source === 'bundled' ? `“${conflict.summary.title}” is a bundled workout with the same ID. The import is saved as a separate copy.` : `“${conflict.summary.title}” is already saved with this ID. Import another copy, or replace the saved one.`}</p> : <p className={shared.dialogIntro}>Saved to this device’s library. Starting is a separate step.</p>}
         <div className={shared.dialogActions}>
           {conflict?.source === 'saved' && <button className={shared.quietButton} onClick={() => confirmImport('replace')}>Replace saved copy</button>}

@@ -1,4 +1,5 @@
 import type { CueSource, SoundMode } from './audio';
+import { LOAD_LEVELS, type LoadLevel } from '../../../packages/domain/src/schema';
 
 export type ThemePreference = 'auto' | 'light' | 'dark';
 export interface Preferences {
@@ -10,9 +11,14 @@ export interface Preferences {
   rate: number;
   volume: number;
   view: 'focus' | 'context';
+  /** Which prescribed load each athlete lifts when a workout offers levels (BLD-08 session override). */
+  levels: { A: LoadLevel; B: LoadLevel };
+  /** Equipment available at home; the library can hide anything that needs more. */
+  myEquipment: string[];
+  onlyMyEquipment: boolean;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', voiceURI: '', rate: 1, volume: .7, view: 'focus' };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', voiceURI: '', rate: 1, volume: .7, view: 'focus', levels: { A: 'medium', B: 'medium' }, myEquipment: [], onlyMyEquipment: false };
 
 const KEY = 'wodva.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -26,7 +32,7 @@ const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']> } : {};
+    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; levels?: Partial<Preferences['levels']> } : {};
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
@@ -36,6 +42,9 @@ export function loadPreferences(): Preferences {
       rate: clamp(stored.rate, .7, 1.3, defaultPreferences.rate),
       volume: clamp(stored.volume, 0, 1, defaultPreferences.volume),
       view: oneOf(stored.view, ['focus', 'context'], defaultPreferences.view),
+      levels: { A: oneOf(stored.levels?.A, LOAD_LEVELS, 'medium'), B: oneOf(stored.levels?.B, LOAD_LEVELS, 'medium') },
+      myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
+      onlyMyEquipment: stored.onlyMyEquipment === true,
     };
   } catch { return structuredClone(defaultPreferences); }
 }

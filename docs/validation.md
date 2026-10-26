@@ -55,3 +55,17 @@ Added after the player milestone: YAML exchange format (version 2, human duratio
 | Visual pass | WebKit screenshots of library, overview, editor and player in light and dark at 1440 and 390 px inspected. |
 
 Not run in this round: the recorded cue clips (`npm run cues:generate` needs a one-off Piper download, which this environment could not perform; the app falls back to device voice and says so), the Docker production smoke test, and the real-hour and physical-device checks listed above.
+
+## Formats wave, 26 October 2026
+
+Added: workout model version 2 and file version 3 (manual tasks, six section formats, targets, levelled loads), engine commands Done/Finish/Switch/Count with cap precedence and a snapshot/restore pair, per-format player layouts with big targets and level chips, a per-athlete load level, format and “only my equipment” filters, seven format fixtures (Cindy, Fran, a partner EMOM, you-go-I-go sprints, run/sled/run, 5 × 5 back squat, a mixed session) and 22 workouts curated from coach programming, and editor support for every format.
+
+| Check | Result |
+| --- | --- |
+| Frozen traces of the eight timed fixtures | Byte-identical before and after the model change (`tests/unit/traces`). |
+| Unit tests | 76 passed, including AT-04, 05, 06, 07, 08, 20 and 22 against the fake clock, and a snapshot round trip. |
+| Accelerated browser integration | Firefox and WebKit: the previous 17 scenarios plus AMRAP, EMOM, For time, you-go-I-go, library filters and an editor-built AMRAP; Chromium runs in CI. |
+| Production build and test-hook exclusion | Passed. |
+| Visual pass | WebKit screenshots of library, overview, editor, the ready screen and the AMRAP, EMOM, For time, you-go-I-go, strength and finish screens in light and dark at 1024 × 768 and 390 × 844 inspected. |
+
+Not run in this round: the Docker production smoke test, the recorded cue clips, and the real-hour and physical-device checks listed above.

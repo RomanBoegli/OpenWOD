@@ -46,3 +46,19 @@
 .saveActions .primaryButton { width: 100%; }
 @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } .summary { position: static; } }
 @media (max-width: 620px) { .card { padding: 16px 14px; } .slots, .slots thead, .slots tbody, .slots tr, .slots td { display: block; } .slots thead { display: none; } .slots tr { padding: 10px 0; border-bottom: 1px solid var(--line-2); } .slots td { border: 0; padding: 4px 0; } .slots td:first-child { padding-top: 4px; } .slots td .field { width: 100%; } }
+.formatHelp { margin: 2px 0 6px; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+.laneCell { min-width: 220px; }
+.targetRow { display: grid; grid-template-columns: minmax(96px, 1fr) 74px minmax(84px, 1fr) auto; gap: 4px; margin-top: 4px; align-items: center; }
+.targetRow select, .loadRow input { min-height: 36px !important; padding: 5px 8px !important; font-size: 12px !important; }
+.targetRow input { min-height: 36px !important; padding: 5px 8px !important; font-size: 12px !important; }
+.slots td .targetRow select { width: 100%; min-width: 0; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); }
+.inlineCheck { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-2); white-space: nowrap; }
+.inlineCheck input { width: 16px !important; min-width: 16px; height: 16px; min-height: 0 !important; padding: 0 !important; accent-color: var(--accent-fill); margin: 0; }
+.loadRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 4px; margin-top: 4px; }
+.levelInput { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 4px; }
+.levelInput span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #fff; }
+.levelInput[data-level=light] span { background: var(--level-light); }
+.levelInput[data-level=medium] span { background: var(--level-medium); }
+.levelInput[data-level=heavy] span { background: var(--level-heavy); border: 1px solid var(--level-heavy-border); }
+.slots td select { min-height: 44px; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); color: var(--ink); font-size: 13px; }
+.sectionList small { color: var(--ink-3); }

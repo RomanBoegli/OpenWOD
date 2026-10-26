@@ -1,7 +1,7 @@
 format: wodva.workout
-formatVersion: 2
+formatVersion: 3
 workout:
-  schemaVersion: 1
+  schemaVersion: 2
   id: partner-circuit
   revision: 1
   title: Partner circuit

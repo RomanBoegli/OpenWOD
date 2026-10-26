@@ -6,7 +6,7 @@ import { serialiseWorkoutFile } from '../../packages/domain/src';
 const PLAYER = '/#/wod/partner-circuit/play';
 const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__wodvaTest));
 const communityFile = (title = 'Community circuit', id = partnerCircuit.id) => ({ name: 'community.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile({ ...partnerCircuit, id, title })) });
-const legacyJsonFile = { name: 'legacy.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, id: 'legacy-circuit', title: 'Legacy circuit' } })) };
+const legacyJsonFile = { name: 'legacy.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'wodva.workout', formatVersion: 1, workout: { ...partnerCircuit, schemaVersion: 1, id: 'legacy-circuit', title: 'Legacy circuit' } })) };
 
 test.describe('player', () => {
   test.beforeEach(async ({ page }) => { await page.goto(PLAYER); await ready(page); });
@@ -229,6 +229,40 @@ test.describe('editor', () => {
   });
 });
 
+test.describe('editor formats', () => {
+  test('builds an AMRAP with targets and levelled loads, saves it, and plays it with the counter', async ({ page }) => {
+    await page.goto('/#/new'); await page.getByRole('heading', { level: 1, name: 'Build a workout' }).waitFor();
+    await page.getByLabel('Title', { exact: true }).fill('Garage AMRAP');
+    await page.getByRole('radio', { name: 'Solo' }).check();
+    await page.getByLabel('Section 1 format').selectOption('amrap');
+    await page.getByLabel('Time cap').fill('12:00');
+    await page.getByLabel('Section 1 movement 1', { exact: true }).fill('Kettlebell swings');
+    await page.getByLabel('Section 1 movement 1 target kind').selectOption('reps');
+    await page.getByLabel('Section 1 movement 1 target amount').fill('15');
+    await page.getByLabel('Section 1 movement 1 load unit').selectOption('kg');
+    await page.getByLabel('Section 1 movement 1', { exact: true }).locator('..').getByRole('checkbox', { name: 'Levels' }).check();
+    await page.getByLabel('Section 1 movement 1 heavy load').fill('24');
+    await page.getByRole('button', { name: 'Add movement' }).click();
+    await page.getByLabel('Section 1 movement 2', { exact: true }).fill('Burpees');
+    await page.getByLabel('Section 1 movement 2 target kind').selectOption('reps');
+    await page.getByLabel('Section 1 movement 2 target amount').fill('10');
+    await expect(page.getByRole('complementary', { name: 'Summary' })).toContainText('Cap 12:00');
+    await page.getByRole('button', { name: 'Save to library' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Garage AMRAP' })).toBeVisible();
+    await expect(page.getByRole('main')).toContainText('AMRAP');
+    await expect(page.getByRole('main')).toContainText('24 kg');
+    await page.getByRole('link', { name: 'Start workout' }).click(); await ready(page);
+    await page.getByRole('radiogroup', { name: 'Load level for athlete A' }).getByRole('radio', { name: 'Heavy' }).check();
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.evaluate(() => window.__wodvaTest!.advance(10_000));
+    await expect(page.getByRole('list', { name: 'AMRAP block' })).toContainText('24 kg');
+    await page.getByRole('button', { name: 'Round', exact: true }).click();
+    await expect(page.getByTestId('rounds')).toHaveText('1');
+    await page.evaluate(() => window.__wodvaTest!.advance(720_000));
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+  });
+});
+
 test.describe('library', () => {
   test.beforeEach(async ({ page }) => { await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor(); });
 
@@ -314,11 +348,121 @@ test.describe('library', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect.poll(theme).toBe('dark');
     await page.getByRole('button', { name: 'Player settings' }).click();
-    await page.getByRole('radio', { name: 'Light' }).check();
+    await page.getByRole('group', { name: 'Appearance' }).getByRole('radio', { name: 'Light' }).check();
     await expect.poll(theme).toBe('light');
     await page.getByRole('button', { name: 'Close settings' }).click();
     await page.reload();
     await expect.poll(theme).toBe('light');
     expect(await page.evaluate(() => document.querySelector('meta[name="theme-color"]')?.getAttribute('content'))).toBe('#f3f5ee');
+  });
+});
+
+test.describe('formats', () => {
+  const advance = (page: Page, ms: number) => page.evaluate(ms => window.__wodvaTest!.advance(ms), ms);
+
+  test('AMRAP counts only what is tapped, never moves its block, and ends capped', async ({ page }) => {
+    await page.goto('/#/wod/cindy/play'); await ready(page);
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:10');
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    await expect(page.getByRole('status')).toHaveText('AMRAP');
+    await expect(page.getByTestId('primary-timer')).toHaveText('20:00');
+    await expect(page.getByRole('list', { name: 'AMRAP block' }).getByRole('listitem')).toHaveCount(3);
+    await advance(page, 60_000);
+    await expect(page.getByTestId('primary-timer')).toHaveText('19:00');
+    await expect(page.getByRole('button', { name: 'Next interval' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Round', exact: true }).click();
+    await page.getByRole('button', { name: 'Round', exact: true }).click();
+    await page.getByRole('button', { name: 'Rep', exact: true }).click();
+    await expect(page.getByTestId('rounds')).toHaveText('2');
+    await expect(page.getByTestId('reps')).toHaveText('1');
+    await page.getByRole('button', { name: 'Undo last count' }).click();
+    await expect(page.getByTestId('reps')).toHaveText('0');
+    await expect(page.getByRole('list', { name: 'AMRAP block' }).getByRole('listitem')).toHaveCount(3);
+    await advance(page, 1_140_000);
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('2 rounds');
+    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('capped');
+  });
+
+  test('EMOM keeps its boundaries whatever is tapped and shows rest after an early Done', async ({ page }) => {
+    await page.goto('/#/wod/partner-emom-16/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    await expect(page.getByRole('status')).toHaveText('Interval');
+    await expect(page.getByTestId('primary-timer')).toHaveText('01:00');
+    await expect(page.getByText('INTERVAL 1 / 16')).toBeVisible();
+    await expect(page.getByTestId('movement-A')).toHaveText('Row');
+    await advance(page, 20_000);
+    await page.getByTestId('done').click();
+    await expect(page.getByText('DONE · REST').first()).toBeVisible();
+    await expect(page.getByTestId('done')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Next interval' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Restart interval' })).toBeDisabled();
+    await advance(page, 20_000);
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:20');
+    await advance(page, 20_000);
+    await expect(page.getByText('INTERVAL 2 / 16')).toBeVisible();
+    await expect(page.getByTestId('movement-A')).toHaveText('Burpees');
+    await expect(page.getByTestId('done')).toBeVisible();
+  });
+
+  test('For time counts up, advances on Done, shows big targets with the chosen load level, and finishes', async ({ page }) => {
+    await page.goto('/#/wod/fran/play'); await ready(page);
+    await expect(page.getByRole('heading', { level: 3, name: 'Today’s load level' })).toBeVisible();
+    await page.getByRole('radiogroup', { name: 'Load level for athlete A' }).getByRole('radio', { name: 'Heavy' }).check();
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('43 kg');
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    await expect(page.getByRole('status')).toHaveText('Work · tap Done');
+    await expect(page.getByTestId('movement-A')).toHaveText('Thrusters');
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('21');
+    await advance(page, 5_000);
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:05');
+    await expect(page.getByText('ELAPSED · CAP BELOW')).toBeVisible();
+    await expect(page.getByText('CAP09:55')).toBeVisible();
+    for (let step = 0; step < 5; step++) { await page.getByTestId('done').click(); await advance(page, 1_000); }
+    await expect(page.getByTestId('movement-A')).toHaveText('Pull-ups');
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('9');
+    await page.getByTestId('done').click();
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('completed');
+    await page.reload(); await ready(page);
+    await expect(page.getByRole('radiogroup', { name: 'Load level for athlete A' }).getByRole('radio', { name: 'Heavy' })).toBeChecked();
+  });
+
+  test('You go, I go hands over on Switch and ignores a rapid second tap', async ({ page }) => {
+    await page.goto('/#/wod/you-go-i-go-sprints/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    await expect(page.getByRole('status')).toHaveText('Athlete A works');
+    await expect(page.getByText('TEAM ROUND 1 · TURN 1')).toBeVisible();
+    await page.getByTestId('switch').click();
+    await page.getByTestId('switch').click({ force: true });
+    await expect(page.getByRole('status')).toHaveText('Athlete B works');
+    await expect(page.getByText('TEAM ROUND 1 · TURN 2')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.getByTestId('switch').click();
+    await expect(page.getByText('TEAM ROUND 2 · TURN 3')).toBeVisible();
+    await advance(page, 720_000);
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('1 team round');
+  });
+
+  test('the library filters by format and by the equipment you own', async ({ page }) => {
+    await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
+    await page.getByLabel('Format').selectOption('amrap');
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Cindy');
+    await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');
+    await page.getByLabel('Format').selectOption('');
+    await page.getByLabel('Only my equipment').check();
+    await expect(page.getByText('Nothing matches yet')).toBeVisible();
+    await page.getByRole('button', { name: 'Player settings' }).click();
+    await page.getByRole('checkbox', { name: 'Pull-up bar' }).check();
+    await page.getByRole('button', { name: 'Close settings' }).click();
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Cindy');
+    await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');
+    await page.reload();
+    await expect(page.getByLabel('Only my equipment')).toBeChecked();
   });
 });

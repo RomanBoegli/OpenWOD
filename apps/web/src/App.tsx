@@ -12,6 +12,8 @@ import { loadPreferences, savePreferences, type Preferences } from './preference
 import { useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
 import { Icon } from './Icon';
+import { LevelPicker } from './LevelChip';
+import { equipmentOptions } from '../../../packages/domain/src/library';
 import styles from './App.module.css';
 
 const bundledEntries = fixtureWorkouts.map(workout => toEntry(workout, 'bundled'));
@@ -92,6 +94,7 @@ export default function App() {
     })() : undefined;
   const editingDraft = editing && drafts.find(draft => draft.id === editing.id);
   const update = (patch: Partial<Preferences>) => setPreferences(value => ({ ...value, ...patch }));
+  const equipmentChoices = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
 
   return <div className={styles.app} data-performing={performing}>
     <header className={styles.header}>
@@ -108,13 +111,15 @@ export default function App() {
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} initial={editing.initial} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={draft => saveDraft(editing.id, editing.mode, draft)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : '#/'; }} />
         : route.name === 'edit' && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
         : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} onRemove={removeWorkout} />
-        : <Library entries={entries} onImport={importWorkout} onRemove={removeWorkout} storageError={storageError} missingId={route.name === 'library' || route.name === 'new' ? undefined : route.id} drafts={drafts} onDiscardDraft={discardDraft} />}
+        : <Library entries={entries} onImport={importWorkout} onRemove={removeWorkout} storageError={storageError} missingId={route.name === 'library' || route.name === 'new' ? undefined : route.id} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} />}
       <footer className={styles.footer}><span>BUILT FOR YOUR EVERYDAY STRONG.</span><span>Player preview · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
     </main>
 
     <dialog ref={settings} className={styles.dialog} aria-labelledby="settings-title"><div className={styles.dialogHeading}><h2 id="settings-title">Make it yours</h2><button className={styles.iconButton} aria-label="Close settings" onClick={() => settings.current?.close()}><Icon name="close" /></button></div><p className={styles.dialogIntro}>Saved on this device. A few things to set before you get moving.</p>
       <fieldset className={styles.segmented}><legend>Appearance</legend>{([['auto', 'Auto', 'auto'], ['light', 'Light', 'sun'], ['dark', 'Dark', 'moon']] as const).map(([value, label, icon]) => <label key={value} data-checked={preferences.theme === value}><input type="radio" name="theme" value={value} checked={preferences.theme === value} onChange={() => update({ theme: value })} /><Icon name={icon} size={16} />{label}</label>)}</fieldset>
       <div className={styles.nameFields}>{(['A', 'B'] as const).map(role => <label key={role}>Athlete {role}<input maxLength={30} value={preferences.names[role]} onChange={event => update({ names: { ...preferences.names, [role]: event.target.value } })} /></label>)}</div>
+      <div className={styles.settingsBlock}><span className={styles.settingsLabel}>Load levels</span><LevelPicker levels={preferences.levels} participants={2} names={preferences.names} onChange={levels => update({ levels })} /><small className={styles.fieldNote}>Blue is light, red is medium, black is heavy. Workouts with levelled loads show the weight for each athlete’s choice.</small></div>
+      <div className={styles.settingsBlock}><span className={styles.settingsLabel}>My equipment</span><div className={styles.chipGrid}>{equipmentChoices.map(item => <label key={item} className={styles.chipToggle} data-checked={preferences.myEquipment.includes(item)}><input type="checkbox" checked={preferences.myEquipment.includes(item)} onChange={event => update({ myEquipment: event.target.checked ? [...preferences.myEquipment, item] : preferences.myEquipment.filter(known => known !== item) })} />{item}</label>)}</div><small className={styles.fieldNote}>Tick what you have at home. The library can then show only workouts that need nothing more.</small></div>
       <label>Sound<select value={preferences.soundMode} onChange={event => update({ soundMode: event.target.value as Preferences['soundMode'] })}><option value="voice">Voice + beeps</option><option value="beeps">Beeps only</option><option value="silent">Silent</option></select></label>
       <label>Fixed cues (Go, Rest, countdown)<select value={preferences.cueSource} onChange={event => update({ cueSource: event.target.value as Preferences['cueSource'] })}><option value="clips">Recorded voice (recommended)</option><option value="device">Device voice</option></select>{preferences.cueSource === 'clips' && clipsReady === false && <small className={styles.fieldNote}>Recorded cues are not installed in this build, so the device voice is used.</small>}</label>
       <label>Device voice for movement names<select value={preferences.voiceURI} onChange={event => update({ voiceURI: event.target.value })}><option value="">{pickDefaultVoice(voices) ? `Best available (${pickDefaultVoice(voices)!.name})` : 'Device default'}</option>{voices.map(voice => <option value={voice.voiceURI} key={voice.voiceURI}>{voice.name} · {voice.lang}</option>)}</select></label>

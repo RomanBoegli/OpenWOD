@@ -1,7 +1,7 @@
 format: wodva.workout
-formatVersion: 2
+formatVersion: 3
 workout:
-  schemaVersion: 1
+  schemaVersion: 2
   id: hyrox-pace-intervals
   revision: 1
   title: HYROX pace intervals

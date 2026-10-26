@@ -1,0 +1,183 @@
+format: wodva.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: synchro-snatch-chipper
+  revision: 1
+  title: Synchro snatch chipper
+  description: Ten to fifty and back down for a pair. The lunges, box jump overs and sit-ups are synchronised, so both of you tap Done; the squat snatches and dumbbell thrusters are shared, so split them and tap Done once. Keep the snatch bar at a weight you can cycle in singles without misses.
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by Wodva.
+  equipment:
+    - Dumbbells
+    - Barbell
+    - Plyo box
+    - AbMat
+  participants: 2
+  prep: 10s
+  sections:
+    - id: synchro
+      title: Chipper
+      format: forTime
+      transitionAfter: manualReady
+      body:
+        id: synchro-steps
+        type: sequence
+        children:
+          - id: synchro-lunges-1
+            type: task
+            completion: both
+            assignments:
+              A:
+                notes: Synchro, one dumbbell each
+                name: Dumbbell overhead lunges
+                shortName: DB overhead lunges
+                reps: 10
+              B:
+                notes: Synchro, one dumbbell each
+                name: Dumbbell overhead lunges
+                shortName: DB overhead lunges
+                reps: 10
+          - id: synchro-snatches-1
+            type: task
+            completion: team
+            assignments:
+              A:
+                notes: Split as you like
+                name: Squat snatches
+                reps: 20
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 42
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+              B:
+                notes: Split as you like
+                name: Squat snatches
+                reps: 20
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 42
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+          - id: synchro-box-jump-overs-1
+            type: task
+            completion: both
+            assignments:
+              A:
+                notes: Synchro
+                name: Box jump overs
+                reps: 30
+              B:
+                notes: Synchro
+                name: Box jump overs
+                reps: 30
+          - id: synchro-thrusters-1
+            type: task
+            completion: team
+            assignments:
+              A:
+                notes: Split as you like
+                name: Single-dumbbell thrusters
+                shortName: DB thrusters
+                reps: 40
+              B:
+                notes: Split as you like
+                name: Single-dumbbell thrusters
+                shortName: DB thrusters
+                reps: 40
+          - id: synchro-sit-ups
+            type: task
+            completion: both
+            assignments:
+              A:
+                notes: "Synchro: clap hands at the top"
+                name: AbMat sit-ups
+                reps: 50
+              B:
+                notes: "Synchro: clap hands at the top"
+                name: AbMat sit-ups
+                reps: 50
+          - id: synchro-thrusters-2
+            type: task
+            completion: team
+            assignments:
+              A:
+                notes: Split as you like
+                name: Single-dumbbell thrusters
+                shortName: DB thrusters
+                reps: 40
+              B:
+                notes: Split as you like
+                name: Single-dumbbell thrusters
+                shortName: DB thrusters
+                reps: 40
+          - id: synchro-box-jump-overs-2
+            type: task
+            completion: both
+            assignments:
+              A:
+                notes: Synchro
+                name: Box jump overs
+                reps: 30
+              B:
+                notes: Synchro
+                name: Box jump overs
+                reps: 30
+          - id: synchro-snatches-2
+            type: task
+            completion: team
+            assignments:
+              A:
+                notes: Split as you like
+                name: Squat snatches
+                reps: 20
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 42
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+              B:
+                notes: Split as you like
+                name: Squat snatches
+                reps: 20
+                load:
+                  light:
+                    value: 30
+                    unit: kg
+                  medium:
+                    value: 42
+                    unit: kg
+                  heavy:
+                    value: 61
+                    unit: kg
+          - id: synchro-lunges-2
+            type: task
+            completion: both
+            assignments:
+              A:
+                notes: Synchro, one dumbbell each
+                name: Dumbbell overhead lunges
+                shortName: DB overhead lunges
+                reps: 10
+              B:
+                notes: Synchro, one dumbbell each
+                name: Dumbbell overhead lunges
+                shortName: DB overhead lunges
+                reps: 10

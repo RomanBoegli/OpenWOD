@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { builderToWorkout, emptyDraft, validateDraft, workoutToBuilder } from '../../packages/domain/src/builder';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { fightGoneBad, fullBodyPartner, hyroxDoublesCircuit, hyroxEngineEmom, hyroxPaceIntervals, partnerCircuit, rowBurpeeEmom, tabataThis } from '../../packages/domain/src/fixtures';
+import { backSquatFives, cindy, fightGoneBad, fran, fullBodyPartner, hyroxDoublesCircuit, hyroxEngineEmom, hyroxPaceIntervals, mixedSession, partnerCircuit, partnerEmom16, partnerSprints, rowBurpeeEmom, runSledRun, tabataThis } from '../../packages/domain/src/fixtures';
 
 describe('editor builder model', () => {
   it('round-trips the editable fixtures with identical compiled timing and assignments', () => {
-    for (const workout of [partnerCircuit, fullBodyPartner, fightGoneBad, rowBurpeeEmom, hyroxPaceIntervals, hyroxEngineEmom]) {
+    for (const workout of [partnerCircuit, fullBodyPartner, fightGoneBad, rowBurpeeEmom, hyroxPaceIntervals, hyroxEngineEmom, tabataThis, cindy, fran, partnerEmom16, partnerSprints, runSledRun, backSquatFives, mixedSession]) {
       const draft = workoutToBuilder(workout);
       expect(draft, workout.id).not.toBeNull();
       expect(validateDraft(draft!)).toEqual([]);
@@ -13,15 +13,22 @@ describe('editor builder model', () => {
       const before = compileWorkout(workout);
       const after = compileWorkout(rebuilt);
       expect(after.durationMs).toBe(before.durationMs);
-      expect(after.occurrences.map(item => [item.phase, item.durationMs, item.assignments?.A.name, item.assignments?.B?.name])).toEqual(before.occurrences.map(item => [item.phase, item.durationMs, item.assignments?.A.name, item.assignments?.B?.name]));
+      const shape = (plan: typeof before) => plan.occurrences.map(item => [item.phase, item.timing, item.durationMs, item.assignments?.A.name, item.assignments?.B?.name, item.completion, item.tasks?.map(task => task.assignments.A.name)]);
+      expect(shape(after)).toEqual(shape(before));
+      expect(after.sections.map(section => [section.format, section.capMs, section.durationKind, section.emom, section.youGoIGo, section.amrap])).toEqual(before.sections.map(section => [section.format, section.capMs, section.durationKind, section.emom, section.youGoIGo, section.amrap]));
       expect(rebuilt.revision).toBe(workout.revision + 1);
       expect(rebuilt.attribution).toEqual(workout.attribution);
     }
   });
 
   it('reports workouts outside the editable shape instead of approximating them', () => {
-    expect(workoutToBuilder(tabataThis)).toBeNull();
-    expect(workoutToBuilder(hyroxDoublesCircuit)).toBeNull();
+    expect(workoutToBuilder(hyroxDoublesCircuit)).toBeNull(); // A timed run before an alternating repeat.
+    expect(workoutToBuilder(tabataThis)?.sections[0]).toMatchObject({ slotRepeats: 8, slotRepeatRestMs: 10_000, betweenSlotsRestMs: 60_000 });
+    expect(workoutToBuilder(fran)?.sections[0]).toMatchObject({ format: 'forTime', capMs: 600_000 });
+    expect(workoutToBuilder(fran)?.sections[0].slots[0].A.load).toEqual({ light: { value: 20, unit: 'kg' }, medium: { value: 30, unit: 'kg' }, heavy: { value: 43, unit: 'kg' } });
+    expect(workoutToBuilder(partnerEmom16)?.sections[0]).toMatchObject({ format: 'emom', intervalMs: 60_000, intervals: 16 });
+    expect(workoutToBuilder(partnerEmom16)?.sections[0].slots[0].completion).toBe('team');
+    expect(workoutToBuilder(partnerSprints)?.sections[0]).toMatchObject({ format: 'youGoIGo', capMs: 720_000, teamRounds: 0 });
   });
 
   it('keeps the full-body block structure: alternating rounds, trailing transition and block rest', () => {

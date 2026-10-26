@@ -1,11 +1,20 @@
-import type { ExecutionPlan, Occurrence, Phase, RoundContext } from './compiler';
-import type { Prescription } from './schema';
+import type { CompiledSection, DurationKind, ExecutionPlan, Occurrence, Phase, RoundContext, Timing } from './compiler';
+import type { Prescription, SectionFormat } from './schema';
 
 /** A readable, round-by-round outline of a compiled plan for studying a workout before starting it. */
 export interface RestSegment { kind: Phase; ms: number }
-export interface OutlineRow { anchor: string; A?: Prescription; B?: Prescription; workMs: number; restAfter: RestSegment[] }
+export interface OutlineRow {
+  anchor: string;
+  A?: Prescription;
+  B?: Prescription;
+  timing: Timing;
+  /** Absent for manual work: the athletes decide when it ends. */
+  workMs?: number;
+  completion?: 'team' | 'both';
+  restAfter: RestSegment[];
+}
 export interface OutlineRound {
-  /** "Round 1", "Rounds 1–5", "Set 2 · Round 3"; empty when the section has no repeat. */
+  /** "Round 1", "Rounds 1–5", "Set 2 · Round 3", "Cycles 1–8 of 8"; empty when the section has no repeat. */
   label: string;
   first: RoundContext[];
   last: RoundContext[];
@@ -16,20 +25,37 @@ export interface OutlineRound {
   restAfter: RestSegment[];
   /** How many repetitions this group stands for. */
   repetitions: number;
+  /** AMRAP and you-go-I-go: the rows are one block worked through as many times as the clock allows. */
+  block?: boolean;
 }
-export interface OutlineSection { id: string; title: string; startMs: number; durationMs: number; transitionAfter: 'manualReady' | 'automatic'; leadingRest: RestSegment[]; rounds: OutlineRound[] }
+export interface OutlineSection {
+  id: string;
+  title: string;
+  format: SectionFormat;
+  startMs?: number;
+  durationMs: number;
+  durationKind: DurationKind;
+  capMs?: number;
+  emom?: CompiledSection['emom'];
+  youGoIGo?: CompiledSection['youGoIGo'];
+  transitionAfter: 'manualReady' | 'automatic';
+  leadingRest: RestSegment[];
+  rounds: OutlineRound[];
+}
 
 const pathKey = (rounds: RoundContext[]) => rounds.map(round => `${round.nodeId}:${round.iteration}`).join('.');
 const LEVEL_NAMES = ['Set', 'Round'];
 
-function levelName(depth: number, levels: number): string {
+function levelName(depth: number, levels: number, format: SectionFormat): string {
+  if (format === 'emom') return 'Cycle';
+  if (format === 'strength') return levels === 1 ? 'Set' : LEVEL_NAMES[depth] === 'Set' ? 'Block' : 'Set';
   return levels === 1 ? 'Round' : LEVEL_NAMES[depth] ?? `Level ${depth + 1}`;
 }
 
-function describe(first: RoundContext[], last: RoundContext[]): string {
+function describe(first: RoundContext[], last: RoundContext[], format: SectionFormat): string {
   if (!first.length) return '';
   return first.map((round, depth) => {
-    const name = levelName(depth, first.length);
+    const name = levelName(depth, first.length, format);
     const end = last[depth]?.iteration ?? round.iteration;
     return end !== round.iteration ? `${name}s ${round.iteration}–${end} of ${round.count}` : `${name} ${round.iteration} of ${round.count}`;
   }).join(' · ');
@@ -37,6 +63,13 @@ function describe(first: RoundContext[], last: RoundContext[]): string {
 
 const sameRows = (a: OutlineRow[], b: OutlineRow[]) => JSON.stringify(a) === JSON.stringify(b);
 const sameOuterPath = (a: RoundContext[], b: RoundContext[]) => a.length === b.length && a.slice(0, -1).every((round, index) => round.iteration === b[index].iteration && round.nodeId === b[index].nodeId);
+
+function row(item: Occurrence): OutlineRow {
+  const result: OutlineRow = { anchor: item.anchor, A: item.assignments?.A, B: item.assignments?.B, timing: item.timing, restAfter: [] };
+  if (item.timing !== 'manual') result.workMs = item.durationMs;
+  if (item.completion) result.completion = item.completion;
+  return result;
+}
 
 export function outlineWorkout(plan: ExecutionPlan): OutlineSection[] {
   return plan.sections.map(section => {
@@ -46,13 +79,17 @@ export function outlineWorkout(plan: ExecutionPlan): OutlineSection[] {
     let group: OutlineRound | undefined;
     let lastRow: OutlineRow | undefined;
     for (const item of occurrences) {
-      if (item.phase === 'work') {
+      if (item.tasks) {
+        group = { label: '', first: [], last: [], rows: item.tasks.map(task => ({ anchor: task.nodeId, A: task.assignments.A, B: task.assignments.B, timing: 'manual', restAfter: [] })), roundRestMs: 0, restAfter: [], repetitions: 1, block: true };
+        groups.push(group);
+        lastRow = undefined;
+      } else if (item.phase === 'work') {
         if (!group || pathKey(group.first) !== pathKey(item.rounds)) {
-          group = { label: describe(item.rounds, item.rounds), first: item.rounds, last: item.rounds, rows: [], roundRestMs: 0, restAfter: [], repetitions: 1 };
+          group = { label: describe(item.rounds, item.rounds, section.format), first: item.rounds, last: item.rounds, rows: [], roundRestMs: 0, restAfter: [], repetitions: 1 };
           groups.push(group);
           lastRow = undefined;
         }
-        lastRow = { anchor: item.anchor, A: item.assignments?.A, B: item.assignments?.B, workMs: item.durationMs, restAfter: [] };
+        lastRow = row(item);
         group.rows.push(lastRow);
       } else if (!group) leadingRest.push({ kind: item.phase, ms: item.durationMs });
       else if (pathKey(group.first) !== pathKey(item.rounds)) group.restAfter.push({ kind: item.phase, ms: item.durationMs }); // Outer level: after the whole group.
@@ -63,11 +100,16 @@ export function outlineWorkout(plan: ExecutionPlan): OutlineSection[] {
     const rounds: OutlineRound[] = [];
     for (const candidate of groups) {
       const previous = rounds.at(-1);
-      const mergeable = previous && previous.restAfter.length === 0 && sameOuterPath(previous.last, candidate.first) && sameRows(previous.rows, candidate.rows)
+      const mergeable = previous && !previous.block && !candidate.block && previous.restAfter.length === 0 && sameOuterPath(previous.last, candidate.first) && sameRows(previous.rows, candidate.rows)
         && (candidate.roundRestMs === previous.roundRestMs || (candidate.roundRestMs === 0 && candidate.last.at(-1)?.iteration === candidate.last.at(-1)?.count));
-      if (mergeable) { previous.last = candidate.last; previous.repetitions += 1; previous.label = describe(previous.first, previous.last); previous.restAfter = candidate.restAfter; }
+      if (mergeable) { previous.last = candidate.last; previous.repetitions += 1; previous.label = describe(previous.first, previous.last, section.format); previous.restAfter = candidate.restAfter; }
       else rounds.push(candidate);
     }
-    return { id: section.id, title: section.title, startMs: section.startMs, durationMs: section.durationMs, transitionAfter: section.transitionAfter, leadingRest, rounds };
+    const result: OutlineSection = { id: section.id, title: section.title, format: section.format, durationMs: section.durationMs, durationKind: section.durationKind, transitionAfter: section.transitionAfter, leadingRest, rounds };
+    if (section.startMs !== undefined) result.startMs = section.startMs;
+    if (section.capMs !== undefined) result.capMs = section.capMs;
+    if (section.emom) result.emom = section.emom;
+    if (section.youGoIGo) result.youGoIGo = section.youGoIGo;
+    return result;
   });
 }

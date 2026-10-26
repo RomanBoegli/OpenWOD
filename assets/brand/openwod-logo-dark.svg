@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
+  <title id="title">OpenWOD — dark theme</title>
+  <desc id="description">Code brackets form a barbell beside OpenWOD. Slogan: Not born. Made. Outlined vector artwork for dark backgrounds.</desc>
+  <g fill="#B9F27B" transform="translate(32 42)">
+    <path d="M89 2H94Q99 2 99 7V38L45 90L99 142V173Q99 178 94 178H89Q83 178 78 173L9 108Q0 100 0 90Q0 80 9 72L78 7Q83 2 89 2Z"/>
+    <path transform="translate(360 0) scale(-1 1)" d="M89 2H94Q99 2 99 7V38L45 90L99 142V173Q99 178 94 178H89Q83 178 78 173L9 108Q0 100 0 90Q0 80 9 72L78 7Q83 2 89 2Z"/>
+    <rect x="110" y="44" width="30" height="92" rx="5"/>
+    <rect x="220" y="44" width="30" height="92" rx="5"/>
+    <rect x="91" y="66" width="14" height="48" rx="3"/>
+    <rect x="255" y="66" width="14" height="48" rx="3"/>
+    <path d="M148 79H212V101H148Z"/>
+  </g>
+  <g fill="#F4F4EC" fill-rule="evenodd" transform="translate(448 64)">
+    <path transform="translate(0 0) scale(1 1)" d="M25 0H65Q90 0 90 25V103Q90 128 65 128H25Q0 128 0 103V25Q0 0 25 0ZM34 26Q30 26 30 30V98Q30 102 34 102H56Q60 102 60 98V30Q60 26 56 26Z"/>
+    <path transform="translate(98 0) scale(1 1)" d="M0 28H58Q82 28 82 52V104Q82 128 58 128H29V157H0ZM33 54Q29 54 29 58V98Q29 102 33 102H49Q53 102 53 98V58Q53 54 49 54Z"/>
+    <path transform="translate(188 0) scale(1 1)" d="M24 28H58Q82 28 82 52V86H28V99Q28 104 33 104H50Q55 104 55 99V94H82V104Q82 128 58 128H24Q0 128 0 104V52Q0 28 24 28ZM33 52Q28 52 28 57V66H55V57Q55 52 50 52Z"/>
+    <path transform="translate(278 0) scale(1 1)" d="M0 28H58Q82 28 82 52V128H53V60Q53 54 47 54H29V128H0Z"/>
+    <path transform="translate(368 0) scale(1 1)" d="M0 0H31L43 77L60 28H79L96 77L105 0H136L114 128H87L69 73L51 128H24Z"/>
+    <path transform="translate(512 0) scale(1 1)" d="M25 0H65Q90 0 90 25V103Q90 128 65 128H25Q0 128 0 103V25Q0 0 25 0ZM34 26Q30 26 30 30V98Q30 102 34 102H56Q60 102 60 98V30Q60 26 56 26Z"/>
+    <path transform="translate(610 0) scale(1 1)" d="M0 0H66Q96 0 96 30V98Q96 128 66 128H0ZM31 26V102H56Q65 102 65 93V35Q65 26 56 26Z"/>
+  </g>
+  <g fill="#B9F27B" fill-rule="evenodd" transform="translate(452 239)">
+    <path transform="translate(0 0) scale(0.55 0.44)" d="M0 100V0H22L60 65V0H82V100H60L22 35V100Z"/>
+    <path transform="translate(51.1 0) scale(0.55 0.44)" d="M16 25H54Q70 25 70 41V84Q70 100 54 100H16Q0 100 0 84V41Q0 25 16 25ZM24 44Q20 44 20 48V77Q20 81 24 81H46Q50 81 50 77V48Q50 44 46 44Z"/>
+    <path transform="translate(95.6 0) scale(0.55 0.44)" d="M12 0H32V25H50V43H32V77Q32 82 37 82H50V100H29Q12 100 12 83V43H0V25H12Z"/>
+    <path transform="translate(159.85 0) scale(0.55 0.44)" d="M0 0H20V25H54Q70 25 70 41V84Q70 100 54 100H0ZM24 44Q20 44 20 48V77Q20 81 24 81H46Q50 81 50 77V48Q50 44 46 44Z"/>
+    <path transform="translate(204.35 0) scale(0.55 0.44)" d="M16 25H54Q70 25 70 41V84Q70 100 54 100H16Q0 100 0 84V41Q0 25 16 25ZM24 44Q20 44 20 48V77Q20 81 24 81H46Q50 81 50 77V48Q50 44 46 44Z"/>
+    <path transform="translate(248.85 0) scale(0.55 0.44)" d="M0 25H50V45H27Q20 45 20 52V100H0Z"/>
+    <path transform="translate(282.35 0) scale(0.55 0.44)" d="M0 25H54Q70 25 70 41V100H50V49Q50 44 45 44H20V100H0Z"/>
+    <path transform="translate(326.85 0) scale(0.55 0.44)" d="M0 82H18V100H0Z"/>
+    <path transform="translate(373.5 0) scale(0.55 0.44)" d="M0 100V0H22L50 48L78 0H100V100H78V37L50 84L22 37V100Z"/>
+    <path transform="translate(434.5 0) scale(0.55 0.44)" d="M16 25H54Q70 25 70 41V100H16Q0 100 0 84V73Q0 57 16 57H50V49Q50 44 45 44H7V25ZM24 74Q20 74 20 78V79Q20 83 24 83H50V74Z"/>
+    <path transform="translate(479 0) scale(0.55 0.44)" d="M50 0H70V100H16Q0 100 0 84V41Q0 25 16 25H50ZM24 44Q20 44 20 48V77Q20 81 24 81H46Q50 81 50 77V48Q50 44 46 44Z"/>
+    <path transform="translate(523.5 0) scale(0.55 0.44)" d="M16 25H54Q70 25 70 41V70H20V78Q20 82 24 82H46Q50 82 50 78V76H70V84Q70 100 54 100H16Q0 100 0 84V41Q0 25 16 25ZM24 43Q20 43 20 47V53H50V47Q50 43 46 43Z"/>
+    <path transform="translate(568 0) scale(0.55 0.44)" d="M0 82H18V100H0Z"/>
+  </g>
+</svg>

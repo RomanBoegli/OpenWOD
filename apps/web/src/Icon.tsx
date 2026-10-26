@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type IconName = 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid';
+export type IconName = 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip';
 
 const paths: Record<IconName, ReactNode> = {
   play: <path d="m9 5 11 7-11 7z" />,
@@ -26,6 +26,11 @@ const paths: Record<IconName, ReactNode> = {
   moon: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
   auto: <><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" /></>,
   grid: <path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z" />,
+  switch: <path d="M4 8h13m-4-4 4 4-4 4M20 16H7m4-4-4 4 4 4" />,
+  undo: <path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  flag: <path d="M5 21V4h12l-2 4 2 4H5" />,
+  skip: <path d="m5 5 9 7-9 7zM17 5v14" />,
 };
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {

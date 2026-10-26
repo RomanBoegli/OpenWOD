@@ -1,0 +1,56 @@
+format: wodva.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: wall-ball-row-burpee-emom-20
+  revision: 1
+  title: Wall ball, row, burpee EMOM 20
+  description: "Every minute for twenty minutes: a minute of wall balls, a minute on the rower, a minute of burpee box jump overs, a minute of rest; five rounds. Finish the work, then recover until the next minute starts. Trim the reps if you cannot finish inside 45 seconds."
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by Wodva.
+  equipment:
+    - Medicine ball
+    - Rowing machine
+    - Plyo box
+  participants: 1
+  prep: 10s
+  sections:
+    - id: wbrb
+      title: EMOM 20
+      format: emom
+      transitionAfter: manualReady
+      interval: 1m
+      intervals: 20
+      body:
+        id: wbrb-stations
+        type: sequence
+        children:
+          - id: wbrb-wall-balls
+            type: task
+            assignments:
+              A:
+                notes: Big, unbroken sets if you can
+                name: Wall balls
+                reps: 21
+          - id: wbrb-row
+            type: task
+            assignments:
+              A:
+                notes: 12 cal if scaling; strong pulls, save the legs
+                name: Row
+                calories: 15
+          - id: wbrb-burpees
+            type: task
+            assignments:
+              A:
+                notes: Steady rhythm, no pauses
+                name: Burpee box jump overs
+                shortName: Burpee box overs
+                reps: 9
+          - id: wbrb-rest
+            type: task
+            assignments:
+              A:
+                notes: Bring the breathing back under control
+                name: Rest

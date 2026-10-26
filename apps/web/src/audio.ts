@@ -157,11 +157,17 @@ export class WorkoutAudio {
     this.speak('Ready to train. A, row. B, kettlebell swings.');
   }
 
+  private lastTurn?: { key: string; number: number };
+  private lastAcks = '';
+  private lastEnded?: { occurrenceId: string; manual: boolean; status: string };
+
   update(projection: Projection, clocks: ClockValues) {
-    const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}`;
+    const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}:${projection.clockScope}`;
+    const clips = this.useClips && this.clipsReady;
     if (this.token === token) {
+      this.acknowledgementCue(projection, clocks, clips);
       // Device-voice countdown is spoken late, as each second arrives; clips were scheduled ahead at the token change.
-      if (this.useClips && this.clipsReady) return;
+      if (clips || projection.clockScope === 'elapsed') return;
       const count = Math.ceil(clocks.remainingMs / 1000);
       const cue = `${token}:countdown:${count}`;
       if (this.mode === 'voice' && ['running', 'preparing'].includes(projection.status) && count >= 1 && count <= 3 && !this.spoken.has(cue)) {
@@ -170,9 +176,12 @@ export class WorkoutAudio {
       }
       return;
     }
-    const wasPaused = this.token.endsWith(':paused');
+    const wasPaused = this.token.includes(':paused:');
+    const previous = this.lastEnded;
+    this.lastEnded = { occurrenceId: projection.occurrenceId.replace(/\/turn:\d+$/, ''), manual: projection.timing === 'manual' && !projection.tasks, status: projection.status };
     this.cancel();
     this.token = token;
+    this.lastAcks = `${projection.acks.A}${projection.acks.B}${projection.acks.team}`;
     if (this.mode === 'silent') return;
     const terminal = ['completed', 'aborted'].includes(projection.status);
     if (terminal) {
@@ -185,31 +194,69 @@ export class WorkoutAudio {
     if (projection.status === 'paused') { this.cue('paused', 'Paused.'); return; }
     if (!['running', 'preparing'].includes(projection.status)) return;
     if (wasPaused) this.cue('resume', 'Resume.');
-    const clips = this.useClips && this.clipsReady;
-    if (this.context?.state === 'running') {
-      const audioNow = this.context.currentTime;
-      const secondsLeft = clocks.remainingMs / 1000;
-      // Only schedule cues that are still in the future. Missed numbers are dropped (AUD-06).
-      for (const seconds of [3, 2, 1] as const) if (secondsLeft > seconds + .05) {
-        if (!clips || !this.clip(COUNTDOWN[seconds], audioNow + secondsLeft - seconds)) this.beep(audioNow + secondsLeft - seconds, .08, 620);
-      }
-      if (secondsLeft > .03) {
-        // What the boundary announces: work, rest, or nothing when a manual Ready gate follows.
-        const nextIsWork = projection.status === 'preparing' || projection.current.phase !== 'work' || projection.restBeforeNextMs === 0;
-        const gateFollows = projection.nextWork !== undefined && projection.nextWork.sectionIndex !== projection.current.sectionIndex && projection.section.transitionAfter === 'manualReady' && (projection.current.phase === 'work' ? projection.restBeforeNextMs === 0 : true);
-        const last = projection.nextWork === undefined && projection.current.phase === 'work';
-        const boundary: CueName | undefined = last || gateFollows ? undefined : nextIsWork ? 'go' : 'rest';
-        if (!clips || !boundary || !this.clip(boundary, audioNow + secondsLeft)) this.beep(audioNow + secondsLeft, .18, 880);
-      }
-    }
+    // A handoff: the Switch cue names the incoming athlete.
+    const turnKey = `${projection.sessionId}:${projection.current.id}:${projection.index}`;
+    const switched = projection.turn !== undefined && this.lastTurn?.key === turnKey && projection.turn.number > this.lastTurn.number;
+    this.lastTurn = projection.turn ? { key: turnKey, number: projection.turn.number } : undefined;
+    if (switched && !wasPaused) this.cue('switch', `Switch. ${projection.turn!.athlete}.`);
+    const scheduled = this.scheduleBoundary(projection, clocks, clips);
     const cueId = `${projection.sessionId}:${projection.occurrenceId}`;
     if (this.spoken.has(cueId)) return;
     this.spoken.add(cueId);
+    const sameOccurrence = previous?.occurrenceId === this.lastEnded.occurrenceId;
     const assignment = projection.status === 'preparing' ? projection.current.assignments : projection.current.phase !== 'work' ? projection.nextWork?.assignments : undefined;
-    if (assignment && clocks.remainingMs > 5000) {
+    if (assignment && (clocks.remainingMs > 5000 || projection.clockScope === 'elapsed')) {
       const lead = projection.status === 'preparing' ? 'get-ready' : 'rest';
       if (clips && this.clip(lead, this.context!.currentTime)) this.speak(WorkoutAudio.assignmentText(assignment));
       else this.speak(`${lead === 'get-ready' ? 'Get ready.' : 'Rest.'} ${WorkoutAudio.assignmentText(assignment)}`);
-    } else if (projection.status === 'running' && clocks.slotMs < 1000 && !clips) this.speak(projection.current.phase === 'work' ? 'Go.' : 'Rest.');
+      return;
+    }
+    if (projection.status !== 'running' || clocks.slotMs >= 1000 || wasPaused || switched || sameOccurrence) return;
+    // A fresh start that no scheduled boundary announced: after a Done, a Ready gate, or into a manual task.
+    const announced = previous === undefined || (!previous.manual && previous.status !== 'awaitingReady' && previous.status !== 'ready');
+    if (previous?.manual && this.context?.state === 'running') this.beep(this.context.currentTime + .01, .06, 740); // The Done that ended the last task.
+    if (projection.current.phase !== 'work') { if (!announced) this.cue('rest', 'Rest.'); return; }
+    if (!announced || projection.timing === 'manual') {
+      this.cue('go', 'Go.');
+      if (projection.timing === 'manual' && !projection.tasks && projection.current.assignments) this.speak(WorkoutAudio.assignmentText(projection.current.assignments));
+    }
+    if (projection.interval && projection.interval.index === projection.interval.count) this.speak('Last interval.');
+    void scheduled;
+  }
+
+  /** Schedules the 3-2-1 countdown and the boundary cue on the audio clock for slot, interval, turn and cap scopes. */
+  private scheduleBoundary(projection: Projection, clocks: ClockValues, clips: boolean): boolean {
+    if (this.context?.state !== 'running' || projection.clockScope === 'elapsed') return false;
+    const audioNow = this.context.currentTime;
+    const secondsLeft = clocks.remainingMs / 1000;
+    // Only schedule cues that are still in the future. Missed numbers are dropped (AUD-06).
+    for (const seconds of [3, 2, 1] as const) if (secondsLeft > seconds + .05) {
+      if (!clips || !this.clip(COUNTDOWN[seconds], audioNow + secondsLeft - seconds)) this.beep(audioNow + secondsLeft - seconds, .08, 620);
+    }
+    if (secondsLeft <= .03) return false;
+    let boundary: CueName | undefined;
+    if (projection.clockScope === 'turn') boundary = 'switch';
+    else {
+      // What the boundary announces: work, rest, or nothing when a manual Ready gate or the end follows.
+      const nextIsWork = projection.status === 'preparing' || projection.current.phase !== 'work' || projection.restBeforeNextMs === 0;
+      const gateFollows = projection.nextWork !== undefined && projection.nextWork.sectionIndex !== projection.current.sectionIndex && projection.section.transitionAfter === 'manualReady' && (projection.current.phase === 'work' ? projection.restBeforeNextMs === 0 : true);
+      const last = projection.nextWork === undefined && projection.current.phase === 'work';
+      boundary = last || gateFollows ? undefined : nextIsWork ? 'go' : 'rest';
+    }
+    if (!clips || !boundary || !this.clip(boundary, audioNow + secondsLeft)) this.beep(audioNow + secondsLeft, .18, 880);
+    return true;
+  }
+
+  /** A short confirmation when a Done lands; a partial both-done tells the pair who is waiting (device voice only). */
+  private acknowledgementCue(projection: Projection, clocks: ClockValues, clips: boolean) {
+    const acks = `${projection.acks.A}${projection.acks.B}${projection.acks.team}`;
+    if (acks === this.lastAcks) return;
+    this.lastAcks = acks;
+    if (this.mode === 'silent' || projection.status !== 'running') return;
+    if (this.context?.state === 'running') this.beep(this.context.currentTime + .01, .06, 740);
+    const partial = (projection.acks.A !== projection.acks.B) && !projection.acks.team;
+    if (partial && !clips) this.speak(projection.acks.A ? 'A done. Waiting for B.' : 'B done. Waiting for A.');
+    // An early EMOM Done previews the next interval while there is time to hear it.
+    if (projection.timing === 'interval' && !partial && projection.nextWork?.assignments && clocks.remainingMs > 5000) this.speak(`Next. ${WorkoutAudio.assignmentText(projection.nextWork.assignments)}`);
   }
 }

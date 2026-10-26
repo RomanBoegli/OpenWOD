@@ -1,0 +1,131 @@
+format: wodva.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: squat-power-e2-30
+  revision: 1
+  title: Squat power E2:30
+  description: "Seven sets of back squats on a 2:30 clock, reps falling from six to two while the load climbs from sixty percent to a heavy double. No grinding reps: if you do not know your percentages, work up cleanly to a heavy double. Tap Done after each set; two minutes of rest are timed for you."
+  attribution:
+    author: Coach programming, shared in a members chat
+    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by Wodva.
+  equipment:
+    - Barbell
+    - Squat rack
+  participants: 1
+  prep: 10s
+  sections:
+    - id: squat-power
+      title: Back squat
+      format: strength
+      transitionAfter: manualReady
+      body:
+        id: squat-power-sets
+        type: sequence
+        betweenChildrenRest: 2m
+        children:
+          - id: squat-power-set-1
+            type: task
+            assignments:
+              A:
+                name: Back squat
+                reps: 6
+                load:
+                  light:
+                    value: 55
+                    unit: percent
+                  medium:
+                    value: 60
+                    unit: percent
+                  heavy:
+                    value: 65
+                    unit: percent
+          - id: squat-power-set-2
+            type: task
+            assignments:
+              A:
+                name: Back squat
+                reps: 5
+                load:
+                  light:
+                    value: 65
+                    unit: percent
+                  medium:
+                    value: 70
+                    unit: percent
+                  heavy:
+                    value: 75
+                    unit: percent
+          - id: squat-power-set-3
+            type: task
+            assignments:
+              A:
+                name: Back squat
+                reps: 4
+                load:
+                  light:
+                    value: 70
+                    unit: percent
+                  medium:
+                    value: 75
+                    unit: percent
+                  heavy:
+                    value: 80
+                    unit: percent
+          - id: squat-power-set-4
+            type: task
+            assignments:
+              A:
+                name: Back squat
+                reps: 3
+                load:
+                  light:
+                    value: 75
+                    unit: percent
+                  medium:
+                    value: 80
+                    unit: percent
+                  heavy:
+                    value: 85
+                    unit: percent
+          - id: squat-power-set-5
+            type: task
+            assignments:
+              A:
+                notes: "Program: 82–85 %"
+                name: Back squat
+                reps: 3
+                load:
+                  light:
+                    value: 80
+                    unit: percent
+                  medium:
+                    value: 82.5
+                    unit: percent
+                  heavy:
+                    value: 85
+                    unit: percent
+          - id: squat-power-set-6
+            type: task
+            assignments:
+              A:
+                notes: "Program: 85–88 %"
+                name: Back squat
+                reps: 2
+                load:
+                  light:
+                    value: 85
+                    unit: percent
+                  medium:
+                    value: 86.5
+                    unit: percent
+                  heavy:
+                    value: 88
+                    unit: percent
+          - id: squat-power-set-7
+            type: task
+            assignments:
+              A:
+                notes: "RPE 8–9: a heavy double, no grind"
+                name: Back squat
+                reps: 2

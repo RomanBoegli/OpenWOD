@@ -1,0 +1,58 @@
+/* Format-specific player pieces. The shared layout (perimeter, clock block, lanes, controls) stays in App.module.css. */
+.target { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 2px; font-variant-numeric: tabular-nums; line-height: 1; }
+.target strong { font-size: clamp(56px, 6vw, 84px); font-weight: 700; letter-spacing: -3px; color: var(--ink); }
+.target small { font-size: 16px; font-weight: 600; letter-spacing: 1px; color: var(--ink-3); text-transform: uppercase; }
+.loadLine { display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.secondaryClock { display: flex; justify-content: center; gap: 24px; margin-top: 10px; color: var(--ink-3); font-size: 11px; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; }
+.secondaryClock strong { color: var(--ink-2); font-weight: 600; margin-left: 6px; }
+.laneState { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 700; letter-spacing: 1.2px; }
+.laneState[data-state=waiting] { background: color-mix(in srgb, var(--phase-rest) 15%, transparent); color: var(--phase-rest); }
+.laneState[data-state=rest] { background: color-mix(in srgb, var(--phase-rest) 15%, transparent); color: var(--phase-rest); }
+.laneDone { margin-top: 16px; width: 100%; min-height: 72px; font-size: 18px; }
+.unit { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.unit li { display: flex; align-items: baseline; gap: 10px; font-size: clamp(22px, 2.4vw, 30px); font-weight: 600; letter-spacing: -.4px; }
+.unit li small { font-size: 12px; color: var(--ink-3); font-weight: 600; letter-spacing: 1px; }
+.lane[data-active=false] { opacity: .55; }
+.actionBar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: stretch; margin: 6px 0 18px; }
+.bigAction { display: inline-flex; align-items: center; justify-content: center; gap: 12px; flex: 1 1 260px; min-height: 72px; padding: 14px 28px; border-radius: 14px; border: 1px solid var(--accent-border); background: var(--accent-fill); color: var(--accent-ink); font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
+.bigAction[data-role=A] { background: var(--lane-a-bg); color: var(--lane-a); border-color: var(--lane-a-border); }
+.bigAction[data-role=B] { background: var(--lane-b-bg); color: var(--lane-b); border-color: var(--lane-b-border); }
+.bigAction:hover:not(:disabled) { filter: brightness(1.05); }
+.counter { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.counterValue { display: flex; align-items: baseline; gap: 6px; min-width: 110px; font-variant-numeric: tabular-nums; }
+.counterValue strong { font-size: 44px; font-weight: 700; letter-spacing: -2px; line-height: 1; }
+.counterValue small { font-size: 11px; color: var(--ink-3); letter-spacing: 1.2px; text-transform: uppercase; }
+.counterButton { min-height: 56px; min-width: 56px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface-5); color: var(--ink); font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+.counterButton:hover:not(:disabled) { background: var(--hover); }
+.taskList { margin: 0 0 6px; padding: 0; list-style: none; display: grid; gap: 6px; }
+.taskRow { display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: center; padding: 12px 16px; border-radius: 12px; background: var(--surface-1); border: 1px solid var(--line); }
+.taskRow[data-pair=true] { grid-template-columns: 34px 1fr 1fr; }
+.taskRow[data-done=true] { opacity: .5; }
+.taskRow[data-highlight=true] { border-color: var(--accent-border); background: var(--accent-soft); }
+.taskIndex { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--surface-3); color: var(--ink-3); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.taskCell { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; min-width: 0; }
+.taskCell strong { font-size: clamp(22px, 2.6vw, 34px); font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.taskCell strong small { font-size: 12px; letter-spacing: 1px; color: var(--ink-3); font-weight: 600; margin-left: 4px; text-transform: uppercase; }
+.taskCell span { font-size: clamp(16px, 1.6vw, 22px); font-weight: 500; overflow-wrap: anywhere; }
+.taskCell[data-role=B] { color: var(--ink); }
+.taskHint { color: var(--ink-3); font-size: 11px; margin: 8px 0 0; text-align: center; letter-spacing: .5px; }
+.fitWarning { color: var(--notice-text); font-size: 11px; margin: 0 0 8px; text-align: center; }
+.resultList { margin: 14px auto 0; padding: 0; list-style: none; display: grid; gap: 6px; max-width: 520px; text-align: left; }
+.resultList li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 14px; border-radius: 10px; background: var(--surface-1); border: 1px solid var(--line); font-size: 13px; }
+.resultList li span:last-child { color: var(--ink-3); font-variant-numeric: tabular-nums; text-align: right; }
+.levelSetup { margin: 0 0 18px; padding: 16px 18px; border-radius: 14px; background: var(--surface-1); border: 1px solid var(--line); }
+.levelSetup h3 { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: .3px; }
+.levelSetup p { margin: 0 0 12px; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+.keyHint { color: var(--ink-4); font-size: 9px; letter-spacing: 1px; }
+@media (max-width: 620px) {
+  .target { margin-top: 10px; }
+  .target strong { font-size: 48px; letter-spacing: -2px; }
+  .bigAction { font-size: 18px; min-height: 64px; flex-basis: 100%; }
+  .counterValue strong { font-size: 36px; }
+  .taskRow { padding: 10px 12px; gap: 10px; }
+  .taskRow[data-pair=true] { grid-template-columns: 26px 1fr; }
+  .taskRow[data-pair=true] .taskCell[data-role=B] { grid-column: 2; }
+  .taskCell strong { font-size: 22px; }
+  .taskCell span { font-size: 15px; }
+  .unit li { font-size: 20px; }
+}
