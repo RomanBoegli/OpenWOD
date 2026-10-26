@@ -47,7 +47,8 @@ A change there is a change in behaviour and must be deliberate.
 
 `npm run cues:generate` renders five English voice packs with [Piper](https://github.com/OHF-Voice/piper1-gpl) into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`. `CUE_PACKS=british` renders one): the fixed cues (Go, Rest, countdown, A, B, Next, Last interval, …) as `<cue>.mp3` and every bundled movement's spoken name under `names/<movement-id>.mp3`, about 200 clips and 2 MB per pack.
 The list of packs and cue texts lives in `scripts/generate-cues.ts`. `scripts/render-cues.py` does the synthesis with the Piper Python API so a voice model loads once per pack.
-The Docker build renders the same set (`CUES=1`, the default) from `scripts/` and `packages/` before the app is copied, so the layer is cached across app edits.
+The Docker build renders the same set (`CUES=1`, the default) in a stage that starts from the bare Node image with only the two cue scripts, the movement catalogue and a pinned `tsx`, so the layer stays cached across app edits, version bumps and dependency updates.
+A cached rebuild shows `CACHED` beside the render step.
 The rendered files are not committed.
 Without them the app uses beeps and the device's best English voice.
 

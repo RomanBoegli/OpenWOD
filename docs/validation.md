@@ -158,6 +158,7 @@ The rule is anchored to the root, the data layer is tracked, and the clean check
 | Sound test probe | In headless Firefox and WebKit every part of the test comes from the recorded pack and speech synthesis is never called. The device-voice fallback now reports itself. |
 | Layout | Screenshots at 1280, 1024 and 390 px of the three-column feed, the accent swatches in both themes, the player with a pink and a blue accent, and the footer. |
 | Release workflow | Not yet exercised past validation on GitHub runners. A manual run of the Release image workflow is the dry run before the tag. |
+| Voice layer cache | The voice stage no longer derives from the dependency stage, so a version bump stops re-rendering the five packs. The stage alone was built from the bare Node image with a pinned `tsx` and rendered every pack. |
 
 ## Persistence, sharing and release rehearsal (Wave 3), 26 October 2026
 

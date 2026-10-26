@@ -1,23 +1,27 @@
 ARG NODE_IMAGE=node:24.22.1-bookworm-slim
 
-# Dependencies once: everything below shares this layer and only a lockfile change rebuilds it.
+# Dependencies once: the build stage uses this layer and only a package.json or lockfile change rebuilds it.
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --include=dev
 
-# The recorded voices. They depend only on the two cue scripts and the movement catalogue, so an edit anywhere else
-# in the app reuses this layer. CUES=1 renders them with Piper (offline text-to-speech); CUES=0 skips them for fast local builds.
-FROM deps AS cues
+# The recorded voices. The stage starts from the bare Node image, not from deps, so a version bump or a dependency
+# update never re-renders them: only the two cue scripts and the movement catalogue reach this layer. The runner (tsx)
+# is pinned here and installed on its own because the script needs nothing else from the app's node_modules.
+# CUES=1 renders them with Piper (offline text-to-speech); CUES=0 skips them for fast local builds.
+FROM ${NODE_IMAGE} AS cues
 ARG CUES=1
+WORKDIR /app
 RUN if [ "$CUES" = "1" ]; then \
       apt-get update && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip && rm -rf /var/lib/apt/lists/* \
-      && pip3 install --no-cache-dir --break-system-packages piper-tts==1.8.0; \
+      && pip3 install --no-cache-dir --break-system-packages piper-tts==1.8.0 \
+      && npm install -g tsx@4.23.15 && npm cache clean --force; \
     fi
 COPY scripts/generate-cues.ts scripts/render-cues.py ./scripts/
 COPY packages/domain/src/movements.ts ./packages/domain/src/movements.ts
 RUN if [ "$CUES" = "1" ]; then \
-      CUES_OUT=/cues PIPER_VOICES=/tmp/piper-voices PIPER_PYTHON=python3 npx tsx scripts/generate-cues.ts && rm -rf /tmp/piper-voices; \
+      CUES_OUT=/cues PIPER_VOICES=/tmp/piper-voices PIPER_PYTHON=python3 tsx scripts/generate-cues.ts && rm -rf /tmp/piper-voices; \
     else mkdir -p /cues; fi
 
 # The app: checks, build, and the voices copied in last so the build layers never depend on them.
