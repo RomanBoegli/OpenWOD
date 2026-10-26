@@ -10,7 +10,7 @@ services:
     ports:
       - "127.0.0.1:${HTTP_PORT:-8080}:8080"
     environment:
-      DATABASE_PATH: /data/app.sqlite
+      DATABASE_PATH: ${DATABASE_PATH:-/data/app.sqlite}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - openwod-data:/data

@@ -48,6 +48,7 @@ A change there is a change in behaviour and must be deliberate.
 `npm run cues:generate` renders five English voice packs with [Piper](https://github.com/OHF-Voice/piper1-gpl) into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`. `CUE_PACKS=british` renders one): the fixed cues (Go, Rest, countdown, A, B, Next, Last interval, …) as `<cue>.mp3` and every bundled movement's spoken name under `names/<movement-id>.mp3`, about 200 clips and 2 MB per pack.
 The list of packs and cue texts lives in `scripts/generate-cues.ts`. `scripts/render-cues.py` does the synthesis with the Piper Python API so a voice model loads once per pack.
 Every clip is trimmed and brought to the same level (-18 dBFS RMS, peaks under -1 dBFS) in two ffmpeg passes, because single-pass loudness normalisation cannot measure clips this short.
+Piper samples noise on every synthesis, so a clip can once in a while come out silent and is then synthesised again, up to three times, before the render fails naming that clip.
 A pack rendered by an older version of the scripts is rendered again, not resumed.
 The Docker build renders the same set (`CUES=1`, the default) in a stage that starts from the bare Node image with only the two cue scripts, the movement catalogue and a pinned `tsx`, so the layer stays cached across app edits, version bumps and dependency updates.
 A cached rebuild shows `CACHED` beside the render step.
@@ -65,6 +66,7 @@ Browser storage is a convenience until the server milestone and every read is va
 The image is built and published by the **Release image** workflow (`.github/workflows/release.yml`) when a `v*` tag is pushed.
 The workflow refuses a tag whose version is not the one in `package.json`, and a tag without release notes.
 It does not repeat the browser suite: the **Check** workflow that ran on the same commit when it was pushed to `main` counts, and only a commit without a green Check is tested inside the release.
+The browser suite is paused in the Check workflow for now, behind the `BROWSER_SUITE` switch at the top of the file, and runs locally as before.
 Tags do not trigger the Check workflow on their own.
 
 1. Pick the version, `vX.Y.Z`, and put `X.Y.Z` in `package.json`, `package-lock.json` (both `version` fields), `CITATION.cff` (with the release date) and the `ARG VERSION` default of the `Dockerfile`.

@@ -10,7 +10,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "8080"
-      DATABASE_PATH: /data/app.sqlite
+      DATABASE_PATH: ${DATABASE_PATH:-/data/app.sqlite}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: ${TRUST_PROXY:-false}
     volumes:

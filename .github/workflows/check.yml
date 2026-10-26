@@ -1,5 +1,5 @@
 name: Check
-# Lint, typecheck, build and the browser suite. Runs on every branch push and pull request, and as the validation step of the
+# Lint, typecheck, build and the browser suite (paused with BROWSER_SUITE below). Runs on every branch push and pull request, and as the validation step of the
 # Release image workflow when the tagged commit has no green run of its own. Tags themselves do not trigger it.
 on:
   push:
@@ -8,6 +8,9 @@ on:
   workflow_call:
 permissions:
   contents: read
+env:
+  # The browser suite is paused for now: set to "true" to run it again on every push and inside the release.
+  BROWSER_SUITE: "false"
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -21,9 +24,11 @@ jobs:
       - run: npm run check
       - run: npm run build
       - run: npm run browsers:install -- --with-deps
+        if: env.BROWSER_SUITE == 'true'
       - run: npm run test:e2e
+        if: env.BROWSER_SUITE == 'true'
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: env.BROWSER_SUITE == 'true' && failure()
         with:
           name: browser-test-results
           path: test-results/

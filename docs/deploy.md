@@ -19,7 +19,8 @@ Nothing is built on the server.
    The image name is the lower-cased GitHub repository under `ghcr.io`, and a freshly published package is private until its visibility is changed or the stack gets registry credentials.
 2. In Portainer Community Edition on Docker Standalone, create a stack from **Repository**: the Git URL and reference, Compose path `compose.yaml`.
    Name the stack `openwod` so it matches the `name` in the file and the volume is `openwod_openwod-data`.
-3. Set `APP_IMAGE` to the published reference (a digest is best) and optionally `HTTP_PORT` (default `8080`).
+3. Set `APP_IMAGE` to the published reference (a digest is best) and optionally `HTTP_PORT` (default `8080`), `DATABASE_PATH`, `LOG_LEVEL` and `TRUST_PROXY`.
+   Every variable in the table below that Compose passes has its default in the file, so only `APP_IMAGE` is required.
    The placeholders in [.env.example](../.env.example) must be replaced in the stack variables.
    No `.env` file is needed on the server.
    Private repositories need Git credentials.
@@ -33,7 +34,7 @@ Nothing is built on the server.
 | `HTTP_PORT` | Host port, default `8080`. |
 | `PORT` | Server port inside the container, fixed to `8080` by Compose. |
 | `HOST` | Server bind address. Defaults to `0.0.0.0`. |
-| `DATABASE_PATH` | The SQLite file. Defaults to `/data/app.sqlite`, inside the persistent volume. |
+| `DATABASE_PATH` | The SQLite file. Defaults to `/data/app.sqlite`, inside the persistent volume. Keep it under `/data`. |
 | `LOG_LEVEL` | `fatal`, `error`, `warn`, `info` (default), `debug`, `trace` or `silent`. Logs never contain workout content. |
 | `TRUST_PROXY` | `false` (default), `true`, or a comma-separated list of proxy addresses whose forwarded headers are trusted. |
 | `WEB_ROOT` | Optional absolute path to built frontend assets. Default `dist/web`. |
