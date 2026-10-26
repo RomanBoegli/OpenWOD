@@ -311,6 +311,8 @@ test.describe('formats', () => {
     await page.getByRole('button', { name: 'Forward 10 seconds' }).click();
     await page.getByRole('button', { name: 'Forward 10 seconds' }).click();
     await expect(timer).toHaveText('00:20');
+    // The clicked button keeps the focus on Linux, and keys from a focused button are left to the button.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.keyboard.press('j');
     await expect(timer).toHaveText('00:30');
     await page.keyboard.press('l');
