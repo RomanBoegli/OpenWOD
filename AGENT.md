@@ -1,11 +1,10 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.0 · 26 October 2026 · Implementation baseline
+Version 1.1 · 26 October 2026 · Desktop-first development and portable workout sharing
 
-Build a self-hosted web application for collecting, composing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. A shared iPad placed approximately two metres away is the primary workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
+Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
 The core interaction is synchronised workout content: the execution engine identifies the relevant row, athlete assignments, or exercise block; the player highlights and presents that content with what comes next. Repeated execution revisits the same content with a new round context. Timers must never invent progress through repetitions or distance-based work.
-q
 Deployment is a product requirement: a GitHub repository must be deployable through Portainer using its root Compose file, a prebuilt application image, and persistent SQLite storage.
 
 # 1 Purpose and requirement conventions
@@ -21,6 +20,8 @@ This specification defines observable behaviour, data semantics, operating const
 | P2 | Possible future scope; not a commitment for the first release. |
 
 Requirements carry stable IDs. Changes should preserve IDs, record the reason, and update associated acceptance fixtures. All unmarked normative requirements are P0. Numerical limits and UI defaults below are proposed product decisions, not facts about the users' hardware.
+
+The complete P0 scope is the dependable first release, not a prerequisite for reviewing an early usable version. Phase 2 below delivers an initial household version for saved paired timed workouts and file sharing; the remaining formats and advanced authoring follow before the complete P0 release. Partial versions SHALL identify unsupported capabilities and SHALL NOT claim complete P0 compliance.
 
 Success means the couple can create a workout once, select it on the iPad, press Play, and complete a timed partner session without touching the screen again. Completion-driven formats require only meaningful actions such as Switch, Done, or Finish.
 
@@ -40,7 +41,7 @@ Success means the couple can create a workout once, select it on the iPad, press
 
 - A distance-readable workout player, optional contextual list view, audio cues, and an animated screen-edge timer.
 
-- Basic session results, local interruption recovery, JSON import/export, and server backup/restore.
+- Basic session results, local interruption recovery, portable JSON workout/program import/export, and server backup/restore. One workout per file is a first-class sharing workflow.
 
 - GitHub Actions image publishing, Docker Compose, and Portainer Community Edition deployment on Docker Standalone.
 
@@ -48,7 +49,7 @@ Success means the couple can create a workout once, select it on the iPad, press
 
 P1: separate login accounts, richer progress comparisons, reusable section templates, calendar scheduling, a larger exercise catalogue, configurable language packs, and optional locally hosted speech generation.
 
-P2: independent athlete timelines, live synchronisation across multiple devices, remote-control phones, wearables, equipment sensors, automatic rep detection, voice commands, workout generation by AI, public sharing, leaderboards, nutrition tracking, and official competition scoring.
+P2: independent athlete timelines, live synchronisation across multiple devices, remote-control phones, wearables, equipment sensors, automatic rep detection, voice commands, workout generation by AI, a hosted public workout directory or social sharing service, leaderboards, nutrition tracking, and official competition scoring. Sharing portable workout files between installations is P0 and requires no public service.
 
 P0 is one authoritative player device per session. Two profiles do not imply two independently running timers. A simple household application does not require microservices or a database server.
 
@@ -59,7 +60,7 @@ P0 is one authoritative player device per session. Two profiles do not imply two
 | Interface and speech | English; kg, metres, kilometres, and machine calories. Schema permits other units. |
 | Athlete identities | A and B are session roles; display names are editable. A stays left, B stays right. |
 | Access | One household login, shared library, optional persistent trusted-device session. Profiles are not security boundaries. |
-| Display | Landscape iPad first; portrait and desktop supported. Dark high-contrast player. |
+| Display | Responsive web app; desktop Safari/Firefox and half-width windows first for UX review, with tablet and phone reflow from the start. Dark high-contrast player. |
 | Timer perimeter | Remaining time drains clockwise from a full border to empty. |
 | Prep | One configurable 10-second countdown before starting; excluded from workout score. |
 | Section boundaries | Manual Ready by default; explicit automatic continuation permitted. |
@@ -68,7 +69,7 @@ P0 is one authoritative player device per session. Two profiles do not imply two
 | Deployment | One application container, SQLite in a named Docker volume, one replica. |
 | HTTPS | Trusted HTTPS for the intended iPad experience, normally through an existing reverse proxy. |
 
-These defaults should be validated in the first physical iPad trial; they do not block the initial engineering work.
+Validate layout and interactions first in desktop browsers and resized windows. Later real-device smoke tests cover touch, audio, wake lock, safe areas, and performance; physical iPad availability SHALL NOT block initial engineering or editor work.
 
 # 3 Users and primary workflows
 
@@ -86,7 +87,10 @@ These defaults should be validated in the first physical iPad trial; they do not
 | AMRAP | Display the active exercise block and cap; optionally count rounds; finish at the cap. |
 | You-go-I-go | Show the active athlete and task; Switch records a completed turn; the other athlete becomes active. |
 | HYROX-style session | Alternate run and station tasks; Done records a split and advances; no distance completion is inferred. |
-| Recover interruption | Show recovered workout, current position, and elapsed time; Resume or end as interrupted. |
+| Recover interruption | Show recovered workout, current position, and elapsed time; Resume or end as Aborted with Interrupted flagged. |
+| Share a WOD | Workout menu → Export workout → send the .wod.json file through an existing channel. |
+| Receive a WOD | Library or administration → Import → select file → review workout and conflicts → import a local copy → preview/play. |
+| Share a collection | Administration → Export selected workouts or program → send one .wods.json pack; recipient imports without setting up catalogue records. |
 | Deploy | Portainer reads Compose from GitHub, pulls the image, creates storage, and starts a healthy service. |
 
 # 4 Domain vocabulary and workout semantics
@@ -151,6 +155,8 @@ Validation includes missing IDs/references, duplicate node IDs, negative/nonfini
 
 **BLD-11** The builder SHALL autosave local drafts and clearly distinguish Saved, Unsaved locally, Sync pending, and Save failed. Explicit save to the server SHALL use revision conflict checking; a conflicting version SHALL NOT silently overwrite another edit.
 
+**BLD-12** Paired repeat blocks SHALL support an explicit assignment policy: fixed assignments or alternate the two task columns after each complete iteration. Alternation SHALL change prescriptions within stable A/B lanes, not athlete identity or lane order. The preview, spoken cues, checkpoints, and exported workout SHALL preserve the policy and resolve the correct assignments for each iteration. The first implementation MAY compile the policy into explicit per-round assignments; the shared model SHALL preserve its authored meaning. Nested repeats SHALL identify which repeat level triggers alternation.
+
 # 6 Workout model and execution contract
 
 ## 6.1 Three layers
@@ -179,19 +185,21 @@ flowchart TD
 
 **MOD-05** Clock policy, presentation mode, athlete participation, and completion rule SHALL be separate concepts. For example, paired participation can occur inside an AMRAP or a timed circuit; it is not a mutually exclusive workout type.
 
+Implement named formats using a bounded set of shared behaviours: sequence/repeat, timed work/rest, fixed scheduled intervals, capped blocks, and explicit manual completion/handoff. Tabata is a timed preset; a chipper and a run/station workout are manual sequences with different prescriptions. Avoid a separate progression implementation for each format or a general-purpose scripting language. Shared behaviours retain their format-specific scoring and presentation rules.
+
 ## 6.2 Minimum data entities
 
 | Entity | Required contents |
 | - | - |
 | Exercise | ID, full/short/spoken names, equipment, optional notes. |
-| Workout | ID, schema version, revision, metadata, ordered section tree. |
+| Workout | ID, schema version, revision, metadata, ordered section tree, optional sharing provenance and attribution. |
 | Activity | Stable node ID, copied prescription, targets, athlete assignments, content anchor. |
 | Block | Stable node ID, type, children, repeat/interval/cap settings, completion and transition policies. |
 | Program | ID, name, ordered workout references, notes. |
 | Athlete profile | ID, display name, preferred units; profile is separate from login identity. |
 | Session | ID, workout snapshot, mapped athletes, settings, engine version, state, clocks, active occurrence, completion acknowledgements. |
 | Session event | ID, increasing sequence, session ID, occurrence ID, event type, monotonic offset, wall timestamp, payload. |
-| Result | Status, scores by section/athlete/team, elapsed/paused time, modifications, notes, snapshot reference. |
+| Result | Outcome, Interrupted and Modified flags, scores by section/athlete/team, elapsed/paused time, modifications, notes, snapshot reference. |
 
 All executable durations SHALL be integer milliseconds internally; user-facing entry may use minutes and seconds. Quantity values SHALL include units. Missing scores SHALL remain null/unrecorded, never become zero. Timestamp storage SHALL use UTC; display uses the configured local timezone.
 
@@ -270,6 +278,14 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 | Exactly 250s | Round 2, slot 1; contextual view returns to its anchor. |
 | Exactly 1,190s | Section and session complete; no extra rest or Ready gate after the final section. |
 
+## 6.5 User-provided Markdown workout
+
+[example-wod.md](example-wod.md) is a real authoring and display reference. Preserve the original document as supplied. It contains a five-minute warm-up, four paired four-row blocks labelled ten minutes each, and a five-minute cooldown. Work is prescribed as 40 seconds with 20-second transitions; the bodyweight/dumbbell task columns exchange athlete assignments after each round. Column headings describe task groups, not permanent athlete identities.
+
+The example is intentionally not yet a canonical executable timing fixture: the title says 40 minutes, while the listed sections total 50 minutes before manual readiness waits. Four 40s/20s slots form four minutes only when all four transition periods are included; ten-minute blocks do not define a whole number of those rounds. Omitting final transition rest changes that duration again. Before converting it to executable JSON, explicitly resolve the intended overall duration, round counts versus hard block caps, trailing transitions, and section handoffs. A capped partial round SHALL NOT be described as a complete round or an equal A/B role rotation.
+
+Use this document to test paired table/context layout, long movement names, multi-section navigation, and per-round assignment alternation. Markdown remains a human authoring/reference format; automatic interpretation of arbitrary Markdown or natural language is outside P0. The editor or a reviewed manual conversion produces validated portable JSON; imported executable files SHALL never guess missing timing semantics from prose.
+
 # 7 Session engine and timing requirements
 
 **ENG-01** The engine SHALL be independently testable without the UI, DOM, audio device, or server. Given the same snapshot, clock observations, and ordered commands, it SHALL produce the same state and semantic events.
@@ -294,7 +310,7 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 | Visibility loss | Auto-pause if Running/Preparing, save checkpoint; never auto-resume on return. |
 | Reload with active checkpoint | Enter Recoverable and present Resume/End options. |
 
-**ENG-05** P0 SHALL support Pause/Resume, Next, Previous, and Stop. Previous restarts the preceding execution occurrence, including its repeat path; Next skips to the next occurrence. These actions do not undo physical work or erase audit events. They preserve the enclosing section clock and cap while resetting the selected slot clock; they mark the session modified. Navigation outside the current timed section is permitted only while paused through an explicit section selection. AMRAP counters use a separate Undo counter action.
+**ENG-05** P0 SHALL support Pause/Resume, Next, Previous, and Stop where applicable to the format. For ordinary timed sequences, Previous restarts the preceding execution occurrence, including its repeat path; Next skips to the next occurrence. These actions do not undo physical work or erase audit events. They preserve the enclosing section clock and cap while resetting the selected slot clock; they mark the session modified. During EMOM/every-N execution, Next/Previous SHALL be disabled so interval boundaries cannot shift; browsing future prescriptions SHALL NOT change the active occurrence. Navigation outside the current timed section is permitted only while paused through an explicit section selection. AMRAP counters use a separate Undo counter action.
 
 **ENG-06** For Time SHALL terminate on Finish or cap. AMRAP SHALL terminate on cap or explicit early finish. At an exact cap boundary, cap processing takes precedence over a manual completion timestamp at or after that boundary; the result is Capped. UI rendering delay SHALL NOT extend the cap.
 
@@ -348,7 +364,7 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 **UI-08** Controls SHALL have at least 48 × 48 CSS-pixel hit areas; the principal Switch/Done control SHOULD be at least 72px high. A single Pause action SHALL remain visible. Destructive Stop SHALL be separated and confirmed. No hover-only or gesture-only essential action is permitted.
 
-**UI-09** Layout SHALL respect safe areas, browser chrome, and portrait reflow. Essential content SHALL not clip. Fullscreen or installed-PWA presentation is optional enhancement; normal Safari operation SHALL remain usable.
+**UI-09** Layout SHALL respect safe areas, browser chrome, and portrait reflow. Essential content SHALL not clip. Initial UX acceptance SHALL include desktop Safari and Firefox, a half-monitor-width Safari window with its actual CSS dimensions recorded, and narrow phone/tablet viewports. A/B lanes SHALL retain A-before-B order when stacking vertically; controls SHALL remain touch-sized and essential text SHALL reflow instead of being scaled down to fit. Fullscreen or installed-PWA presentation is optional enhancement; normal Safari operation SHALL remain usable.
 
 **UI-10** Text contrast SHALL meet a product target of at least 4.5:1. Phase changes SHALL use text and shape/icon cues in addition to colour. Reduced-motion settings SHALL suppress scrolling animation and decorative motion while preserving accurate state.
 
@@ -356,7 +372,7 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 **UI-11** A thick inset border SHALL trace the usable application viewport, with rounded corners. It SHALL avoid controls and safe areas; the browser cannot draw outside its own viewport onto the physical iPad bezel.
 
-**UI-12** For known-duration phases, remaining fraction SHALL be clamped to remainingMs/durationMs. The border starts full and drains clockwise to empty. It resets only when its represented phase changes and freezes on pause. Work uses green, transitions to amber in the final warning window, and red in the final three seconds; rest uses a distinct blue phase colour and an explicit REST label.
+**UI-12** For known-duration phases, remaining fraction SHALL be clamped to remainingMs/durationMs. The border starts full and drains clockwise to empty. It resets only when its represented phase changes and freezes on pause. Work uses green, then amber and red according to UI-13; rest uses a distinct blue phase colour and an explicit REST label.
 
 **UI-13** Warning thresholds SHALL be capped to the interval length so short intervals do not spend their entire duration in warning. Default amber threshold is min(10 seconds, 25% of duration); red is min(3 seconds, 10% of duration). Colour changes SHALL not flash.
 
@@ -388,11 +404,11 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 **DAT-01** SQLite SHALL be the authoritative server datastore for workouts, programs, profiles, settings, and session records. All persistent application data SHALL live under a documented mounted data directory. Container replacement SHALL not lose data.
 
-**DAT-02** Browser storage SHALL hold current snapshots, drafts, checkpoints, and a retryable event/result outbox. Starting a loaded workout and finishing it SHALL not require continued network connectivity. P0 does not require cold-starting the entire app offline; cached offline startup is P1.
+**DAT-02** IndexedDB SHALL hold current snapshots, drafts, checkpoints, and a retryable event/result outbox. Related checkpoint/event/outbox updates SHALL be transactional so recovery and upload agree on acknowledged progress. Storage work SHALL remain outside the render/timing path. Starting a loaded workout and finishing it SHALL not require continued network connectivity. P0 does not require cold-starting the entire app offline; cached offline startup is P1.
 
 **DAT-03** Synchronisation SHALL use stable session/event IDs and idempotent writes. Repeated upload after a timeout SHALL not duplicate sessions or results. A reconnect SHALL upload pending events in order without resetting the active player.
 
-**DAT-04** Results SHALL distinguish Completed, Capped, Aborted, and Interrupted, with a separate Modified flag. Store actual overrides and relevant scores: time, rounds plus reps, reps, distance, load, and optional notes. Scores may be per athlete or team, explicitly labelled. Completion of a timer is not proof that prescribed reps were completed.
+**DAT-04** Results SHALL distinguish final outcomes Completed, Capped, and Aborted, with separate Interrupted and Modified flags. Recovery sets Interrupted without predetermining the final outcome: a recovered session may subsequently be Completed or Capped. Ending a recovered session without resuming records Aborted with Interrupted flagged. Store actual overrides and relevant scores: time, rounds plus reps, reps, distance, load, and optional notes. Scores may be per athlete or team, explicitly labelled. Completion of a timer is not proof that prescribed reps were completed.
 
 **DAT-05** Users SHALL see recent sessions, reopen the workout snapshot, and repeat it as a new session. Correcting a score SHALL preserve the prior value and correction timestamp. Basic history is P0; charts and personal-record inference are P1.
 
@@ -404,13 +420,33 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 **DAT-09** Archiving/deleting a workout SHALL not invalidate session snapshots. Clearing browser storage SHALL not erase already-synchronised server data; unsynchronised data is local-only and must be labelled accordingly.
 
+## 10.1 Portable WOD sharing
+
+SQLite remains the live datastore. JSON files are portable exchange documents; sharing a workout SHALL NOT require copying the database, accessing the container filesystem, or running another service.
+
+**SHR-01** Each workout SHALL offer Export workout, producing one UTF-8 JSON file named from its title with a .wod.json suffix. The library and administration screen SHALL offer Import; administration SHALL also offer export of selected workouts/programs as one .wods.json pack. These actions SHALL work through ordinary browser file selection/download on desktop, tablet, and phone. Workout sharing SHALL be available when the first circuit editor is delivered.
+
+**SHR-02** A single-workout document SHALL use the discriminator `format: "wodva.workout"`, an integer `formatVersion`, and one `workout` conforming to the separately versioned domain schema. A pack SHALL use `format: "wodva.workoutPack"`, `formatVersion`, and workout/program collections. Files SHALL contain the complete prescriptions, targets, units, repeats, rests, section policies, A/B roles, and required movement names/short/spoken names. Referenced exercise definitions SHALL be included or resolved into copied prescriptions during export. Files SHALL remain usable on an empty compatible installation without source-server access, catalogue IDs, household athlete profiles, or linked external assets.
+
+**SHR-03** Shared files SHALL contain workout/program content and optional author-entered attribution only. They SHALL exclude household profile identities, session history/results, authentication data, deployment configuration, and local draft state. Any author/source URL or workout notes intentionally included SHALL be visible in the export preview. Household A/B names SHALL export as role labels. Full application-data export under DAT-06 SHALL be a separate, clearly labelled administrative operation and SHALL NOT use the workout-sharing discriminator.
+
+**SHR-04** Import SHALL preview titles, formats, athlete roles, timing summary, equipment, attribution, and conflicts before confirmation. Validation SHALL complete before a transactional import; invalid or unsupported files SHALL produce actionable errors without partial changes. Default import creates independent local copies, remaps local workout/program/node/reference IDs consistently, and preserves separate sharing provenance. Reimport detection SHALL use provenance identity/revision when available, not titles alone, and offer Skip or Import another copy. Explicit replacement SHALL identify the local target, require its expected revision and confirmation, and preserve existing session snapshots. Importing SHALL never start a session automatically.
+
+**SHR-05** Workouts SHALL support optional sharing provenance (stable sharing ID and source revision), author, source URL, description, and licence/permission text. Imports and re-exports SHALL preserve declared attribution and provenance; edited derivatives SHALL record their source and receive a distinct sharing identity. Local database identity and local edit revision SHALL remain separate from source provenance. An absent content licence SHALL remain unspecified; the application's code licence SHALL NOT be applied automatically to contributed workouts. A central directory, public accounts, and in-app publishing are deferred; users may distribute files through existing channels or Git repositories.
+
+**SHR-06** The repository SHALL publish the versioned exchange/domain JSON Schemas, readable format documentation, and valid single-workout/pack examples. JSON export SHALL be formatted for reading and stable diffs, without volatile export timestamps. Import SHALL accept older supported versions through explicit migrations, reject unknown newer versions, and identify unsupported workout capabilities in partial releases. Round-trip and cross-installation fixtures SHALL verify semantic equivalence of prescriptions, timing, attribution, and program references after ID remapping. Parsing and expansion SHALL enforce BLD-10/NFR-10 limits before writes; source URLs SHALL be treated as metadata and SHALL NOT be fetched automatically.
+
+Example filename: `partner-circuit.wod.json`. Its workout payload is the complete fixture in section 6.4, wrapped with `format: "wodva.workout"` and `formatVersion: 1`; `workout.schemaVersion` versions the workout model independently of the exchange envelope. Program packs embed referenced workouts rather than depending on another installation's library. The public schemas SHALL specify required fields, optional metadata, ID remapping, and migration behaviour before the first sharing release.
+
 # 11 Architecture and interface boundaries
 
-The recommended baseline is a TypeScript web frontend, a pure TypeScript execution engine shared with tests, and a small Node.js HTTP service serving both the built frontend and API. Use SQLite directly through a maintained driver. This is a proposed implementation choice; the behavioural contracts above remain authoritative if a different stack is chosen.
+The selected stack is React + TypeScript with Vite, CSS Modules and CSS variables, a pure TypeScript execution engine, a Node.js + Fastify backend, SQLite server storage, and IndexedDB browser storage. Use Vitest for domain/engine tests and Playwright for browser integration tests. Select and pin supported dependency/runtime versions and a maintained SQLite driver during implementation. The specification intentionally does not freeze patch versions before setup.
 
-React with Vite is a reasonable frontend starting point. Select and pin supported dependency/runtime versions during implementation. The specification intentionally does not freeze today's patch versions.
+Frontend, backend, and tests SHALL share the versioned domain schemas and validation rules. The backend SHALL serve the production frontend assets and same-origin API in one application container. SQLite is an embedded file datastore under /data and SHALL NOT require a second database container. Development may use separate Vite and API processes, with a development proxy. An existing HTTPS reverse proxy remains external deployment infrastructure.
 
 The engine executes on the player device. The server stores content and results; it does not send once-per-second timer ticks. Rendering, audio, and persistence subscribe to state/events without controlling progression.
+
+Responsive layouts SHALL use available container/viewport space rather than device-name detection. Animate the perimeter from engine clock observations without rerendering the full React tree every frame; update textual clock labels and semantic content only when their displayed values change. This is a presentation optimisation, not a second source of progression. Prefer a small set of shared components and design tokens; add dependencies when a concrete workflow needs them.
 
 ```mermaid
 flowchart TD
@@ -434,6 +470,8 @@ flowchart TD
 | packages/engine/ | Pure state machine, clock adapter contract, events and projections. |
 | tests/fixtures/ | Canonical workouts and expected execution traces. |
 | tests/e2e/ | User flows, network failure and persistence tests. |
+| schemas/ | Published versioned JSON Schemas for domain and sharing documents. |
+| examples/workouts/ | Portable single-workout and pack files for documentation and cross-installation tests. |
 | docs/ | Deployment, backup, architecture decisions, contributor guide. |
 | compose.yaml | Default Portainer-ready production stack. |
 | compose.dev.yaml | Optional source-build/development setup. |
@@ -452,7 +490,7 @@ flowchart TD
 | Start/register session | Accept client-generated session ID and immutable snapshot; retry-safe. |
 | Append session events | Ordered per-session sequence and unique IDs; duplicate-safe. |
 | Finish/update result | Idempotent finalisation; corrections distinguished from first finish. |
-| Export/import | Versioned structured data, validation and transactional application. |
+| Export/import | Single-workout and pack exchange under SHR-01–06; separate administrative application-data export; versioned schemas, preview/validation and transactional application. |
 | Health/live | Process responsiveness. |
 | Health/ready | Database available, migrations complete, service ready. |
 
@@ -523,13 +561,13 @@ The implementation SHALL document exact environment names in .env.example and th
 
 | ID | Requirement and acceptance target |
 | - | - |
-| NFR-01 | On the reference iPad in the foreground, a 60-minute timing test SHALL end within 250ms of the test reference clock, excluding deliberate pauses. Individual visible boundaries SHOULD be within 150ms; exact speech latency is not guaranteed. |
+| NFR-01 | On the recorded reference device/browser in the foreground, a 60-minute timing test SHALL end within 250ms of the test reference clock, excluding deliberate pauses. Individual visible boundaries SHOULD be within 150ms; exact speech latency is not guaranteed. Record the reference clock, aligned start/end signals, sampling method, and measurement uncertainty; distinguish engine deadline correctness from visible/audio latency. Fake-clock tests SHALL verify exact engine deadlines separately. |
 | NFR-02 | A delayed callback test SHALL produce correct state with no accumulated tick drift and no replay burst of obsolete cues. |
 | NFR-03 | At two metres, both users SHALL correctly identify current task, primary time, A/B role, and next task in at least 9 of 10 random screen states each, under normal room lighting. |
 | NFR-04 | With 1,000 workouts and 10,000 session summaries, library search SHOULD respond within 500ms and a preloaded workout SHOULD enter prep within 300ms on the reference hardware/LAN. |
 | NFR-05 | A 60-minute session SHALL remain usable with network disabled after setup; reconnection SHALL synchronise one result without duplicates. |
 | NFR-06 | Server idle memory SHOULD remain below 256MiB and routine household use below 512MiB, excluding optional future TTS. Measure on the recorded deployment hardware. |
-| NFR-07 | The player SHALL pass on the actual household iPad in Safari and home-screen mode. Desktop editing SHALL pass in current Safari and Chromium. Record device/OS/browser versions; a simulator alone is insufficient. |
+| NFR-07 | Initial player and editing acceptance SHALL pass in desktop Safari and Firefox, including a recorded half-monitor-width window and responsive tablet/phone viewports. Automated browser tests SHALL cover Chromium, Firefox, and WebKit, with WebKit described as engine coverage rather than the installed Safari browser. Later physical iPad/iPhone smoke tests SHALL record device/OS/browser versions and cover touch, sound, wake lock, safe areas, and performance; home-screen mode SHALL be tested if offered. Physical-device checks SHALL NOT gate initial implementation or desktop UX review. |
 | NFR-08 | Essential controls SHALL be keyboard accessible with visible focus and accessible names. Screen-reader output SHALL announce phase changes without reading every second. |
 | NFR-09 | Authentication SHALL protect API data and exports; sessions SHALL use secure cookie settings appropriate to HTTPS, hashed passwords, login throttling, and protection against cross-site state-changing requests. |
 | NFR-10 | Untrusted import content SHALL be treated as data, never executable HTML/script. Request/import sizes and model expansion SHALL be bounded. |
@@ -538,31 +576,31 @@ The implementation SHALL document exact environment names in .env.example and th
 | NFR-13 | Application upgrades SHALL not replace a running player's assets mid-session. An available frontend update SHALL apply at idle/reload after the session ends. |
 | NFR-14 | The repository SHALL include a licence selected before public release, a dependency lockfile, and documented asset/voice licensing. Suggested default: MIT for original application code. |
 
-Reference hardware is established in Phase 0. These thresholds are targets to test, not measured performance claims.
+Desktop reference hardware, browser versions, and actual CSS viewport sizes are established in Phase 0. Record physical mobile hardware when available. These thresholds are targets to test, not measured performance claims. The two-metre recognition test applies to shared-display use, not handheld phone use.
 
 # 14 Acceptance scenarios and traceability
 
-Tests below define release gates. Unit tests use a fake monotonic clock; browser tests verify integration; real-device tests verify visibility and platform behaviour.
+Tests below define release gates at their applicable milestones. Unit tests use a fake monotonic clock; desktop/browser tests verify integration and responsive behaviour; later real-device tests verify visibility and platform behaviour.
 
 | Test | Scenario and expected outcome | Requirements |
 | - | - | - |
 | AT-01 | Execute the five-round fixture: exactly 19:50 active duration, 20:00 including prep; no final transition or round rest. | BLD-03/04, MOD-04, ENG-02/03 |
-| AT-02 | Change the fixture to two rounds: total 7:20; at 4:10 return to slot 1 with Round 2/2. Both lanes remain correctly labelled. | MOD-01/02, UI-03/04 |
+| AT-02 | Change the fixture to two rounds: active duration 7:20, or 7:30 including prep; at active time 4:10 return to slot 1 with Round 2/2. Both lanes remain correctly labelled. | MOD-01/02, UI-03/04 |
 | AT-03 | Pair assignments change Row/Swings → Swings/Row; A remains left and B right; next preview resolves through rest. | BLD-05, UI-04/05 |
 | AT-04 | Run a 10-minute AMRAP with three movements. After one minute without taps, the list is unchanged and cap is 9:00; finish at 10:00 without fabricated reps. | MOD-03, ENG-06, UI-06, DAT-04 |
-| AT-05 | Complete EMOM work at 20s. Rest lasts until 60s; next task starts exactly then. Missing a Done tap never shifts the schedule. | ENG-07 |
+| AT-05 | Complete EMOM work at 20s. Rest lasts until 60s; next task starts exactly then. Missing a Done tap never shifts the schedule. Next/Previous are disabled; browsing future prescriptions does not change the active interval or deadlines. | ENG-05/07 |
 | AT-06 | A completes a you-go-I-go turn and taps Switch twice rapidly. Only one switch occurs; after B completes, team round increments once. | ENG-08/10 |
 | AT-07 | Both-done task: A taps Done twice, B has not. Task remains active; B's later Done advances once. | BLD-06, ENG-09/10 |
 | AT-08 | Finish For Time at 299.9s of a 300s cap: Completed. At 300.0s: Capped. Event order and status are deterministic. | ENG-03/06 |
-| AT-09 | Pause with 23s remaining for 30 real seconds. Resume at 23s; border frozen while paused; no queued countdown plays. | ENG-04, AUD-05 |
+| AT-09 | Pause with 23s remaining for 30 real seconds. Resume at 23s; border frozen while paused; no queued countdown plays. For a 10s work slot, amber starts at 2.5s and red at 1s remaining under UI-13. | ENG-04, UI-12/13, AUD-05 |
 | AT-10 | Delay processing across several timed boundaries. Resolve current occurrence correctly; do not announce missed countdown numbers. | ENG-02, AUD-06, NFR-02 |
 | AT-11 | Disconnect network mid-session, finish, reconnect and retry upload twice. Exactly one complete session/result exists. | ENG-11, DAT-02/03 |
-| AT-12 | Reload in round 3 during athlete B's turn. Recover paused from checkpoint with correct lane, round, clock and acknowledgements. | ENG-12 |
+| AT-12 | Reload in round 3 during athlete B's turn. Recover paused from checkpoint with correct lane, round, clock and acknowledgements. Finish after resuming: outcome Completed, Interrupted true. End from recovery: outcome Aborted, Interrupted true. | ENG-12, DAT-04 |
 | AT-13 | Hide the app, return, and test wake-lock reacquisition. Show Paused, require Resume, preserve state. If terminated, use checkpoint recovery. | ENG-13, AUD-09 |
 | AT-14 | Edit a workout while a snapshot session is active. Running prescriptions and saved history remain unchanged. | LIB-05 |
 | AT-15 | Import malformed/oversized/future-schema data. Reject without partial changes. Export/import a valid program and remap references correctly. | BLD-10, DAT-06, NFR-10 |
 | AT-16 | Exhaust or deny local storage. Display failure clearly; do not claim recovery is available. Existing server records remain intact. | ENG-11, DAT-09 |
-| AT-17 | Use long exercise names, large rep targets, two athlete lanes and portrait rotation. No critical clipping; preflight flags non-fitting AMRAP content. | UI-06/07/09 |
+| AT-17 | Use long exercise names, large rep targets, and two athlete lanes in desktop Safari/Firefox at full and half-window widths, plus tablet/phone portrait and landscape viewports. No critical clipping or whole-page horizontal scrolling; stacking preserves A-before-B order and touch-sized controls; preflight flags non-fitting AMRAP content. | UI-04/06/07/09, NFR-07 |
 | AT-18 | Complete the physical two-metre recognition test and a 30-minute audio session with music at normal training volume. No conflicting/stale cues. | UI-07, AUD-03/06, NFR-03 |
 | AT-19 | Deploy from Git in Portainer, preserve data across redeploy, migrate and restore a backup without server-side source builds. | DEP-01–14, DAT-07/08 |
 | AT-20 | Execute a custom run → station → run sequence. Clock never auto-completes distance; manual Done records splits and correct next work. | BLD-02, MOD-04, DAT-04 |
@@ -570,49 +608,54 @@ Tests below define release gates. Unit tests use a fake monotonic clock; browser
 | AT-22 | Complete a mixed session: timed warm-up → Ready → manual strength/rest → Ready → capped AMRAP. Each clock and transition follows its declared scope. | BLD-07, MOD-05, ENG-04/06 |
 | AT-23 | Execute two sets of two circuits with distinct between-circuit and between-set rests. Compare occurrence IDs, repeat paths and duration against a hand-calculated trace. | BLD-03/04, MOD-01 |
 | AT-24 | Restart the server during active play; then restart the container after saving results. Player continues locally and stored results survive. | ENG-11, DAT-01, DEP-04/06 |
+| AT-25 | Export one paired workout through its menu as .wod.json, import into an empty second installation through the browser, and compare prescriptions, assignments, repeats/rests and compiled duration. No source catalogue/profile setup is required. Household names, results, credentials and configuration are absent from the shared file. | SHR-01–04/06, LIB-05 |
+| AT-26 | Import a file twice and import another file with colliding local IDs. Preview identifies known provenance, offers Skip/Import another copy, remaps copied IDs/references, and leaves existing workouts and session snapshots unchanged. A title match alone never overwrites content. | SHR-04/05, DAT-06/09 |
+| AT-27 | Export/import a program pack with two workouts sharing an exercise reference. All required movement definitions and program references resolve on a fresh installation; attribution/provenance survive re-export. Editing a derivative gives it a distinct sharing identity while recording its source. | SHR-02/05/06, LIB-02/03 |
+| AT-28 | Import malformed, oversized, unknown-version or unsupported-capability sharing files. Preview reports actionable failures and no records are written. Validate published examples against schemas and round-trip supported older fixtures through migrations. | SHR-04/06, BLD-10, NFR-10 |
+| AT-29 | Review example-wod.md without inventing a round count or resolving its 40/50-minute discrepancy automatically. On a separate normalised two-round fixture, alternate bodyweight/dumbbell assignments after the complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
 
 # 15 Implementation plan and release gates
 
-Build complete vertical slices, keeping the execution core independent. The first useful milestone is a playable fixture on the real iPad, not a polished library screen.
+Build complete vertical slices, keeping the execution core independent. The first useful milestone is the paired fixture playable in desktop Safari/Firefox, including a half-monitor-width window and responsive phone/tablet layouts. Start with the real, minimal tested engine so the first player evolves into the application. Real-device trials follow desktop UX progress and SHALL NOT block editor work.
 
 | Phase | Deliverables | Exit gate |
 | - | - | - |
-| 0 Platform and interaction spike | One paired timed fixture; large timer and lanes; perimeter prototype; voice/beeps; wake lock; HTTPS served from a minimal container. Record actual iPad and server architecture. | Two-metre trial, audio starts reliably, foreground timer works, wake-lock limitations understood. Resolve any blocking platform issue before editor work. |
-| 1 Domain and deterministic engine | Versioned schema, validator/compiler, repeat paths, clocks, state transitions, manual gates, event IDs, fake-clock tests. | AT-01/02/04–10/20/22/23 pass at engine level. No UI timers independently advance state. |
-| 2 Performance player | Focus/context modes, paired lanes, AMRAP/EMOM/For Time/YGIG layouts, cue scheduler, preflight, pause/navigation, local checkpoints. | Core formats playable on iPad; AT-03/12/13/17/18/21 pass. |
-| 3 Authoring and persistence | Exercise/workout/program library, builder, previews, scaling overrides, API, SQLite migrations, household login, history, import/export, outbox. | Full create → play → save → repeat flow; AT-11/14–16/24 pass. |
-| 4 Deployment and release hardening | CI, multi-architecture image publishing, production Compose, Portainer walkthrough, backup/restore, migration/rollback tests, dependency and asset review. | Fresh Portainer deployment and AT-19 pass; all P0 acceptance tests and real-device checks pass. |
+| 0 Tested browser fixture | Selected TypeScript stack and shared schema; pure sequence/repeat/timed work/rest engine; paired focus/context prototype; timer/perimeter; voice/beeps; pause/resume; responsive layout. Initial CI, image publishing and root Compose. | AT-01/02/03/09/10 pass for timed circuits; desktop Safari/Firefox full/half-window UX works with narrow-viewport checks under AT-17. Build/publish the initial image and exercise Git → registry → Portainer over HTTPS as deployment access becomes available. |
+| 1 Dependable saved workout | Thin authenticated API with SQLite/migrations; save/load fixture and immutable session snapshot; IndexedDB checkpoints/events/outbox; recovery and single-tab control; idempotent results; initial backup/restore. | Saved workout → play → reload/recover → finish/upload → redeploy → retain data works. Applicable timed-circuit cases of AT-11–14/16/21/24 pass, including completion after recovery. |
+| 2 Initial household version | Simple timed-circuit editor/library, duplicate/reuse, presets, per-athlete overrides and round assignment alternation, accurate previews, basic history, single-workout sharing and multi-workout packs, public schemas/examples and import preview. | Create → save → play → repeat → export → import on a fresh installation works. AT-25/26/28/29 pass for supported circuit capabilities; unsupported formats are identified before import/start. Desktop UX remains the review gate; later physical-device smoke tests can inform iteration. |
+| 3 Complete P0 formats and authoring | Shared engine behaviours for caps, manual gates, AMRAP, EMOM, For Time/chippers/run-station sequences and handoffs; full player layouts; advanced/nested builder; catalogue/program management; complete pack/application-data import/export. | AT-01–17/20–29 pass at applicable engine/browser layers, including program-pack references. Full complete-P0 create → play → save → share flow works. |
+| 4 Release hardening | Multi-architecture image verification, Portainer walkthrough, migration/rollback and restore rehearsal, dependency/assets review, recorded performance and physical-device validation. | Fresh Portainer deployment and AT-19 pass; all 29 acceptance scenarios pass at applicable layers, including AT-18 shared-display/audio checks and real-device smoke tests. |
 | 5 Follow-up improvements | Prioritised P1 items based on actual training sessions. | Each addition preserves engine fixtures and deployment simplicity. |
 
-A minimal image and Compose file start in Phase 0; deployment hardening is not postponed until the architecture is difficult to package.
+A minimal image, CI publishing and Compose file start in Phase 0. Exercise the actual deployment route early; retain comprehensive migration/rollback and multi-architecture release gates in Phase 4. Program export joins the pack format when program authoring arrives in Phase 3. Phase 2 is an initial usable milestone, not the complete P0 release.
 
 ## 15.1 First implementation backlog
 
-1. Record architecture decisions for schema, clock policy, rest semantics, single-device control, and image publishing.
+1. Record architecture decisions for the selected stack, shared domain/exchange schemas, clock policy, rest/rotation semantics, single-device control, and image publishing. Capture desktop browsers and full/half-window CSS viewport dimensions; review example-wod.md without guessing its unresolved timing.
 
-2. Create the repository skeleton, lockfile, test runner, CI check, initial Dockerfile and compose.yaml.
+2. Create the repository skeleton, lockfile, Vitest/Playwright setup, CI check, initial Dockerfile and compose.yaml. Publish an initial image and document the Portainer/HTTPS path.
 
-3. Encode the partner fixture and its expected timing trace as test data.
+3. Encode the unambiguous partner fixture and its expected timing trace as test data; establish the public schema/exchange envelope and a minimal valid sharing example alongside it.
 
 4. Build a pure engine for sequence, repeat, timed work/rest and pause/resume.
 
-5. Connect the engine projection to one large paired-player screen and perimeter.
+5. Connect the engine projection to responsive paired focus/context screens and perimeter; verify full/half desktop windows and stacked narrow layouts.
 
-6. Add cue scheduling and audio preflight; run the physical iPad trial.
+6. Add cue scheduling and audio preflight; test first in desktop Safari/Firefox. Record platform capability status and schedule physical mobile smoke checks when hardware is available.
 
-7. Extend the engine to caps, manual gates, AMRAP, EMOM, For Time and handoffs.
+7. Add the thin authenticated SQLite API, session snapshot/results, IndexedDB checkpoints/outbox, recovery, single-tab control, idempotent upload and basic backup/restore. Verify server/container restart and redeploy behaviour before full editor work.
 
-8. Add interruption recovery and local event persistence.
+8. Build the simple circuit library/editor on the tested schema/compiler, including explicit per-round assignment alternation, overrides, history and preview.
 
-9. Build library/editor workflows on the already-tested schema/compiler.
+9. Deliver Export workout, Import preview, pack export/import, public schemas and self-contained examples with the first editor. Test cross-installation round trips, privacy, conflicts and unsupported-capability failures.
 
-10. Add server storage, synchronisation, authentication, release publishing and operational documentation.
+10. Extend shared behaviours and layouts to the remaining formats; add advanced authoring, exercise catalogue and programs. Complete pack references, operational documentation, physical-device validation and release hardening.
 
 ## 15.2 Definition of done for the first release
 
 - All P0 requirements implemented, with each requirement mapped to an automated test, documented inspection, or real-device result.
 
-- All 24 acceptance scenarios pass at their applicable layers.
+- All 29 acceptance scenarios pass at their applicable layers.
 
 - Two real household workouts completed: one automatic paired circuit and one mixed manual/timed session.
 
@@ -622,6 +665,10 @@ A minimal image and Compose file start in Phase 0; deployment hardening is not p
 
 - Backup restored successfully into a fresh test stack.
 
+- A shared workout file and a program pack imported successfully into a fresh installation, with equivalent prescriptions/timing, preserved attribution and no household identities or results in the sharing files.
+
+- Desktop Safari/Firefox full/half-window review and responsive phone/tablet layouts pass; recorded physical-device smoke tests verify platform-specific behaviour before mobile support is declared tested.
+
 - Release notes identify supported browsers, hardware tested, known limitations, image digest, and schema version.
 
 - README gives another developer enough information to run, test, deploy, upgrade and restore the application.
@@ -630,18 +677,20 @@ A minimal image and Compose file start in Phase 0; deployment hardening is not p
 
 | Risk or decision | Baseline treatment | When to validate |
 | - | - | - |
-| iPad speech timing or voices are inadequate | Keep boundary beeps local and precise; speech is advisory. Consider cached local TTS in P1. | Phase 0. |
-| Screen visibility and long prescriptions conflict | Prioritise essential targets, provide short names, warn before starting crowded blocks. | Phase 0 and player acceptance. |
+| iPad speech timing or voices are inadequate | Keep boundary beeps local and precise; speech is advisory. Consider cached local TTS in P1. | Desktop audio in Phase 0; physical mobile smoke test later. |
+| Screen visibility and long prescriptions conflict | Prioritise essential targets, provide short names, test reflow at full/half/narrow widths, warn before starting crowded blocks. | Phase 0 desktop UX; later shared-display recognition test. |
 | Approaching the iPad for handoffs is inconvenient | Large Switch control in P0; keyboard/Bluetooth remote support is a possible later enhancement. | First you-go-I-go workout. |
-| Hidden app behaviour surprises users | Explicit auto-pause policy and interrupted-session flag; no lock-screen guarantee. | Phase 0. |
+| Hidden app behaviour surprises users | Explicit auto-pause policy and interrupted-session flag; no lock-screen guarantee. | Desktop in Phases 0–1; physical mobile smoke test later. |
 | Rest interpretation changes workout duration | Explicit between-item/between-round/trailing rest settings and exact preview. | Domain fixtures before editor implementation. |
 | Independent athlete progress is requested later | Keep athlete and completion policy explicit; defer truly independent timelines. | After first household release. |
-| Browser loses unsynchronised state | Durable checkpoints, visible sync status, recovery tests; completed server data remains authoritative. | Phases 2–3. |
+| Browser loses unsynchronised state | Durable checkpoints, visible sync status, recovery tests; completed server data remains authoritative. | Phase 1, before full editor work. |
 | Database migration breaks rollback | Pre-upgrade consistent backup; explicit image/schema compatibility and restore procedure. | Phase 4. |
 | Private GitHub repository or image | Separate Git and registry credential instructions; neither credential belongs in source. | First Portainer deployment. |
 | Container architecture mismatch | Publish and test amd64/arm64, verify actual server architecture. | Phases 0 and 4. |
+| Shared files depend on another installation or expose household data | Self-contained copied prescriptions, role labels, separate administrative export, schemas and cross-installation tests. | Exchange schema in Phase 0; sharing delivery in Phase 2. |
+| Prose workout leaves timing or assignment rotation ambiguous | Preserve example-wod.md; request explicit timing decisions during conversion and validate authored repeats/caps/rests. | Before making the example executable; editor validation in Phases 2–3. |
 
-No further product decision is required to begin Phase 0. The first review should examine a real iPad running the paired fixture, the proposed background-pause behaviour, and the readability of a representative AMRAP block.
+No further product decision is required to begin Phase 0 with the unambiguous timed fixture. The first review examines desktop Safari/Firefox full/half-window UX, responsive A/B layouts, foreground timing/audio and pause behaviour. The real Markdown example informs content layout immediately; resolving its timing is required only before converting that example into an executable workout. Physical iPad/iPhone checks follow without holding up desktop development.
 
 # 17 Source references
 
@@ -662,3 +711,14 @@ Sources establish terminology and platform/deployment constraints. Workout seman
 - **S7 — Image publishing:** [GitHub documentation on publishing Docker images](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images).
 
 Reference review date: 26 October 2026. Recheck platform support and deployment documentation when selecting implementation versions.
+
+# 18 Plan revision record
+
+## Version 1.1 — 26 October 2026
+
+- Adopted desktop Safari/Firefox and half-monitor-width UX review first, with responsive tablet/phone layouts from the beginning. Physical mobile checks remain later platform validation rather than an initial development gate.
+- Selected React/TypeScript/Vite, CSS Modules/variables, Node.js/Fastify, SQLite, IndexedDB, Vitest and Playwright; clarified one production application container and optional separate development processes.
+- Reordered milestones to begin with a minimal tested engine and browser fixture, then persistence/recovery before the editor. Kept the complete P0 scope while adding an earlier usable household milestone and moving image publishing/deployment checks forward.
+- Added SHR-01–06 and AT-25–28 for portable workout/pack files, browser export/import, self-contained prescriptions, privacy, attribution/provenance, versioned public schemas and cross-installation tests. Updated DAT-06/API-01 context; hosted public discovery remains deferred.
+- Added BLD-12 and AT-29 for explicit per-round assignment alternation, informed by example-wod.md. Recorded the example's unresolved duration/round/rest semantics without modifying the source document.
+- Preserved existing requirement IDs while clarifying ENG-05 scheduled-interval navigation, UI-12 warning thresholds, and DAT-04 outcome versus interruption flags. Updated AT-05/09/12 accordingly; clarified prep exclusion in AT-02.
