@@ -1,6 +1,8 @@
+import type { Catalogue } from './catalogue';
 import { compileWorkout, type DurationKind } from './compiler';
+import { searchScore, type SearchField } from './search';
 import { rateDifficulty, type Difficulty, type DifficultyLevel } from './difficulty';
-import type { SectionFormat, Workout, WorkoutNode } from './schema';
+import type { Prescription, SectionFormat, Workout, WorkoutNode } from './schema';
 
 /** Presentation-ready facts about a workout, computed once per library entry. */
 export interface WorkoutSummary {
@@ -49,11 +51,17 @@ export function durationBucket(totalMs: number): DurationBucket {
   return totalMs <= SHORT_MAX_MS ? 'short' : totalMs <= MEDIUM_MAX_MS ? 'medium' : 'long';
 }
 
-function collectMovements(node: WorkoutNode, into: string[]) {
-  if (node.type === 'timed' || node.type === 'task') {
-    for (const prescription of [node.assignments.A, node.assignments.B]) if (prescription && !into.includes(prescription.name)) into.push(prescription.name);
-  } else if (node.type === 'sequence') node.children.forEach(child => collectMovements(child, into));
-  else if (node.type === 'repeat') collectMovements(node.body, into);
+/** Every prescription in a workout, in authored order, each name once. */
+export function collectPrescriptions(workout: Workout): Prescription[] {
+  const found: Prescription[] = [];
+  const walk = (node: WorkoutNode) => {
+    if (node.type === 'timed' || node.type === 'task') {
+      for (const prescription of [node.assignments.A, node.assignments.B]) if (prescription && !found.some(item => item.name === prescription.name)) found.push(prescription);
+    } else if (node.type === 'sequence') node.children.forEach(walk);
+    else if (node.type === 'repeat') walk(node.body);
+  };
+  for (const section of workout.sections) walk(section.body);
+  return found;
 }
 
 /** Movement keyword → the equipment it implies. Checked against normalised movement names; every match counts. */
@@ -104,15 +112,20 @@ export interface SummaryOptions {
   /** Maps an equipment name to its canonical spelling (master data merges). */
   canonicalEquipment?: (name: string) => string;
   collections?: string[];
+  /** When given, equipment comes from the exercise records of recognised movements; keywords only cover the rest. */
+  catalogue?: Catalogue;
 }
 
 export function summariseWorkout(workout: Workout, options: SummaryOptions = {}): WorkoutSummary {
   const plan = compileWorkout(workout);
-  const movements: string[] = [];
-  for (const section of workout.sections) collectMovements(section.body, movements);
+  const prescriptions = collectPrescriptions(workout);
+  const movements = prescriptions.map(item => item.name);
   const canonical = options.canonicalEquipment ?? ((name: string) => name);
+  const known = options.catalogue ? prescriptions.filter(item => options.catalogue!.resolve(item)) : [];
+  const unknown = prescriptions.filter(item => !known.includes(item)).map(item => item.name);
+  const inferred = [...known.flatMap(item => options.catalogue!.equipmentOf(item)), ...inferEquipment(unknown, workout.equipment)];
   const equipmentNeeded: string[] = [];
-  for (const item of [...workout.equipment, ...inferEquipment(movements, workout.equipment)].map(canonical)) if (!equipmentNeeded.some(known => equipmentKey(known) === equipmentKey(item) || normalise(known).includes(normalise(item)))) equipmentNeeded.push(item);
+  for (const item of [...workout.equipment, ...inferred].map(canonical)) if (!equipmentNeeded.some(known => equipmentKey(known) === equipmentKey(item) || normalise(known).includes(normalise(item)))) equipmentNeeded.push(item);
   const formats: SectionFormat[] = [];
   for (const section of workout.sections) if (!formats.includes(section.format)) formats.push(section.format);
   return {
@@ -123,7 +136,15 @@ export function summariseWorkout(workout: Workout, options: SummaryOptions = {})
   };
 }
 
-/** Every whitespace-separated query token must appear in the title, description, a movement or an equipment item. */
+/** The weighted fields the library search ranks: title first, then movements and equipment, then the description. */
+export const searchFields = (summary: WorkoutSummary): SearchField[] => [
+  { text: summary.title, weight: 3 },
+  { text: summary.movements.join(' '), weight: 2 },
+  { text: summary.equipmentNeeded.join(' '), weight: 1.5 },
+  { text: summary.description, weight: 1 },
+];
+
+/** Every query token must match (exactly, as a prefix, inside a word or with a small typo) in some searched field. */
 export function matchesFilter(summary: WorkoutSummary, filter: LibraryFilter): boolean {
   if (filter.participants && summary.participants !== filter.participants) return false;
   if (filter.equipment?.length && !filter.equipment.some(wanted => summary.equipmentNeeded.some(item => equipmentKey(item) === equipmentKey(wanted)))) return false;
@@ -135,10 +156,7 @@ export function matchesFilter(summary: WorkoutSummary, filter: LibraryFilter): b
   if (filter.difficulty?.length && !filter.difficulty.includes(summary.difficulty.level)) return false;
   if (filter.format?.length && !filter.format.some(format => summary.formats.includes(format))) return false;
   if (filter.collections?.length && !filter.collections.some(id => summary.collections.includes(id))) return false;
-  const tokens = normalise(filter.query ?? '').split(/\s+/).filter(Boolean);
-  if (!tokens.length) return true;
-  const haystack = normalise([summary.title, summary.description, ...summary.movements, ...summary.equipmentNeeded].join('\n'));
-  return tokens.every(token => haystack.includes(token));
+  return searchScore(filter.query ?? '', searchFields(summary)) > 0;
 }
 
 export function sortSummaries<T extends WorkoutSummary>(summaries: T[], sort: LibrarySort): T[] {

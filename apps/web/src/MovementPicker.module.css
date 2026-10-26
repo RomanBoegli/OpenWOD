@@ -1,0 +1,13 @@
+.picker { position: relative; min-width: 0; }
+.picker input { width: 100%; }
+.picker[data-unmatched] input { border-color: var(--notice-border); box-shadow: inset 3px 0 var(--phase-amber); }
+.list { position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 100%; max-width: 360px; margin: 0; padding: 6px; list-style: none; background: var(--surface-4); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 18px 50px var(--shadow); animation: pop var(--t-fast) var(--ease); }
+.list li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.list li[data-active=true] { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent); }
+.optionName { font-size: 14px; color: var(--ink); }
+.list small { font-size: 11px; color: var(--ink-3); }
+.status { min-height: 18px; margin-top: 3px; font-size: 11px; line-height: 1.4; }
+.matched { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-text); }
+.unmatchedNote { display: inline-flex; align-items: center; gap: 6px; color: var(--notice-text); }
+.unmatchedNote button { min-height: 24px; padding: 2px 10px; border: 1px solid var(--notice-border); border-radius: 999px; background: var(--notice-bg); color: var(--notice-text); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.unmatchedNote button:hover { background: var(--hover); }

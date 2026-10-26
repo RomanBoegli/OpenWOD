@@ -7,7 +7,6 @@ export interface Preferences {
   names: { A: string; B: string };
   soundMode: SoundMode;
   cueSource: CueSource;
-  voiceURI: string;
   rate: number;
   volume: number;
   view: 'focus' | 'context';
@@ -22,7 +21,7 @@ export interface Preferences {
   onlyMyEquipment: boolean;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', voiceURI: '', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, myEquipment: [], onlyMyEquipment: false };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, myEquipment: [], onlyMyEquipment: false };
 
 const KEY = 'openwod.preferences.v1';
 const LEGACY_KEY = 'wodva.preferences.v1';
@@ -43,7 +42,6 @@ export function loadPreferences(): Preferences {
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
       soundMode: oneOf(stored.soundMode, ['voice', 'beeps', 'silent'], defaultPreferences.soundMode),
       cueSource: oneOf(stored.cueSource, ['clips', 'device'], defaultPreferences.cueSource),
-      voiceURI: text(stored.voiceURI, '', 300),
       rate: clamp(stored.rate, .7, 1.3, defaultPreferences.rate),
       volume: clamp(stored.volume, 0, 1, defaultPreferences.volume),
       view: oneOf(stored.view, ['focus', 'context'], defaultPreferences.view),

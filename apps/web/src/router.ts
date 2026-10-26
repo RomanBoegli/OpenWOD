@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings' } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string };
+export const SETTINGS_SECTIONS = ['general', 'sound', 'equipment', 'exercises', 'collections'] as const;
+export type SettingsSection = typeof SETTINGS_SECTIONS[number];
+export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string };
 
 /** Hash routes keep the back button and reloads working on a static host without server rewrites. */
 export function parseRoute(hash: string): Route {
   if (/^#\/new\/?$/.test(hash)) return { name: 'new' };
-  if (/^#\/settings\/?$/.test(hash)) return { name: 'settings' };
+  const settings = /^#\/settings(?:\/([a-z]+))?\/?$/.exec(hash);
+  if (settings) return { name: 'settings', section: (SETTINGS_SECTIONS as readonly string[]).includes(settings[1]) ? settings[1] as SettingsSection : 'general' };
+  const draft = /^#\/draft\/([^/?#]+)\/?$/.exec(hash);
+  if (draft) return { name: 'draft', id: decodeURIComponent(draft[1]) };
   const match = /^#\/wod\/([^/?#]+)(?:\/(play|edit))?\/?$/.exec(hash);
   if (!match) return { name: 'library' };
   return { name: match[2] === 'play' ? 'play' : match[2] === 'edit' ? 'edit' : 'workout', id: decodeURIComponent(match[1]) };
@@ -16,6 +21,9 @@ export const playHref = (id: string) => `#/wod/${encodeURIComponent(id)}/play`;
 export const editHref = (id: string) => `#/wod/${encodeURIComponent(id)}/edit`;
 export const NEW_HREF = '#/new';
 export const SETTINGS_HREF = '#/settings';
+export const settingsHref = (section: SettingsSection) => section === 'general' ? SETTINGS_HREF : `#/settings/${section}`;
+/** An imported file is edited as an unsaved draft before it joins the library. */
+export const draftHref = (id: string) => `#/draft/${encodeURIComponent(id)}`;
 
 export function useRoute() {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));

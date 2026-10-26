@@ -2,9 +2,12 @@ import type { ClockValues, Projection } from '../../../packages/engine/src';
 
 export type SoundMode = 'voice' | 'beeps' | 'silent';
 export type CueSource = 'clips' | 'device';
-export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' | 'one' | 'paused' | 'resume' | 'complete';
-export interface CuePack { id: string; label: string; voice?: string }
-export const CUE_NAMES: CueName[] = ['get-ready', 'go', 'rest', 'switch', 'three', 'two', 'one', 'paused', 'resume', 'complete'];
+export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' | 'one' | 'paused' | 'resume' | 'complete' | 'a' | 'b' | 'next' | 'last-interval' | 'a-waiting' | 'b-waiting' | 'ended';
+/** A recorded voice pack: fixed cues plus, when `names` is set, one clip per bundled movement under names/<id>.mp3. */
+export interface CuePack { id: string; label: string; voice?: string; names?: number }
+export const CUE_NAMES: CueName[] = ['get-ready', 'go', 'rest', 'switch', 'three', 'two', 'one', 'paused', 'resume', 'complete', 'a', 'b', 'next', 'last-interval', 'a-waiting', 'b-waiting', 'ended'];
+type Lane = { name: string; spokenName?: string; movement?: string };
+type Assignment = { A: Lane; B?: Lane };
 const COUNTDOWN: Record<1 | 2 | 3, CueName> = { 1: 'one', 2: 'two', 3: 'three' };
 
 const PREFERRED = /enhanced|premium|siri|natural|neural|hd\b/i;
@@ -34,7 +37,6 @@ export class WorkoutAudio {
   private preloading?: Promise<void>;
   mode: SoundMode = 'voice';
   cueSource: CueSource = 'clips';
-  voiceURI = '';
   rate = 1;
   volume = .7;
   /** Base URL for the pre-rendered cue clips; packs live in subfolders listed by packs.json. */
@@ -43,6 +45,11 @@ export class WorkoutAudio {
   cuePack = '';
   packs: CuePack[] = [];
   private loadedPack = '';
+  /** Recorded movement names of the loaded pack, by movement id (see prepareNames). */
+  private names = new Map<string, AudioBuffer>();
+  private namesPack = '';
+  /** Maps a prescription to its exercise record id so its recorded name can be found; set by the app from the catalogue. */
+  resolveMovement?: (lane: Lane) => string | undefined;
   onError?: (message: string) => void;
   /** Reports whether every clip decoded, once preloading finishes. */
   onClips?: (ready: boolean) => void;
@@ -58,6 +65,25 @@ export class WorkoutAudio {
     return this.context;
   }
 
+  private listing?: Promise<CuePack[]>;
+  /** Reads packs.json once; needs no audio context, so the settings page can list the packs before any sound was unlocked. */
+  listPacks(): Promise<CuePack[]> {
+    this.listing ??= (async () => {
+      if (typeof fetch === 'function') {
+        try {
+          const response = await fetch(`${this.clipBase}packs.json`);
+          if (response.ok) {
+            const listed: unknown = await response.json();
+            if (Array.isArray(listed)) this.packs = listed.filter((item): item is CuePack => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.label === 'string'));
+          }
+        } catch { /* No pack list: fall back to device speech. */ }
+      }
+      this.onPacks?.(this.packs);
+      return this.packs;
+    })();
+    return this.listing;
+  }
+
   /** Fetches and decodes every clip once so a session never needs the network after Play (ENG-11). Failure is silent: beeps and device speech remain. */
   preload(): Promise<void> {
     const wanted = this.cuePack || this.packs[0]?.id || '';
@@ -66,18 +92,10 @@ export class WorkoutAudio {
       if (typeof fetch !== 'function') return;
       let context: AudioContext;
       try { context = this.ensureContext(); } catch { return; }
-      if (!this.packs.length) {
-        try {
-          const response = await fetch(`${this.clipBase}packs.json`);
-          if (response.ok) {
-            const listed: unknown = await response.json();
-            if (Array.isArray(listed)) this.packs = listed.filter((item): item is CuePack => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.label === 'string'));
-          }
-        } catch { /* No pack list: fall back to device speech. */ }
-        this.onPacks?.(this.packs);
-      }
+      await this.listPacks();
       const pack = this.packs.find(item => item.id === this.cuePack) ?? this.packs[0];
       this.loadedPack = pack?.id ?? '';
+      if (this.namesPack !== this.loadedPack) { this.names.clear(); this.namesPack = this.loadedPack; }
       this.clips.clear();
       if (!pack) { this.onClips?.(false); return; }
       await Promise.all(CUE_NAMES.map(async name => {
@@ -90,6 +108,23 @@ export class WorkoutAudio {
       this.onClips?.(this.clipsReady);
     })();
     return this.preloading;
+  }
+
+  /** Fetches and decodes the recorded names a session will announce. Names the pack lacks (your own exercises) fall back to device speech. */
+  async prepareNames(ids: string[]): Promise<void> {
+    if (typeof fetch !== 'function' || this.cueSource !== 'clips') return;
+    await this.listPacks();
+    const pack = this.packs.find(item => item.id === this.cuePack) ?? this.packs[0];
+    if (!pack?.names) return;
+    let context: AudioContext;
+    try { context = this.ensureContext(); } catch { return; }
+    if (this.namesPack !== pack.id) { this.names.clear(); this.namesPack = pack.id; }
+    await Promise.all([...new Set(ids)].filter(id => !this.names.has(id)).map(async id => {
+      try {
+        const response = await fetch(`${this.clipBase}${pack.id}/names/${id}.mp3`);
+        if (response.ok) this.names.set(id, await context.decodeAudioData(await response.arrayBuffer()));
+      } catch { /* No clip: the device voice reads this name. */ }
+    }));
   }
 
   get clipsReady() { return this.clips.size === CUE_NAMES.length; }
@@ -125,17 +160,23 @@ export class WorkoutAudio {
     this.track(source, volume);
   }
 
+  /** Plays a decoded buffer at an exact AudioContext time and returns when it ends. */
+  private play(buffer: AudioBuffer, at: number): number {
+    const source = this.context!.createBufferSource();
+    const volume = this.context!.createGain();
+    source.buffer = buffer;
+    volume.gain.value = this.volume;
+    source.connect(volume).connect(this.context!.destination);
+    source.start(at);
+    this.track(source, volume);
+    return at + (buffer.duration || .6);
+  }
+
   /** Plays a pre-rendered clip at an exact AudioContext time. Returns false when the clip is unavailable. */
   private clip(name: CueName, at: number): boolean {
     const buffer = this.clips.get(name);
     if (!buffer || !this.context || this.context.state !== 'running') return false;
-    const source = this.context.createBufferSource();
-    const volume = this.context.createGain();
-    source.buffer = buffer;
-    volume.gain.value = this.volume;
-    source.connect(volume).connect(this.context.destination);
-    source.start(at);
-    this.track(source, volume);
+    this.play(buffer, at);
     return true;
   }
 
@@ -152,8 +193,7 @@ export class WorkoutAudio {
     if (this.mode !== 'voice' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find(item => item.voiceURI === this.voiceURI) ?? pickDefaultVoice(voices);
+    const voice = pickDefaultVoice(window.speechSynthesis.getVoices());
     if (voice) utterance.voice = voice;
     utterance.rate = this.rate;
     utterance.volume = this.volume;
@@ -167,17 +207,44 @@ export class WorkoutAudio {
     this.speak(text);
   }
 
-  private static assignmentText(assignment: NonNullable<Projection['current']['assignments']>): string {
-    const name = (lane: { name: string; spokenName?: string }) => lane.spokenName ?? lane.name;
+  private static assignmentText(assignment: Assignment): string {
+    const name = (lane: Lane) => lane.spokenName ?? lane.name;
     return assignment.B ? `A, ${name(assignment.A)}. B, ${name(assignment.B)}.` : `${name(assignment.A)}.`;
+  }
+
+  /**
+   * Says who does what. With a recorded pack: the lead clips, then "A", the movement, "B", the movement, as clips in
+   * sequence when the pack has every name; otherwise the device voice reads the names after the lead clips.
+   * Without a pack the device voice says everything, lead text included.
+   */
+  private announce(assignment: Assignment, leadText: string, leadClips: CueName[] = [], at = this.context?.currentTime ?? 0) {
+    if (this.useClips && this.clipsReady) {
+      let time = at;
+      for (const name of leadClips) time = this.play(this.clips.get(name)!, time) + .1;
+      const sequence: AudioBuffer[] = [];
+      const lanes: [CueName | undefined, Lane][] = assignment.B ? [['a', assignment.A], ['b', assignment.B]] : [[undefined, assignment.A]];
+      const complete = lanes.every(([athlete, lane]) => {
+        const id = this.resolveMovement?.(lane) ?? lane.movement;
+        const buffer = id ? this.names.get(id) : undefined;
+        if (!buffer) return false;
+        if (athlete) sequence.push(this.clips.get(athlete)!);
+        sequence.push(buffer);
+        return true;
+      });
+      if (complete) { for (const buffer of sequence) time = this.play(buffer, time) + .08; return; }
+      this.speak(WorkoutAudio.assignmentText(assignment));
+      return;
+    }
+    this.speak(`${leadText} ${WorkoutAudio.assignmentText(assignment)}`.trim());
   }
 
   async test() {
     await this.unlock();
     await this.preload();
+    const sample: Assignment = { A: { name: 'Row', movement: 'row' }, B: { name: 'Kettlebell swings', movement: 'kettlebell-swing' } };
+    await this.prepareNames(['row', 'kettlebell-swing']);
     if (this.context && this.mode !== 'silent') this.beep(this.context.currentTime + .1, .15, 880);
-    if (this.useClips && this.clipsReady) { this.clip('get-ready', this.context!.currentTime + .4); this.speak('A, row. B, kettlebell swings.'); return; }
-    this.speak('Ready to train. A, row. B, kettlebell swings.');
+    this.announce(sample, 'Ready to train.', ['get-ready'], (this.context?.currentTime ?? 0) + .4);
   }
 
   private lastTurn?: { key: string; number: number };
@@ -188,7 +255,7 @@ export class WorkoutAudio {
     const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}:${projection.clockScope}`;
     const clips = this.useClips && this.clipsReady;
     if (this.token === token) {
-      this.acknowledgementCue(projection, clocks, clips);
+      this.acknowledgementCue(projection, clocks);
       // Device-voice countdown is spoken late, as each second arrives; clips were scheduled ahead at the token change.
       if (clips || projection.clockScope === 'elapsed') return;
       const count = Math.ceil(clocks.remainingMs / 1000);
@@ -211,7 +278,7 @@ export class WorkoutAudio {
       if (projection.status === 'completed') {
         if (this.context) this.beep(this.context.currentTime + .01, .35, 1047);
         this.cue('complete', 'Workout complete. Well done.', (this.context?.currentTime ?? 0) + .4);
-      } else this.speak('Workout ended.');
+      } else this.cue('ended', 'Workout ended.');
       return;
     }
     if (projection.status === 'paused') { this.cue('paused', 'Paused.'); return; }
@@ -221,7 +288,11 @@ export class WorkoutAudio {
     const turnKey = `${projection.sessionId}:${projection.current.id}:${projection.index}`;
     const switched = projection.turn !== undefined && this.lastTurn?.key === turnKey && projection.turn.number > this.lastTurn.number;
     this.lastTurn = projection.turn ? { key: turnKey, number: projection.turn.number } : undefined;
-    if (switched && !wasPaused) this.cue('switch', `Switch. ${projection.turn!.athlete}.`);
+    if (switched && !wasPaused) {
+      const incoming: CueName = projection.turn!.athlete === 'A' ? 'a' : 'b';
+      if (clips && this.clips.has('switch') && this.clips.has(incoming)) this.play(this.clips.get(incoming)!, this.play(this.clips.get('switch')!, this.context!.currentTime) + .1);
+      else this.speak(`Switch. ${projection.turn!.athlete}.`);
+    }
     const scheduled = this.scheduleBoundary(projection, clocks, clips);
     const cueId = `${projection.sessionId}:${projection.occurrenceId}`;
     if (this.spoken.has(cueId)) return;
@@ -230,8 +301,7 @@ export class WorkoutAudio {
     const assignment = projection.status === 'preparing' ? projection.current.assignments : projection.current.phase !== 'work' ? projection.nextWork?.assignments : undefined;
     if (assignment && (clocks.remainingMs > 5000 || projection.clockScope === 'elapsed')) {
       const lead = projection.status === 'preparing' ? 'get-ready' : 'rest';
-      if (clips && this.clip(lead, this.context!.currentTime)) this.speak(WorkoutAudio.assignmentText(assignment));
-      else this.speak(`${lead === 'get-ready' ? 'Get ready.' : 'Rest.'} ${WorkoutAudio.assignmentText(assignment)}`);
+      this.announce(assignment, lead === 'get-ready' ? 'Get ready.' : 'Rest.', [lead]);
       return;
     }
     if (projection.status !== 'running' || clocks.slotMs >= 1000 || wasPaused || switched || sameOccurrence) return;
@@ -241,9 +311,9 @@ export class WorkoutAudio {
     if (projection.current.phase !== 'work') { if (!announced) this.cue('rest', 'Rest.'); return; }
     if (!announced || projection.timing === 'manual') {
       this.cue('go', 'Go.');
-      if (projection.timing === 'manual' && !projection.tasks && projection.current.assignments) this.speak(WorkoutAudio.assignmentText(projection.current.assignments));
+      if (projection.timing === 'manual' && !projection.tasks && projection.current.assignments) this.announce(projection.current.assignments, '', [], (this.context?.currentTime ?? 0) + .7);
     }
-    if (projection.interval && projection.interval.index === projection.interval.count) this.speak('Last interval.');
+    if (projection.interval && projection.interval.index === projection.interval.count) this.cue('last-interval', 'Last interval.', (this.context?.currentTime ?? 0) + 1);
     void scheduled;
   }
 
@@ -271,15 +341,15 @@ export class WorkoutAudio {
   }
 
   /** A short confirmation when a Done lands; a partial both-done tells the pair who is waiting (device voice only). */
-  private acknowledgementCue(projection: Projection, clocks: ClockValues, clips: boolean) {
+  private acknowledgementCue(projection: Projection, clocks: ClockValues) {
     const acks = `${projection.acks.A}${projection.acks.B}${projection.acks.team}`;
     if (acks === this.lastAcks) return;
     this.lastAcks = acks;
     if (this.mode === 'silent' || projection.status !== 'running') return;
     if (this.context?.state === 'running') this.beep(this.context.currentTime + .01, .06, 740);
     const partial = (projection.acks.A !== projection.acks.B) && !projection.acks.team;
-    if (partial && !clips) this.speak(projection.acks.A ? 'A done. Waiting for B.' : 'B done. Waiting for A.');
+    if (partial) this.cue(projection.acks.A ? 'a-waiting' : 'b-waiting', projection.acks.A ? 'A done. Waiting for B.' : 'B done. Waiting for A.', (this.context?.currentTime ?? 0) + .15);
     // An early EMOM Done previews the next interval while there is time to hear it.
-    if (projection.timing === 'interval' && !partial && projection.nextWork?.assignments && clocks.remainingMs > 5000) this.speak(`Next. ${WorkoutAudio.assignmentText(projection.nextWork.assignments)}`);
+    if (projection.timing === 'interval' && !partial && projection.nextWork?.assignments && clocks.remainingMs > 5000) this.announce(projection.nextWork.assignments, 'Next.', ['next'], (this.context?.currentTime ?? 0) + .2);
   }
 }

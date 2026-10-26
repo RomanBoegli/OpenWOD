@@ -33,7 +33,7 @@ function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
   vi.stubGlobal('AudioContext', function () { return context; });
   vi.stubGlobal('window', { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (utterance: { text: string }) => spoken.push(utterance.text) } });
   vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} });
-  vi.stubGlobal('fetch', async (url: string) => !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)' }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
+  vi.stubGlobal('fetch', async (url: string) => !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)', names: 190 }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
   let now = 0;
   const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' });
@@ -85,7 +85,7 @@ it('uses recorded clips for countdown and boundary cues at the same instants as 
   audio.update(engine.project(), engine.readClocks());
   expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'rest']);
   expect(spoken).toEqual(['A, Kettlebell swings. B, Row.']);
-  expect(CUE_NAMES).toHaveLength(10);
+  expect(CUE_NAMES).toHaveLength(17);
   expect(audio.packs.map(pack => pack.id)).toEqual(['british', 'american']);
   audio.cuePack = 'american';
   await audio.preload();
@@ -140,4 +140,25 @@ it('plays the Switch clip on a handoff, confirms a Done with a short beep, and a
   manual.audio.update(manual.engine.project(), manual.engine.readClocks());
   expect(manual.spoken).toEqual(['Go.', 'Sled push.']);
   expect(manual.sources.map(source => source.kind)).toEqual(['beep']); // The acknowledgement beep; nothing is scheduled for open-ended work.
+});
+
+it('announces who does what from recorded name clips when the pack has them, and lets the device voice read the rest', async () => {
+  const { audio, sources, spoken, engine, advance } = setup({ clips: true });
+  audio.resolveMovement = lane => ({ 'Kettlebell swings': 'kettlebell-swing', Row: 'row' } as Record<string, string>)[lane.name];
+  await audio.unlock(); await audio.preload();
+  await audio.prepareNames(['kettlebell-swing', 'row']);
+  audio.update(engine.project(), engine.readClocks());
+  advance(40_000); // Into the transition: the rest clip, then "A", the movement, "B", the movement, all as clips.
+  sources.length = 0; spoken.length = 0;
+  audio.update(engine.project(), engine.readClocks());
+  const clips = sources.filter(source => source.kind === 'clip').map(source => source.clip);
+  expect(clips.slice(-5)).toEqual(['rest', 'a', 'kettlebell-swing', 'b', 'row']); // after the scheduled countdown and Go
+  expect(spoken).toEqual([]);
+  // A movement the pack does not know falls back to the device voice for the whole announcement.
+  audio.resolveMovement = lane => lane.name === 'Row' ? 'row' : undefined;
+  advance(10_000); advance(40_000);
+  sources.length = 0; spoken.length = 0;
+  audio.update(engine.project(), engine.readClocks());
+  expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toContain('rest');
+  expect(spoken).toHaveLength(1);
 });

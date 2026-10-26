@@ -62,3 +62,10 @@
 .levelInput[data-level=heavy] span { background: var(--level-heavy); border: 1px solid var(--level-heavy-border); }
 .slots td select { min-height: 44px; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); color: var(--ink); font-size: 13px; }
 .sectionList small { color: var(--ink-3); }
+.unmatched { display: grid; gap: 8px; padding: 12px; background: var(--notice-bg); border: 1px solid var(--notice-border); border-radius: 10px; color: var(--notice-text); font-size: 12px; line-height: 1.5; }
+.unmatched ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.unmatched li { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.unmatched li button { min-height: 28px; padding: 2px 10px; border: 1px solid var(--notice-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.unmatched li button:hover { background: var(--hover); }
+.unmatched small { color: var(--ink-3); }
+.slots td .picker { width: 100%; }

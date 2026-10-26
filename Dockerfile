@@ -5,13 +5,16 @@ ARG CUES=1
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --include=dev
-COPY . .
+# The voices depend only on the scripts and the bundled catalogue, so this layer survives app edits.
+COPY scripts ./scripts
+COPY packages ./packages
 RUN if [ "$CUES" = "1" ]; then \
       apt-get update && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip && rm -rf /var/lib/apt/lists/* \
       && pip3 install --no-cache-dir --break-system-packages piper-tts==1.8.0 \
-      && PIPER_RUNNER=piper node scripts/generate-cues.mjs; \
-    fi
-RUN npm run check && npm run build
+      && CUES_OUT=/cues PIPER_VOICES=/tmp/piper-voices PIPER_PYTHON=python3 npx tsx scripts/generate-cues.ts && rm -rf /tmp/piper-voices; \
+    else mkdir -p /cues; fi
+COPY . .
+RUN npm run check && npm run build && mkdir -p dist/web/cues && cp -r /cues/. dist/web/cues/
 
 FROM ${NODE_IMAGE} AS runtime
 ARG VERSION=0.1.0

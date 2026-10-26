@@ -4,18 +4,47 @@ import type { WorkoutFile } from '../../packages/domain/src';
 test('the production container plays a real interval without test injection', async ({ page }) => {
   await page.goto('/');
   expect(await page.evaluate(() => typeof window.__wodvaTest)).toBe('undefined');
-  await page.getByRole('button', { name: 'Player settings' }).click();
+  await page.goto('/#/settings/sound');
   await page.getByRole('combobox', { name: 'Sound', exact: true }).selectOption('silent');
-  await page.getByRole('button', { name: 'Close settings' }).click();
+  await page.goto('/');
   const file: WorkoutFile = { format: 'wodva.workout', formatVersion: 1, workout: {
     schemaVersion: 1, revision: 1, id: 'production-smoke', title: 'Production timing check', participants: 2, prepMs: 0, equipment: [],
     sections: [{ id: 'section', title: 'Smoke check', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'movement', type: 'timed', durationMs: 1000, assignments: { A: { name: 'Air squats' }, B: { name: 'March in place' } } } }],
   } };
   await page.locator('input[type=file]').setInputFiles({ name: 'production.wod.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(file)) });
   await page.getByRole('button', { name: 'Save to library' }).click();
+  await expect(page).toHaveURL(/#\/wod\/production-timing-check$/);
+  await page.goto('/');
   await page.getByRole('link', { name: 'Start Production timing check' }).click();
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Workout complete', { timeout: 5000 });
   await expect(page.getByTestId('primary-timer')).toHaveText('00:01');
   expect(await page.evaluate(() => typeof window.__wodvaTest)).toBe('undefined');
+});
+
+test('the production container ships the recorded cue packs', async ({ page, request }) => {
+  const packs = await request.get('/cues/packs.json');
+  expect(packs.ok()).toBe(true);
+  const list = (await packs.json()) as { id: string; label: string }[];
+  expect(list.map(pack => pack.id)).toEqual(['british', 'american', 'scottish', 'northern', 'american-male']);
+  for (const pack of list) expect((pack as { names?: number }).names, `${pack.id} names`).toBeGreaterThan(150);
+  const name = await request.get('/cues/british/names/row.mp3');
+  expect(name.ok()).toBe(true);
+  for (const pack of list) {
+    const clip = await request.get(`/cues/${pack.id}/go.mp3`);
+    expect(clip.ok(), `${pack.id}/go.mp3`).toBe(true);
+    expect(clip.headers()['content-type']).toContain('audio/mpeg');
+  }
+  // One clip must decode in the real browser: this is what the player plays at Go.
+  await page.goto('/');
+  const durationSeconds = await page.evaluate(() => new Promise<number>((resolve, reject) => {
+    const audio = new Audio('/cues/scottish/complete.mp3');
+    audio.addEventListener('loadedmetadata', () => resolve(audio.duration));
+    audio.addEventListener('error', () => reject(new Error('clip failed to decode')));
+    audio.load();
+  }));
+  expect(durationSeconds).toBeGreaterThan(0.5);
+  await page.goto('/#/settings/sound');
+  const options = await page.getByRole('combobox', { name: 'Voice', exact: true }).locator('option').allTextContents();
+  expect(options).toEqual(['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)', 'Device voice only']);
 });

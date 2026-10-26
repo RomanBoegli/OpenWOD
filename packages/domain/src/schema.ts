@@ -23,6 +23,8 @@ export const LOAD_LEVELS = ['light', 'medium', 'heavy'] as const;
 export type LoadLevel = typeof LOAD_LEVELS[number];
 
 export const PrescriptionSchema = Type.Object({
+  /** Optional id of the exercise record this prescription was picked from; the names below stay authoritative, so a file is complete without any catalogue. */
+  movement: Type.Optional(Type.String({ pattern: '^[a-z0-9][a-z0-9-]{0,79}$', maxLength: 80 })),
   name: label,
   shortName: Type.Optional(label),
   spokenName: Type.Optional(label),

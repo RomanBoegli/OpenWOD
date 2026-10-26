@@ -29,7 +29,7 @@ docker compose -p openwod-preview -f deploy/compose.dev.yaml logs app
 docker compose -p openwod-preview -f deploy/compose.dev.yaml down
 ```
 
-The preview binds to loopback on port 8080. The image build renders the recorded cue voices with Piper (about a minute the first time); pass `--build-arg CUES=0` to skip them. With the preview running, `npm run test:production` runs the real-interval smoke test in all three browser engines.
+The preview binds to loopback on port 8080. The image build renders the five recorded voices with Piper (several minutes the first time, cached afterwards); pass `--build-arg CUES=0` to skip them. With the preview running, `npm run test:production` runs the real-interval smoke test in all three browser engines.
 
 ## Upgrade and rollback
 
@@ -42,5 +42,5 @@ There is no login yet. Keep the app behind your own network or an authenticating
 ## Troubleshooting
 
 - Unhealthy at startup: check the container logs, the image architecture, and that the host port is free.
-- No sound: use Test sound in settings; check the browser and device volume and that a voice is installed. Recorded cues need the image built with `CUES=1` (the default).
+- No sound: use Test sound in settings; check the browser and device volume. The recorded voices need the image built with `CUES=1` (the default); the settings page says so when they are missing.
 - No screen wake lock: it needs a secure context (HTTPS or localhost) and a supporting browser; the app says so in the player.

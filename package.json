@@ -19,7 +19,7 @@
     "schemas:check": "tsx scripts/generate-schemas.ts --check",
     "check": "npm run typecheck && npm run schemas:check && npm test",
     "browsers:install": "node scripts/install-browsers.mjs",
-    "cues:generate": "node scripts/generate-cues.mjs"
+    "cues:generate": "tsx scripts/generate-cues.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

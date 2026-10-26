@@ -277,6 +277,11 @@
                                   }
                                 ]
                               },
+                              "movement": {
+                                "maxLength": 80,
+                                "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                "type": "string"
+                              },
                               "name": {
                                 "maxLength": 160,
                                 "minLength": 1,
@@ -489,6 +494,11 @@
                                     "type": "object"
                                   }
                                 ]
+                              },
+                              "movement": {
+                                "maxLength": 80,
+                                "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                "type": "string"
                               },
                               "name": {
                                 "maxLength": 160,
@@ -747,6 +757,11 @@
                                   }
                                 ]
                               },
+                              "movement": {
+                                "maxLength": 80,
+                                "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                "type": "string"
+                              },
                               "name": {
                                 "maxLength": 160,
                                 "minLength": 1,
@@ -959,6 +974,11 @@
                                     "type": "object"
                                   }
                                 ]
+                              },
+                              "movement": {
+                                "maxLength": 80,
+                                "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                "type": "string"
                               },
                               "name": {
                                 "maxLength": 160,

@@ -113,7 +113,7 @@ const KEY_ORDER = [
   'schemaVersion', 'id', 'revision', 'title', 'format', 'description', 'attribution', 'author', 'sourceUrl', 'licence', 'notes', 'equipment', 'participants', 'prep', 'prepMs', 'sections',
   'type', 'transitionAfter', 'cap', 'capMs', 'interval', 'intervalMs', 'intervals', 'counter', 'rounds', 'turn', 'turnMs',
   'count', 'assignmentPolicy', 'completion', 'betweenIterationsRest', 'betweenIterationsRestMs', 'betweenChildrenRest', 'betweenChildrenRestMs', 'trailingRest', 'trailingRestMs', 'duration', 'durationMs', 'kind',
-  'assignments', 'A', 'B', 'name', 'shortName', 'spokenName', 'reps', 'calories', 'distance', 'time', 'timeMs', 'load', 'light', 'medium', 'heavy', 'value', 'unit', 'body', 'children',
+  'assignments', 'A', 'B', 'movement', 'name', 'shortName', 'spokenName', 'reps', 'calories', 'distance', 'time', 'timeMs', 'load', 'light', 'medium', 'heavy', 'value', 'unit', 'body', 'children',
 ];
 const rank = (order: string[], key: string) => { const index = order.indexOf(key); return index === -1 ? order.length : index; };
 

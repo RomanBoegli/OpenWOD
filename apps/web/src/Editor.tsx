@@ -5,6 +5,10 @@ import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat } from '../../../packages/domain/src/schema';
 import { displayTime } from '../../../packages/engine/src';
+import type { Catalogue, Movement } from '../../../packages/domain/src/catalogue';
+import { equipmentKey } from '../../../packages/domain/src/library';
+import { recordForName, unmatchedMovements } from './catalogue-link';
+import { MovementPicker } from './MovementPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
@@ -56,6 +60,10 @@ function withLoad(value: Prescription, mode: LoadMode, levelled: boolean, amount
 interface EditorProps {
   mode: 'create' | 'replace';
   initial: BuilderDraft;
+  /** Set when the draft came from an imported file; the editor then says so and points at unmatched movements. */
+  importedFrom?: string;
+  catalogue: Catalogue;
+  onAddMovement: (record: Movement) => void;
   savedAt?: string;
   onAutosave: (draft: BuilderDraft) => void;
   onSave: (draft: BuilderDraft) => void;
@@ -71,7 +79,7 @@ const FORMAT_HELP: Record<SectionFormat, string> = {
   strength: 'Sets at your own pace, each ended by Done, with a timed rest between sets. Loads can be levelled or a percentage of 1RM.',
 };
 
-export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
+export function Editor({ mode, initial, importedFrom, catalogue, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
   const [draft, setDraft] = useState(initial);
   const [equipmentText, setEquipmentText] = useState(initial.equipment.join(', '));
   const [dirty, setDirty] = useState(false);
@@ -86,6 +94,7 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
   }, [draft, issues]);
   const difficulty = useMemo(() => compiled.plan && rateDifficulty(compiled.plan), [compiled.plan]);
   const canSave = issues.length === 0 && Boolean(compiled.plan);
+  const unmatched = useMemo(() => unmatchedMovements(draft, catalogue), [draft, catalogue]);
 
   useEffect(() => {
     if (first.current) { first.current = false; return; }
@@ -103,6 +112,23 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
   const setFormat = (s: number, format: SectionFormat) => updateSection(s, { format, ...(LIST_FORMATS.includes(format) ? { rounds: 1, betweenSlotsRestMs: 0, trailingRestMs: 0, blockRestMs: 0, slotRepeats: 1 } : {}), ...(format === 'amrap' && !draft.sections[s].capMs ? { capMs: 600_000 } : {}), ...(format !== 'timedCircuit' ? { slotRepeats: 1 } : {}) });
   const issueFor = (path: string) => issues.find(issue => issue.path === path)?.message;
   const pair = draft.participants === 2;
+  /** A picked record's equipment joins the workout's declared equipment. */
+  const addEquipment = (items: string[] = []) => {
+    const missing = items.filter(item => !draft.equipment.some(known => equipmentKey(known) === equipmentKey(item)));
+    if (!missing.length) return;
+    const equipment = [...draft.equipment, ...missing];
+    setEquipmentText(equipment.join(', '));
+    update({ equipment });
+  };
+  /** Creates records for names the catalogue does not know and links every lane that uses them. */
+  const addToCatalogue = (names: string[]) => {
+    const created = names.map(name => { const record = recordForName(name, catalogue, draft.equipment); onAddMovement(record); return record; });
+    setDraft(value => ({ ...value, sections: value.sections.map(section => ({ ...section, slots: section.slots.map(slot => {
+      const link = (item?: Prescription) => { if (!item) return item; const record = created.find(entry => entry.name.toLowerCase() === item.name.trim().toLowerCase()); return record ? { ...item, movement: record.id } : item; };
+      return { ...slot, A: link(slot.A)!, ...(slot.B ? { B: link(slot.B) } : {}) };
+    }) })) }));
+    return created;
+  };
 
   const laneCell = (s: number, i: number, role: 'A' | 'B', slot: BuilderSlot, section: BuilderSection) => {
     const value = slot[role] ?? { name: '' };
@@ -111,7 +137,7 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
     const loadMode = loadModeOf(value);
     const levelled = levelledOf(value);
     return <td key={role} className={styles.laneCell}>
-      <input aria-label={label} value={value.name} maxLength={160} placeholder="Movement" aria-invalid={issueFor(`sections.${s}.slots.${i}.${role}`) ? true : undefined} onChange={event => updateLane(s, i, role, current => ({ ...current, name: event.target.value }))} />
+      <MovementPicker value={value} label={label} catalogue={catalogue} invalid={Boolean(issueFor(`sections.${s}.slots.${i}.${role}`))} onChange={change => updateLane(s, i, role, change)} onPick={record => addEquipment(record.equipment)} onAdd={name => addToCatalogue([name])[0]} />
       <div className={styles.targetRow}>
         <select aria-label={`${label} target kind`} value={kind} onChange={event => updateLane(s, i, role, current => withTarget(current, event.target.value as TargetKind, targetAmountOf(current) || (event.target.value === 'none' ? '' : 10)))}>{(Object.keys(TARGET_LABELS) as TargetKind[]).map(item => <option key={item} value={item}>{TARGET_LABELS[item]}</option>)}</select>
         {kind !== 'none' && <input type="number" inputMode="decimal" min={0} step={kind === 'km' ? 0.1 : 1} aria-label={`${label} target amount`} value={targetAmountOf(value)} onChange={event => updateLane(s, i, role, current => withTarget(current, kind, event.target.value === '' ? '' : Number(event.target.value)))} />}
@@ -126,9 +152,9 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
   return <div className={styles.editor}>
     <div className={shared.workoutHeading}>
       <div>
-        <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {mode === 'replace' ? 'EDIT WORKOUT' : 'NEW WORKOUT'}</div>
+        <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {importedFrom ? 'IMPORTED WORKOUT' : mode === 'replace' ? 'EDIT WORKOUT' : 'NEW WORKOUT'}</div>
         <h1>{draft.title.trim() || (mode === 'replace' ? 'Edit workout' : 'Build a workout')}</h1>
-        <p className={shared.description}>Sections of timed slots or manual movements with targets, in any of the six formats. The summary on the right updates as you type.</p>
+        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Sections of timed slots or manual movements with targets, in any of the six formats. Type a movement to pick it from your exercises; the summary on the right updates as you type.'}</p>
       </div>
     </div>
 
@@ -223,6 +249,12 @@ export function Editor({ mode, initial, savedAt, onAutosave, onSave, onDiscard }
           </dl>
           {difficulty && <DifficultyChip difficulty={difficulty} detailed />}
           {compiled.plan && <ul className={styles.sectionList}>{compiled.plan.sections.map(section => <li key={section.id}><span>{section.title} <small>· {FORMAT_LABELS[section.format]}</small></span><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span></li>)}</ul>}
+          {unmatched.length > 0 && <div className={styles.unmatched} role="status" aria-label="Movements not in your exercises">
+            <strong>{unmatched.length === 1 ? '1 movement is' : `${unmatched.length} movements are`} not in your exercises</strong>
+            <ul>{unmatched.map(name => <li key={name}><span>{name}</span><button type="button" onClick={() => addToCatalogue([name])}>Add</button></li>)}</ul>
+            <small>Add them as they are, or pick the matching exercise in the form. You can tidy names later under Settings → Exercises.</small>
+            {unmatched.length > 1 && <button type="button" className={shared.quietButton} onClick={() => addToCatalogue(unmatched)}><Icon name="plus" size={14} />Add all {unmatched.length}</button>}
+          </div>}
           {(issues.length > 0 || compiled.error) && <ul className={styles.issues} role="alert">{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}
           <p className={styles.status} aria-live="polite">{dirty ? 'Unsaved changes…' : savedAt ? `Draft saved on this device · ${new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Drafts save automatically on this device.'}</p>
           <div className={styles.saveActions}>

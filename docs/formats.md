@@ -84,6 +84,7 @@ At most two repeat levels nest. Rests are only ever added where they are written
 
 | Key | Meaning |
 | --- | --- |
+| `movement` | Optional id of the exercise record the movement was picked from (`hang-power-clean`). The names below stay authoritative, so a file is complete without any catalogue; a reader that knows the id can attach its own equipment and default loads. |
 | `name`, `shortName`, `spokenName` | What is shown and spoken. Short names keep the player readable from across the room. |
 | `reps`, `calories`, `distance` (`{ value, unit: m or km }`), `time` | Targets, shown big in the player. |
 | `load` | Either a single `{ value, unit }` or levels: `light`, `medium`, `heavy`, each `{ value, unit }` with `kg`, `lb` or `percent` (of a one-rep max). All levels are shown inline in the player and the overview. |

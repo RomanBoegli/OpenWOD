@@ -80,5 +80,23 @@ Added: OpenWOD branding, inline load levels, 16 bundled benchmarks, collections,
 | Accelerated browser integration | Firefox and WebKit: 25 scenarios each (50), including the settings page, master-data merge, collections, the session log and accumulative filters; Chromium runs in CI. |
 | Production build and test-hook exclusion | Passed. |
 | Visual pass | WebKit screenshots of the library (desktop and phone), the settings page and the player wash at work, warning and rest inspected. |
+| Native arm64 Docker build with cue packs | Passed with `CUES=1` after two fixes: piper-tts 1.8 needs an explicit `piper.download_voices` step (pinned, script updated), and the Vitest root is now resolved from the config file so `npm run check` works inside the image. The image rendered 3 packs × 10 cues; `/cues/packs.json` and every `go.mp3` are served as `audio/mpeg`. |
+| Production smoke test | Firefox and WebKit against the running image: the real one-second interval and a new scenario that lists the three packs, decodes a clip in the browser and sees the packs in the settings select. Found and fixed: the settings page listed no packs until a sound had been unlocked (packs.json is now read on start). |
 
-Not run in this round: the Docker image build with the cue packs on both architectures (CI), the production smoke test, and the real-hour and physical-device checks listed above.
+Not run in this round: the amd64 build (CI), and the real-hour and physical-device checks listed above.
+
+## Exercises and search wave, 26 October 2026
+
+Added: the exercise catalogue (190 bundled records in families, device-local records, overrides, merges and removals), the `movement` id on prescriptions, one ranked typo-tolerant search for the library and the editor's exercise picker, imports opening in the editor with unmatched movements highlighted, exercise housekeeping and the settings page split into sections with labelled switches and segmented controls, library filters kept for the session, press ripple and card tilt, chip contrast, the brand mark rendering in theme colours (it had been black in both themes because the component used a plain class name instead of the CSS-module one), and self-contained speech: five English Piper voices (three men, two women; British, Scottish, Northern English, American) rendered at image build time as fixed cues plus one clip per bundled exercise, so announcements like "A, kettlebell swings. B, row." are recorded clips and the device-voice picker is gone (the device's best English voice only reads exercises the pack does not know).
+
+| Check | Result |
+| --- | --- |
+| Unit tests | 110 passed, including the catalogue (every bundled movement name resolves except two composite names), search ranking and typos, linking, merges, renames and default loads, and announcements from recorded name clips with the device-voice fallback. |
+| Accelerated browser integration | Firefox and WebKit: 28 scenarios each (56): the exercise picker filling names and equipment, unknown movements added from the editor, an import with an unknown movement opened as a draft, merged on the exercises page and reflected on the overview, typo search, filters surviving navigation, and the settings sections. Chromium runs in CI. |
+| Production build and test-hook exclusion | Passed. |
+| Visual pass | WebKit screenshots of the general, sound and exercises settings pages, the library chips and the brand mark in both themes inspected. |
+
+| Native arm64 Docker build with five voices | Passed with `CUES=1`: 5 packs × 207 clips (17 cues and 190 movement names each) rendered in about 5.5 minutes with the Piper Python API, about 2 MB per pack, image 286 MB; the voice layer is built from `scripts/` and `packages/` before the app is copied, so it is cached across app edits. |
+| Production smoke test | Firefox and WebKit against the running image: the real one-second interval through the new import-to-editor flow, the five packs listed with 190 names each, a name clip served and a cue clip decoded in the browser, and the five voices in the Voice select. |
+
+Not run in this round: the real-hour and physical-device checks listed above.

@@ -17,3 +17,8 @@ assets
 AGENT.md
 .github
 test-results*
+# Locally rendered voices; the image renders its own complete set
+apps/web/public/cues/*/
+apps/web/public/cues/packs.json
+apps/web/public/cues/LICENSE.md
+apps/web/public/cues/.render-spec.json

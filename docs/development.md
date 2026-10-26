@@ -34,9 +34,9 @@ Browser tests drive the player through an injected clock (`window.__wodvaTest`) 
 
 The frozen traces under `tests/unit/traces/` pin the compiled timing of the original timed fixtures; a change there is a change in behaviour and must be deliberate.
 
-## Recorded cue voices
+## Recorded voices
 
-`npm run cues:generate` renders the Go, Rest, countdown and other fixed cues with Piper into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`). The Docker build does the same with `CUES=1`. The rendered files are not committed; without them the app uses beeps and the device voice.
+`npm run cues:generate` renders five English voice packs with Piper into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`; `CUE_PACKS=british` renders one): the fixed cues (Go, Rest, countdown, A, B, Next, Last interval, …) as `<cue>.mp3` and every bundled exercise's spoken name under `names/<movement-id>.mp3`, about 200 clips and 2 MB per pack. The list of packs and cue texts lives in `scripts/generate-cues.ts`; `scripts/render-cues.py` does the synthesis with the Piper Python API so a voice model loads once per pack. The Docker build renders the same set (`CUES=1`, the default) from `scripts/` and `packages/` before the app is copied, so the layer is cached across app edits. The rendered files are not committed; without them the app uses beeps and the device's best English voice.
 
 ## Conventions
 

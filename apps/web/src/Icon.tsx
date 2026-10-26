@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type IconName = 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip';
+export type IconName = 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert';
 
 const paths: Record<IconName, ReactNode> = {
   play: <path d="m9 5 11 7-11 7z" />,
@@ -31,6 +31,7 @@ const paths: Record<IconName, ReactNode> = {
   plus: <path d="M12 5v14M5 12h14" />,
   flag: <path d="M5 21V4h12l-2 4 2 4H5" />,
   skip: <path d="m5 5 9 7-9 7zM17 5v14" />,
+  alert: <><path d="M12 3 2 20h20zM12 10v4" /><circle cx="12" cy="17" r=".6" /></>,
 };
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {

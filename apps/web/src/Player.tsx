@@ -13,7 +13,9 @@ import { Icon } from './Icon';
 import { DifficultyChip } from './DifficultyChip';
 import { LoadLevels } from './LevelChip';
 import { AthletesChip, FormatChips } from './Chip';
-import { effectiveLoad, type MasterData } from './master-data';
+import type { Catalogue } from '../../../packages/domain/src/catalogue';
+import { collectPrescriptions } from '../../../packages/domain/src/library';
+import { effectiveLoad } from './master-data';
 import { countsAsDone, type SessionRecord } from './session-log';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import styles from './App.module.css';
@@ -67,15 +69,15 @@ interface PlayerProps {
   workout: Workout;
   audio: WorkoutAudio;
   preferences: Preferences;
-  masterData: MasterData;
+  catalogue: Catalogue;
   onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
   onPerformingChange: (performing: boolean) => void;
   onSessionEnd: (record: SessionRecord) => void;
 }
 
-export function Player({ workout, audio, preferences, masterData, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
+export function Player({ workout, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
   const { names, view, loadsFor } = preferences;
-  const loadOf = (item: Prescription, role: 'A' | 'B') => effectiveLoad(masterData, item, loadsFor[role]);
+  const loadOf = (item: Prescription, role: 'A' | 'B') => effectiveLoad(catalogue, item, loadsFor[role]);
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
   const [following, setFollowing] = useState(true);
   const [highlight, setHighlight] = useState<string>();
@@ -120,7 +122,8 @@ export function Player({ workout, audio, preferences, masterData, onPreferencesC
   const currentWorkNumber = contextRows.findIndex(item => item.anchor === focusAnchor) + 1;
 
   useEffect(() => { onPerformingChange(!editable); }, [editable, onPerformingChange]);
-  useEffect(() => { void audio.preload(); }, [audio]); // Clips are decoded before Play so a session never waits on the network.
+  // Clips and this workout's recorded movement names are decoded before Play so a session never waits on the network.
+  useEffect(() => { void audio.preload(); void audio.prepareNames(collectPrescriptions(workout).map(item => catalogue.resolve(item)?.id).filter((id): id is string => Boolean(id))); }, [audio, workout, catalogue]);
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
   // Log the session once when it ends: completed always, an ended session when it covered enough of the plan.
