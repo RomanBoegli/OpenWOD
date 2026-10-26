@@ -1,4 +1,6 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { get } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -12,6 +14,7 @@ import { playedSession } from './helpers/session';
 
 const scratch = mkdtempSync(join(tmpdir(), 'openwod-server-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+const HAS_OPENSSL = spawnSync('openssl', ['version'], { stdio: 'ignore' }).status === 0;
 const own = (id: string, revision = 1): Workout => ({ ...bundledWorkout('fran'), id, revision, title: `Own ${id}`, sharing: undefined });
 
 describe('server', () => {
@@ -26,6 +29,26 @@ describe('server', () => {
       const missing = await server.inject('/api/v1/missing');
       expect(missing.statusCode).toBe(404);
       expect(missing.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+    } finally { await server.close(); }
+  });
+
+  it.skipIf(!HAS_OPENSSL)('listens on HTTPS itself when given a key and a certificate', async () => {
+    const keyPath = join(scratch, 'key.pem');
+    const certPath = join(scratch, 'cert.pem');
+    expect(spawnSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', keyPath, '-out', certPath, '-days', '2', '-subj', '/CN=localhost'], { stdio: 'ignore' }).status).toBe(0);
+    const server = await createServer({ webRoot: '/does-not-exist', version: '9.9.9', https: { key: readFileSync(keyPath, 'utf8'), cert: readFileSync(certPath, 'utf8') } });
+    try {
+      const address = await server.listen({ host: '127.0.0.1', port: 0 });
+      expect(address).toMatch(/^https:\/\//);
+      const live = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+        get(`${address}/api/v1/health/live`, { rejectUnauthorized: false }, response => {
+          let body = '';
+          response.on('data', chunk => { body += chunk; });
+          response.on('end', () => resolve({ status: response.statusCode ?? 0, body }));
+        }).on('error', reject);
+      });
+      expect(live.status).toBe(200);
+      expect(JSON.parse(live.body)).toEqual({ status: 'ok', version: '9.9.9' });
     } finally { await server.close(); }
   });
 

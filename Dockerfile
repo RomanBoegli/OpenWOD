@@ -31,7 +31,7 @@ RUN npm run check && npm run build
 COPY --from=cues /cues ./dist/web/cues
 
 FROM ${NODE_IMAGE} AS runtime
-ARG VERSION=1.1.0
+ARG VERSION=1.1.1
 ARG REVISION=unknown
 ARG SOURCE_URL=unknown
 LABEL org.opencontainers.image.title="OpenWOD" \
@@ -51,5 +51,5 @@ USER node
 EXPOSE 8080
 STOPSIGNAL SIGTERM
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:8080/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+  CMD node -e "process.env.NODE_TLS_REJECT_UNAUTHORIZED='0';fetch((process.env.HTTPS_CERT?'https':'http')+'://127.0.0.1:8080/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["node", "dist/server/index.js"]

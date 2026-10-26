@@ -569,6 +569,8 @@ The implementation SHALL document exact environment names in .env.example and th
 
 **DEP-17** (planned for 1.2.0) The production smoke SHALL run in both shapes and SHALL be base-path safe, so the same spec checks the container, a `vite preview` of the static build, and the live Pages URL.
 
+**DEP-18** The container SHALL serve HTTPS itself when `HTTPS_KEY` and `HTTPS_CERT` are set, each a PEM file path inside the container or the PEM text with newlines written as `\n`, SHALL refuse to start when only one of them is set, and SHALL serve plain HTTP for a reverse proxy when neither is. The health check SHALL follow the protocol in use.
+
 ## 12.1 Portainer acceptance path
 
 1. Publish a tested version to the chosen registry.
@@ -794,6 +796,9 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - The Check workflow gains a `BROWSER_SUITE` switch that pauses the browser suite while lint, typecheck, unit tests and build keep running; it is on (DEP-10).
 - The image job's amd64 runner is pinned to `ubuntu-24.04` like the arm64 one, its browser install is bounded to ten minutes and the browsers are cached per Playwright version, runner OS and architecture: the apt step of the install had twice hung on `ubuntu-latest` until the 40-minute job timeout while the arm64 candidate passed and was pushed (DEP-10).
 - Both Compose files read `DATABASE_PATH` from the stack variables with `/data/app.sqlite` as the default, as `.env.example` and the Portainer guide had implied all along (DEP-07).
+- Starting a workout over plain HTTP (a phone on `http://10.10.10.11:8321`) crashed on `crypto.randomUUID`, which exists only in secure contexts: the first session id threw inside React, the whole tree unmounted and the player went black. The app now builds its session, command, sharing and device ids from `crypto.getRandomValues` when the function is missing (ENG-10, DAT-03), a root error boundary shows the message of any later render error instead of an empty page, and only the screen wake lock (AUD-09) and the Web Locks single-tab control (ENG-14) still need HTTPS, as the deployment guide says (DEP-14).
+- The server serves HTTPS itself when `HTTPS_KEY` and `HTTPS_CERT` are set, each a PEM file path or the PEM text with `\n` for newlines as Actual Budget takes it, so a home network without a reverse proxy gets a secure context from a mkcert certificate: the health checks of the image and both Compose files follow the protocol and accept the self-signed certificate on loopback, and the deployment guide walks through mkcert, the two ways of handing over the files and the root certificate on a phone (DEP-14, DEP-18).
+- Version 1.1.1 prepared with the plain-HTTP fix, the built-in HTTPS and the release workflow hardening, released from the same schema version 1.
 
 ## Version 1.10 — 26 October 2026
 

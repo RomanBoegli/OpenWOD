@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readConfig } from '../../apps/server/src/config';
 
@@ -12,5 +15,17 @@ describe('server configuration', () => {
     expect(() => readConfig({ PORT: '70000' })).toThrow(/PORT/);
     expect(() => readConfig({ LOG_LEVEL: 'loud' })).toThrow(/LOG_LEVEL/);
     expect(() => readConfig({ DATABASE_PATH: '  ' })).toThrow(/DATABASE_PATH/);
+  });
+
+  it('takes the TLS key and certificate as a file path or as PEM text, both or neither', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'openwod-tls-'));
+    try {
+      writeFileSync(join(dir, 'cert.pem'), '-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n');
+      const config = readConfig({ HTTPS_KEY: '-----BEGIN PRIVATE KEY-----\\nxyz\\n-----END PRIVATE KEY-----', HTTPS_CERT: join(dir, 'cert.pem') });
+      expect(config.https).toEqual({ key: '-----BEGIN PRIVATE KEY-----\nxyz\n-----END PRIVATE KEY-----', cert: '-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n' });
+      expect(readConfig({ HTTPS_KEY: '', HTTPS_CERT: ' ' }).https).toBeUndefined();
+      expect(() => readConfig({ HTTPS_CERT: join(dir, 'cert.pem') })).toThrow(/HTTPS_KEY and HTTPS_CERT/);
+      expect(() => readConfig({ HTTPS_KEY: join(dir, 'missing.pem'), HTTPS_CERT: join(dir, 'cert.pem') })).toThrow(/HTTPS_KEY names .*missing\.pem/);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

@@ -3,6 +3,7 @@ import { compileWorkout } from '../../../packages/domain/src/compiler';
 import type { Workout } from '../../../packages/domain/src';
 import { WorkoutEngine, type ClockValues, type Command, type CommandType } from '../../../packages/engine/src';
 import type { WorkoutAudio } from './audio';
+import { newId } from './ids';
 import { applyProgress, writeCheckpoint, writeProgress, WriteQueue, type Checkpoint, type CheckpointStatus, type Progress, type Recovery } from './data/checkpoints';
 
 declare const __OPENWOD_TEST__: boolean;
@@ -32,7 +33,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   const engine = useMemo(() => {
     const plan = compileWorkout(workout);
     if (recovery && session === 0) return WorkoutEngine.fromSnapshot(plan, applyProgress(structuredClone(recovery.checkpoint.snapshot), recovery.progress), now);
-    return new WorkoutEngine(plan, now, crypto.randomUUID());
+    return new WorkoutEngine(plan, now, newId());
   }, [workout, session, recovery, now]);
   const startedAt = useRef<string | undefined>(recovery?.checkpoint.startedAt);
   // Checkpoints and progress records are written off the timing path; the first failure is reported once (AT-16).
@@ -101,7 +102,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
     schedule();
     const hidden = () => {
       if (document.hidden) {
-        engine.command({ id: crypto.randomUUID(), occurrenceId: engine.occurrenceId, type: 'pause', reason: 'hidden' });
+        engine.command({ id: newId(), occurrenceId: engine.occurrenceId, type: 'pause', reason: 'hidden' });
         audio.cancel();
       }
       schedule();
@@ -110,7 +111,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
     if (__OPENWOD_TEST__) window.__openwodTest = {
       advance(ms) { clockOffset.current += ms; schedule(); },
       snapshot() { return { projection: engine.project(), clocks: engine.readClocks(), events: engine.events }; },
-      command(type, extra = {}) { const accepted = engine.command({ id: crypto.randomUUID(), occurrenceId: engine.occurrenceId, type, ...extra }); schedule(); return accepted; },
+      command(type, extra = {}) { const accepted = engine.command({ id: newId(), occurrenceId: engine.occurrenceId, type, ...extra }); schedule(); return accepted; },
       flushCheckpoints: async () => { await queues.checkpoint.flush(); await queues.progress.flush(); },
       checkpointRevision: () => checkpointRevision.current,
     };
@@ -142,7 +143,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
       lastNavigation.current = performance.now();
     }
     if (['play', 'resume', 'ready'].includes(type) && !__OPENWOD_TEST__) void audio.unlock();
-    engine.command({ id: crypto.randomUUID(), occurrenceId, type, ...extra });
+    engine.command({ id: newId(), occurrenceId, type, ...extra });
     scheduleRef.current();
   }, [engine, audio]);
 

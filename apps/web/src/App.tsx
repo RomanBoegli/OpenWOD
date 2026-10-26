@@ -26,6 +26,7 @@ import { useLibraryData, type SaveResult } from './data/use-library-data';
 import { probeSessionLock, takeOverSession } from './data/session-lock';
 import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
+import { newId } from './ids';
 
 // Build-time constants from vite.config.ts: the package version and the repository URL.
 declare const __OPENWOD_VERSION__: string;
@@ -86,7 +87,7 @@ export default function App() {
     if (workout.sharing) return workout;
     const existing = saved.find(item => item.id === workout.id);
     if (!existing) return workout;
-    const shared = { ...workout, revision: existing.revision + 1, sharing: { id: crypto.randomUUID(), sourceRevision: existing.revision + 1 } };
+    const shared = { ...workout, revision: existing.revision + 1, sharing: { id: newId(), sourceRevision: existing.revision + 1 } };
     const result = await data.saveWorkout(shared, existing.revision);
     return result === 'saved' || result === 'queued' ? shared : workout;
   }, [saved, data]);
@@ -134,18 +135,18 @@ export default function App() {
     const existing = mode === 'replace' ? saved.find(item => item.id === id) : undefined;
     if (existing) {
       const base = overwriteRevision ?? existing.revision;
-      const sharing = existing.origin === 'imported' && existing.document.sharing ? { id: crypto.randomUUID(), sourceRevision: 1, derivedFrom: { id: existing.document.sharing.id, sourceRevision: existing.document.sharing.sourceRevision } } : existing.document.sharing;
+      const sharing = existing.origin === 'imported' && existing.document.sharing ? { id: newId(), sourceRevision: 1, derivedFrom: { id: existing.document.sharing.id, sourceRevision: existing.document.sharing.sourceRevision } } : existing.document.sharing;
       const workout = { ...builderToWorkout(linkDraft(draft, catalogue), { id, revision: base + 1 }), ...(sharing ? { sharing } : {}) };
       const result = await data.saveWorkout(workout, base);
       if (result === 'saved' || result === 'queued') { updateDrafts(current => current.filter(item => item.id !== id)); window.location.hash = workoutHref(id); }
       return result;
     }
     if (saved.length >= SAVED_LIMIT) { setStorageError(`The library keeps up to ${SAVED_LIMIT} saved workouts. Remove one before saving another.`); return 'failed'; }
-    const newId = freeWorkoutId(slugify(draft.title), new Set(entries.map(entry => entry.workout.id)));
+    const freshId = freeWorkoutId(slugify(draft.title), new Set(entries.map(entry => entry.workout.id)));
     const source = entries.find(entry => entry.workout.id === id)?.workout.sharing;
-    const workout = { ...builderToWorkout(linkDraft(draft, catalogue), { id: newId, revision: 1 }), ...(source ? { sharing: { id: crypto.randomUUID(), sourceRevision: 1, derivedFrom: { id: source.id, sourceRevision: source.sourceRevision } } } : {}) };
+    const workout = { ...builderToWorkout(linkDraft(draft, catalogue), { id: freshId, revision: 1 }), ...(source ? { sharing: { id: newId(), sourceRevision: 1, derivedFrom: { id: source.id, sourceRevision: source.sourceRevision } } } : {}) };
     const result = await data.saveWorkout(workout, 0);
-    if (result === 'saved' || result === 'queued') { updateDrafts(current => current.filter(item => item.id !== id)); window.location.hash = workoutHref(newId); }
+    if (result === 'saved' || result === 'queued') { updateDrafts(current => current.filter(item => item.id !== id)); window.location.hash = workoutHref(freshId); }
     return result;
   }, [saved, entries, catalogue, data, updateDrafts]);
 

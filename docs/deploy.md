@@ -25,8 +25,8 @@ Nothing is built on the server.
    No `.env` file is needed on the server.
    Private repositories need Git credentials.
    Private packages need registry credentials.
-4. Deploy, confirm the container is healthy, and open the app through your trusted HTTPS reverse proxy (for example `https://openwod.example.org` to `http://docker-host:8080`).
-   HTTPS is needed for the screen wake lock.
+4. Deploy, confirm the container is healthy, and open the app.
+   Plain HTTP on the home network plays workouts, but the screen wake lock needs HTTPS: either a trusted reverse proxy in front (for example `https://openwod.example.org` to `http://docker-host:8080`) or the container's own certificate, see [HTTPS](#https).
 
 | Setting | Meaning |
 | --- | --- |
@@ -37,10 +37,43 @@ Nothing is built on the server.
 | `DATABASE_PATH` | The SQLite file. Defaults to `/data/app.sqlite`, inside the persistent volume. Keep it under `/data`. |
 | `LOG_LEVEL` | `fatal`, `error`, `warn`, `info` (default), `debug`, `trace` or `silent`. Logs never contain workout content. |
 | `TRUST_PROXY` | `false` (default), `true`, or a comma-separated list of proxy addresses whose forwarded headers are trusted. |
+| `HTTPS_KEY` | The TLS private key, as a file path inside the container or as the PEM text with newlines written as `\n`. Empty by default. |
+| `HTTPS_CERT` | The TLS certificate, the same way. Set both or neither. With both the container serves HTTPS on its port. |
 | `WEB_ROOT` | Optional absolute path to built frontend assets. Default `dist/web`. |
 
 Health endpoints: `/api/v1/health/live` (process responsive, with the version) and `/api/v1/health/ready` (database open and migrated, with `persistence: true` and the schema version).
 The container's health check uses the ready endpoint, so a database that cannot be opened makes the container unhealthy instead of serving without data.
+
+## HTTPS
+
+The container serves plain HTTP unless it is given a key and a certificate, the same way Actual Budget does it.
+Then it serves HTTPS on the same port, and the health check follows.
+This is the route for a home network without a reverse proxy, with a certificate you make yourself.
+
+1. Make the certificate on your computer with [mkcert](https://github.com/FiloSottile/mkcert), naming every address the app is opened at:
+
+   ```sh
+   mkcert -install
+   mkcert -cert-file openwod-cert.pem -key-file openwod-key.pem 10.10.10.11 openwod.local
+   ```
+
+   `mkcert -install` puts the root certificate into this computer's trust store.
+   Every other device needs the root certificate once: `mkcert -CAROOT` names the folder holding `rootCA.pem`, which is sent to the phone, installed as a profile and, on iOS, switched on under Settings → General → About → Certificate Trust Settings.
+   A device that already trusts a mkcert root for another app trusts this certificate too.
+2. Hand the two files to the container, one of two ways.
+   As stack variables, which needs no access to the server's files: each file becomes one line with its newlines written as `\n`, printed ready to paste into the stack's variables:
+
+   ```sh
+   printf 'HTTPS_CERT=%s\n' "$(awk 'NF { printf "%s\\n", $0 }' openwod-cert.pem)"
+   printf 'HTTPS_KEY=%s\n' "$(awk 'NF { printf "%s\\n", $0 }' openwod-key.pem)"
+   ```
+
+   Or as files in the data volume, copied in with `docker cp openwod-cert.pem openwod:/data/cert.pem` and the key alike, with `HTTPS_CERT=/data/cert.pem` and `HTTPS_KEY=/data/key.pem` as the variables.
+3. Update the stack and open `https://10.10.10.11:8321`, with the host port of the stack.
+   The log's first line names the protocol, and a key without a certificate, or the other way round, stops the container with a message naming the variable.
+
+The private key is a secret: anyone holding it can impersonate the server on your network.
+Keep the files out of the repository and renew them before the date mkcert prints.
 
 ## What the server stores
 
@@ -139,3 +172,7 @@ Do not expose it to the public internet until the login milestone.
   The settings page says so when they are missing.
 - No screen wake lock: it needs a secure context (HTTPS or localhost) and a supporting browser.
   The app says so in the player.
+- Opened over plain HTTP on a LAN address (for example `http://10.10.10.11:8321` on a phone): everything works, including playing a workout, saving and sharing.
+  Only two things still need HTTPS, because the browser offers them in a secure context alone: the screen wake lock and the single-tab lock that stops a second tab from controlling the same session.
+  The [HTTPS](#https) section gives the container its own certificate for them.
+  Without HTTPS the player says so for the wake lock and a second tab is only warned best-effort.

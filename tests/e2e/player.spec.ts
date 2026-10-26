@@ -332,3 +332,25 @@ test.describe('formats', () => {
     await expect(page.getByTestId('primary-timer')).toHaveText('00:01');
   });
 });
+
+test.describe('player without a secure context', () => {
+  // Plain HTTP on a LAN address (a phone opening http://10.10.10.11:8321) has no crypto.randomUUID; starting a workout used to throw and leave a black page.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => { delete (Crypto.prototype as { randomUUID?: unknown }).randomUUID; });
+    await page.goto(PLAYER); await ready(page);
+  });
+
+  test('starts and runs a workout when crypto.randomUUID is missing', async ({ page }) => {
+    expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Get ready');
+    await expect(page.getByTestId('primary-timer')).toBeVisible();
+    await advance(page, 10_000);
+    await expect(page.getByRole('status')).toHaveText('Work');
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:40');
+    await page.getByRole('button', { name: 'Pause workout', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Workout paused');
+    expect(await page.evaluate(() => window.__openwodTest!.snapshot().projection.sessionId)).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect((await page.locator('body').innerText()).trim()).not.toBe('');
+  });
+});

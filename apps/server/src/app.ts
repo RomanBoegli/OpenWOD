@@ -1,4 +1,4 @@
-import Fastify, { type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyRequest, type FastifyServerOptions } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -10,6 +10,8 @@ export interface ServerOptions {
   logger?: boolean | { level: string };
   webRoot?: string;
   trustProxy?: boolean | string;
+  /** PEM key and certificate: the server then listens on HTTPS instead of HTTP. */
+  https?: { key: string; cert: string };
   /** The household datastore. Without one the API answers 503 and health/ready reports no persistence. */
   store?: Store;
   /** Test builds only: a fresh in-memory store per X-OpenWOD-Scope header, so parallel browser tests never share data. */
@@ -24,8 +26,9 @@ export function appVersion(): string {
 const SCOPE_LIMIT = 64;
 const SCOPE_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
-export async function createServer({ logger = false, webRoot = resolve('dist/web'), trustProxy = false, store, scopes = false, version = appVersion() }: ServerOptions = {}) {
-  const app = Fastify({ logger, bodyLimit: 1_048_576, trustProxy });
+export async function createServer({ logger = false, webRoot = resolve('dist/web'), trustProxy = false, https, store, scopes = false, version = appVersion() }: ServerOptions = {}) {
+  // One instance type for both protocols: Fastify's overloads would otherwise split the return type by server class, and nothing here depends on it.
+  const app = Fastify({ logger, bodyLimit: 1_048_576, trustProxy, ...(https ? { https } : {}) } as FastifyServerOptions);
   app.setErrorHandler(errorHandler);
   const scoped = new Map<string, Store>();
   const storeOf = (request: FastifyRequest): Store | undefined => (request as FastifyRequest & { scopedStore?: Store }).scopedStore ?? store;

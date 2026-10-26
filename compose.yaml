@@ -13,12 +13,14 @@ services:
       DATABASE_PATH: ${DATABASE_PATH:-/data/app.sqlite}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      HTTPS_KEY: ${HTTPS_KEY:-}
+      HTTPS_CERT: ${HTTPS_CERT:-}
     volumes:
       - openwod-data:/data
     restart: unless-stopped
     stop_grace_period: 15s
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "process.env.NODE_TLS_REJECT_UNAUTHORIZED='0';fetch((process.env.HTTPS_CERT?'https':'http')+'://127.0.0.1:8080/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 3s
       start_period: 5s
