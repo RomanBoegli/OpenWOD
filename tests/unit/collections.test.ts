@@ -25,6 +25,6 @@ describe('collections on a device', () => {
     expect(allCollections(data).find(collection => collection.id === 'default')?.workoutIds).not.toContain('tabata-this');
     data = upsertCollection(data, { id: 'short', title: 'Short', workoutIds: ['fran', 'karen'] });
     expect(allCollections(data).find(collection => collection.id === 'benchmarks')?.workoutIds).not.toContain('karen');
-    expect(allCollections(data).map(collection => collection.id).slice(0, 4)).toEqual(['benchmarks', 'coach-programming', 'default', 'hyrox']);
+    expect(allCollections(data).map(collection => collection.id).slice(0, 4)).toEqual(['advanced', 'benchmarks', 'default', 'hyrox']);
   });
 });

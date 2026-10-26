@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { type Workout } from '../../../packages/domain/src';
 import { MAX_PACK_BYTES, parseSharedFile, type PackCollection, type SharedFile } from '../../../packages/domain/src/pack';
 import type { PackDecision } from './data/remote';
@@ -97,8 +97,29 @@ function loadFilters(): StoredFilters {
   } catch { return emptyFilters(); }
 }
 
+/** Pinboard packing for the workout grid: each card spans as many 8 px grid rows as its own height needs (plus the 16 px gap below it). */
+function useMasonry(grid: RefObject<HTMLUListElement | null>) {
+  useLayoutEffect(() => {
+    const list = grid.current;
+    if (!list || typeof ResizeObserver === 'undefined') return;
+    const fit = (item: Element) => { (item as HTMLElement).style.gridRowEnd = `span ${Math.max(1, Math.ceil(((item as HTMLElement).offsetHeight + 16) / 8))}`; };
+    // Spans are written in the next frame: writing them inside the observer callback reflows the grid mid-cycle and the browser reports an observer loop.
+    const dirty = new Set<Element>();
+    let frame = 0;
+    const flush = () => { frame = 0; for (const item of dirty) fit(item); dirty.clear(); };
+    const sizes = new ResizeObserver(entries => { for (const entry of entries) dirty.add(entry.target); frame ||= requestAnimationFrame(flush); });
+    const watch = () => { sizes.disconnect(); for (const item of list.children) { fit(item); sizes.observe(item); } };
+    watch();
+    const children = new MutationObserver(watch);
+    children.observe(list, { childList: true });
+    return () => { sizes.disconnect(); children.disconnect(); if (frame) cancelAnimationFrame(frame); };
+  });
+}
+
 export function Library({ entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
   const [migrationHidden, setMigrationHidden] = useState(false);
+  const grid = useRef<HTMLUListElement>(null);
+  useMasonry(grid);
   const [migrationReport, setMigrationReport] = useState('');
   const [stored] = useState(loadFilters);
   const [query, setQuery] = useState(stored.query);
@@ -155,7 +176,7 @@ export function Library({ entries, collections, sessions, onImportPack, onImport
       <div>
         <div className={shared.eyebrow}>YOUR LIBRARY <span>/</span> {entries.length} {entries.length === 1 ? 'WORKOUT' : 'WORKOUTS'}</div>
         <h1>Pick your next session</h1>
-        <p className={shared.description}>Benchmarks, coach programming and the WODs you’ve built or imported, all on this device. Filter, then press Start.</p>
+        <p className={shared.description}>Benchmarks, advanced pieces and the WODs you’ve built or imported, all on this device. Filter, then press Start.</p>
       </div>
       <div className={styles.headingActions}>
         <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
@@ -198,13 +219,15 @@ export function Library({ entries, collections, sessions, onImportPack, onImport
     </div>
     <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}{onlyMine && preferences.myEquipment.length === 0 && <> · bodyweight only, <a href={settingsHref('equipment')}>tick your gear in settings</a></>}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
-    {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
+    {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul ref={grid} className={styles.grid} aria-label="Workouts">
       {visible.map(({ workout, summary, source, pending }) => {
         const last = lastDone(sessions, workout.id);
         const count = timesDone(sessions, workout.id);
-        return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt>
-          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} /><DifficultyChip difficulty={summary.difficulty} /></span>{collectionOf(collections, workout.id) && <span className={styles.cardCollection} title="Collection">{collectionOf(collections, workout.id)!.title}</span>}</div>
-          <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
+        // The whole tile opens the workout; its own links, buttons and a text selection keep their meaning.
+        const open = (event: React.MouseEvent<HTMLLIElement>) => { if ((event.target as HTMLElement).closest('a, button') || window.getSelection()?.toString()) return; window.location.hash = workoutHref(workout.id).replace(/^#/, ''); };
+        return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt onClick={open}>
+          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} /><DifficultyChip difficulty={summary.difficulty} /></span></div>
+          <div className={styles.titleRow}><h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>{collectionOf(collections, workout.id) && <span className={styles.cardCollection} title="Collection">{collectionOf(collections, workout.id)!.title}</span>}</div>
           {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
           <dl className={styles.facts}>
             <div><dt>Total</dt><dd>{durationLabel(summary)}</dd></div>

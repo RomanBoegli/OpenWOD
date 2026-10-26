@@ -55,7 +55,7 @@ Pick a session from the library, press Start, and put the phone down.
 - [x] Readable from two metres: big targets, a draining timer ring with amber and red marks, a background pulse
 - [x] Light, medium and heavy loads per movement, women's amounts, kilograms or pounds
 - [x] Beeps on the audio clock and five offline voices that call Go, Rest, the countdown, who is up and every movement
-- [x] 53 bundled workouts as hand-written YAML: benchmarks with their published Rx, coach programming, HYROX, partner circuits
+- [x] 53 bundled workouts as hand-written YAML: benchmarks with their published Rx, advanced pieces from class programming, HYROX, partner circuits
 - [x] Library filters that stack: athletes, format, collection, duration, difficulty, equipment, only my equipment
 - [x] A projected difficulty per workout, calibrated to your taste in settings
 - [x] An editor for every format with autosaved drafts, duplicate-and-edit, and equipment derived from the movements

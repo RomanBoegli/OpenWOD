@@ -9,7 +9,7 @@ Every folder has one.
 | Folder | Collection | Contents |
 | --- | --- | --- |
 | `benchmarks/` | Benchmarks | The CrossFit girls and hero workouts, as published on CrossFit.com. |
-| `coach-programming/` | Coach programming | Standalone pieces curated from class programming. |
+| `advanced/` | Advanced | Standalone pieces curated from class programming. |
 | `hyrox/` | HYROX | Training variations of the race structure. |
 | `default/` | Default | Timed circuits, intervals and mixed sessions that show every format and both participant counts. |
 

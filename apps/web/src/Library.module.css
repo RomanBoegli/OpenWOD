@@ -21,24 +21,28 @@
 .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .resultLine { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; margin: 10px 0 6px; padding: 0 4px; color: var(--ink-3); font-size: 12px; letter-spacing: .4px; }
 /* Tiles are wide enough for the chip row (athletes, formats, difficulty) to stay on one line. */
-.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 16px; }
-.card { display: flex; flex-direction: column; gap: 12px; padding: 22px 22px 18px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border: 1px solid var(--line); border-radius: 20px; min-width: 0; }
+/* A three-column feed: every card keeps its natural height and useMasonry (Library.tsx) tells the grid how many 8 px rows it spans, so the columns pack like a pinboard while the reading order stays row by row. */
+.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 8px; column-gap: 16px; row-gap: 0; align-items: start; }
+@media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card { cursor: pointer; display: flex; flex-direction: column; gap: 11px; margin-bottom: 16px; padding: 20px 20px 17px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border: 1px solid var(--line); border-radius: 20px; min-width: 0; }
 .card[data-source=saved] { border-color: var(--line-2); }
 /* Drop shadow on hover, no lift; a light pointer tilt (feel.ts sets --tilt-x/--tilt-y on fine pointers only). */
 .card { transform: perspective(1200px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); transition: transform 160ms var(--ease), box-shadow var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
 .card:hover { box-shadow: 0 14px 34px var(--shadow); border-color: var(--line-2); }
-/* One row: chips left, the collection as a thin label right; tiles are wide enough that neither wraps. */
-.cardTop { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-/* The collection sits thin in the corner, like the index of a playing card; a workout belongs to one. */
-.cardCollection { flex-shrink: 0; font-size: 10px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+/* The chip row wraps in a narrow tile instead of clipping. */
+.cardTop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+/* The title with the collection as a thin label on the same line, right-aligned, like the index of a playing card. */
+.titleRow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-width: 0; }
+.cardCollection { flex-shrink: 0; font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
 /* Cards carry Start and Details only; duplicate, export and remove live on the detail view. */
-.badges { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; overflow: hidden; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .4px; color: var(--lane-a); background: color-mix(in srgb, var(--lane-a) 12%, transparent); border: 1px solid color-mix(in srgb, var(--lane-a) 30%, transparent); }
 .badge[data-kind=solo] { color: var(--lane-b); background: color-mix(in srgb, var(--lane-b) 12%, transparent); border-color: color-mix(in srgb, var(--lane-b) 30%, transparent); }
 .badge[data-kind=format] { color: var(--ink-2); background: var(--surface-3); border-color: var(--line-2); }
 .toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; margin-left: auto; color: var(--ink-2); cursor: pointer; }
 .toggle input { accent-color: var(--accent-fill); width: 18px; height: 18px; margin: 0; }
-.card h2 { font-size: 22px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; margin: 2px 0 0; overflow-wrap: anywhere; }
+.card h2 { font-size: 20px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .card h2 a { text-decoration: none; }
 .card h2 a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .cardDescription { margin: 0; color: var(--ink-3); font-size: 13px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -52,8 +56,8 @@
 .tag[aria-pressed=true] { background: var(--accent-fill); border-color: var(--accent-border); color: var(--accent-ink); font-weight: 600; }
 .tag[data-plain] { display: inline-flex; align-items: center; color: var(--ink-3); border-style: dashed; }
 /* Card actions are a size down from the page buttons so the title and the facts carry the card. */
-.cardActions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: auto; padding-top: 4px; }
-.cardActions a { min-height: 40px; padding: 6px 18px; font-size: 13px; border-radius: 9px; gap: 8px; }
+.cardActions { display: flex; gap: 8px; margin-top: auto; padding-top: 4px; }
+.cardActions a { min-height: 38px; padding: 6px 16px; font-size: 13px; border-radius: 9px; gap: 7px; }
 .cardActions a svg { width: 15px; height: 15px; }
 .banner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--accent-border); border-radius: 16px; background: var(--accent-soft); }
 .banner strong { display: block; font-size: 15px; }
