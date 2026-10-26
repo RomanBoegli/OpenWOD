@@ -1,13 +1,14 @@
 {
   "name": "openwod",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "license": "GPL-3.0-only",
   "description": "OpenWOD: a workout player for training at home, solo or in pairs. Not born. Made.",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "dev:server": "tsx watch apps/server/src/index.ts",
+    "dev:server": "node scripts/dev.mjs server",
+    "dev:full": "node scripts/dev.mjs full",
     "build": "npm run typecheck && vite build && node scripts/check-production.mjs && esbuild apps/server/src/index.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server/index.js",
     "start": "node dist/server/index.js",
     "typecheck": "tsc --noEmit",

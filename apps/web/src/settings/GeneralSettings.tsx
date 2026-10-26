@@ -1,6 +1,7 @@
 import type { Preferences } from '../preferences';
 import { CALIBRATION_RANGES, DEFAULT_CALIBRATION, normaliseCalibration, type DifficultyCalibration } from '../../../../packages/domain/src/difficulty';
 import { DifficultyChip } from '../DifficultyChip';
+import { downloadUrl } from '../data/client';
 import { Icon } from '../Icon';
 import styles from '../Settings.module.css';
 import shared from '../App.module.css';
@@ -9,7 +10,7 @@ import { type SettingsProps } from './shared';
 /** Bundled sessions that span the scale, so a change to the knobs is visible at once. */
 const REFERENCE_IDS = ['tabata-this', 'cindy', 'fran', 'fight-gone-bad', 'murph', 'hyrox-engine-emom-24'];
 
-export function GeneralSettings({ preferences, onPreferencesChange, entries }: SettingsProps) {
+export function GeneralSettings({ preferences, onPreferencesChange, entries, household }: SettingsProps) {
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
   const calibration = preferences.difficulty;
   const calibrate = (patch: Partial<DifficultyCalibration>) => update({ difficulty: normaliseCalibration({ ...calibration, ...patch }) });
@@ -28,6 +29,23 @@ export function GeneralSettings({ preferences, onPreferencesChange, entries }: S
         <div className={styles.field}><span id={`loads-${role}-label`}>Loads shown for</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby={`loads-${role}-label`}>{(['men', 'women'] as const).map(sex => <label key={sex} data-checked={preferences.loadsFor[role] === sex}><input type="radio" name={`loads-${role}`} value={sex} checked={preferences.loadsFor[role] === sex} onChange={() => update({ loadsFor: { ...preferences.loadsFor, [role]: sex } })} />{sex === 'men' ? 'Men' : 'Women'}</label>)}</div></div>
       </div>)}
       <p className={styles.hint}>Switching tabs pauses a running workout. Keep the window visible while training.</p>
+    </section>
+    <section className={styles.card} aria-labelledby="household-title">
+      <h2 id="household-title">Household server</h2>
+      <p className={styles.hint}>Workouts, collections, movements and the session log live on the server this app is served from, so every device in the household sees the same library. This device keeps a copy for offline reading and uploads changes when the server is back.</p>
+      <dl className={styles.facts}>
+        <div><dt>Connection</dt><dd>{household.connection === 'online' ? 'Connected' : household.connection === 'offline' ? 'Offline' : household.connection === 'unreachable' ? 'Server unreachable' : 'Checking…'}</dd></div>
+        <div><dt>Server</dt><dd>{household.serverVersion ? `OpenWOD ${household.serverVersion}` : '—'}</dd></div>
+        <div><dt>Database schema</dt><dd>{household.schemaVersion ?? '—'}</dd></div>
+        <div><dt>Waiting to upload</dt><dd>{household.pendingCount}</dd></div>
+      </dl>
+      <div className={styles.rowActions}>
+        <a className={shared.quietButton} href={downloadUrl('/backup')} download><Icon name="download" size={15} />Download backup</a>
+        <a className={shared.quietButton} href={downloadUrl('/export')} download><Icon name="download" size={15} />Export all data</a>
+        <button type="button" className={shared.quietButton} onClick={() => void household.onRefresh()}><Icon name="undo" size={15} />Reconnect</button>
+        {household.legacy && <button type="button" className={shared.quietButton} disabled={household.migrating || household.connection !== 'online'} onClick={() => void household.onMigrate()}><Icon name="upload" size={15} />{household.migrating ? 'Moving…' : 'Move device data to the server'}</button>}
+      </div>
+      <p className={styles.hint}>The backup is a consistent copy of the SQLite database, taken with the SQLite backup API while the server keeps running. The export is the same data as JSON for reading elsewhere; it is not a sharing file.</p>
     </section>
     <section className={styles.card} aria-labelledby="difficulty-title">
       <h2 id="difficulty-title">Difficulty rating</h2>

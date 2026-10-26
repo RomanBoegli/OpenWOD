@@ -2,17 +2,18 @@ import { useMemo, useState } from 'react';
 import { formatDuration } from '../../../packages/domain/src';
 import { compileWorkout, type Phase } from '../../../packages/domain/src/compiler';
 import { outlineWorkout } from '../../../packages/domain/src/outline';
+import type { Workout } from '../../../packages/domain/src/schema';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
 import { LoadLevels } from './LevelChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import type { Collection } from './master-data';
-import { agoText, type SessionRecord } from './session-log';
+import { agoText } from './session-log';
+import type { SessionView } from './data/use-library-data';
 import { resultText } from './Player';
 import { displayTime } from '../../../packages/engine/src';
 import type { LibraryEntry } from './Library';
-import { exportWorkoutFile } from './Player';
 import { editHref, playHref } from './router';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
@@ -23,12 +24,12 @@ import shared from './App.module.css';
 const REST_NAMES: Record<Phase, string> = { work: 'work', transition: 'transition', roundRest: 'round rest', blockRest: 'block rest' };
 const restText = (segments: { kind: Phase; ms: number }[]) => segments.map(segment => `${formatDuration(segment.ms)} ${REST_NAMES[segment.kind]}`).join(' + ');
 
-interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionRecord[]; loadsFor: { A: Sex; B: Sex }; loadUnit: LoadUnit; onRemove: (id: string) => void }
+interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionView[]; loadsFor: { A: Sex; B: Sex }; loadUnit: LoadUnit; onRemove: (id: string) => void; onExport: (workout: Workout) => void }
 
 /** The study view: everything the athletes will see, round by round, before anyone presses Start. */
 /** Targets only (no fallback hint), for table cells; loads are shown per level separately. */
 const targetText = (value: Prescription) => value.reps || value.calories || value.distance || value.timeMs ? prescriptionText({ ...value, load: undefined }) : '';
-export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove }: OverviewProps) {
+export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove, onExport }: OverviewProps) {
   const { workout, summary, source, editable } = entry;
   const cell = (value: Prescription | undefined, role: 'A' | 'B') => value ? <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{value.load ? <small><LoadLevels load={value.load} unit={loadUnit} sex={workout.participants === 2 ? loadsFor[role] : undefined} /></small> : null}</> : null;
   const [removing, setRemoving] = useState(false);
@@ -54,7 +55,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
       <div className={styles.actions}>
         <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
         {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name={source === 'saved' ? 'edit' : 'copy'} size={16} />{source === 'saved' ? 'Edit' : 'Duplicate and edit'}</a>}
-        <button className={shared.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export</button>
+        <button className={shared.quietButton} onClick={() => onExport(workout)}><Icon name="download" size={17} />Export</button>
         {source === 'saved' && <button className={shared.quietButton} onClick={() => setRemoving(true)}><Icon name="trash" size={17} />Remove</button>}
       </div>
     </div>
@@ -103,7 +104,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     </div>
     {sessions.length > 0 && <section className={styles.history} aria-label="Past sessions">
       <h2>Past sessions</h2>
-      <ul>{sessions.slice(0, 10).map(session => <li key={session.id}><span>{new Date(session.finishedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{session.outcome === 'completed' ? 'Completed' : `Ended at ${Math.round(session.completion * 100)} %`} · {displayTime(session.activeMs, 'floor')} active</span><span>{session.results.map(result => resultText(result)).join(' · ')}</span></li>)}</ul>
+      <ul>{sessions.slice(0, 10).map(session => <li key={session.id}><span>{new Date(session.finishedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{session.outcome === 'completed' ? 'Completed' : session.outcome === 'capped' ? 'Capped' : `Ended at ${Math.round(session.completion * 100)} %`}{session.interrupted ? ' · interrupted' : ''} · {displayTime(session.activeMs, 'floor')} active</span><span>{session.results.map(result => resultText(result)).join(' · ')}</span></li>)}</ul>
     </section>}
 
     <ConfirmDialog open={removing} title={`Remove “${summary.title}”?`} confirmLabel="Remove workout" cancelLabel="Keep it" onClose={() => setRemoving(false)} onConfirm={() => { setRemoving(false); onRemove(workout.id); window.location.hash = '#/'; }}>

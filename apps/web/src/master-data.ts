@@ -1,38 +1,17 @@
 import { Catalogue, movementKey, type Movement } from '../../../packages/domain/src/catalogue';
 import { equipmentKey } from '../../../packages/domain/src/library';
 import { seedMovements } from '../../../packages/domain/src/movements';
-import { bundledCollections } from '../../../packages/domain/src/bundled';
 
 /**
- * Master data kept on this device until the server milestone: equipment spellings (merges), collections of workouts,
- * and the movement catalogue (your own records, overrides of bundled ones, merges and removals). Everything here is
- * presentation and organisation; it never changes a workout file.
+ * Master data on this device: the household document (see packages/domain/src/master-data.ts) plus the editing
+ * helpers the settings pages use. Browser storage keeps a copy until the server milestone; every read is sanitised.
  */
-export interface Collection { id: string; title: string; description?: string; workoutIds: string[]; builtIn?: boolean }
-/** Your changes to a bundled collection, kept as a delta so a workout added to the registry later still shows up. */
-export interface CollectionEdit { title?: string; description?: string; added: string[]; removed: string[] }
+import { emptyMasterData, sanitiseMasterData, builtInCollections, editFor, type Collection, type CollectionEdit, type MasterData } from '../../../packages/domain/src/master-data';
+export { emptyMasterData, sanitiseMasterData, builtInCollections, mergeMasterData, isEmptyMasterData, type Collection, type CollectionEdit, type MasterData } from '../../../packages/domain/src/master-data';
 export type { Movement };
 export type { Sex } from '../../../packages/domain/src/prescription';
-export interface MasterData {
-  /** Equipment key (see equipmentKey) → canonical display name. */
-  equipmentAliases: Record<string, string>;
-  collections: Collection[];
-  /** Edits to bundled collections by id. */
-  collectionEdits: Record<string, CollectionEdit>;
-  /** Your movement records: new ones, and overrides of bundled records with the same id. */
-  movements: Movement[];
-  /** Bundled record ids you removed. */
-  hiddenMovements: string[];
-  /** Extra spellings → record id, from merges and renames ("Wall-ball shots" → wall-ball). */
-  movementAliases: Record<string, string>;
-  /** Merges you committed: they keep working but no longer appear in the history with an Undo. */
-  committed: string[];
-}
 
 const KEY = 'openwod.master.v1';
-
-/** Collections that ship with the app: one per registry folder with a collection.yaml. They are not editable; your own collections sit beside them. */
-export const builtInCollections: Collection[] = bundledCollections.map(collection => ({ ...collection, builtIn: true }));
 
 /** Bundled collections first with your edits applied, then your own. A workout in one of your collections is not shown under a bundled one. */
 export const allCollections = (data: MasterData): Collection[] => {
@@ -45,48 +24,9 @@ export const allCollections = (data: MasterData): Collection[] => {
   });
   return [...bundled, ...own];
 };
-export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], collectionEdits: {}, movements: [], hiddenMovements: [], movementAliases: {}, committed: [] });
-
-const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
-const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
-const MOVEMENT_LIMIT = 600;
-
-function readMovement(value: unknown): Movement | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const item = value as Partial<Movement>;
-  const id = text(item.id, 80);
-  const name = text(item.name, 160);
-  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id) || !name) return undefined;
-  const record: Movement = { id, name };
-  if (text(item.shortName, 60)) record.shortName = text(item.shortName, 60);
-  if (text(item.spokenName, 160)) record.spokenName = text(item.spokenName, 160);
-  const aliases = strings(item.aliases, 20, 160);
-  if (aliases.length) record.aliases = aliases;
-  if (text(item.family, 80)) record.family = text(item.family, 80);
-  const equipment = strings(item.equipment, 10);
-  if (equipment.length) record.equipment = equipment;
-  if (typeof item.category === 'string' && ['weightlifting', 'gymnastics', 'monostructural', 'strength', 'conditioning', 'mobility'].includes(item.category)) record.category = item.category;
-  if (text(item.notes, 500)) record.notes = text(item.notes, 500);
-  return record;
-}
 
 export function loadMasterData(): MasterData {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<MasterData> : {};
-    const aliases: Record<string, string> = {};
-    if (stored.equipmentAliases && typeof stored.equipmentAliases === 'object') for (const [key, name] of Object.entries(stored.equipmentAliases)) if (text(key, 80) && text(name, 80)) aliases[equipmentKey(key)] = text(name, 80);
-    const collections: Collection[] = Array.isArray(stored.collections) ? stored.collections.filter((item): item is Collection => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.workoutIds))).slice(0, 50).map(item => ({ id: text(item.id, 120), title: text(item.title, 120) || 'Collection', ...(item.description ? { description: text(item.description, 500) } : {}), workoutIds: item.workoutIds.filter((id): id is string => typeof id === 'string').slice(0, 500) })) : [];
-    const movements = (Array.isArray(stored.movements) ? stored.movements : []).map(readMovement).filter((item): item is Movement => Boolean(item)).slice(0, MOVEMENT_LIMIT);
-    const hiddenMovements = strings(stored.hiddenMovements, MOVEMENT_LIMIT);
-    const movementAliases: Record<string, string> = {};
-    if (stored.movementAliases && typeof stored.movementAliases === 'object') for (const [key, id] of Object.entries(stored.movementAliases)) if (text(key, 160) && text(id, 80)) movementAliases[text(key, 160)] = text(id, 80);
-    const collectionEdits: Record<string, CollectionEdit> = {};
-    if (stored.collectionEdits && typeof stored.collectionEdits === 'object') for (const [id, edit] of Object.entries(stored.collectionEdits as Record<string, Partial<CollectionEdit>>)) if (builtInCollections.some(item => item.id === id) && edit && typeof edit === 'object') collectionEdits[id] = { ...(text(edit.title, 120) ? { title: text(edit.title, 120) } : {}), ...(typeof edit.description === 'string' ? { description: text(edit.description, 500) } : {}), added: strings(edit.added, 500, 120), removed: strings(edit.removed, 500, 120) };
-    // Earlier builds stored an edited bundled collection as a full copy under its id; that becomes a delta.
-    for (const copy of collections.filter(item => builtInCollections.some(bundled => bundled.id === item.id))) collectionEdits[copy.id] = editFor(builtInCollections.find(bundled => bundled.id === copy.id)!, copy);
-    return { equipmentAliases: aliases, collections: collections.filter(item => !builtInCollections.some(bundled => bundled.id === item.id)), collectionEdits, movements, hiddenMovements, movementAliases, committed: strings(stored.committed, 2000, 200) };
-  } catch { return emptyMasterData(); }
+  try { return sanitiseMasterData(JSON.parse(localStorage.getItem(KEY) ?? '{}')); } catch { return emptyMasterData(); }
 }
 
 export function persistMasterData(data: MasterData): string | undefined {
@@ -207,16 +147,6 @@ export function removeMovementAlias(data: MasterData, spelling: string): MasterD
  * Replaces a collection in place (so editing never reorders the list) or appends a new one. A workout belongs to one
  * of your collections at a time: the ids it now holds leave every other collection of yours.
  */
-/** The delta between a bundled collection and the version the user saved. */
-function editFor(bundled: Collection, edited: Collection): CollectionEdit {
-  return {
-    ...(edited.title.trim() && edited.title.trim() !== bundled.title ? { title: edited.title.trim() } : {}),
-    ...((edited.description ?? '') !== (bundled.description ?? '') ? { description: edited.description ?? '' } : {}),
-    added: edited.workoutIds.filter(id => !bundled.workoutIds.includes(id)),
-    removed: bundled.workoutIds.filter(id => !edited.workoutIds.includes(id)),
-  };
-}
-
 /**
  * Saves a collection: a bundled one as a delta against the registry, your own in place (so editing never reorders
  * the list) or appended. A workout belongs to one collection at a time, so the ids it now holds leave every other

@@ -17,6 +17,11 @@ import { AthletesChip, FormatChips } from './Chip';
 import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import { collectPrescriptions } from '../../../packages/domain/src/library';
 import { countsAsDone, type SessionRecord } from './session-log';
+import { sessionOutcome } from '../../../packages/engine/src/records';
+import { deviceId } from './data/device';
+import { PACK_EXTENSION, serialisePackFile, type WorkoutPack } from '../../../packages/domain/src/pack';
+import { elapsedText, type Recovery } from './data/checkpoints';
+import { holdSessionLock } from './data/session-lock';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import styles from './App.module.css';
 import own from './Player.module.css';
@@ -37,14 +42,23 @@ function Perimeter({ progress, width }: { progress: RefObject<SVGPathElement | n
   return <svg className={styles.perimeter} ref={svg} aria-hidden="true" data-perimeter=""><path className={styles.borderTrack} d={d} /><path ref={progress} className={styles.borderProgress} pathLength="1" strokeDasharray="1 1" d={d} /></svg>;
 }
 
-export function exportWorkoutFile(workout: Workout) {
-  const blob = new Blob([serialiseWorkoutFile(workout)], { type: 'application/yaml' });
+function downloadText(text: string, name: string) {
+  const blob = new Blob([text], { type: 'application/yaml' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `${slugify(workout.title)}${FILE_EXTENSION}`;
+  anchor.download = name;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function exportWorkoutFile(workout: Workout) {
+  downloadText(serialiseWorkoutFile(workout), `${slugify(workout.title)}${FILE_EXTENSION}`);
+}
+
+/** Several workouts and their collections as one .wods.yaml pack (SHR-01). */
+export function exportPackFile(pack: WorkoutPack) {
+  downloadText(serialisePackFile(pack), `${slugify(pack.title ?? 'openwod-pack')}${PACK_EXTENSION}`);
 }
 
 /** The one big number of a prescription: reps, calories, distance or a target time. */
@@ -76,9 +90,15 @@ interface PlayerProps {
   onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
   onPerformingChange: (performing: boolean) => void;
   onSessionEnd: (record: SessionRecord) => void;
+  /** A session that ended without a record to keep still clears its checkpoint. */
+  onSessionClear?: (sessionId: string) => void;
+  /** Restore this checkpoint instead of starting fresh (ENG-12). */
+  recovery?: Recovery;
 }
 
-export function Player({ workout, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd }: PlayerProps) {
+export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery }: PlayerProps) {
+  // The session plays the workout it started with; an edit in the library never changes a running session (AT-14).
+  const [workout] = useState(workoutProp);
   const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors } = preferences;
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
   const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
@@ -95,7 +115,8 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
   const turnClock = useRef<HTMLElement>(null);
   const border = useRef<SVGPathElement>(null);
   const player = useRef<HTMLDivElement>(null);
-  const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart } = useWorkout(workout, audio);
+  const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints } = useWorkout(workout, audio, { recovery });
+  const [takenOver, setTakenOver] = useState(false);
   const { status, current, nextWork, section, format, timing, clockScope, controls, acks, tasks, counter, turn, interval } = projection;
   const isBlock = Boolean(tasks);
   const isPrep = status === 'preparing' || (status === 'paused' && projection.occurrenceId === 'prep');
@@ -126,31 +147,45 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
   const currentWorkNumber = contextRows.findIndex(item => item.anchor === focusAnchor) + 1;
 
   useEffect(() => { onPerformingChange(!editable); }, [editable, onPerformingChange]);
+
+  // This tab controls the session (ENG-14). When another tab claims it: pause, write the last checkpoint, let go.
+  useEffect(() => {
+    if (editable || takenOver) return;
+    let released = false;
+    const held = holdSessionLock(engine.sessionId, {
+      onClaim: () => {
+        if (released) return;
+        released = true;
+        send('pause', engine.occurrenceId);
+        void flushCheckpoints().finally(() => { held.release(); setTakenOver(true); });
+      },
+    });
+    return () => { released = true; held.release(); };
+  }, [engine, editable, takenOver, flushCheckpoints, send]);
   // Clips and this workout's recorded movement names are decoded before Play so a session never waits on the network.
   useEffect(() => { void audio.preload(); void audio.prepareNames(collectPrescriptions(workout).map(item => catalogue.resolve(item)?.id).filter((id): id is string => Boolean(id))); }, [audio, workout, catalogue]);
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
   // Log the session once when it ends: completed always, an ended session when it covered enough of the plan.
   const logged = useRef<string | undefined>(undefined);
-  const startedAt = useRef<string | undefined>(undefined);
-  useEffect(() => { if (status === 'preparing' || status === 'running') startedAt.current ??= new Date().toISOString(); if (status === 'ready') startedAt.current = undefined; }, [status]);
   useEffect(() => {
     if (!terminal || logged.current === engine.sessionId) return;
     logged.current = engine.sessionId;
     const activeMs = engine.readClocks().activeMs;
-    const outcome = status === 'completed' ? 'completed' : 'aborted';
-    if (!countsAsDone(outcome, activeMs, plan.durationMs, plan.durationKind === 'open')) return;
+    const outcome = sessionOutcome(status, projection.results);
+    const interrupted = engine.events.some(event => event.type === 'recovered');
+    if (!interrupted && !countsAsDone(outcome, activeMs, plan.durationMs, plan.durationKind === 'open')) { onSessionClear?.(engine.sessionId); return; }
     const finishedAt = new Date().toISOString();
-    onSessionEnd({ id: engine.sessionId, workoutId: workout.id, title: workout.title, startedAt: startedAt.current ?? finishedAt, finishedAt, outcome, completion: outcome === 'completed' ? 1 : Math.min(1, activeMs / plan.durationMs), activeMs, results: projection.results });
-  }, [terminal, status, engine, plan, workout, projection.results, onSessionEnd]);
+    onSessionEnd({ id: engine.sessionId, workoutId: workout.id, workoutRevision: workout.revision, title: workout.title, startedAt: startedAt.current ?? finishedAt, finishedAt, outcome, interrupted, modified: projection.modified, completion: outcome === 'aborted' ? Math.min(1, activeMs / plan.durationMs) : 1, activeMs, results: projection.results, events: engine.events, workout, deviceId: deviceId() });
+  }, [terminal, status, engine, plan, workout, projection.results, projection.modified, onSessionEnd, onSessionClear, startedAt]);
 
-  // Until checkpoints exist, leaving the page ends the session: ask first.
+  // Checkpoints make leaving safe; only when they fail does leaving mean losing the session, so ask then (AT-16).
   useEffect(() => {
-    if (editable) return;
+    if (editable || checkpointStatus !== 'failed') return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); };
     window.addEventListener('beforeunload', guard);
     return () => window.removeEventListener('beforeunload', guard);
-  }, [editable]);
+  }, [editable, checkpointStatus]);
 
   // Keyboard: Space pauses/resumes, Enter is Done or Switch, arrows navigate (NFR-08).
   useEffect(() => {
@@ -249,6 +284,10 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
     </section>;
   };
 
+  if (takenOver) return <div className={styles.screen}>
+    <section className={styles.recovery} role="region" aria-label="Taken over"><div><strong>Another tab took over this session.</strong><p>“{workout.title}” continues there; this tab no longer controls the clock. Close it, or reopen the session here.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href="#/">Back to library</a><button className={styles.primaryButton} onClick={() => window.location.reload()}><Icon name="play" />Reopen here</button></div></section>
+  </div>;
+
   return <div className={styles.screen} data-performing={!editable} data-view={view}>
     <div className={styles.workoutHeading}>
       <div>
@@ -323,8 +362,12 @@ export function Player({ workout, audio, preferences, catalogue, onPreferencesCh
         {terminal ? <button className={styles.primaryButton} onClick={restart}><Icon name="play" />Train again</button> : <button className={styles.primaryButton} onClick={() => send(status === 'ready' ? 'play' : status === 'paused' ? 'resume' : status === 'awaitingReady' ? 'ready' : 'pause', projection.occurrenceId)}><Icon name={active ? 'pause' : 'play'} />{status === 'ready' ? 'Start workout' : status === 'paused' ? 'Resume workout' : status === 'awaitingReady' ? 'Start next section' : 'Pause workout'}</button>}
         <button className={styles.stopButton} disabled={editable} onClick={() => stopDialog.current?.showModal()}><Icon name="close" size={16} />End session</button>
       </div>
+      {status === 'paused' && projection.pauseReason === 'recovered' && recovery && <section className={styles.recovery} role="dialog" aria-label="Interrupted session">
+        <div><strong>Interrupted session · saved {elapsedText(Date.now() - new Date(recovery.checkpoint.savedAt).getTime())}</strong><p>{[`Section ${current.sectionIndex + 1} of ${plan.sections.length}`, turn ? `${turn.athlete === 'A' ? names.A : names.B}’s turn · team round ${turn.teamRound + 1}` : round ? `Round ${round.iteration}` : '', clockScope === 'elapsed' ? `${displayTime(engine.readClocks().activeMs, 'floor')} elapsed` : `${displayTime(engine.readClocks().remainingMs)} left`].filter(Boolean).join(' · ')}. Time since the save is not counted; nothing was marked done for you.</p></div>
+        <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send('resume', projection.occurrenceId)}><Icon name="play" />Resume</button></div>
+      </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
-      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
+      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
     </div>
 
     <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={styles.quietButton} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Details</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { PLAYER, ready, advance } from './helpers';
 
 test.describe('player', () => {

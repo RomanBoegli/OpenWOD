@@ -3,7 +3,12 @@
 .heading h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 12px 0 6px; }
 .headingActions { display: flex; gap: 10px; flex-shrink: 0; }
 .filters { display: grid; gap: 12px; padding: 16px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; }
-.filterTop { display: grid; grid-template-columns: minmax(200px, 1fr) 220px; gap: 12px; align-items: end; }
+.filterTop { display: grid; grid-template-columns: minmax(200px, 1fr) 280px; gap: 12px; align-items: end; }
+.sortControls { display: flex; align-items: end; gap: 8px; min-width: 0; }
+.sortControls .sort { flex: 1; }
+.randomButton { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; padding: 0; border: 1px solid var(--line-2); border-radius: 10px; background: var(--input-bg); color: var(--ink-2); }
+.randomButton:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.randomButton[aria-pressed=true] { color: var(--accent-text); border-color: var(--accent-border); background: color-mix(in srgb, var(--accent-fill) 12%, var(--input-bg)); }
 .filters label { display: grid; gap: 7px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); min-width: 0; }
 .filterGroup { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; padding-top: 10px; border-top: 1px solid var(--line); }
 .filterLabel { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-3); padding-top: 11px; }
@@ -50,6 +55,12 @@
 .cardActions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: auto; padding-top: 4px; }
 .cardActions a { min-height: 40px; padding: 6px 18px; font-size: 13px; border-radius: 9px; gap: 8px; }
 .cardActions a svg { width: 15px; height: 15px; }
+.banner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--accent-border); border-radius: 16px; background: var(--accent-soft); }
+.banner strong { display: block; font-size: 15px; }
+.banner p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); max-width: 60ch; }
+.bannerActions { display: flex; gap: 8px; }
+.bannerActions a, .bannerActions button { min-height: 40px; padding: 6px 16px; font-size: 13px; }
+.linkButton { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .drafts { margin: 0 0 22px; padding: 16px 18px; border: 1px dashed var(--line-2); border-radius: 16px; }
 .drafts h2 { margin: 0 0 10px; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-3); }
 .drafts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

@@ -28,18 +28,7 @@ export function persistSavedWorkouts(workouts: Workout[]): string | undefined {
   }
 }
 
-export function slugify(title: string): string {
-  return title.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workout';
-}
-
-/** A free workout ID for a copy: keeps the authored ID when free, otherwise appends a counter. */
-export function freeWorkoutId(wanted: string, taken: Set<string>): string {
-  if (!taken.has(wanted)) return wanted;
-  for (let counter = 2; ; counter++) {
-    const candidate = `${wanted}-${counter}`.slice(0, 120);
-    if (!taken.has(candidate)) return candidate;
-  }
-}
+export { freeWorkoutId, slugify } from '../../../packages/domain/src/library';
 
 // ---- Editor drafts -------------------------------------------------------------------------------------------
 import type { BuilderDraft } from '../../../packages/domain/src/builder';

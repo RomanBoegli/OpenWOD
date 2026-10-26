@@ -1,24 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MAX_FILE_BYTES, parseWorkoutFile, type Workout } from '../../../packages/domain/src';
+import { type Workout } from '../../../packages/domain/src';
+import { MAX_PACK_BYTES, parseSharedFile, type PackCollection, type SharedFile } from '../../../packages/domain/src/pack';
+import type { PackDecision } from './data/remote';
+import { ImportPreview } from './ImportPreview';
 import { equipmentOptions, matchesFilter, searchFields, sortSummaries, summariseWorkout, type DurationBucket, type LibraryFilter, type LibrarySort, type SummaryOptions, type WorkoutSummary } from '../../../packages/domain/src/library';
 import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
 import type { Preferences } from './preferences';
 import { collectionOf, type Collection } from './master-data';
-import { agoText, lastDone, timesDone, type SessionRecord } from './session-log';
+import { agoText, lastDone, timesDone } from './session-log';
+import type { Connection, LegacyData, SessionView } from './data/use-library-data';
+import type { OutboxItem } from './data/outbox';
+import { elapsedText, type Recovery } from './data/checkpoints';
 import { DifficultyChip } from './DifficultyChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { rankBySearch } from '../../../packages/domain/src/search';
 import { draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
-import { NEW_DRAFT_ID, type StoredDraft } from './library-store';
+import { freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './Library.module.css';
 import shared from './App.module.css';
 
-export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean }
+export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean; /** Saved on this device, not yet on the household server. */ pending?: boolean; origin?: 'local' | 'imported' }
 
 export function toEntry(workout: Workout, source: LibraryEntry['source'], options: SummaryOptions = {}): LibraryEntry {
   return { workout, summary: summariseWorkout(workout, options), source, editable: workoutToBuilder(workout) !== null };
@@ -27,27 +33,52 @@ export function toEntry(workout: Workout, source: LibraryEntry['source'], option
 interface LibraryProps {
   entries: LibraryEntry[];
   collections: Collection[];
-  sessions: SessionRecord[];
-  onImport: (workout: Workout, mode: 'copy' | 'replace') => void;
-  /** Editable files open in the editor as an unsaved draft; the preview dialog stays for structures the editor cannot express. */
+  sessions: SessionView[];
+  /** Applies the decisions of the import preview (SHR-04) and, for a single workout, navigates to it. */
+  onImportPack: (workouts: Workout[], collections: PackCollection[], decisions: Record<string, PackDecision>) => Promise<void>;
+  /** A single editable file can open in the editor as an unsaved draft instead. */
   onImportDraft: (workout: Workout, fileName: string) => void;
-  storageError: string;
+  onExportLibrary: () => void;
+  notice: string;
+  onClearNotice: () => void;
   missingId?: string;
+  connection: Connection;
+  legacy?: LegacyData;
+  migrating: boolean;
+  onMigrate: () => Promise<unknown>;
+  conflicts: OutboxItem[];
+  rejected: OutboxItem[];
+  onResolveConflict: (item: OutboxItem, decision: 'copy' | 'discard', freeId?: string) => Promise<void>;
+  onDismissRejected: (item: OutboxItem) => Promise<void>;
+  recoveries: Recovery[];
+  onDiscardRecovery: (sessionId: string) => Promise<void>;
   drafts: StoredDraft[];
   onDiscardDraft: (id: string) => void;
   preferences: Preferences;
   onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
 }
 
-type Sort = LibrarySort | 'longestAgo';
+type Sort = LibrarySort | 'longestAgo' | 'random';
 const DURATIONS: [DurationBucket, string][] = [['short', 'Up to 20 min'], ['medium', '20 to 40 min'], ['long', 'Over 40 min']];
 export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.totalMs)}`;
 const toggle = <T,>(list: T[], item: T) => list.includes(item) ? list.filter(value => value !== item) : [...list, item];
 
+/** A seeded Fisher–Yates shuffle stays stable across renders and library navigation. */
+function shuffled<T>(items: T[], seed: number): T[] {
+  const result = [...items];
+  let state = seed >>> 0;
+  for (let index = result.length - 1; index > 0; index--) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const other = Math.floor(state / 0x1_0000_0000 * (index + 1));
+    [result[index], result[other]] = [result[other], result[index]];
+  }
+  return result;
+}
+
 /** Filters and sort survive navigation within the browser session; every read is validated. */
-interface StoredFilters { query: string; participants: '' | 1 | 2; equipment: string[]; duration: DurationBucket[]; difficulty: DifficultyLevel[]; format: SectionFormat[]; collectionIds: string[]; sort: Sort }
+interface StoredFilters { query: string; participants: '' | 1 | 2; equipment: string[]; duration: DurationBucket[]; difficulty: DifficultyLevel[]; format: SectionFormat[]; collectionIds: string[]; sort: Sort; randomSeed: number }
 const FILTER_KEY = 'openwod.libraryFilters';
-const emptyFilters = (): StoredFilters => ({ query: '', participants: '', equipment: [], duration: [], difficulty: [], format: [], collectionIds: [], sort: 'title' });
+const emptyFilters = (): StoredFilters => ({ query: '', participants: '', equipment: [], duration: [], difficulty: [], format: [], collectionIds: [], sort: 'title', randomSeed: 0 });
 function loadFilters(): StoredFilters {
   try {
     const stored = JSON.parse(sessionStorage.getItem(FILTER_KEY) ?? 'null') as Partial<StoredFilters> | null;
@@ -60,12 +91,15 @@ function loadFilters(): StoredFilters {
       difficulty: Array.isArray(stored.difficulty) ? stored.difficulty.filter((item): item is DifficultyLevel => [1, 2, 3, 4].includes(item as number)) : [],
       format: strings(stored.format).filter((item): item is SectionFormat => (SECTION_FORMATS as readonly string[]).includes(item)),
       collectionIds: strings(stored.collectionIds),
-      sort: typeof stored.sort === 'string' && ['title', 'shortest', 'longest', 'easiest', 'hardest', 'longestAgo'].includes(stored.sort) ? stored.sort as Sort : 'title',
+      sort: typeof stored.sort === 'string' && ['title', 'shortest', 'longest', 'easiest', 'hardest', 'longestAgo', 'random'].includes(stored.sort) ? stored.sort as Sort : 'title',
+      randomSeed: Number.isInteger(stored.randomSeed) && stored.randomSeed! >= 0 && stored.randomSeed! <= 0xffff_ffff ? stored.randomSeed! : 0,
     };
   } catch { return emptyFilters(); }
 }
 
-export function Library({ entries, collections, sessions, onImport, onImportDraft, storageError, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange }: LibraryProps) {
+export function Library({ entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
+  const [migrationHidden, setMigrationHidden] = useState(false);
+  const [migrationReport, setMigrationReport] = useState('');
   const [stored] = useState(loadFilters);
   const [query, setQuery] = useState(stored.query);
   const [participants, setParticipants] = useState<'' | 1 | 2>(stored.participants);
@@ -75,8 +109,9 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
   const [format, setFormat] = useState<SectionFormat[]>(stored.format);
   const [collectionIds, setCollectionIds] = useState<string[]>(stored.collectionIds);
   const [sort, setSort] = useState<Sort>(stored.sort);
-  useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ query, participants, equipment, duration, difficulty, format, collectionIds, sort } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [query, participants, equipment, duration, difficulty, format, collectionIds, sort]);
-  const [preview, setPreview] = useState<Workout>();
+  const [randomSeed, setRandomSeed] = useState(stored.randomSeed);
+  useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed]);
+  const [preview, setPreview] = useState<{ file: SharedFile; name: string }>();
   const [importError, setImportError] = useState('');
   const [discarding, setDiscarding] = useState<StoredDraft>();
   const importDialog = useRef<HTMLDialogElement>(null);
@@ -90,32 +125,28 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
     const matching = entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry }));
     // Never done first (alphabetically), then the longest-ago session first.
     const stamp = (id: string) => lastDone(sessions, id)?.finishedAt ?? '';
-    const sorted = sort !== 'longestAgo' ? sortSummaries(matching, sort) : [...matching].sort((a, b) => (stamp(a.id) === stamp(b.id) ? a.title.localeCompare(b.title, 'en') : stamp(a.id).localeCompare(stamp(b.id))));
+    const sorted = sort === 'random' ? matching : sort !== 'longestAgo' ? sortSummaries(matching, sort) : [...matching].sort((a, b) => (stamp(a.id) === stamp(b.id) ? a.title.localeCompare(b.title, 'en') : stamp(a.id).localeCompare(stamp(b.id))));
     // With a query the best match comes first; the chosen sort breaks ties.
-    return rankBySearch(sorted, query, item => searchFields(item)).map(item => item.entry);
-  }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, onlyMine, preferences.myEquipment, sort, sessions]);
+    const ranked = rankBySearch(sorted, query, item => searchFields(item)).map(item => item.entry);
+    return sort === 'random' ? shuffled(ranked, randomSeed) : ranked;
+  }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, onlyMine, preferences.myEquipment, sort, sessions, randomSeed]);
+  const randomise = () => { setRandomSeed(Math.floor(Math.random() * 0x1_0000_0000)); setSort('random'); };
   const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || onlyMine);
   const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
-  const previewSummary = useMemo(() => preview && summariseWorkout(preview, { difficulty: preferences.difficulty }), [preview, preferences.difficulty]);
-  const conflict = preview && entries.find(entry => entry.workout.id === preview.id);
 
   async function importFile(file?: File) {
     if (!file) return;
     try {
-      if (file.size > MAX_FILE_BYTES) throw new Error('Choose a workout file smaller than 1 MB.');
-      const parsed = parseWorkoutFile(await file.text());
-      summariseWorkout(parsed); // Compiles: unsupported or unbounded content is rejected before anything is saved.
-      if (workoutToBuilder(parsed)) { if (fileInput.current) fileInput.current.value = ''; onImportDraft(parsed, file.name); return; }
-      setPreview(parsed); setImportError('');
+      if (file.size > MAX_PACK_BYTES) throw new Error('Choose a workout file or pack smaller than 4 MB.');
+      const parsed = parseSharedFile(await file.text());
+      // Compiles every workout: unsupported or unbounded content is rejected before anything is saved.
+      for (const workout of parsed.kind === 'pack' ? parsed.pack.workouts : [parsed.workout]) summariseWorkout(workout);
+      setPreview({ file: parsed, name: file.name }); setImportError('');
     } catch (error) { setPreview(undefined); setImportError(error instanceof Error ? error.message : 'This file could not be read.'); }
     importDialog.current?.showModal();
     if (fileInput.current) fileInput.current.value = '';
   }
-  function confirmImport(mode: 'copy' | 'replace') {
-    if (preview) onImport(preview, mode);
-    importDialog.current?.close();
-    setPreview(undefined);
-  }
+  const closeImport = () => { importDialog.current?.close(); setPreview(undefined); };
 
   const group = (label: string, children: React.ReactNode) => <div className={styles.filterGroup} role="group" aria-label={label}><span className={styles.filterLabel}>{label}</span><div className={styles.chipRow}>{children}</div></div>;
 
@@ -129,18 +160,31 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
       <div className={styles.headingActions}>
         <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
         <button className={shared.quietButton} onClick={() => fileInput.current?.click()}><Icon name="upload" size={18} />Import WOD</button>
+        {entries.some(entry => entry.source === 'saved') && <button className={shared.quietButton} onClick={onExportLibrary} title="Every saved workout and your collections as one .wods.yaml pack"><Icon name="download" size={18} />Export library</button>}
         <input ref={fileInput} hidden type="file" accept=".yaml,.yml,.json,.wod.yaml,.wod.json,application/yaml,application/x-yaml,text/yaml,application/json" onChange={event => void importFile(event.target.files?.[0])} />
       </div>
     </div>
 
     {drafts.length > 0 && <section className={styles.drafts} aria-label="Drafts"><h2>Drafts</h2><ul>{drafts.map(draft => <li key={draft.id}><div><strong>{draft.draft.title.trim() || 'Untitled workout'}</strong><small>{draft.mode === 'replace' ? `Edits to “${entries.find(entry => entry.workout.id === draft.id)?.summary.title ?? draft.id}”` : draft.importedFrom ? `Imported from ${draft.importedFrom}, not saved yet` : 'New workout'} · saved {new Date(draft.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</small></div><div className={styles.draftActions}><a className={shared.primaryButton} href={draft.id === NEW_DRAFT_ID ? NEW_HREF : draft.importedFrom ? draftHref(draft.id) : editHref(draft.id)}>Continue editing</a><button className={shared.quietButton} onClick={() => setDiscarding(draft)} aria-label={`Discard draft ${draft.draft.title.trim() || 'Untitled workout'}`}><Icon name="trash" size={16} />Discard</button></div></li>)}</ul></section>}
     {missingId && <p className={shared.notice} role="status">No workout with the ID “{missingId}” is in this library. It may have been removed from this device.</p>}
-    {storageError && <p className={shared.notice} role="alert">{storageError}</p>}
+    {recoveries.map(({ checkpoint }) => <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Interrupted session"><div><strong>Interrupted session of “{checkpoint.workout.title}”</strong><p>Saved {elapsedText(Date.now() - new Date(checkpoint.savedAt).getTime())} on this device. Resume where it stopped, or discard it.</p></div><div className={styles.bannerActions}><a className={shared.primaryButton} href={playHref(checkpoint.workoutId)}><Icon name="play" size={16} />Resume</a><button type="button" className={shared.quietButton} onClick={() => void onDiscardRecovery(checkpoint.sessionId)}>Discard</button></div></section>)}
+    {notice && <p className={shared.notice} role="alert">{notice} <button type="button" className={styles.linkButton} onClick={onClearNotice}>Dismiss</button></p>}
+    {connection === 'unreachable' && <p className={shared.notice} role="status">The household server cannot be reached. The library shows what this device last saw; anything you save waits here and uploads when the server is back.</p>}
+    {legacy && !migrationHidden && <section className={styles.banner} role="status" aria-label="Move device data">
+      <div><strong>This device still holds data from before the household server.</strong><p>{[legacy.workouts.length ? `${legacy.workouts.length} saved ${legacy.workouts.length === 1 ? 'workout' : 'workouts'}` : '', legacy.sessions.length ? `${legacy.sessions.length} logged ${legacy.sessions.length === 1 ? 'session' : 'sessions'}` : '', 'your settings'].filter(Boolean).join(', ')}. Move them to the server so every device sees them; the browser copies are removed afterwards.</p></div>
+      <div className={styles.bannerActions}><button type="button" className={shared.primaryButton} disabled={migrating || connection !== 'online'} onClick={() => { void onMigrate().then(report => { const summary = report as { workouts?: { created: number; renamed: { from: string; to: string }[] }; sessions?: { created: number } } | undefined; if (summary) setMigrationReport(`Moved ${summary.workouts?.created ?? 0} workouts and ${summary.sessions?.created ?? 0} sessions to the server${summary.workouts?.renamed.length ? ` (${summary.workouts.renamed.map(item => `${item.from} became ${item.to}`).join(', ')})` : ''}.`); }); }}><Icon name="upload" size={16} />{migrating ? 'Moving…' : 'Move to the server'}</button><button type="button" className={shared.quietButton} onClick={() => setMigrationHidden(true)}>Not now</button></div>
+    </section>}
+    {migrationReport && <p className={shared.notice} role="status">{migrationReport}</p>}
+    {conflicts.map(item => { const workout = item.body as Workout; const taken = new Set(entries.map(entry => entry.workout.id)); return <p key={item.id} className={shared.notice} role="alert">“{workout.title}” could not be saved: the household server already holds revision {item.current?.revision ?? '?'} of it, changed elsewhere. <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'copy', freeWorkoutId(`${workout.id}-copy`, taken))}>Save mine as a copy</button> <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'discard')}>Discard mine</button></p>; })}
+    {rejected.map(item => <p key={item.id} className={shared.notice} role="alert">A change could not be uploaded and will not be retried: {item.error ?? 'the server refused it'}. <button type="button" className={styles.linkButton} onClick={() => void onDismissRejected(item)}>Dismiss</button></p>)}
 
     <div className={styles.filters} role="search" aria-label="Filter workouts">
       <div className={styles.filterTop}>
         <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment (typos welcome)" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
-        <label className={styles.sort}>Sort<select value={sort} onChange={event => setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option></select></label>
+        <div className={styles.sortControls}>
+          <label className={styles.sort}>Sort<select value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
+          <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
+        </div>
       </div>
       {group('Athletes', <>{([[1, 'Solo'], [2, 'Pair']] as const).map(([value, label]) => <Chip key={value} kind={value === 2 ? 'pair' : 'solo'} icon={value === 2 ? 'users' : 'user'} pressed={participants === value} onClick={() => setParticipants(current => current === value ? '' : value)}>{label}</Chip>)}</>)}
       {group('Format', SECTION_FORMATS.map(item => <Chip key={item} kind="format" pressed={format.includes(item)} onClick={() => setFormat(current => toggle(current, item))}>{FORMAT_LABELS[item]}</Chip>))}
@@ -155,7 +199,7 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
     <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}{onlyMine && preferences.myEquipment.length === 0 && <> · bodyweight only, <a href={settingsHref('equipment')}>tick your gear in settings</a></>}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
     {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul className={styles.grid} aria-label="Workouts">
-      {visible.map(({ workout, summary, source }) => {
+      {visible.map(({ workout, summary, source, pending }) => {
         const last = lastDone(sessions, workout.id);
         const count = timesDone(sessions, workout.id);
         return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt>
@@ -168,6 +212,7 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
             <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
           </dl>
           <div className={styles.tags}>
+            {pending && <Chip kind="neutral" icon="upload" title="Saved on this device; it reaches the household server when the server is back">Not yet on the server</Chip>}
             {last ? <Chip kind="done" icon="check" title={new Date(last.finishedAt).toLocaleString()}>{count === 1 ? 'Done once' : `Done ${count}×`} · {agoText(last.finishedAt)}</Chip> : <Chip kind="neutral">Not done yet</Chip>}
             {summary.equipmentNeeded.length > 0 ? summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</button>) : <span className={styles.tag} data-plain>Bodyweight only</span>}
           </div>
@@ -180,17 +225,9 @@ export function Library({ entries, collections, sessions, onImport, onImportDraf
     </ul>}
 
     <dialog ref={importDialog} className={shared.dialog} aria-labelledby="import-title"><div className={shared.dialogHeading}><h2 id="import-title">Preview your WOD</h2><button className={shared.iconButton} aria-label="Close import preview" onClick={() => importDialog.current?.close()}><Icon name="close" /></button></div>
-      {importError ? <p role="alert" className={shared.importError}>{importError}</p> : preview && previewSummary && <>
-        <h3>{preview.title}</h3>
-        {preview.description && <p>{preview.description}</p>}
-        <p>{durationLabel(previewSummary)} incl. prep · {preview.participants === 2 ? '2 athletes' : 'Solo'} · {previewSummary.formats.map(item => FORMAT_LABELS[item]).join(', ')} · {previewSummary.sections} {previewSummary.sections === 1 ? 'section' : 'sections'} · {previewSummary.movements.length} movements · projected {previewSummary.difficulty.label.toLowerCase()}</p>
-        {previewSummary.equipmentNeeded.length > 0 && <p>{previewSummary.equipmentNeeded.join(' + ')}</p>}
-        {conflict ? <p className={shared.notice} role="status">{conflict.source === 'bundled' ? `“${conflict.summary.title}” is a bundled workout with the same ID. The import is saved as a separate copy.` : `“${conflict.summary.title}” is already saved with this ID. Import another copy, or replace the saved one.`}</p> : <p className={shared.dialogIntro}>Saved to this device’s library. Starting is a separate step.</p>}
-        <div className={shared.dialogActions}>
-          {conflict?.source === 'saved' && <button className={shared.quietButton} onClick={() => confirmImport('replace')}>Replace saved copy</button>}
-          <button className={shared.primaryButton} onClick={() => confirmImport('copy')}>{conflict ? 'Import as copy' : 'Save to library'}<Icon name="arrow" /></button>
-        </div>
-      </>}
+      {importError ? <p role="alert" className={shared.importError}>{importError}</p> : preview && <ImportPreview key={preview.name + preview.file.kind} file={preview.file} fileName={preview.name} entries={entries} difficulty={preferences.difficulty}
+        onOpenInEditor={preview.file.kind === 'workout' && workoutToBuilder(preview.file.workout) ? workout => { closeImport(); onImportDraft(workout, preview.name); } : undefined}
+        onConfirm={async (workouts, packCollections, decisions) => { await onImportPack(workouts, packCollections, decisions); closeImport(); }} onClose={closeImport} />}
     </dialog>
 
     <ConfirmDialog open={Boolean(discarding)} title={`Discard “${discarding?.draft.title.trim() || 'Untitled workout'}”?`} confirmLabel="Discard draft" cancelLabel="Keep it" onClose={() => setDiscarding(undefined)} onConfirm={() => { if (discarding) onDiscardDraft(discarding.id); setDiscarding(undefined); }}><p>The draft is removed from this device. Saved workouts are not affected.</p></ConfirmDialog>

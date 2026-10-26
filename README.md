@@ -16,7 +16,7 @@ It runs as a single container on your own hardware and requires no account, clou
   <img src="docs/images/hero.png" alt="The library with its filters and cards, and the player running a partner circuit in the dark theme" width="960">
   </br></br>
 
-**[👋 Introduction](#-introduction)** | **[✅ Features](#features)** | **[🚀 Setup](#-setup)** | **[🏠 Run it at home](#-run-it-at-home)** | **[📄 Workout files](#-workout-files)** | **[🔧 Developer notes](#-developer-notes)** | **[🧹 Cleanup](#-cleanup)** | **[🙏 Acknowledgements](#-acknowledgements)**
+**[👋 Introduction](#-introduction)** | **[🚀 Setup](#-setup)** | **[🏠 Run it at home](#-run-it-at-home)** | **[📄 Workout files](#-workout-files)** | **[🔧 Developer notes](#-developer-notes)** | **[🧹 Cleanup](#-cleanup)** | **[🙏 Acknowledgements](#-acknowledgements)**
 
   </br>
 
@@ -63,8 +63,11 @@ Pick a session from the library, press Start, and put the phone down.
 - [x] Collections, a session log on every card, import and export of single `.wod.yaml` files
 - [x] One container, no account, no cloud, no tracking.
       Light and dark themes
-- [ ] Recovery after a reload and a household database shared by every device (next milestone)
-- [ ] Workout packs with sharing provenance, and login (after that)
+- [x] A household server: one SQLite database shared by every device, with a cache and an outbox on each device for the time the server is away
+- [x] Recovery after a reload or a killed browser, and one tab in control of a session
+- [x] History with Repeat and score corrections, backups through the SQLite backup API, versioned migrations
+- [x] Workout packs with sharing provenance: reimports recognised, newer revisions can replace
+- [ ] Login (the server stays on a trusted network until then)
 
 > [!NOTE]
 > Everything you build, import or log stays in your browser until the household server milestone lands.
@@ -90,10 +93,11 @@ npm ci
 ### 2. Run it
 
 ```sh
-npm run dev
+npm run dev:full
 ```
 
 Open http://127.0.0.1:5173, pick a workout, press Start.
+The household API runs beside the dev server and keeps its data in `.data/app.sqlite`.
 
 > [!TIP]
 > Press **Test sound** in the header once: browsers only play audio after a tap, and that tap unlocks the beeps and voices for the session.
@@ -112,16 +116,18 @@ The walkthrough, the settings table and the HTTPS note are in [docs/deploy.md](d
 To build and run from source locally:
 
 ```sh
-docker compose -p openwod-preview -f deploy/compose.dev.yaml up --build -d
+docker compose -f deploy/compose.dev.yaml up --build -d
 ```
 
 The image build renders the cue voices with Piper, so the first build takes a few minutes.
-Afterwards the container serves the app and its API on port 8080 with no network dependency at all.
+Afterwards the container serves the app and its API on port 8080 with no network dependency at all, and the household's data lives in the `/data` volume.
+Backup, restore, upgrade and rollback are in [docs/deploy.md](docs/deploy.md).
 
 ## 📄 Workout files
 
 A workout is one `.wod.yaml` file: readable, diffable, and the same whether it is bundled, built in the editor or sent to a friend.
 Durations are human (`40s`, `1m30s`, `10m`), loads carry a women's amount, and movement names resolve against the catalogue.
+A `.wods.yaml` pack carries several workouts and their collections, and a sharing identity on each workout lets an installation recognise a reimport and offer a newer revision as a replacement.
 
 ```yaml
 format: openwod.workout
@@ -161,7 +167,8 @@ Add a file to a folder under `workouts/`, run `npm run workouts:bundle`, and it 
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Vite dev server for the web app. |
+| `npm run dev:full` | The API on port 8787 beside the Vite dev server, which proxies `/api` to it. |
+| `npm run dev` | Vite dev server for the web app only. |
 | `npm run check` | Typecheck, schema and registry drift, the legacy-name guard, 129 unit tests including the frozen timing traces. |
 | `npm run build` | Production bundle of the web app and the server. |
 | `npm run test:e2e` | Browser scenarios. Add `--project=firefox --project=webkit` to pick engines. |
@@ -172,8 +179,8 @@ Add a file to a folder under `workouts/`, run `npm run workouts:bundle`, and it 
 
 ```
 apps/
-  server/        Fastify: health endpoints and the built app (persistence lands in the next milestone)
-  web/           React 19 + Vite: library, editor, player, settings
+  server/        Fastify: the household API over SQLite, migrations, health, the built app
+  web/           React 19 + Vite: library, editor, player, history, settings, the data layer under src/data/
 packages/
   domain/        Schema (TypeBox), compiler, difficulty, loads, movement catalogue, YAML exchange
   engine/        The clock: deterministic session engine, warning marks, wash curve
@@ -197,6 +204,7 @@ workouts/        The registry: one folder per collection, one .wod.yaml per work
 
 Pushing a `v*` tag runs the **Release image** workflow: it validates, runs the browser tests, builds native amd64 and arm64 images with the voices rendered inside, smoke-tests both, and publishes a multi-arch manifest.
 A manual run publishes `sha-<commit>` instead.
+Before the tag: run `scripts/rehearse-restore.sh`, go through [docs/device-checklist.md](docs/device-checklist.md), and fill in [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md).
 
 ## 🧹 Cleanup
 

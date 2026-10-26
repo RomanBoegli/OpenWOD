@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { freeWorkoutId, slugify } from '../../packages/domain/src/library';
 import { durationBucket, equipmentOptions, matchesFilter, sortSummaries, summariseWorkout } from '../../packages/domain/src/library';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
 const fullBodyPartner = bundledWorkout('full-body-partner');
@@ -59,5 +60,17 @@ describe('library summaries and filters', () => {
     expect(sortSummaries([circuit, fullBody], 'easiest').map(item => item.id)).toEqual(['partner-circuit', 'full-body-partner']);
     expect(sortSummaries([circuit, fullBody], 'hardest').map(item => item.id)).toEqual(['full-body-partner', 'partner-circuit']);
     expect(equipmentOptions([circuit, fullBody, { ...circuit, equipment: ['kettlebell'] }])).toEqual(['Dumbbells', 'Exercise mat', 'Kettlebell', 'Rowing machine']);
+  });
+});
+
+describe('workout ids for copies', () => {
+  it('slugifies titles and appends a counter only when the id is taken', () => {
+    expect(slugify('Fran: Thrusters & Pull-ups!')).toBe('fran-thrusters-pull-ups');
+    expect(slugify('Élan vital')).toBe('elan-vital');
+    expect(slugify('')).toBe('workout');
+    expect(freeWorkoutId('fran', new Set())).toBe('fran');
+    expect(freeWorkoutId('fran', new Set(['fran']))).toBe('fran-2');
+    expect(freeWorkoutId('fran', new Set(['fran', 'fran-2']))).toBe('fran-3');
+    expect(freeWorkoutId('x'.repeat(120), new Set(['x'.repeat(120)])).length).toBeLessThanOrEqual(120);
   });
 });

@@ -3,7 +3,9 @@ import { formatDuration, parseDuration } from '../../../packages/domain/src';
 import { builderToWorkout, emptySection, emptySlot, LIST_FORMATS, MANUAL_FORMATS, validateDraft, type BuilderDraft, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
 import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src/compiler';
 import { rateDifficulty, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
-import { FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat } from '../../../packages/domain/src/schema';
+import { FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat, type Workout } from '../../../packages/domain/src/schema';
+import type { SaveResult } from './data/use-library-data';
+import { workoutHref } from './router';
 import { displayTime } from '../../../packages/engine/src';
 import type { Catalogue, Movement } from '../../../packages/domain/src/catalogue';
 import { equipmentKey, inferEquipment } from '../../../packages/domain/src/library';
@@ -79,7 +81,9 @@ interface EditorProps {
   onAddMovement: (record: Movement) => void;
   savedAt?: string;
   onAutosave: (draft: BuilderDraft) => void;
-  onSave: (draft: BuilderDraft) => void;
+  /** The saved workout's id when replacing, for the conflict dialog's link to the newer version. */
+  workoutId?: string;
+  onSave: (draft: BuilderDraft, overwriteRevision?: number) => Promise<SaveResult>;
   onDiscard: () => void;
 }
 
@@ -95,7 +99,10 @@ const FORMAT_HELP: Record<SectionFormat, string> = {
 const lanesOf = (draft: BuilderDraft) => draft.sections.flatMap(section => section.slots.flatMap(slot => [slot.A, slot.B])).filter((lane): lane is Prescription => Boolean(lane?.name.trim()));
 const derivedEquipment = (lanes: Prescription[], catalogue: Catalogue) => [...lanes.flatMap(lane => catalogue.equipmentOf(lane)), ...inferEquipment(lanes.filter(lane => !catalogue.resolve(lane)).map(lane => lane.name))];
 
-export function Editor({ mode, initial, importedFrom, catalogue, difficulty: calibration, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
+export function Editor({ mode, workoutId, initial, importedFrom, catalogue, difficulty: calibration, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
+  const [saving, setSaving] = useState(false);
+  const [conflict, setConflict] = useState<{ revision: number; document?: Workout }>();
+  const save = async (overwrite?: number) => { setSaving(true); try { const result = await onSave(effective, overwrite); if (typeof result === 'object') setConflict(result.conflict); else setConflict(undefined); } finally { setSaving(false); } };
   const [draft, setDraft] = useState(initial);
   const [dirty, setDirty] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -305,13 +312,16 @@ export function Editor({ mode, initial, importedFrom, catalogue, difficulty: cal
           {(issues.length > 0 || compiled.error) && <ul className={styles.issues} role="alert">{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}
           <p className={styles.status} aria-live="polite">{dirty ? 'Unsaved changes…' : savedAt ? `Draft saved on this device · ${new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Drafts save automatically on this device.'}</p>
           <div className={styles.saveActions}>
-            <button type="button" className={shared.primaryButton} disabled={!canSave} onClick={() => onSave(effective)}><Icon name="check" />{mode === 'replace' ? 'Save changes' : 'Save to library'}</button>
+            <button type="button" className={shared.primaryButton} disabled={!canSave || saving} onClick={() => void save()}><Icon name="check" />{saving ? 'Saving…' : mode === 'replace' ? 'Save changes' : 'Save to library'}</button>
             <button type="button" className={shared.quietButton} onClick={() => setDiscarding(true)}>Discard draft</button>
           </div>
         </div>
       </aside>
     </div>
 
+    <ConfirmDialog open={Boolean(conflict)} title="Saved elsewhere since you opened it" confirmLabel="Overwrite with mine" cancelLabel="Keep editing" onClose={() => setConflict(undefined)} onConfirm={() => { const revision = conflict?.revision ?? 0; setConflict(undefined); void save(revision); }}>
+      <p>Someone saved revision {conflict?.revision}{conflict?.document ? ` (“${conflict.document.title}”)` : ''} of this workout on the household server while you were editing. Overwrite it with your version, or {workoutId ? <a href={workoutHref(workoutId)} onClick={() => onDiscard()}>open the newer version</a> : 'keep editing'} and copy your changes across.</p>
+    </ConfirmDialog>
     <ConfirmDialog open={discarding} title="Discard this draft?" confirmLabel="Discard" cancelLabel="Keep editing" onClose={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); onDiscard(); }}>
       <p>{mode === 'replace' ? 'The saved workout stays as it was. Your unsaved edits are removed from this device.' : 'The draft is removed from this device.'}</p>
     </ConfirmDialog>

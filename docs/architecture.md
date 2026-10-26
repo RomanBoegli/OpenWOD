@@ -94,25 +94,39 @@ Browser visibility loss auto-pauses without automatic resume.
 Wake lock is acquired while running/preparing where supported.
 Failures are visible.
 
-## Sharing and persistence boundary
+## Sharing and persistence
 
-The app imports and exports complete `.wod.yaml` files (file version 3: human-readable durations under `duration`/`prep`/`*Rest`/`cap`/`interval`/`turn`/`time` keys, parsed by one YAML 1.2 parser that also reads JSON).
-The file JSON Schema is derived from the model schema by renaming duration properties, so TypeBox stays the single source.
-Only version 3 is read.
-The two pre-release versions are refused with a message.
+The app imports and exports complete `.wod.yaml` files (file version 3: human-readable durations under `duration`/`prep`/`*Rest`/`cap`/`interval`/`turn`/`time` keys, parsed by one YAML 1.2 parser that also reads JSON) and `.wods.yaml` packs (`openwod.workoutPack` version 1) that carry several workouts and the collections grouping them.
+The file JSON Schemas are derived from the model schema by renaming duration properties, so TypeBox stays the single source.
+Only the current versions are read.
 Anchors, aliases and duplicate keys are rejected.
 The model is always integer milliseconds.
-Imports go into a device library held in browser storage, validated and compiled again on every load so an older or corrupt entry is dropped rather than approximated.
-ID collisions produce a copy with a free ID, or an explicit replacement of a saved entry.
-Preferences (names, sound, theme, view) are also device-local and validated on read.
-Both are conveniences until SQLite and IndexedDB arrive and are never treated as the household's authoritative data.
-Files exclude household names, audio settings, and all session data.
-Versioned schemas/examples describe the supported subset.
-Full attribution/provenance, remapped saved-library identities, packs, and supported-version migrations belong to the sharing/editor milestone.
+A workout may carry a sharing identity (`sharing`: a stable id, the author's revision at export, and for a derivative the identity it came from).
+The identity is assigned the first time a saved workout is exported, bundled workouts carry a deterministic one, and the local id and revision stay separate from it (SHR-05).
+An import previews every workout with its attribution and a state read from the provenance: known, newer than the known copy, or new.
+Known copies are skipped by default, a newer revision may replace the local workout at its expected revision, and ids that are taken are remapped on the server in one transaction.
+Files exclude household names, audio settings and all session data.
+An edit of an imported workout gives it a new sharing identity that records its source.
 
-Phase 0 does not write browser or server checkpoints and does not claim recovery.
-The next vertical slice adds authenticated SQLite content/results, IndexedDB checkpoint/event/outbox transactions, bounded-age progress records naming their checkpoint, Web Locks ownership, and consistent backups.
-Snapshot deduplication remains optional until measured need.
+The household server (`apps/server`) is the authoritative store (DAT-01): SQLite through `node:sqlite` at `DATABASE_PATH`, with revisioned JSON documents for workouts and one master-data document, immutable session records with the workout as played and the engine's event log, and a correction table for scores.
+Migrations are versioned and run in transactions, a newer schema refuses to start, and an existing file is backed up with the SQLite backup API before any migration.
+Writes require the expected revision (`If-Match`) and answer a conflict with the current document.
+Session uploads are idempotent by id.
+Validation reuses the domain parser and compiler, so invalid content never reaches the database.
+In test builds a header selects a per-test in-memory database, which lets the browser suite run in parallel against one server process.
+
+On the device (`apps/web/src/data/`), IndexedDB holds five stores: checkpoints and progress records of running sessions, the outbox of writes that have not reached the server, a cache of the household data for an instant and offline start, and metadata.
+`useLibraryData` owns the household state for the app: cache first, then the server, with writes going to the server directly and into the outbox on a network failure.
+The outbox flushes single-flight with backoff on reconnect, when the tab becomes visible and on a timer, and a master-data conflict is resolved by merging ours over the server's.
+Everything not yet uploaded is labelled in the header, on the card, in history and in settings (DAT-09).
+A pre-1.0 device library is offered for a one-time move to the server, in one transaction that renames colliding ids and remaps sessions and collections.
+
+Recovery (ENG-11/12) writes a full checkpoint (`engine.toJSON()` plus the workout as played) after every accepted command and transition, and a small progress record about once a second that names the checkpoint revision it extends.
+Both are written through a queue that keeps only the latest value, off the timing path.
+On the play route the app reads the device's checkpoints before mounting the player, restores the engine paused with reason `recovered`, pulls offsets that overran a boundary back to that boundary, and asks for Resume or End.
+A session ended from that prompt is recorded as aborted and interrupted.
+When checkpoint writes fail, the player says so and never claims a recovery (AT-16).
+One tab controls a session (ENG-14): a Web Lock named by the session id, a BroadcastChannel for the takeover, and a ping that distinguishes a live holder from a document on its way out.
 
 ## Screens, routes and theme
 
@@ -178,13 +192,14 @@ Bundled workouts are only ever duplicated.
 
 ## Deployment and tests
 
-The production root Compose uses an image reference and named `/data` volume.
-Source-build Compose is a separate local route.
-Phase 0 health explicitly reports no persistence.
-Images run the unit/schema checks during their build.
-Release CI runs browser tests, then tests amd64/arm64 images on native runners before publishing the combined release manifest.
+The production root Compose names the stack `openwod`, uses an image reference and a named `/data` volume, and passes `DATABASE_PATH`, `LOG_LEVEL` and `TRUST_PROXY`.
+Source-build Compose is a separate local route named `openwod-preview`.
+Health reports persistence and the schema version once the database is open.
+Images run the unit and schema checks during their build.
+Release CI runs browser tests, then tests amd64 and arm64 images on native runners before publishing the combined release manifest.
+`scripts/rehearse-restore.sh` rehearses backup, volume loss and restore against a throwaway stack.
 
-Browser clock/audio injection exists only in test builds.
-Unit and browser tests share the canonical fixture definitions.
-Accelerated tests establish semantics.
-A real-hour reliability/accuracy run and physical mobile/audio/readability checks remain separate release work.
+Browser clock and audio injection exist only in test builds.
+The Playwright configuration starts the API with an in-memory database and Vite with a proxy, and a fixture gives every test its own scope.
+Accelerated tests establish semantics, including reload recovery, takeover between tabs, offline finish and upload, and the device migration.
+A real-hour reliability and accuracy run and the physical device checks (`docs/device-checklist.md`) remain release work done by hand.

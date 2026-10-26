@@ -116,3 +116,32 @@ describe('deterministic workout engine', () => {
     expect(washDrain(0, 60_000)).toBe(1);
   });
 });
+
+describe('checkpoint recovery (ENG-11/12)', () => {
+  it('restores a checkpoint with its progress offsets and completes an overdue boundary on the first tick after resume', () => {
+    let now = 0; let id = 0;
+    const plan = compileWorkout(bundledWorkout('partner-circuit'));
+    const engine = new WorkoutEngine(plan, () => now, 'ckpt');
+    const command = (type: Parameters<WorkoutEngine['command']>[0]['type']) => engine.command({ type, id: String(++id), occurrenceId: engine.occurrenceId });
+    command('play'); now = 10_000; engine.tick(); now = 35_000; engine.tick();
+    const checkpoint = engine.toJSON();
+    expect(engine.offsets()).toEqual({ phaseMs: 25_000, activeMs: 25_000, sectionMs: 25_000 });
+    // The tab died 20 seconds later than the last checkpoint, 5 seconds past the slot boundary.
+    const progress = { phaseMs: 45_000, activeMs: 45_000, sectionMs: 45_000 };
+    let later = 500_000;
+    const restored = WorkoutEngine.fromSnapshot(plan, { ...structuredClone(checkpoint), ...progress }, () => later);
+    expect(restored.project().status).toBe('paused');
+    expect(restored.project().pauseReason).toBe('recovered');
+    // The five seconds past the slot boundary are pulled back: the boundary is due the moment the session resumes.
+    expect(restored.readClocks().activeMs).toBe(40_000);
+    expect(restored.command({ type: 'resume', id: 'r', occurrenceId: restored.occurrenceId })).toBe(true);
+    restored.tick();
+    expect(restored.project().status).toBe('running');
+    expect(restored.project().current.anchor).not.toBe(engine.project().current.anchor);
+    expect(restored.readClocks().activeMs).toBe(40_000);
+    later += 5_000; restored.tick();
+    expect(restored.readClocks().activeMs).toBe(45_000);
+    // Commands acknowledged before the checkpoint stay acknowledged after it.
+    expect(restored.command({ type: 'pause', id: '1', occurrenceId: restored.occurrenceId })).toBe(false);
+  });
+});

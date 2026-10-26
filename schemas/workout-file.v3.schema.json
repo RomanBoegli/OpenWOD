@@ -1431,6 +1431,44 @@
           "minItems": 1,
           "type": "array"
         },
+        "sharing": {
+          "additionalProperties": false,
+          "properties": {
+            "derivedFrom": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "sourceRevision": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "sourceRevision"
+              ],
+              "type": "object"
+            },
+            "id": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "sourceRevision": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "sourceRevision"
+          ],
+          "type": "object"
+        },
         "title": {
           "maxLength": 160,
           "minLength": 1,

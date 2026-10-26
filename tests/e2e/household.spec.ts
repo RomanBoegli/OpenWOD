@@ -1,0 +1,90 @@
+import { expect, test } from './fixtures';
+import { bundledWorkout } from '../../packages/domain/src/bundled';
+import type { Workout } from '../../packages/domain/src/schema';
+import { advance, PLAYER, ready } from './helpers';
+
+const own = (id: string, title: string, revision = 1): Workout => ({ ...bundledWorkout('fran'), id, revision, title, sharing: undefined });
+
+test.describe('household server', () => {
+  test('a saved workout reaches the server, shows on a fresh page, and an archive removes it', async ({ page, api }) => {
+    await page.goto('/#/new');
+    await page.getByLabel('Title', { exact: true }).fill('Household check');
+    const lane = page.getByRole('combobox', { name: 'Section 1 slot 1 athlete A', exact: true });
+    await lane.fill('Burpees');
+    await page.getByRole('combobox', { name: 'Section 1 slot 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('button', { name: 'Save to library' }).click();
+    await expect(page).toHaveURL(/#\/wod\/household-check$/);
+    const stored = await api.get<{ workouts: { id: string; revision: number }[] }>('/api/v1/workouts');
+    expect(stored.workouts.map(item => [item.id, item.revision])).toEqual([['household-check', 1]]);
+    await page.goto('/');
+    await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem').filter({ hasText: 'Household check' })).toBeVisible();
+    await page.goto('/#/wod/household-check');
+    await page.getByRole('button', { name: 'Remove', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Remove workout' }).click();
+    await expect.poll(async () => (await api.get<{ workouts: unknown[] }>('/api/v1/workouts')).workouts.length).toBe(0);
+    expect((await api.get<{ workouts: unknown[] }>('/api/v1/workouts?includeArchived=1')).workouts).toHaveLength(1);
+  });
+
+  test('a concurrent edit is caught: the editor offers to overwrite and the next revision lands', async ({ page, api }) => {
+    expect((await api.put('/api/v1/workouts/race', { document: own('race', 'Race') })).status).toBe(201);
+    await page.goto('/#/wod/race/edit');
+    await page.getByLabel('Title', { exact: true }).fill('Race edited here');
+    expect((await api.put('/api/v1/workouts/race', { document: own('race', 'Race edited elsewhere', 2) }, 1)).status).toBe(200);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Saved elsewhere since you opened it' });
+    await expect(dialog).toContainText('revision 2');
+    await dialog.getByRole('button', { name: 'Overwrite with mine' }).click();
+    await expect(page).toHaveURL(/#\/wod\/race$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Race edited here');
+    const stored = await api.get<{ revision: number; document: Workout }>('/api/v1/workouts/race');
+    expect(stored.revision).toBe(3);
+    expect(stored.document.title).toBe('Race edited here');
+  });
+
+  test('history lists sessions newest first, repeats one, and corrects a score keeping the earlier value', async ({ page, api }) => {
+    await page.goto('/#/wod/cindy/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    await page.getByRole('button', { name: 'Round', exact: true }).click();
+    await page.getByRole('button', { name: 'Round', exact: true }).click();
+    await advance(page, 1_200_000);
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await expect.poll(async () => (await api.get<{ sessions: { outcome: string }[] }>('/api/v1/sessions')).sessions.length).toBe(1);
+    await page.goto('/#/history');
+    const row = page.getByRole('list', { name: 'Sessions' }).getByRole('listitem').first();
+    await expect(row).toContainText('Cindy');
+    await expect(row).toContainText('Capped');
+    await expect(row).toContainText('2 rounds');
+    await row.getByRole('button', { name: 'Correct score' }).click();
+    const dialog = page.getByRole('dialog', { name: /Correct the score/ });
+    await dialog.getByLabel('Rounds').fill('3');
+    await dialog.getByLabel('Note').fill('Miscounted');
+    await dialog.getByRole('button', { name: 'Save correction' }).click();
+    await expect(row).toContainText('3 rounds');
+    await expect(row).toContainText('Corrected');
+    const session = (await api.get<{ sessions: { id: string; revision: number }[] }>('/api/v1/sessions')).sessions[0];
+    expect(session.revision).toBe(2);
+    const full = await api.get<{ corrections: { previousResults: { counter: { rounds: number } }[]; note: string }[] }>(`/api/v1/sessions/${session.id}`);
+    expect(full.corrections[0].previousResults[0].counter.rounds).toBe(2);
+    expect(full.corrections[0].note).toBe('Miscounted');
+    await row.getByRole('link', { name: 'Repeat' }).click();
+    await expect(page).toHaveURL(/#\/wod\/cindy\/play$/);
+  });
+
+  test('AT-24: the server going away mid-session changes nothing in the player, and the result uploads afterwards', async ({ page, api }) => {
+    await page.goto(PLAYER); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    await page.route('**/api/**', route => route.abort('connectionrefused'));
+    await advance(page, 60_000);
+    await expect(page.getByRole('status')).toHaveText('Work');
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:30');
+    await advance(page, 1_140_000);
+    await expect(page.getByRole('status')).toHaveText('Workout complete');
+    await expect(page.getByText(/change(s)? waiting/)).toBeVisible();
+    await page.unroute('**/api/**');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect.poll(async () => (await api.get<{ sessions: unknown[] }>('/api/v1/sessions')).sessions.length, { timeout: 20_000 }).toBe(1);
+    await expect(page.getByText(/change(s)? waiting/)).toHaveCount(0);
+  });
+});

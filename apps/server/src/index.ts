@@ -1,7 +1,21 @@
-import { createServer } from './app';
+import { appVersion, createServer } from './app';
+import { readConfig } from './config';
+import { SchemaNewerError } from './db';
+import { Store } from './store';
 
-const app = await createServer({ logger: true, ...(process.env.WEB_ROOT ? { webRoot: process.env.WEB_ROOT } : {}) });
-const port = Number(process.env.PORT ?? 8080);
-if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer from 1 to 65535.');
-for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { void app.close().catch(error => { app.log.error(error); process.exitCode = 1; }); });
-await app.listen({ host: process.env.HOST ?? '0.0.0.0', port });
+const config = readConfig();
+const version = appVersion();
+let opened: Awaited<ReturnType<typeof Store.open>>;
+try {
+  opened = await Store.open(config.databasePath, { appVersion: version });
+} catch (error) {
+  // DAT-08: never serve against a schema this build does not understand.
+  console.error(error instanceof SchemaNewerError ? error.message : `Could not open the database at ${config.databasePath}: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
+const { store, migration } = opened;
+const app = await createServer({ logger: { level: config.logLevel }, trustProxy: config.trustProxy, store, scopes: config.testScopes, version, ...(config.webRoot ? { webRoot: config.webRoot } : {}) });
+if (migration.to !== migration.from) app.log.info({ from: migration.from, to: migration.to, backup: migration.backup }, 'Database migrated.');
+app.log.info({ path: config.databasePath, schemaVersion: store.schemaVersion, version }, 'Datastore ready.');
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => { void app.close().then(() => store.close()).catch(error => { app.log.error(error); process.exitCode = 1; }); });
+await app.listen({ host: config.host, port: config.port });

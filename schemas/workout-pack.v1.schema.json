@@ -1,0 +1,1542 @@
+{
+  "$id": "WorkoutPackV1",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "properties": {
+    "collections": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "maxLength": 500,
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          },
+          "workoutIds": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 500,
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "workoutIds"
+        ],
+        "type": "object"
+      },
+      "maxItems": 50,
+      "type": "array"
+    },
+    "description": {
+      "maxLength": 2000,
+      "type": "string"
+    },
+    "format": {
+      "const": "openwod.workoutPack",
+      "type": "string"
+    },
+    "formatVersion": {
+      "const": 1,
+      "type": "integer"
+    },
+    "title": {
+      "maxLength": 160,
+      "type": "string"
+    },
+    "workouts": {
+      "items": {
+        "$id": "WorkoutV3",
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "additionalProperties": false,
+            "properties": {
+              "author": {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              "licence": {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              "notes": {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              },
+              "sourceUrl": {
+                "maxLength": 500,
+                "minLength": 1,
+                "pattern": "^https?://",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "equipment": {
+            "items": {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "pattern": "^[a-zA-Z0-9_.:-]+$",
+            "type": "string"
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "const": 1,
+                "type": "number"
+              },
+              {
+                "const": 2,
+                "type": "number"
+              }
+            ]
+          },
+          "prep": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                "type": "string"
+              }
+            ],
+            "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "schemaVersion": {
+            "const": 2,
+            "type": "number"
+          },
+          "sections": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "body": {
+                  "$id": "WorkoutNodeV3",
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "assignments": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "A": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "calories": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "distance": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "unit": {
+                                      "anyOf": [
+                                        {
+                                          "const": "m",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "km",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 1000000,
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "value",
+                                    "unit"
+                                  ],
+                                  "type": "object"
+                                },
+                                "load": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "unit": {
+                                          "anyOf": [
+                                            {
+                                              "const": "kg",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "lb",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "percent",
+                                              "type": "string"
+                                            }
+                                          ]
+                                        },
+                                        "value": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        },
+                                        "women": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "value",
+                                        "unit"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "minProperties": 1,
+                                      "properties": {
+                                        "heavy": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "light": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "medium": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                "movement": {
+                                  "maxLength": 80,
+                                  "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "notes": {
+                                  "maxLength": 500,
+                                  "type": "string"
+                                },
+                                "reps": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "shortName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "spokenName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "time": {
+                                  "anyOf": [
+                                    {
+                                      "minimum": 0.001,
+                                      "type": "number"
+                                    },
+                                    {
+                                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                                      "type": "string"
+                                    }
+                                  ],
+                                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "type": "object"
+                            },
+                            "B": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "calories": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "distance": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "unit": {
+                                      "anyOf": [
+                                        {
+                                          "const": "m",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "km",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 1000000,
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "value",
+                                    "unit"
+                                  ],
+                                  "type": "object"
+                                },
+                                "load": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "unit": {
+                                          "anyOf": [
+                                            {
+                                              "const": "kg",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "lb",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "percent",
+                                              "type": "string"
+                                            }
+                                          ]
+                                        },
+                                        "value": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        },
+                                        "women": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "value",
+                                        "unit"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "minProperties": 1,
+                                      "properties": {
+                                        "heavy": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "light": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "medium": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                "movement": {
+                                  "maxLength": 80,
+                                  "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "notes": {
+                                  "maxLength": 500,
+                                  "type": "string"
+                                },
+                                "reps": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "shortName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "spokenName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "time": {
+                                  "anyOf": [
+                                    {
+                                      "minimum": 0.001,
+                                      "type": "number"
+                                    },
+                                    {
+                                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                                      "type": "string"
+                                    }
+                                  ],
+                                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "A"
+                          ],
+                          "type": "object"
+                        },
+                        "duration": {
+                          "anyOf": [
+                            {
+                              "minimum": 0.001,
+                              "type": "number"
+                            },
+                            {
+                              "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                        },
+                        "id": {
+                          "maxLength": 120,
+                          "minLength": 1,
+                          "pattern": "^[a-zA-Z0-9_.:-]+$",
+                          "type": "string"
+                        },
+                        "type": {
+                          "const": "timed",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "duration",
+                        "assignments"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "assignments": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "A": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "calories": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "distance": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "unit": {
+                                      "anyOf": [
+                                        {
+                                          "const": "m",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "km",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 1000000,
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "value",
+                                    "unit"
+                                  ],
+                                  "type": "object"
+                                },
+                                "load": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "unit": {
+                                          "anyOf": [
+                                            {
+                                              "const": "kg",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "lb",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "percent",
+                                              "type": "string"
+                                            }
+                                          ]
+                                        },
+                                        "value": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        },
+                                        "women": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "value",
+                                        "unit"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "minProperties": 1,
+                                      "properties": {
+                                        "heavy": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "light": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "medium": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                "movement": {
+                                  "maxLength": 80,
+                                  "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "notes": {
+                                  "maxLength": 500,
+                                  "type": "string"
+                                },
+                                "reps": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "shortName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "spokenName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "time": {
+                                  "anyOf": [
+                                    {
+                                      "minimum": 0.001,
+                                      "type": "number"
+                                    },
+                                    {
+                                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                                      "type": "string"
+                                    }
+                                  ],
+                                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "type": "object"
+                            },
+                            "B": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "calories": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "distance": {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "unit": {
+                                      "anyOf": [
+                                        {
+                                          "const": "m",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "km",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    "value": {
+                                      "exclusiveMinimum": 0,
+                                      "maximum": 1000000,
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "value",
+                                    "unit"
+                                  ],
+                                  "type": "object"
+                                },
+                                "load": {
+                                  "anyOf": [
+                                    {
+                                      "additionalProperties": false,
+                                      "properties": {
+                                        "unit": {
+                                          "anyOf": [
+                                            {
+                                              "const": "kg",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "lb",
+                                              "type": "string"
+                                            },
+                                            {
+                                              "const": "percent",
+                                              "type": "string"
+                                            }
+                                          ]
+                                        },
+                                        "value": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        },
+                                        "women": {
+                                          "maximum": 10000,
+                                          "minimum": 0,
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "value",
+                                        "unit"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    {
+                                      "additionalProperties": false,
+                                      "minProperties": 1,
+                                      "properties": {
+                                        "heavy": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "light": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "medium": {
+                                          "additionalProperties": false,
+                                          "properties": {
+                                            "unit": {
+                                              "anyOf": [
+                                                {
+                                                  "const": "kg",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "lb",
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "const": "percent",
+                                                  "type": "string"
+                                                }
+                                              ]
+                                            },
+                                            "value": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            },
+                                            "women": {
+                                              "maximum": 10000,
+                                              "minimum": 0,
+                                              "type": "number"
+                                            }
+                                          },
+                                          "required": [
+                                            "value",
+                                            "unit"
+                                          ],
+                                          "type": "object"
+                                        }
+                                      },
+                                      "type": "object"
+                                    }
+                                  ]
+                                },
+                                "movement": {
+                                  "maxLength": 80,
+                                  "pattern": "^[a-z0-9][a-z0-9-]{0,79}$",
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "notes": {
+                                  "maxLength": 500,
+                                  "type": "string"
+                                },
+                                "reps": {
+                                  "maximum": 100000,
+                                  "minimum": 1,
+                                  "type": "integer"
+                                },
+                                "shortName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "spokenName": {
+                                  "maxLength": 160,
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "time": {
+                                  "anyOf": [
+                                    {
+                                      "minimum": 0.001,
+                                      "type": "number"
+                                    },
+                                    {
+                                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                                      "type": "string"
+                                    }
+                                  ],
+                                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                                }
+                              },
+                              "required": [
+                                "name"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "A"
+                          ],
+                          "type": "object"
+                        },
+                        "completion": {
+                          "anyOf": [
+                            {
+                              "const": "team",
+                              "type": "string"
+                            },
+                            {
+                              "const": "both",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "maxLength": 120,
+                          "minLength": 1,
+                          "pattern": "^[a-zA-Z0-9_.:-]+$",
+                          "type": "string"
+                        },
+                        "type": {
+                          "const": "task",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "assignments"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "duration": {
+                          "anyOf": [
+                            {
+                              "minimum": 0.001,
+                              "type": "number"
+                            },
+                            {
+                              "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                        },
+                        "id": {
+                          "maxLength": 120,
+                          "minLength": 1,
+                          "pattern": "^[a-zA-Z0-9_.:-]+$",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "anyOf": [
+                            {
+                              "const": "transition",
+                              "type": "string"
+                            },
+                            {
+                              "const": "roundRest",
+                              "type": "string"
+                            },
+                            {
+                              "const": "blockRest",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "type": {
+                          "const": "rest",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "duration"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "betweenChildrenRest": {
+                          "anyOf": [
+                            {
+                              "minimum": 0,
+                              "type": "number"
+                            },
+                            {
+                              "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                        },
+                        "children": {
+                          "items": {
+                            "$ref": "WorkoutNodeV3"
+                          },
+                          "maxItems": 1000,
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "id": {
+                          "maxLength": 120,
+                          "minLength": 1,
+                          "pattern": "^[a-zA-Z0-9_.:-]+$",
+                          "type": "string"
+                        },
+                        "trailingRest": {
+                          "anyOf": [
+                            {
+                              "minimum": 0,
+                              "type": "number"
+                            },
+                            {
+                              "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                        },
+                        "type": {
+                          "const": "sequence",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "children"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "assignmentPolicy": {
+                          "anyOf": [
+                            {
+                              "const": "fixed",
+                              "type": "string"
+                            },
+                            {
+                              "const": "alternate",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "betweenIterationsRest": {
+                          "anyOf": [
+                            {
+                              "minimum": 0,
+                              "type": "number"
+                            },
+                            {
+                              "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                        },
+                        "body": {
+                          "$ref": "WorkoutNodeV3"
+                        },
+                        "count": {
+                          "maximum": 999,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "id": {
+                          "maxLength": 120,
+                          "minLength": 1,
+                          "pattern": "^[a-zA-Z0-9_.:-]+$",
+                          "type": "string"
+                        },
+                        "type": {
+                          "const": "repeat",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "count",
+                        "body"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                },
+                "cap": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.001,
+                      "type": "number"
+                    },
+                    {
+                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                      "type": "string"
+                    }
+                  ],
+                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                },
+                "counter": {
+                  "anyOf": [
+                    {
+                      "const": "roundsAndReps",
+                      "type": "string"
+                    },
+                    {
+                      "const": "rounds",
+                      "type": "string"
+                    },
+                    {
+                      "const": "none",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "format": {
+                  "anyOf": [
+                    {
+                      "const": "timedCircuit",
+                      "type": "string"
+                    },
+                    {
+                      "const": "amrap",
+                      "type": "string"
+                    },
+                    {
+                      "const": "emom",
+                      "type": "string"
+                    },
+                    {
+                      "const": "forTime",
+                      "type": "string"
+                    },
+                    {
+                      "const": "youGoIGo",
+                      "type": "string"
+                    },
+                    {
+                      "const": "strength",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "id": {
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "pattern": "^[a-zA-Z0-9_.:-]+$",
+                  "type": "string"
+                },
+                "interval": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.001,
+                      "type": "number"
+                    },
+                    {
+                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                      "type": "string"
+                    }
+                  ],
+                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                },
+                "intervals": {
+                  "maximum": 999,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "rounds": {
+                  "maximum": 999,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "title": {
+                  "maxLength": 160,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "transitionAfter": {
+                  "anyOf": [
+                    {
+                      "const": "manualReady",
+                      "type": "string"
+                    },
+                    {
+                      "const": "automatic",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "turn": {
+                  "anyOf": [
+                    {
+                      "minimum": 0.001,
+                      "type": "number"
+                    },
+                    {
+                      "pattern": "^(?:\\d+ms|\\d+:\\d{2}(?::\\d{2})?|(?=.)(?:\\d+h)?(?:\\d+m)?(?:\\d+(?:\\.\\d+)?s)?)$",
+                      "type": "string"
+                    }
+                  ],
+                  "description": "A duration such as 40s, 2m, 1m30s or 1:30; a bare number is seconds."
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "format",
+                "transitionAfter",
+                "body"
+              ],
+              "type": "object"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          "sharing": {
+            "additionalProperties": false,
+            "properties": {
+              "derivedFrom": {
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "sourceRevision": {
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "sourceRevision"
+                ],
+                "type": "object"
+              },
+              "id": {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              "sourceRevision": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "sourceRevision"
+            ],
+            "type": "object"
+          },
+          "title": {
+            "maxLength": 160,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "id",
+          "revision",
+          "title",
+          "equipment",
+          "participants",
+          "prep",
+          "sections"
+        ],
+        "type": "object"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "format",
+    "formatVersion",
+    "workouts"
+  ],
+  "type": "object"
+}

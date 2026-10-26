@@ -1,0 +1,22 @@
+.history { display: grid; gap: 18px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.row { display: grid; gap: 8px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); }
+.row[data-pending] { border-style: dashed; }
+.rowTop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.when { font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.row h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
+.row h2 a { text-decoration: none; }
+.row h2 a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.scores { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.actions a, .actions button { min-height: 40px; padding: 6px 16px; font-size: 13px; }
+.empty { padding: 40px 20px; text-align: center; color: var(--ink-3); }
+.empty h2 { margin: 0 0 6px; color: var(--ink); }
+.form { display: grid; gap: 12px; min-width: min(420px, 80vw); }
+.section { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 8px; }
+.section legend { font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); padding: 0 4px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form label { display: grid; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+.form input { min-height: 40px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font-size: 14px; }
+.prior { margin: 0; font-size: 12.5px; color: var(--ink-3); }

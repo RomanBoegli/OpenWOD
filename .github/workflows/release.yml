@@ -22,7 +22,9 @@ jobs:
       - run: npm run test:e2e
   image:
     needs: validate
+    timeout-minutes: 40
     strategy:
+      fail-fast: false
       matrix:
         include:
           - runner: ubuntu-latest
@@ -34,6 +36,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install production test browsers
+        run: npm run browsers:install -- --with-deps
       - name: Set image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: docker/setup-buildx-action@v3
@@ -52,18 +61,42 @@ jobs:
             VERSION=${{ github.ref_name }}
             REVISION=${{ github.sha }}
             SOURCE_URL=https://github.com/${{ github.repository }}
-      - name: Smoke test image
+      - name: Start candidate container
+        id: candidate
+        env:
+          CANDIDATE: ${{ env.IMAGE }}:candidate-${{ github.sha }}-${{ matrix.architecture }}
+        run: docker run --detach --name openwod-smoke -p 127.0.0.1:8080:8080 "$CANDIDATE"
+      - name: Wait for candidate readiness
+        run: |
+          for ((attempt = 1; attempt <= 30; attempt++)); do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:8080/api/v1/health/ready; then break; fi
+            sleep 1
+          done
+          curl --fail --show-error --max-time 5 http://127.0.0.1:8080/api/v1/health/ready
+          curl --fail --show-error --max-time 5 http://127.0.0.1:8080/
+      - name: Test candidate image in Chromium, Firefox and WebKit
+        env:
+          OPENWOD_PRODUCTION_URL: http://127.0.0.1:8080
+        run: npm run test:production
+      - name: Push tested candidate image
         env:
           CANDIDATE: ${{ env.IMAGE }}:candidate-${{ github.sha }}-${{ matrix.architecture }}
         run: |
-          docker run --detach --name openwod-smoke -p 8080:8080 "$CANDIDATE"
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://localhost:8080/api/v1/health/ready; then break; fi
-            sleep 1
-          done
-          curl --fail http://localhost:8080/api/v1/health/ready
-          curl --fail http://localhost:8080/
           docker push "$CANDIDATE"
+      - name: Upload production browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-browser-results-${{ matrix.architecture }}
+          path: test-results-production/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Show failed candidate logs
+        if: failure() && steps.candidate.outcome == 'success'
+        run: docker logs openwod-smoke
+      - name: Remove candidate container
+        if: always() && steps.candidate.outcome == 'success'
+        run: docker rm --force openwod-smoke
   manifest:
     needs: image
     runs-on: ubuntu-latest

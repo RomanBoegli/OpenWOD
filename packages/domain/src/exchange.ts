@@ -54,7 +54,7 @@ const validateFileV3 = compileSchema(WorkoutFileSchemaV3);
 const fail = (path: string, message: string): never => { throw new WorkoutValidationError([{ path, message }]); };
 
 /** Rewrites human duration keys into model *Ms integers, on a cloned document. */
-function toModelDurations(value: unknown, path = ''): unknown {
+export function toModelDurations(value: unknown, path = ''): unknown {
   if (Array.isArray(value)) return value.map((item, index) => toModelDurations(item, `${path}/${index}`));
   if (!value || typeof value !== 'object') return value;
   const result: Record<string, unknown> = {};
@@ -69,7 +69,7 @@ function toModelDurations(value: unknown, path = ''): unknown {
 }
 
 /** Rewrites model *Ms integers into human durations. */
-function toFileDurations(value: unknown): unknown {
+export function toFileDurations(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(toFileDurations);
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, child]) => key in DURATION_KEYS && typeof child === 'number' ? [DURATION_KEYS[key], formatDuration(child)] : [key, toFileDurations(child)]));
@@ -92,9 +92,9 @@ export function parseWorkoutFile(text: string): Workout {
   return fail('/formatVersion', `Workout file version ${String(envelope.formatVersion)} is newer than this app understands. Update the app to import it.`);
 }
 
-const TOP_ORDER = ['format', 'formatVersion', 'workout'];
+const TOP_ORDER = ['format', 'formatVersion', 'title', 'description', 'workout', 'workouts', 'collections'];
 const KEY_ORDER = [
-  'schemaVersion', 'id', 'revision', 'title', 'format', 'description', 'attribution', 'author', 'sourceUrl', 'licence', 'notes', 'equipment', 'participants', 'prep', 'prepMs', 'sections',
+  'schemaVersion', 'id', 'revision', 'sharing', 'sourceRevision', 'derivedFrom', 'title', 'format', 'description', 'workoutIds', 'attribution', 'author', 'sourceUrl', 'licence', 'notes', 'equipment', 'participants', 'prep', 'prepMs', 'sections',
   'type', 'transitionAfter', 'cap', 'capMs', 'interval', 'intervalMs', 'intervals', 'counter', 'rounds', 'turn', 'turnMs',
   'count', 'assignmentPolicy', 'completion', 'betweenIterationsRest', 'betweenIterationsRestMs', 'betweenChildrenRest', 'betweenChildrenRestMs', 'trailingRest', 'trailingRestMs', 'duration', 'durationMs', 'kind',
   'assignments', 'A', 'B', 'movement', 'name', 'shortName', 'spokenName', 'reps', 'calories', 'distance', 'time', 'timeMs', 'load', 'light', 'medium', 'heavy', 'value', 'women', 'unit', 'body', 'children',

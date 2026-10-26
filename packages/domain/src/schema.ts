@@ -92,10 +92,22 @@ export const FORMAT_LABELS: Record<SectionFormat, string> = { timedCircuit: 'Tim
 
 export const SCHEMA_VERSION = 2;
 
+/**
+ * Sharing provenance (SHR-05): a stable identity that travels with the file, separate from the local id and revision.
+ * `sourceRevision` is the author's revision at export; a derivative records what it came from and gets its own id.
+ */
+export const SharingSchema = Type.Object({
+  id: Type.String({ minLength: 1, maxLength: 120 }),
+  sourceRevision: Type.Integer({ minimum: 1 }),
+  derivedFrom: Type.Optional(Type.Object({ id: Type.String({ minLength: 1, maxLength: 120 }), sourceRevision: Type.Integer({ minimum: 1 }) }, { additionalProperties: false })),
+}, { additionalProperties: false });
+export type Sharing = Static<typeof SharingSchema>;
+
 export const WorkoutSchema = Type.Object({
   schemaVersion: Type.Literal(SCHEMA_VERSION),
   id,
   revision: Type.Integer({ minimum: 1 }),
+  sharing: Type.Optional(SharingSchema),
   title: label,
   description: Type.Optional(Type.String({ maxLength: 2000 })),
   attribution: Type.Optional(AttributionSchema),

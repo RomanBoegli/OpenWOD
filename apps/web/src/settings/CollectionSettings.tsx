@@ -11,7 +11,7 @@ import { type SettingsProps, plural, slug } from './shared';
 
 type CollectionForm = { id?: string; title: string; description: string; workoutIds: string[] };
 
-export function CollectionSettings({ masterData, onMasterDataChange, entries }: SettingsProps) {
+export function CollectionSettings({ masterData, onMasterDataChange, entries, household }: SettingsProps) {
   const [form, setForm] = useState<CollectionForm>();
   const [removing, setRemoving] = useState<Collection>();
   const [search, setSearch] = useState('');
@@ -31,13 +31,14 @@ export function CollectionSettings({ masterData, onMasterDataChange, entries }: 
       <div className={styles.cardHeading}><h2 id="collections-title">Collections</h2><span className={styles.hint}>{collections.length} collections</span></div>
       <p className={styles.hint}>Named lists of workouts, shown in the corner of each card and as a filter. A workout belongs to one collection at a time; adding it to another moves it. The collections that come with the app can be edited but not removed; make your own beside them.</p>
       <div className={styles.listTop}><span /><button type="button" className={shared.primaryButton} onClick={() => open()}><Icon name="plus" size={16} />New collection</button></div>
-      <MasterList label="Collections" actionsWidth="124px" empty="No collections yet."
+      <MasterList label="Collections" actionsWidth="172px" empty="No collections yet."
         columns={[{ key: 'title', caption: 'Collection' }, { key: 'count', caption: 'Workouts', width: '90px', align: 'end' }]}
         rows={collections.map(collection => ({
           id: collection.id,
           cells: { title: <><strong>{collection.title}</strong>{collection.description && <small>{collection.description}</small>}</>, count: collection.workoutIds.length },
           actions: <>
             <button type="button" className={shared.quietButton} aria-label={`Edit collection ${collection.title}`} onClick={() => open(collection)}><Icon name="edit" size={14} />Edit</button>
+            <button type="button" className={shared.quietButton} aria-label={`Export collection ${collection.title}`} title="Every workout of the collection as one .wods.yaml pack" disabled={!collection.workoutIds.length} onClick={() => household.exportPack(collection.title, collection.workoutIds)}><Icon name="download" size={14} /></button>
             {!collection.builtIn && <button type="button" className={shared.quietButton} aria-label={`Remove collection ${collection.title}`} onClick={() => setRemoving(collection)}><Icon name="trash" size={14} /></button>}
           </>,
         }))} />

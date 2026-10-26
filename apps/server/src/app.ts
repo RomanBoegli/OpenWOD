@@ -1,12 +1,50 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyRequest } from 'fastify';
 import fastifyStatic from '@fastify/static';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { errorHandler } from './errors';
+import { registerRoutes } from './routes';
+import { Store } from './store';
 
-export async function createServer({ logger = false, webRoot = resolve('dist/web') } = {}) {
-  const app = Fastify({ logger, bodyLimit: 1_048_576, trustProxy: false });
-  app.get('/api/v1/health/live', async () => ({ status: 'ok', version: '0.1.0' }));
-  app.get('/api/v1/health/ready', async () => ({ status: 'ok', capabilities: ['timed-player'], persistence: false }));
+export interface ServerOptions {
+  logger?: boolean | { level: string };
+  webRoot?: string;
+  trustProxy?: boolean | string;
+  /** The household datastore. Without one the API answers 503 and health/ready reports no persistence. */
+  store?: Store;
+  /** Test builds only: a fresh in-memory store per X-OpenWOD-Scope header, so parallel browser tests never share data. */
+  scopes?: boolean;
+  version?: string;
+}
+
+export function appVersion(): string {
+  try { return (JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version?: string }).version ?? '0.0.0'; } catch { return '0.0.0'; }
+}
+
+const SCOPE_LIMIT = 64;
+const SCOPE_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+export async function createServer({ logger = false, webRoot = resolve('dist/web'), trustProxy = false, store, scopes = false, version = appVersion() }: ServerOptions = {}) {
+  const app = Fastify({ logger, bodyLimit: 1_048_576, trustProxy });
+  app.setErrorHandler(errorHandler);
+  const scoped = new Map<string, Store>();
+  const storeOf = (request: FastifyRequest): Store | undefined => (request as FastifyRequest & { scopedStore?: Store }).scopedStore ?? store;
+  if (scopes) {
+    app.addHook('onRequest', async request => {
+      const header = request.headers['x-openwod-scope'];
+      const scope = Array.isArray(header) ? header[0] : header;
+      if (!scope || !SCOPE_PATTERN.test(scope)) return;
+      let scopedStore = scoped.get(scope);
+      if (!scopedStore) {
+        if (scoped.size >= SCOPE_LIMIT) { const [oldest] = scoped.keys(); scoped.get(oldest)?.close(); scoped.delete(oldest); }
+        scopedStore = (await Store.open(':memory:', { appVersion: version })).store;
+        scoped.set(scope, scopedStore);
+      }
+      (request as FastifyRequest & { scopedStore?: Store }).scopedStore = scopedStore;
+    });
+    app.addHook('onClose', async () => { for (const item of scoped.values()) item.close(); scoped.clear(); });
+  }
+  registerRoutes(app, { storeOf, version });
   if (existsSync(webRoot)) {
     await app.register(fastifyStatic, {
       root: webRoot,

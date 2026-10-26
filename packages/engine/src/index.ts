@@ -485,6 +485,13 @@ export class WorkoutEngine {
   }
 
   /** Serialisable state at `at`; never stores the clock anchor, so a restore can use any clock. */
+  /** The three clock offsets a progress record carries (ENG-11): everything else is in the last checkpoint. */
+  offsets(at = this.now()): { phaseMs: number; activeMs: number; sectionMs: number } {
+    const delta = this.moving ? Math.max(0, at - this.anchor) : 0;
+    const running = this.status === 'running';
+    return { phaseMs: this.phaseMs + delta, activeMs: this.activeMs + (running ? delta : 0), sectionMs: this.sectionMs + (running ? delta : 0) };
+  }
+
   toJSON(at = this.now()): EngineSnapshot {
     const delta = this.moving ? Math.max(0, at - this.anchor) : 0;
     const running = this.status === 'running';
@@ -523,12 +530,35 @@ export class WorkoutEngine {
       engine.status = 'paused';
       engine.pauseReason = 'recovered';
       engine.modified = true;
+      engine.clampToBoundary(snapshot.status === 'running');
       engine.emit('recovered');
     } else {
       engine.status = snapshot.status;
       engine.pauseReason = snapshot.pauseReason;
     }
     return engine;
+  }
+
+  /**
+   * A progress record may carry offsets past the boundary the checkpoint was heading for (the page died after the
+   * boundary, before the next checkpoint). The offsets are pulled back to that boundary, so resuming processes it
+   * at once and nothing past it is invented (ENG-12: unsaved time may be lost, tasks are never inferred).
+   */
+  private clampToBoundary(wasRunning: boolean) {
+    const remaining: number[] = [];
+    if (this.pausedFrom === 'preparing') remaining.push(this.plan.workout.prepMs - this.phaseMs);
+    else {
+      const section = this.section;
+      if (section.capMs !== undefined) remaining.push(section.capMs - this.sectionMs);
+      if (this.occurrence.timing !== 'manual') remaining.push(this.occurrence.durationMs - this.phaseMs);
+      const turnMs = section.youGoIGo?.turnMs;
+      if (turnMs && this.isBlock) remaining.push(turnMs - this.phaseMs);
+    }
+    const over = Math.max(0, ...remaining.map(value => -value));
+    if (over <= 0) return;
+    this.phaseMs -= over;
+    this.sectionMs -= over;
+    if (wasRunning) this.activeMs -= over;
   }
 }
 

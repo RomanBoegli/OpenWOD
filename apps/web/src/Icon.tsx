@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type IconName = 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'edit' | 'copy';
+export type IconName = 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'edit' | 'copy' | 'dice';
 
 const paths: Record<IconName, ReactNode> = {
   play: <path d="m9 5 11 7-11 7z" />,
@@ -24,6 +24,7 @@ const paths: Record<IconName, ReactNode> = {
   trash: <path d="M4 7h16M9 7V4h6v3m-7 0 1 13h6l1-13" />,
   edit: <path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4" />,
   copy: <path d="M9 9h11v11H9zM15 9V4H4v11h5" />,
+  dice: <><rect x="3" y="3" width="18" height="18" rx="4" /><g fill="currentColor" stroke="none"><circle cx="8" cy="8" r="1.2" /><circle cx="16" cy="8" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="8" cy="16" r="1.2" /><circle cx="16" cy="16" r="1.2" /></g></>,
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5" /></>,
   moon: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
   auto: <><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" /></>,

@@ -39,7 +39,8 @@ for (const folder of (await readdir(ROOT, { withFileTypes: true })).filter(entry
     seen.set(workout.id, path);
     const unknown = [...new Set(collectPrescriptions(workout).filter(item => !catalogue.resolve(item)).map(item => item.name))];
     if (unknown.length) problems.push(`${path}: movements not in the catalogue (packages/domain/src/movements.ts): ${unknown.join(', ')}.`);
-    workouts.push(workout);
+    // A bundled workout carries a deterministic sharing identity so an export from any installation is recognised on reimport (SHR-05).
+    workouts.push({ ...workout, sharing: { id: `openwod.bundled:${workout.id}`, sourceRevision: workout.revision } });
     ids.push(workout.id);
   }
   if (files.includes('collection.yaml')) {

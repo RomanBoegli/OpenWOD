@@ -178,3 +178,16 @@ export function equipmentOptions(summaries: WorkoutSummary[]): string[] {
   for (const summary of summaries) for (const item of summary.equipmentNeeded) if (!seen.has(equipmentKey(item))) seen.set(equipmentKey(item), item);
   return [...seen.values()].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
 }
+
+export function slugify(title: string): string {
+  return title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workout';
+}
+
+/** A free workout ID for a copy: keeps the authored ID when free, otherwise appends a counter. */
+export function freeWorkoutId(wanted: string, taken: Set<string>): string {
+  if (!taken.has(wanted)) return wanted;
+  for (let counter = 2; ; counter++) {
+    const candidate = `${wanted.slice(0, 116)}-${counter}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}

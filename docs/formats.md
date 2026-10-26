@@ -40,9 +40,10 @@ workout:
 
 | Key | Meaning |
 | --- | --- |
-| `format` | `openwod.workout`. Nothing else is accepted. |
+| `format` | `openwod.workout` for one workout, `openwod.workoutPack` for a pack. Nothing else is accepted. |
 | `formatVersion` | `3`. Versions 1 and 2 only existed before the first release and are refused, as are newer versions, each with a clear message. |
 | `workout` | The workout model, version 2 (`schemaVersion: 2`). |
+| `workouts`, `collections`, `title`, `description` | Pack files only, see below. |
 
 Durations are human readable: `40s`, `2m`, `1m30s`, `1:30`, `1:02:03`, or a bare number of seconds.
 Duration keys are `prep`, `duration`, `betweenChildrenRest`, `trailingRest`, `betweenIterationsRest`, `cap`, `interval`, `turn` and `time`.
@@ -56,6 +57,7 @@ Import rejects YAML anchors, aliases and duplicate keys, files over 1 MB, duplic
 | --- | --- |
 | `id`, `revision`, `title`, `description` | Identity and text. Imports that collide with an existing id become a copy with a free id, or replace a saved workout on explicit confirmation. |
 | `attribution` | Optional `author`, `sourceUrl` (metadata, never fetched), `licence`, `notes`. |
+| `sharing` | Optional provenance: a stable `id`, the author's `sourceRevision` at export, and `derivedFrom` (`id`, `sourceRevision`) on a derivative. Assigned on first export, kept on import, separate from the local `id` and `revision`. |
 | `equipment` | Declared equipment. The app also infers equipment from movement names and lets you merge spellings in settings. |
 | `participants` | `1` or `2`. A and B are lanes, not people. Names are a device setting. |
 | `prep` | The countdown before the first section, 0 to 60 seconds. |
@@ -95,6 +97,30 @@ Rests are only ever added where they are written: between children, between iter
 | `load` | Either a single load or levels `light`, `medium`, `heavy`. A load is `{ value, unit, women? }` with `kg`, `lb` or `percent` (of a one-rep max): `value` is the men's (or only) amount and `women` the women's amount in the same unit. Solo workouts show both, women's in brackets (`H 34 (25) kg`). Pair lanes show their athlete's amount. The app converts between kg and lb on display. Percentages take no `women` value. |
 | `notes` | Free text such as tempo, scaling or coaching cues. Never executed. |
 
+## Packs
+
+A pack carries several workouts and, optionally, the collections that group them:
+
+```yaml
+format: openwod.workoutPack
+formatVersion: 1
+title: Friends of Fran
+workouts:
+  - schemaVersion: 2
+    id: fran-a
+    revision: 1
+    sharing: { id: 7b3c…, sourceRevision: 1 }
+    title: Fran A
+    # … as in a single file
+collections:
+  - title: Friends
+    workoutIds: [fran-a]
+```
+
+Ids inside a pack are local to the file and are remapped on import.
+Up to 200 workouts and 4 MB per pack.
+The import preview shows every workout with its attribution and a state from its provenance (new, already in the library, newer revision), and applies the decisions in one transaction.
+
 ## Examples and schemas
 
-`workouts/` holds every bundled workout as a file, one folder per collection, and is the best set of examples. `schemas/workout.v2.schema.json` and `schemas/workout-file.v3.schema.json` validate the model and the parsed file. `schemas/workout.v1.schema.json` stays for reference.
+`workouts/` holds every bundled workout as a file, one folder per collection, and is the best set of examples. `schemas/workout.v2.schema.json`, `schemas/workout-file.v3.schema.json` and `schemas/workout-pack.v1.schema.json` validate the model, the parsed file and the parsed pack. `schemas/workout.v1.schema.json` stays for reference.

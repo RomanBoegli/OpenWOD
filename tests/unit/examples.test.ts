@@ -18,7 +18,8 @@ describe('the workout registry (workouts/**)', () => {
     for (const file of files) {
       const workout = parseWorkoutFile(readFileSync(new URL(file, registry), 'utf8'));
       expect(file.endsWith(`/${workout.id}.wod.yaml`), file).toBe(true);
-      expect(bundledWorkout(workout.id), file).toEqual(workout);
+      // The bundle adds the deterministic sharing identity (SHR-05); the file itself stays clean.
+      expect(bundledWorkout(workout.id), file).toEqual({ ...workout, sharing: { id: `openwod.bundled:${workout.id}`, sourceRevision: workout.revision } });
     }
     expect(() => bundledWorkout('no-such-workout')).toThrow(/No bundled workout/);
   });

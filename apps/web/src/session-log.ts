@@ -1,21 +1,11 @@
-import type { SectionResult } from '../../../packages/engine/src';
+import type { SessionOutcome, SessionRecord } from '../../../packages/engine/src/records';
+export type { SessionRecord, SessionOutcome } from '../../../packages/engine/src/records';
 
 /**
- * Completed sessions on this device, logged behind the scenes when a workout finishes or was played to at least 80 %
- * of its timed or capped length. The server milestone moves these into SQLite; until then they are a convenience.
+ * Sessions on this device: logged when a workout finishes, was played to at least 80 % of its timed or capped
+ * length, or was recovered from a checkpoint. The household server keeps the authoritative history; browser
+ * storage holds the records written before the server milestone until they are moved.
  */
-export interface SessionRecord {
-  id: string;
-  workoutId: string;
-  title: string;
-  startedAt: string;
-  finishedAt: string;
-  outcome: 'completed' | 'aborted';
-  /** Share of the planned duration that was played (1 for completed, otherwise activeMs / planned). */
-  completion: number;
-  activeMs: number;
-  results: SectionResult[];
-}
 
 const KEY = 'openwod.sessions.v1';
 export const SESSION_LIMIT = 500;
@@ -34,18 +24,22 @@ export function persistSessions(sessions: SessionRecord[]): string | undefined {
 }
 
 /** Does a session count as done? Completed always; an ended session when it covered enough of a known-length workout. */
-export function countsAsDone(outcome: SessionRecord['outcome'], activeMs: number, plannedMs: number, open: boolean): boolean {
-  if (outcome === 'completed') return true;
+export function countsAsDone(outcome: SessionOutcome, activeMs: number, plannedMs: number, open: boolean): boolean {
+  if (outcome === 'completed' || outcome === 'capped') return true;
   if (open || plannedMs <= 0) return false;
   return activeMs / plannedMs >= DONE_THRESHOLD;
 }
 
-export function lastDone(sessions: SessionRecord[], workoutId: string): SessionRecord | undefined {
-  return sessions.filter(item => item.workoutId === workoutId).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0];
+export type SessionSummary = Pick<SessionRecord, 'id' | 'workoutId' | 'finishedAt' | 'outcome' | 'completion'>;
+/** A session counts as done on the cards when it finished or covered enough of the plan; an abandoned one is history, not a tick. */
+export const isDone = (session: Pick<SessionRecord, 'outcome' | 'completion'>) => session.outcome !== 'aborted' || session.completion >= DONE_THRESHOLD;
+
+export function lastDone<T extends SessionSummary>(sessions: T[], workoutId: string): T | undefined {
+  return sessions.filter(item => item.workoutId === workoutId && isDone(item)).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0];
 }
 
-export function timesDone(sessions: SessionRecord[], workoutId: string): number {
-  return sessions.filter(item => item.workoutId === workoutId).length;
+export function timesDone(sessions: SessionSummary[], workoutId: string): number {
+  return sessions.filter(item => item.workoutId === workoutId && isDone(item)).length;
 }
 
 /** "today", "3 days ago", "2 months ago". */

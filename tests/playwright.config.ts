@@ -17,5 +17,9 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
-  webServer: { command: 'npm run dev -- --mode test --port 5174', url: 'http://127.0.0.1:5174', reuseExistingServer: !process.env.CI },
+  // Two processes: the API with one in-memory database per test scope, and Vite proxying /api to it.
+  webServer: [
+    { command: 'npx tsx apps/server/src/index.ts', cwd: resolve(import.meta.dirname, '..'), url: 'http://127.0.0.1:8787/api/v1/health/ready', reuseExistingServer: !process.env.CI, env: { PORT: '8787', HOST: '127.0.0.1', DATABASE_PATH: ':memory:', OPENWOD_TEST_SCOPES: '1', LOG_LEVEL: 'warn' } },
+    { command: 'npm run dev -- --mode test --port 5174', url: 'http://127.0.0.1:5174', reuseExistingServer: !process.env.CI },
+  ],
 });

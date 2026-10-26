@@ -17,7 +17,7 @@ COPY . .
 RUN npm run check && npm run build && mkdir -p dist/web/cues && cp -r /cues/. dist/web/cues/
 
 FROM ${NODE_IMAGE} AS runtime
-ARG VERSION=0.1.0
+ARG VERSION=1.0.0
 ARG REVISION=unknown
 ARG SOURCE_URL=unknown
 LABEL org.opencontainers.image.title="OpenWOD" \
@@ -26,12 +26,13 @@ LABEL org.opencontainers.image.title="OpenWOD" \
       org.opencontainers.image.revision="${REVISION}" \
       org.opencontainers.image.source="${SOURCE_URL}" \
       org.opencontainers.image.licenses="GPL-3.0-only"
-ENV NODE_ENV=production PORT=8080 HOST=0.0.0.0
+ENV NODE_ENV=production PORT=8080 HOST=0.0.0.0 DATABASE_PATH=/data/app.sqlite LOG_LEVEL=info TRUST_PROXY=false
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev && npm cache clean --force && mkdir -p /data && chown node:node /data
 COPY --from=build /app/dist ./dist
 COPY LICENSE ./LICENSE
+VOLUME /data
 USER node
 EXPOSE 8080
 STOPSIGNAL SIGTERM

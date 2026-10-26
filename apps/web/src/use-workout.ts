@@ -3,20 +3,44 @@ import { compileWorkout } from '../../../packages/domain/src/compiler';
 import type { Workout } from '../../../packages/domain/src';
 import { WorkoutEngine, type ClockValues, type Command, type CommandType } from '../../../packages/engine/src';
 import type { WorkoutAudio } from './audio';
+import { applyProgress, writeCheckpoint, writeProgress, WriteQueue, type Checkpoint, type CheckpointStatus, type Progress, type Recovery } from './data/checkpoints';
 
 declare const __OPENWOD_TEST__: boolean;
 declare global {
   interface Window {
-    __openwodTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] }; command: (type: CommandType, extra?: Partial<Command>) => boolean };
+    __openwodTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] }; command: (type: CommandType, extra?: Partial<Command>) => boolean; flushCheckpoints: () => Promise<void>; checkpointRevision: () => number };
   }
 }
 
-/** Hosts one engine per session: schedules its next deadline, feeds audio and clock subscribers, and owns platform concerns. */
-export function useWorkout(workout: Workout, audio: WorkoutAudio) {
+export interface WorkoutOptions {
+  /** A checkpoint to restore instead of starting fresh; the engine comes back paused with reason `recovered`. */
+  recovery?: Recovery;
+}
+
+const PROGRESS_INTERVAL_MS = 1000;
+
+/** Hosts one engine per session: schedules its next deadline, feeds audio and clock subscribers, writes checkpoints, and owns platform concerns. */
+export function useWorkout(workout: Workout, audio: WorkoutAudio, options: WorkoutOptions = {}) {
+  // The recovery applies to the first engine only; later renders may drop it without restarting the session.
+  const [recovery] = useState(options.recovery);
   const clockOffset = useRef(0);
   const [session, setSession] = useState(0);
-  // One engine per (workout, session). Compile and session identity happen exactly once per session.
-  const engine = useMemo(() => new WorkoutEngine(compileWorkout(workout), () => performance.now() + clockOffset.current, crypto.randomUUID()), [workout, session]);
+  const [checkpointStatus, setCheckpointStatus] = useState<CheckpointStatus>('unknown');
+  const now = useCallback(() => performance.now() + clockOffset.current, []);
+  // One engine per (workout, session). Compile and session identity happen exactly once per session; a recovery only applies to the first.
+  const engine = useMemo(() => {
+    const plan = compileWorkout(workout);
+    if (recovery && session === 0) return WorkoutEngine.fromSnapshot(plan, applyProgress(structuredClone(recovery.checkpoint.snapshot), recovery.progress), now);
+    return new WorkoutEngine(plan, now, crypto.randomUUID());
+  }, [workout, session, recovery, now]);
+  const startedAt = useRef<string | undefined>(recovery?.checkpoint.startedAt);
+  // Checkpoints and progress records are written off the timing path; the first failure is reported once (AT-16).
+  const queues = useMemo(() => {
+    const report = (status: CheckpointStatus) => setCheckpointStatus(current => current === 'failed' && status === 'ok' ? 'ok' : status);
+    return { checkpoint: new WriteQueue<Checkpoint>(writeCheckpoint, report), progress: new WriteQueue<Progress>(writeProgress, report) };
+  }, []);
+  const lastProgress = useRef(0);
+  const checkpointRevision = useRef(-1);
   const [projected, setProjected] = useState(() => ({ engine, projection: engine.project() }));
   if (projected.engine !== engine) setProjected({ engine, projection: engine.project() });
   const projection = projected.projection;
@@ -34,11 +58,20 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
     if (revision.current !== engine.revision) {
       revision.current = engine.revision;
       setProjected({ engine, projection: next });
+      if (next.status !== 'ready' && next.status !== 'completed' && next.status !== 'aborted') {
+        if (['preparing', 'running'].includes(next.status)) startedAt.current ??= new Date().toISOString();
+        checkpointRevision.current = engine.revision;
+        queues.checkpoint.push({ sessionId: engine.sessionId, workoutId: workout.id, workoutRevision: workout.revision, workout, snapshot: engine.toJSON(), revision: engine.revision, status: next.status, savedAt: new Date().toISOString(), startedAt: startedAt.current });
+        lastProgress.current = now();
+      }
+    } else if (next.status === 'running' && now() - lastProgress.current >= PROGRESS_INTERVAL_MS) {
+      lastProgress.current = now();
+      queues.progress.push({ sessionId: engine.sessionId, checkpointRevision: engine.revision, ...engine.offsets(), savedAt: new Date().toISOString() });
     }
     const clocks = engine.readClocks();
     if (!__OPENWOD_TEST__) audio.update(next, clocks);
     for (const listener of listeners.current) listener(clocks);
-  }, [engine, audio]);
+  }, [engine, audio, workout, queues, now]);
 
   useEffect(() => {
     let frame = 0;
@@ -76,9 +109,11 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
       advance(ms) { clockOffset.current += ms; schedule(); },
       snapshot() { return { projection: engine.project(), clocks: engine.readClocks(), events: engine.events }; },
       command(type, extra = {}) { const accepted = engine.command({ id: crypto.randomUUID(), occurrenceId: engine.occurrenceId, type, ...extra }); schedule(); return accepted; },
+      flushCheckpoints: async () => { await queues.checkpoint.flush(); await queues.progress.flush(); },
+      checkpointRevision: () => checkpointRevision.current,
     };
     return () => { disposed = true; if (deadline) clearTimeout(deadline); cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); if (__OPENWOD_TEST__) delete window.__openwodTest; };
-  }, [engine, refresh, audio]);
+  }, [engine, refresh, audio, queues]);
 
   useEffect(() => {
     let lock: WakeLockSentinel | undefined;
@@ -115,7 +150,9 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio) {
     return () => { listeners.current.delete(listener); };
   }, [engine]);
 
-  const restart = useCallback(() => { audio.reset(); clockOffset.current = 0; setSession(value => value + 1); }, [audio]);
+  const restart = useCallback(() => { audio.reset(); clockOffset.current = 0; startedAt.current = undefined; setSession(value => value + 1); }, [audio]);
 
-  return { engine, plan: engine.plan, projection, send, subscribeClock, soundError, wakeStatus, restart };
+  const flushCheckpoints = useCallback(async () => { await queues.checkpoint.flush(); await queues.progress.flush(); }, [queues]);
+
+  return { engine, plan: engine.plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints };
 }

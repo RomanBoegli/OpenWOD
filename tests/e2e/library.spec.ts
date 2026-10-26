@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { BUNDLED, partnerCircuit, bundledCount, ready, communityFile } from './helpers';
 import { serialiseWorkoutFile } from '../../packages/domain/src';
 import { bundledWorkouts } from '../../packages/domain/src/bundled';
@@ -47,6 +47,7 @@ test.describe('library', () => {
 
   test('imports into the editor as an unsaved draft, saves it to a device library that survives reload, then removes it', async ({ page }) => {
     await page.locator('input[type=file]').setInputFiles(communityFile());
+    await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Open in editor' }).click();
     await expect(page).toHaveURL(/#\/draft\/import-community-circuit$/);
     await expect(page.getByRole('main')).toContainText('Read from community.wod.yaml');
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Community circuit');
