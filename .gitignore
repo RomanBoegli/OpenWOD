@@ -10,7 +10,7 @@ test-results-production/
 coverage/
 *.log
 .DS_Store
-data/
+/data/
 .data/
 notes.md
 # Rendered cue packs come from the Docker build or `npm run cues:generate`, not from git.
