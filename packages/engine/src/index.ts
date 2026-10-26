@@ -2,7 +2,7 @@ import type { CompiledSection, ExecutionPlan, Occurrence, TaskItem, Timing } fro
 import type { SectionFormat } from '../../domain/src/schema';
 
 export type Status = 'ready' | 'preparing' | 'running' | 'paused' | 'awaitingReady' | 'completed' | 'aborted';
-export type CommandType = 'play' | 'pause' | 'resume' | 'next' | 'previous' | 'stop' | 'ready' | 'done' | 'finish' | 'switch' | 'skipTurn' | 'count' | 'undoCount';
+export type CommandType = 'play' | 'pause' | 'resume' | 'next' | 'previous' | 'nextSection' | 'previousSection' | 'nudge' | 'stop' | 'ready' | 'done' | 'finish' | 'switch' | 'skipTurn' | 'count' | 'undoCount';
 export type Athlete = 'A' | 'B';
 export type PauseReason = 'user' | 'hidden' | 'recovered';
 export interface Command {
@@ -12,7 +12,7 @@ export interface Command {
   reason?: 'user' | 'hidden';
   /** done: which athlete acknowledges a both-done task. */
   athlete?: Athlete;
-  /** count: what to add; delta defaults to 1 and applies to reps only. */
+  /** count: what to add; delta defaults to 1 and applies to reps only. nudge: milliseconds to move the clock, negative for back. */
   unit?: 'round' | 'rep';
   delta?: number;
 }
@@ -31,7 +31,7 @@ export interface ClockValues {
   capRemainingMs?: number;
   turnRemainingMs?: number;
 }
-export type Control = 'play' | 'pause' | 'resume' | 'ready' | 'stop' | 'next' | 'previous' | 'done' | 'done:A' | 'done:B' | 'finish' | 'switch' | 'skipTurn' | 'count:round' | 'count:rep' | 'undoCount';
+export type Control = 'play' | 'pause' | 'resume' | 'ready' | 'stop' | 'next' | 'previous' | 'nextSection' | 'previousSection' | 'nudge' | 'done' | 'done:A' | 'done:B' | 'finish' | 'switch' | 'skipTurn' | 'count:round' | 'count:rep' | 'undoCount';
 export interface Acks { A: boolean; B: boolean; team: boolean }
 export interface Split { occurrenceId: string; anchor: string; athlete: Athlete | 'team'; sectionMs: number; activeMs: number; turn?: number }
 export interface Counter { rounds: number; reps: number }
@@ -39,7 +39,7 @@ export interface TurnState { athlete: Athlete; number: number; teamRound: number
 export interface SectionResult {
   sectionId: string;
   format: SectionFormat;
-  outcome: 'completed' | 'capped' | 'finished';
+  outcome: 'completed' | 'capped' | 'finished' | 'skipped';
   sectionMs: number;
   counter?: Counter;
   turns?: number;
@@ -59,6 +59,8 @@ export interface Projection {
   index: number;
   modified: boolean;
   pauseReason?: PauseReason;
+  /** How often the clock was nudged in this session, so a listener can reschedule what it timed. Not part of the snapshot. */
+  nudges: number;
   format: SectionFormat;
   timing: Timing;
   clockScope: ClockScope;
@@ -112,6 +114,7 @@ export class WorkoutEngine {
   private sectionMs = 0;
   private anchor = 0;
   private modified = false;
+  private nudges = 0;
   private pauseReason?: PauseReason;
   private commands = new Set<string>();
   private acks: { A?: number; B?: number; team?: number } = {};
@@ -309,6 +312,28 @@ export class WorkoutEngine {
       this.emit(this.preparing ? 'preparing' : 'occurrenceStarted');
       return true;
     }
+    if (command.type === 'nudge' && this.canNudge) {
+      if (this.moving) this.freeze(at);
+      // Every clock that counts down here keeps the move within its span: back no further than its start, forward no further
+      // than its end, where the next tick fires the boundary as if the time had passed.
+      const spans: [number, number][] = [];
+      if (this.preparing) spans.push([this.phaseMs, this.plan.workout.prepMs]);
+      else {
+        if (this.occurrence.timing !== 'manual') spans.push([this.phaseMs, this.occurrence.durationMs]);
+        const turnMs = this.section.youGoIGo?.turnMs;
+        if (turnMs && this.isBlock) spans.push([this.phaseMs, turnMs]);
+        if (this.section.capMs !== undefined) spans.push([this.sectionMs, this.section.capMs]);
+      }
+      let delta = Math.round(command.delta ?? 0);
+      for (const [current, limit] of spans) delta = Math.max(-current, Math.min(limit - current, delta));
+      if (delta === 0) return true;
+      this.phaseMs = Math.max(0, this.phaseMs + delta);
+      if (!this.preparing) this.sectionMs = Math.max(0, this.sectionMs + delta);
+      this.nudges++;
+      this.modified = true;
+      this.emit('nudged', { deltaMs: delta });
+      return true;
+    }
     if (command.type === 'pause' && this.moving) {
       this.freeze(at);
       this.pausedFrom = this.status as 'running' | 'preparing';
@@ -349,6 +374,36 @@ export class WorkoutEngine {
       this.visit++;
       this.modified = true;
       this.resetOccurrenceState();
+      this.emit('navigated');
+      return true;
+    }
+    if ((command.type === 'nextSection' || command.type === 'previousSection') && this.canNavigateSections) {
+      const section = this.section;
+      const forward = command.type === 'nextSection';
+      if (forward && section.endIndex >= this.plan.occurrences.length - 1) return false;
+      if (this.moving) this.freeze(at);
+      const wasAwaiting = this.status === 'awaitingReady';
+      let target: CompiledSection;
+      if (forward) {
+        // The section left behind is scored as skipped, with whatever it had counted so far.
+        this.results[section.id] = this.resultFor(section, 'skipped');
+        this.emit('sectionEnded', { outcome: 'skipped', sectionMs: this.sectionMs });
+        target = this.plan.sections[this.occurrence.sectionIndex + 1];
+      } else {
+        // Back to the start of the previous section (or of the first one); its earlier score is dropped so it can be played again.
+        target = this.plan.sections[Math.max(0, this.occurrence.sectionIndex - 1)];
+        delete this.results[target.id];
+      }
+      this.index = target.startIndex;
+      this.phaseMs = 0;
+      this.sectionMs = 0;
+      this.unacknowledged = [];
+      this.anchor = at;
+      this.visit++;
+      this.modified = true;
+      this.resetOccurrenceState();
+      if (forward && section.transitionAfter === 'manualReady') { this.status = 'awaitingReady'; this.emit('awaitingReady'); return true; }
+      if (wasAwaiting) { this.status = 'paused'; this.pausedFrom = 'running'; this.pauseReason = 'user'; }
       this.emit('navigated');
       return true;
     }
@@ -424,6 +479,10 @@ export class WorkoutEngine {
   private get canNavigate() {
     return (this.status === 'running' || (this.status === 'paused' && this.pausedFrom === 'running')) && this.section.format !== 'emom' && !this.isBlock;
   }
+  /** Whole sections can be skipped or returned to in any format, including between sections at a Ready gate, but not during prep. */
+  private get canNavigateSections() { return this.status === 'running' || this.status === 'awaitingReady' || (this.status === 'paused' && this.pausedFrom === 'running'); }
+  /** The clock can be moved a few seconds either way whenever it counts down: prep, a slot, an interval, a turn or a cap. Not an open count-up. */
+  private get canNudge() { return (this.moving || this.status === 'paused') && this.clockScope !== 'elapsed'; }
   private get canDone() { return !this.isBlock && this.occurrence.timing !== 'timed'; }
   private get canSwitch() { return this.isBlock && this.section.format === 'youGoIGo'; }
   private get canCount() { return this.isBlock && this.section.format === 'amrap' && this.section.amrap?.counter !== 'none'; }
@@ -432,13 +491,18 @@ export class WorkoutEngine {
     const controls: Control[] = [];
     if (this.status === 'ready') return ['play'];
     if (this.status === 'completed' || this.status === 'aborted') return controls;
-    if (this.status === 'awaitingReady') return ['ready', 'stop'];
-    if (this.status === 'paused') controls.push('resume', 'stop');
+    if (this.status === 'awaitingReady') controls.push('ready', 'stop');
+    else if (this.status === 'paused') controls.push('resume', 'stop');
     else controls.push('pause', 'stop');
     if (this.canNavigate) {
       controls.push('previous');
       if (this.index < this.section.endIndex) controls.push('next');
     }
+    if (this.canNavigateSections) {
+      controls.push('previousSection');
+      if (this.section.endIndex < this.plan.occurrences.length - 1) controls.push('nextSection');
+    }
+    if (this.canNudge) controls.push('nudge');
     if (this.status !== 'running') return controls;
     if (this.canDone) {
       if ((this.occurrence.completion ?? 'team') === 'team') { if (this.acks.team === undefined) controls.push('done'); }
@@ -471,7 +535,7 @@ export class WorkoutEngine {
     const section = this.section;
     const occurrence = this.occurrence;
     const projection: Projection = {
-      sessionId: this.sessionId, status: this.status, occurrenceId: this.occurrenceId, current: occurrence, nextWork, restBeforeNextMs, section, index: this.index, modified: this.modified, pauseReason: this.pauseReason,
+      sessionId: this.sessionId, status: this.status, occurrenceId: this.occurrenceId, current: occurrence, nextWork, restBeforeNextMs, section, index: this.index, modified: this.modified, pauseReason: this.pauseReason, nudges: this.nudges,
       format: section.format, timing: occurrence.timing, clockScope: this.clockScope, controls: this.controls(),
       acks: { A: this.acks.A !== undefined, B: this.acks.B !== undefined, team: this.acks.team !== undefined },
       results: this.plan.sections.map(item => this.results[item.id]).filter((item): item is SectionResult => Boolean(item)),

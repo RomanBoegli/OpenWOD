@@ -6,6 +6,13 @@ import { BEEP_TONES } from '../audio';
 import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { type SettingsProps } from './shared';
+import { ColorChoice } from './ColorChoice';
+import { restTokens, type Theme } from '../theme';
+
+/** Ready-made rest colours; the first is the built-in blue. Any other colour comes from the picker. */
+const REST_COLORS: [string, string][] = [['', 'Blue'], ['#06b6d4', 'Cyan'], ['#2a9d8f', 'Teal'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f59e0b', 'Amber']];
+const BUILT_IN_BLUE: Record<Theme, string> = { dark: '#a3cbf0', light: '#1d5fa8' };
+const restShade = (value: string, theme: Theme) => value ? restTokens(value, theme)['--phase-rest'] : BUILT_IN_BLUE[theme];
 
 export function TrainingSettings(props: SettingsProps) {
   const { preferences, onPreferencesChange } = props;
@@ -25,19 +32,24 @@ export function TrainingSettings(props: SettingsProps) {
         <TimerPreview view={preferences.view} ringWidth={preferences.perimeterWidth} washGain={preferences.wash ? preferences.washGain : 0} amberMs={preferences.amberMs} redMs={preferences.redMs} colors={preferences.markColors} progress={preferences.progress} clockWeight={preferences.clockWeight} clockSize={preferences.clockSize} />
         <div className={styles.previewFields}>
           <label className={styles.field}>Default view<select value={preferences.view} onChange={event => update({ view: event.target.value as Preferences['view'] })}><option value="focus">Focus</option><option value="context">Context</option></select></label>
-          <div className={styles.field}><span id="progress-label">Overall progress</span><div className={shared.segmented} role="radiogroup" aria-labelledby="progress-label">{([['off', 'Off'], ['bar', 'Bar'], ['detail', 'Bar and numbers']] as const).map(([value, label]) => <label key={value} data-checked={preferences.progress === value}><input type="radio" name="progress" value={value} checked={preferences.progress === value} onChange={() => update({ progress: value })} />{label}</label>)}</div></div>
+          <div className={styles.field}><span id="progress-label">Overall progress</span><div className={shared.segmented} data-fit role="radiogroup" aria-labelledby="progress-label">{([['off', 'Off'], ['bar', 'Bar'], ['detail', 'Bar + info'], ['percent', 'Bar + info + %']] as const).map(([value, label]) => <label key={value} data-checked={preferences.progress === value}><input type="radio" name="progress" value={value} checked={preferences.progress === value} onChange={() => update({ progress: value })} />{label}</label>)}</div></div>
           <div className={styles.twoUp}>
             <div className={styles.field}><span id="clock-weight-label">Clock digits</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby="clock-weight-label">{([['bold', 'Bold'], ['light', 'Light']] as const).map(([value, label]) => <label key={value} data-checked={preferences.clockWeight === value}><input type="radio" name="clock-weight" value={value} checked={preferences.clockWeight === value} onChange={() => update({ clockWeight: value })} />{label}</label>)}</div></div>
             <div className={styles.field}><span id="clock-size-label">Clock size</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby="clock-size-label">{([['large', 'Large'], ['compact', 'Compact']] as const).map(([value, label]) => <label key={value} data-checked={preferences.clockSize === value}><input type="radio" name="clock-size" value={value} checked={preferences.clockSize === value} onChange={() => update({ clockSize: value })} />{label}</label>)}</div></div>
           </div>
-          <label className={styles.field}>Timer ring width · {preferences.perimeterWidth} px<input type="range" min="3" max="12" step="1" value={preferences.perimeterWidth} onChange={event => update({ perimeterWidth: Number(event.target.value) })} /></label>
+          <div className={styles.twoUp}>
+            <label className={styles.field}>Timer ring width · {preferences.perimeterWidth} px<input type="range" min="3" max="12" step="1" value={preferences.perimeterWidth} onChange={event => update({ perimeterWidth: Number(event.target.value) })} /></label>
+            <label className={styles.field}>Skip buttons · {preferences.nudgeSeconds} s<input type="range" min="1" max="60" step="1" value={preferences.nudgeSeconds} onChange={event => update({ nudgeSeconds: Number(event.target.value) })} /></label>
+          </div>
           <div className={styles.twoUp}>
             <div className={styles.field}><span>First milestone marker · {seconds(preferences.amberMs)}</span><div className={styles.markerRow}><input type="range" min="5" max="30" step="1" aria-label="First milestone marker" value={preferences.amberMs / 1000} onChange={event => { const amberMs = Number(event.target.value) * 1000; update({ amberMs, redMs: Math.min(preferences.redMs, amberMs) }); }} /><input type="color" aria-label="First milestone colour" value={preferences.markColors.first || themeColor('--phase-amber')} onChange={event => update({ markColors: { ...preferences.markColors, first: event.target.value } })} />{preferences.markColors.first && <button type="button" className={shared.iconButton} aria-label="First milestone colour back to the theme" title="Theme colour" onClick={() => update({ markColors: { ...preferences.markColors, first: '' } })}><Icon name="undo" size={14} /></button>}</div></div>
             <div className={styles.field}><span>Second milestone marker · {seconds(preferences.redMs)}</span><div className={styles.markerRow}><input type="range" min="1" max={Math.min(10, preferences.amberMs / 1000)} step="1" aria-label="Second milestone marker" value={preferences.redMs / 1000} onChange={event => update({ redMs: Number(event.target.value) * 1000 })} /><input type="color" aria-label="Second milestone colour" value={preferences.markColors.second || themeColor('--phase-red')} onChange={event => update({ markColors: { ...preferences.markColors, second: event.target.value } })} />{preferences.markColors.second && <button type="button" className={shared.iconButton} aria-label="Second milestone colour back to the theme" title="Theme colour" onClick={() => update({ markColors: { ...preferences.markColors, second: '' } })}><Icon name="undo" size={14} /></button>}</div></div>
           </div>
-          <p className={styles.hint}>Work changes colour at each marker this long before a slot ends; the markers sit on the ring above, in the colours you pick (the theme’s amber and red unless changed). Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds.</p>
+          <p className={styles.hint}>Work changes colour at each marker this long before a slot ends; the markers sit on the ring above, in the colours you pick (the theme’s amber and red unless changed). Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds. The skip buttons and the J and L keys move the clock by the chosen seconds. The last progress option also puts the overall percentage beside the time, as in 00:39 · 4 %, dimmer than the digits.</p>
         </div>
       </div>
+      <ColorChoice id="rest" label="Rest colour" options={REST_COLORS} value={preferences.restColor} shade={restShade} onChange={restColor => update({ restColor })} />
+      <p className={styles.hint}>Rest and transition phases, the ring and the pulse during them, and the lane that waits for its partner use the rest colour. The work phase follows the accent under General. Each theme keeps its own choice, shown here in the shade it will use.</p>
       <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player, climbing to full strength just before each milestone and morphing into the next colour." />
       {preferences.wash && <label className={styles.field}>Pulse intensity · {preferences.washGain} %<input type="range" min="10" max="60" step="5" value={preferences.washGain} onChange={event => update({ washGain: Number(event.target.value) })} /></label>}
     </section>

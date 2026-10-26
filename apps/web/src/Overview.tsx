@@ -78,7 +78,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
         {section.rounds.map((round, roundIndex) => <div key={roundIndex} className={styles.round}>
           {(round.label || round.roundRestMs > 0 || round.block) && <div className={styles.roundHeading}><strong>{round.block ? section.format === 'amrap' ? 'One round of the block · repeat until the cap' : 'One turn · then switch' : round.label || 'Once through'}</strong>{round.roundRestMs > 0 && <span>{formatDuration(round.roundRestMs)} rest between {section.format === 'strength' ? 'sets' : 'rounds'}</span>}</div>}
           <table className={styles.table}>
-            <thead><tr><th scope="col">#</th><th scope="col">{pair ? `A · ${names.A}` : 'Movement'}</th>{pair && <th scope="col">B · {names.B}</th>}<th scope="col">{round.block ? 'Clock' : 'Work'}</th><th scope="col">Then</th></tr></thead>
+            <thead><tr><th scope="col">#</th><th scope="col">{pair ? names.A : 'Movement'}</th>{pair && <th scope="col">{names.B}</th>}<th scope="col">{round.block ? 'Clock' : 'Work'}</th><th scope="col">Then</th></tr></thead>
             <tbody>{round.rows.map((row, rowIndex) => <tr key={row.anchor + rowIndex}>
               <td>{String(rowIndex + 1).padStart(2, '0')}</td>
               <td>{cell(row.A, 'A')}</td>

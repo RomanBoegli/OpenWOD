@@ -77,14 +77,14 @@ it('drops stale countdowns instead of speaking a burst after a delayed observati
   expect(spoken).toEqual(['2']);
 });
 
-it('uses recorded clips for countdown and boundary cues at the same instants as the beeps, and speaks only the assignments', async () => {
+it('beeps on every countdown second and boundary, lets the recorded word follow each beep, and speaks only the assignments', async () => {
   const { audio, sources, spoken, engine, advance } = setup({ clips: true });
   await audio.unlock(); await audio.preload();
   expect(audio.clipsReady).toBe(true);
   sources.length = 0; spoken.length = 0;
   audio.update(engine.project(), engine.readClocks()); // Work slot 1: 40 s left, a 10 s transition follows.
-  expect(sources.filter(source => source.kind === 'clip').map(source => [source.clip, source.at])).toEqual([['three', 137], ['two', 138], ['one', 139], ['rest', 140]]);
-  expect(sources.some(source => source.kind === 'beep')).toBe(false);
+  expect(sources.filter(source => source.kind === 'beep').map(source => source.at)).toEqual([137, 138, 139, 140]);
+  expect(sources.filter(source => source.kind === 'clip').map(source => [source.clip, Math.round(source.at! * 100) / 100])).toEqual([['three', 137.1], ['two', 138.1], ['one', 139.1], ['rest', 140.2]]);
   expect(spoken).toEqual([]);
   advance(38_500);
   audio.update(engine.project(), engine.readClocks());
@@ -189,4 +189,29 @@ it('shapes every beep by the chosen tone', async () => {
   audio.tone = 'alarm'; sources.length = 0;
   await audio.testBeeps();
   expect(sources.map(source => source.wave)).toEqual(Array(5).fill('sawtooth'));
+});
+
+it('holds the first cues of a Start until the audio context has resumed, so Get ready and the prep countdown use the clips', async () => {
+  const { audio, sources, spoken, context } = setup({ clips: true });
+  await audio.unlock(); await audio.preload();
+  audio.resolveMovement = lane => ({ Thrusters: 'thruster', 'Pull-ups': 'pull-up' } as Record<string, string>)[lane.name];
+  await audio.prepareNames(['thruster', 'pull-up']);
+  const engine = new WorkoutEngine(compileWorkout(bundledWorkout('fran') as Workout), () => 0, 'prep-test');
+  engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' }); engine.tick();
+  // Start: the unlock's resume is still pending when the same gesture's first frame reaches the audio layer.
+  context.state = 'suspended';
+  let resumed!: () => void;
+  context.resume = () => new Promise<void>(resolve => { resumed = () => { context.state = 'running'; resolve(); }; });
+  const unlocking = audio.unlock();
+  sources.length = 0; spoken.length = 0;
+  audio.update(engine.project(), engine.readClocks());
+  expect(spoken).toEqual([]); expect(sources).toEqual([]);
+  resumed(); await unlocking;
+  audio.update(engine.project(), engine.readClocks());
+  expect(spoken).toEqual([]);
+  const clips = sources.filter(source => source.kind === 'clip');
+  expect(clips.map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'get-ready', 'thruster']);
+  expect(clips.find(source => source.clip === 'get-ready')!.at).toBe(100);
+  // The unlock click, then the three countdown beeps and the Go beep of the 10-second prep.
+  expect(sources.filter(source => source.kind === 'beep').map(source => source.at)).toEqual([100, 107, 108, 109, 110]);
 });

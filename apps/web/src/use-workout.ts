@@ -137,7 +137,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   useEffect(() => () => audio.cancel(), [audio]);
 
   const send = useCallback((type: CommandType, occurrenceId: string, extra: Pick<Command, 'athlete' | 'unit' | 'delta'> = {}) => {
-    if (['next', 'previous', 'switch', 'skipTurn', 'finish'].includes(type)) {
+    if (['next', 'previous', 'nextSection', 'previousSection', 'switch', 'skipTurn', 'finish'].includes(type)) {
       if (performance.now() - lastNavigation.current < 350) return;
       lastNavigation.current = performance.now();
     }

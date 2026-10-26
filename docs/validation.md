@@ -151,10 +151,10 @@ The rule is anchored to the root, the data layer is tracked, and the clean check
 
 | Check | Result |
 | - | - |
-| Unit tests | 156 passed in 22 files, including the accent derivation, the preference migration to one accent per theme, and the beep tones. |
+| Unit tests | 162 passed in 22 files, including the accent and rest colour derivations, the clock nudge, the Start cues held until the audio context resumes, the preference migration to one accent per theme, the beep tones, and section skip and return in the engine. |
 | Browser scenarios | Library, packs, settings, screens, player and footer specs in Firefox and WebKit after each change, including whole-card clicks and the sound-test probe. |
 | Sound test probe | In headless Firefox and WebKit every part of the test comes from the recorded pack and speech synthesis is never called. The device-voice fallback now reports itself. |
-| Layout | Screenshots at 1280, 1024 and 390 px of the three-column feed, the per-theme accent swatches in both themes, the sound card with the beep controls, the player with a pink and a blue accent, and the footer. |
+| Layout | Screenshots at 1280, 1024 and 390 px of the three-column feed, the per-theme accent and rest colour swatches in both themes, a violet transition in the player, the transport row with the skip buttons at 1280 and 390 px, the clock with the percentage, the sound card with the beep controls, the player with a pink and a blue accent, and the footer. |
 | Release workflow | Not yet exercised past validation on GitHub runners. A manual run of the Release image workflow is the dry run before the tag. |
 | Voice layer cache | The voice stage no longer derives from the dependency stage, so a version bump stops re-rendering the five packs. The stage alone was built from the bare Node image with a pinned `tsx` and rendered every pack. |
 

@@ -145,11 +145,15 @@ export class WorkoutAudio {
   get clipsReady() { return this.clips.size === CUE_NAMES.length; }
   private get useClips() { return this.mode === 'voice' && this.cueSource === 'clips' && this.context?.state === 'running'; }
 
+  /** When an unlock began, while its resume is pending (0 otherwise): the first cues of a Start wait for it (AUD-02). */
+  private unlockingSince = 0;
+
   async unlock() {
     if (this.mode === 'silent') return;
     try {
       const context = this.ensureContext();
-      await context.resume();
+      if (context.state !== 'running') this.unlockingSince = performance.now();
+      try { await context.resume(); } finally { this.unlockingSince = 0; }
       // A local oscillator unlocks the output from the user's explicit gesture.
       this.beep(context.currentTime, .035, 660, .05);
       void this.preload();
@@ -161,8 +165,9 @@ export class WorkoutAudio {
     source.onended = () => { source.disconnect(); nodes.forEach(node => node.disconnect()); this.sources = this.sources.filter(item => item !== source); };
   }
 
-  private beep(at: number, length: number, frequency: number, gain = this.beepGain) {
-    if (!this.context || this.context.state !== 'running') return;
+  /** Schedules one beep and returns the instant it has ended, so a recorded word can follow it. */
+  private beep(at: number, length: number, frequency: number, gain = this.beepGain): number {
+    if (!this.context || this.context.state !== 'running') return at;
     const tone = TONES[this.tone];
     length = Math.min(length * tone.tail, tone.hold ?? Infinity);
     const source = this.context.createOscillator();
@@ -178,6 +183,7 @@ export class WorkoutAudio {
     source.start(at);
     source.stop(at + length + .02);
     this.track(source, volume);
+    return at + length + .02;
   }
 
   /** Plays a decoded buffer at an exact AudioContext time and returns when it ends. */
@@ -293,7 +299,10 @@ export class WorkoutAudio {
   private lastEnded?: { occurrenceId: string; manual: boolean; status: string };
 
   update(projection: Projection, clocks: ClockValues) {
-    const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}:${projection.clockScope}`;
+    const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}:${projection.clockScope}:${projection.nudges}`;
+    // Start dispatches in the same gesture as the unlock, before the context has resumed: scheduling then would fall back to the
+    // device voice for "Get ready" and skip the prep countdown. The next frame after the resume schedules everything on the clips.
+    if (this.token !== token && this.mode !== 'silent' && this.unlockingSince && this.context?.state !== 'running' && performance.now() - this.unlockingSince < 2000) return;
     const clips = this.useClips && this.clipsReady;
     if (this.token === token) {
       this.acknowledgementCue(projection, clocks);
@@ -317,8 +326,8 @@ export class WorkoutAudio {
     const terminal = ['completed', 'aborted'].includes(projection.status);
     if (terminal) {
       if (projection.status === 'completed') {
-        if (this.context) this.beep(this.context.currentTime + .01, .35, 1047);
-        this.cue('complete', 'Workout complete. Well done.', (this.context?.currentTime ?? 0) + .4);
+        const end = this.context ? this.beep(this.context.currentTime + .01, .35, 1047) : 0;
+        this.cue('complete', 'Workout complete. Well done.', end + .05);
       } else this.cue('ended', 'Workout ended.');
       return;
     }
@@ -358,14 +367,18 @@ export class WorkoutAudio {
     void scheduled;
   }
 
-  /** Schedules the 3-2-1 countdown and the boundary cue on the audio clock for slot, interval, turn and cap scopes. */
+  /**
+   * Schedules the 3-2-1 countdown and the boundary cue on the audio clock for slot, interval, turn and cap scopes. The beep
+   * always marks the exact instant (AUD-07); with a recorded voice the spoken number or word follows the beep.
+   */
   private scheduleBoundary(projection: Projection, clocks: ClockValues, clips: boolean): boolean {
     if (this.context?.state !== 'running' || projection.clockScope === 'elapsed') return false;
     const audioNow = this.context.currentTime;
     const secondsLeft = clocks.remainingMs / 1000;
     // Only schedule cues that are still in the future. Missed numbers are dropped (AUD-06).
     for (const seconds of [3, 2, 1] as const) if (secondsLeft > seconds + .05) {
-      if (!clips || !this.clip(COUNTDOWN[seconds], audioNow + secondsLeft - seconds)) this.beep(audioNow + secondsLeft - seconds, .08, 620);
+      const end = this.beep(audioNow + secondsLeft - seconds, .08, 620);
+      if (clips) this.clip(COUNTDOWN[seconds], end);
     }
     if (secondsLeft <= .03) return false;
     let boundary: CueName | undefined;
@@ -377,7 +390,8 @@ export class WorkoutAudio {
       const last = projection.nextWork === undefined && projection.current.phase === 'work';
       boundary = last || gateFollows ? undefined : nextIsWork ? 'go' : 'rest';
     }
-    if (!clips || !boundary || !this.clip(boundary, audioNow + secondsLeft)) this.beep(audioNow + secondsLeft, .18, 880);
+    const end = this.beep(audioNow + secondsLeft, .18, 880);
+    if (clips && boundary) this.clip(boundary, end);
     return true;
   }
 

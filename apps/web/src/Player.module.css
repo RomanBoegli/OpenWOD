@@ -2,6 +2,7 @@
 .target { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 2px; font-variant-numeric: tabular-nums; line-height: 1; }
 .target strong { font-size: clamp(56px, 6vw, 84px); font-weight: 700; letter-spacing: -3px; color: var(--ink); }
 .target small { font-size: 16px; font-weight: 600; letter-spacing: 1px; color: var(--ink-3); text-transform: uppercase; }
+.contextDetail { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; font-size: .74em; font-weight: 600; color: var(--ink-3); }
 .loadLine { display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--ink-2); font-size: 15px; font-weight: 600; }
 .secondaryClock { display: flex; justify-content: center; gap: 24px; margin-top: 10px; color: var(--ink-3); font-size: 11px; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; }
 .secondaryClock strong { color: var(--ink-2); font-weight: 600; margin-left: 6px; }

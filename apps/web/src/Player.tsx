@@ -78,7 +78,7 @@ export function resultText(result: SectionResult): string {
   if (result.teamRounds !== undefined) parts.push(`${result.teamRounds} team ${result.teamRounds === 1 ? 'round' : 'rounds'}, ${result.turns} turns`);
   if (result.format === 'forTime' || result.format === 'strength') parts.push(displayTime(result.sectionMs, 'floor'));
   if (result.unacknowledged.length) parts.push(`${result.unacknowledged.length} unreported`);
-  parts.push(result.outcome === 'capped' ? 'capped' : result.outcome === 'finished' ? 'finished early' : 'completed');
+  parts.push(result.outcome === 'capped' ? 'capped' : result.outcome === 'finished' ? 'finished early' : result.outcome === 'skipped' ? 'skipped' : 'completed');
   return parts.join(' · ');
 }
 
@@ -99,7 +99,10 @@ interface PlayerProps {
 export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery }: PlayerProps) {
   // The session plays the workout it started with; an edit in the library never changes a running session (AT-14).
   const [workout] = useState(workoutProp);
-  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, progress, clockWeight, clockSize } = preferences;
+  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, progress, clockWeight, clockSize, nudgeSeconds } = preferences;
+  const clockPercent = progress === 'percent';
+  /** The clock nudge of the skip buttons and the J and L keys, as on a video player. */
+  const nudgeMs = nudgeSeconds * 1000;
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
   const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
@@ -116,6 +119,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const border = useRef<SVGPathElement>(null);
   const overallFill = useRef<HTMLSpanElement>(null);
   const overallText = useRef<HTMLSpanElement>(null);
+  const clockPercentRef = useRef<HTMLSpanElement>(null);
   const player = useRef<HTMLDivElement>(null);
   const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints } = useWorkout(workout, audio, { recovery });
   const [takenOver, setTakenOver] = useState(false);
@@ -200,24 +204,29 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       if (event.key === '?') { helpDialog.current?.showModal(); return; }
       if (event.key === ' ') { event.preventDefault(); for (const control of ['pause', 'resume', 'ready', 'play'] as const) if (controlsNow.includes(control)) { send(control, id); return; } }
       else if (event.key === 'Enter') { event.preventDefault(); if (controlsNow.includes('done')) send('done', id); else if (controlsNow.includes('switch')) send('switch', id); }
+      else if (event.key === 'ArrowRight' && event.shiftKey && controlsNow.includes('nextSection')) send('nextSection', id);
+      else if (event.key === 'ArrowLeft' && event.shiftKey && controlsNow.includes('previousSection')) send('previousSection', id);
       else if (event.key === 'ArrowRight' && controlsNow.includes('next')) send('next', id);
       else if (event.key === 'ArrowLeft' && controlsNow.includes('previous')) send('previous', id);
+      else if ((event.key === 'l' || event.key === 'L') && controlsNow.includes('nudge')) send('nudge', id, { delta: nudgeMs });
+      else if ((event.key === 'j' || event.key === 'J') && controlsNow.includes('nudge')) send('nudge', id, { delta: -nudgeMs });
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine, send]);
+  }, [engine, send, nudgeMs]);
 
   // For time and strength count up in the big clock (UI-04); a cap stays secondary and drives the perimeter.
   const countUp = (format === 'forTime' || format === 'strength') && timing === 'manual' && !isBlock;
   const firstDisplayMs = countUp ? 0 : clockScope === 'cap' ? section.capMs ?? 0 : clockScope === 'elapsed' ? 0 : current.durationMs;
   useEffect(() => subscribeClock((clocks: ClockValues) => {
-    if (overallFill.current || overallText.current) {
+    if (overallFill.current || overallText.current || clockPercentRef.current) {
       const overall = overallProgress(plan, engine.project(), clocks);
+      if (clockPercentRef.current) { const text = `· ${Math.round(overall.fraction * 100)} %`; if (clockPercentRef.current.textContent !== text) clockPercentRef.current.textContent = text; }
       if (overallFill.current) overallFill.current.style.width = `${Math.round(overall.fraction * 1000) / 10}%`;
       if (overallText.current) { const text = [`SECTION ${overall.sectionIndex + 1} / ${overall.sections}`, overall.round ? `ROUND ${overall.round.current} / ${overall.round.total}` : '', `${Math.round(overall.fraction * 100)} %`].filter(Boolean).join(' · '); if (overallText.current.textContent !== text) overallText.current.textContent = text; }
     }
     if (timer.current) {
-      const text = status === 'ready' ? displayTime(workout.prepMs || firstDisplayMs) : terminal ? displayTime(clocks.activeMs) : status === 'awaitingReady' ? displayTime(firstDisplayMs) : clockScope === 'elapsed' || countUp ? displayTime(clocks.sectionMs, 'floor') : displayTime(clocks.remainingMs);
+      const text = status === 'ready' ? displayTime(workout.prepMs || firstDisplayMs) : terminal ? displayTime(clocks.activeMs) : status === 'awaitingReady' ? displayTime(firstDisplayMs) : (clockScope === 'elapsed' || countUp) && !isPrep ? displayTime(clocks.sectionMs, 'floor') : displayTime(clocks.remainingMs);
       if (timer.current.textContent !== text) timer.current.textContent = text;
     }
     if (elapsed.current) {
@@ -235,7 +244,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     const fraction = status === 'ready' || status === 'awaitingReady' || clockScope === 'elapsed' ? 1 : clocks.fraction;
     if (border.current) border.current.style.strokeDashoffset = String(-(1 - fraction));
     if (player.current) {
-      const drained = (status === 'running' || status === 'paused') && clockScope !== 'elapsed' ? (!isRest && !isPrep ? washDrain(clocks.remainingMs, clocks.durationMs, { amberMs, redMs }) : 1 - fraction).toFixed(3) : '0';
+      const drained = (status === 'running' || status === 'preparing' || status === 'paused') && clockScope !== 'elapsed' ? (!isRest && !isPrep ? washDrain(clocks.remainingMs, clocks.durationMs, { amberMs, redMs }) : 1 - fraction).toFixed(3) : '0';
       if (player.current.style.getPropertyValue('--drained') !== drained) player.current.style.setProperty('--drained', drained);
     }
     if (player.current) {
@@ -253,7 +262,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
 
   const restLabel = current.phase === 'roundRest' ? 'Round rest' : current.phase === 'transition' ? 'Transition' : 'Block rest';
   const phaseLabel = status === 'ready' ? 'Ready when you are' : status === 'paused' ? projection.pauseReason === 'hidden' ? 'Paused · app was hidden' : projection.pauseReason === 'recovered' ? 'Recovered · paused' : 'Workout paused' : status === 'awaitingReady' ? 'Next section · ready?' : status === 'completed' ? 'Workout complete' : status === 'aborted' ? 'Workout ended' : isPrep ? 'Get ready' : isRest ? restLabel : format === 'amrap' ? 'AMRAP' : format === 'emom' ? 'Interval' : format === 'youGoIGo' ? `${turn?.athlete === 'B' ? names.B : names.A} works` : format === 'strength' ? 'Set' : timing === 'manual' ? 'Work · tap Done' : 'Work';
-  const playerPhase = terminal ? 'complete' : status === 'paused' ? 'paused' : isRest ? 'rest' : isPrep || status === 'ready' ? 'prep' : 'work';
+  const playerPhase = terminal ? 'complete' : status === 'paused' ? 'paused' : isRest ? 'rest' : isPrep ? 'prep' : status === 'ready' ? 'ready' : 'work';
   const positionLabel = format === 'emom' && interval ? `INTERVAL ${interval.index} / ${interval.count}` : format === 'youGoIGo' && turn ? `TEAM ROUND ${turn.teamRound + 1}${turn.roundsTarget ? ` / ${turn.roundsTarget}` : ''} · TURN ${turn.number}` : format === 'strength' && round ? `SET ${roundNumber} / ${round.count}` : round ? `ROUND ${roundNumber} / ${round.count}` : `SECTION ${current.sectionIndex + 1} / ${plan.sections.length}`;
   const caption = terminal ? 'ACTIVE SESSION TIME' : status === 'ready' || isPrep ? 'PREP COUNTDOWN' : status === 'awaitingReady' ? countUp ? section.capMs ? 'NEXT SECTION · COUNTS UP TO THE CAP' : 'NEXT SECTION · NO CAP' : clockScope === 'cap' ? 'NEXT SECTION · TIME CAP' : clockScope === 'elapsed' ? 'NEXT SECTION · NO CAP' : 'FIRST WORK INTERVAL' : isRest ? 'REST REMAINING' : countUp ? section.capMs ? 'ELAPSED · CAP BELOW' : 'ELAPSED · NO CAP' : CAPTIONS[clockScope];
   const laneHeading = isRest ? 'COMING UP AFTER REST' : status === 'awaitingReady' ? 'YOUR NEXT SECTION' : isBlock && format === 'amrap' ? 'THE BLOCK · AS MANY ROUNDS AS YOU CAN' : isBlock ? 'THE WORK UNIT' : 'YOUR STATIONS';
@@ -309,10 +318,10 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-warning="normal" data-wash={preferences.wash} data-clock-weight={clockWeight} data-clock-size={clockSize} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
       <Perimeter progress={border} width={perimeterWidth} />
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span>{positionLabel}{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
-      {progress !== 'off' && <div className={styles.overall} data-testid="overall-progress" aria-label="Overall progress"><span className={styles.overallTrack}><span ref={overallFill} className={styles.overallFill} /></span>{progress === 'detail' && <span ref={overallText} className={styles.overallText}>SECTION 1 / {plan.sections.length} · 0 %</span>}</div>}
+      {progress !== 'off' && <div className={styles.overall} data-testid="overall-progress" aria-label="Overall progress"><span className={styles.overallTrack}><span ref={overallFill} className={styles.overallFill} /></span>{progress !== 'bar' && <span ref={overallText} className={styles.overallText}>SECTION 1 / {plan.sections.length} · 0 %</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
-        <div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>
+        <div className={styles.clockLine}><div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>{clockPercent && <span ref={clockPercentRef} className={styles.clockPercent} aria-label="Progress beside the clock">· 0 %</span>}</div>
         <div className={styles.clockCaption}>{caption}</div>
         {!terminal && !editable && ((section.capMs !== undefined && (clockScope !== 'cap' || countUp)) || clockScope === 'turn' || (isBlock && format === 'youGoIGo')) && <div className={own.secondaryClock}>
           {section.capMs !== undefined && (clockScope !== 'cap' || countUp) && <span>CAP<strong ref={capClock}>{displayTime(section.capMs)}</strong></span>}
@@ -352,35 +361,49 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       {view === 'context' && <section className={styles.contextSection} aria-label="Workout context">
         <div className={styles.contextHeading}><div><span className={styles.eyebrow}>THE GAME PLAN</span><h2>{section.title}</h2></div><button className={styles.quietButton} aria-pressed={following} onClick={() => setFollowing(value => !value)}><Icon name="focus" size={17} />{following ? 'Following workout' : 'Follow workout'}</button></div>
         <div className={styles.contextList} ref={context} onWheel={() => setFollowing(false)} onTouchMove={() => setFollowing(false)}>
-          <div className={styles.contextColumns}><span>#</span><span>A · {names.A}</span><span>{pair ? `B · ${names.B}` : ''}</span><span>{isBlock ? 'TARGET' : 'WORK'}</span></div>
+          <div className={styles.contextColumns}><span>#</span><span>{pair ? names.A : 'MOVEMENT'}</span><span>{pair ? names.B : ''}</span><span>{isBlock ? 'TARGET' : 'WORK'}</span></div>
           {contextRows.map((item, index) => {
             const selected = isBlock ? highlight === item.anchor : item.anchor === focusAnchor;
-            const cell = (lanePrescription?: Prescription) => lanePrescription ? `${lanePrescription.name}${primaryTarget(lanePrescription) ? ` · ${primaryTarget(lanePrescription)!.amount} ${primaryTarget(lanePrescription)!.unit}` : ''}` : '—';
-            return <div key={item.anchor} ref={selected ? activeRow : undefined} className={styles.contextRow} data-active={selected} aria-current={selected ? 'step' : undefined}><span>{String(index + 1).padStart(2, '0')}</span><span>{cell(item.A)}</span><span>{pair ? cell(item.B) : '—'}</span><span>{item.durationMs !== undefined ? `${Math.round(item.durationMs / 1000)}s` : 'done'}</span></div>;
+            // Everything the focus view shows for a lane: name, target, the load levels and the notes.
+            const cell = (role: 'A' | 'B', lanePrescription?: Prescription) => {
+              if (!lanePrescription) return '—';
+              const amount = primaryTarget(lanePrescription);
+              return <>{lanePrescription.name}{amount ? ` · ${amount.amount} ${amount.unit}` : ''}{(lanePrescription.load || lanePrescription.notes) && <span className={own.contextDetail}>{lanePrescription.load && <LoadLevels load={lanePrescription.load} unit={loadUnit} sex={loadSex(role)} />}{lanePrescription.notes && <span>{lanePrescription.notes}</span>}</span>}</>;
+            };
+            return <div key={item.anchor} ref={selected ? activeRow : undefined} className={styles.contextRow} data-active={selected} aria-current={selected ? 'step' : undefined}><span>{String(index + 1).padStart(2, '0')}</span><span>{cell('A', item.A)}</span><span>{pair ? cell('B', item.B) : '—'}</span><span>{item.durationMs !== undefined ? `${Math.round(item.durationMs / 1000)}s` : 'done'}</span></div>;
           })}
         </div>
         <div className={styles.contextFootnote}>{isBlock ? 'The whole block, in order. The clock only knows the cap.' : 'Assignments follow the current round. Authored rests are included in the total.'}</div>
       </section>}
 
+      {/* Laid out like a disc player: section and interval back on the left, play and end in the middle, forward on the right. */}
       <div className={styles.controls}>
-        <div className={styles.secondaryControls}>
+        <div className={styles.transport} data-side="back">
+          {plan.sections.length > 1 && <button className={styles.iconButton} aria-label={current.sectionIndex === 0 ? 'Restart section' : 'Previous section'} disabled={!can('previousSection')} onClick={() => send('previousSection', projection.occurrenceId)}><Icon name="sectionPrevious" /></button>}
           <button className={styles.iconButton} aria-label={projection.index === section.startIndex ? 'Restart interval' : 'Previous interval'} disabled={!can('previous')} onClick={() => send('previous', projection.occurrenceId)}><Icon name="previous" /></button>
-          <button className={styles.iconButton} aria-label="Next interval" disabled={!can('next')} onClick={() => send('next', projection.occurrenceId)}><Icon name="next" /></button>
+          <button className={styles.iconButton} aria-label={`Back ${nudgeSeconds} seconds`} disabled={!can('nudge')} onClick={() => send('nudge', projection.occurrenceId, { delta: -nudgeMs })}><Icon name="rewind" label={String(nudgeSeconds)} /></button>
         </div>
+        <div className={styles.transportCentre}>
         {terminal ? <button className={styles.primaryButton} onClick={restart}><Icon name="play" />Train again</button> : <button className={styles.primaryButton} onClick={() => send(status === 'ready' ? 'play' : status === 'paused' ? 'resume' : status === 'awaitingReady' ? 'ready' : 'pause', projection.occurrenceId)}><Icon name={active ? 'pause' : 'play'} />{status === 'ready' ? 'Start workout' : status === 'paused' ? 'Resume workout' : status === 'awaitingReady' ? 'Start next section' : 'Pause workout'}</button>}
         <button className={styles.stopButton} disabled={editable} onClick={() => stopDialog.current?.showModal()}><Icon name="close" size={16} />End session</button>
+        </div>
+        <div className={styles.transport} data-side="forward">
+          <button className={styles.iconButton} aria-label={`Forward ${nudgeSeconds} seconds`} disabled={!can('nudge')} onClick={() => send('nudge', projection.occurrenceId, { delta: nudgeMs })}><Icon name="fastForward" label={String(nudgeSeconds)} /></button>
+          <button className={styles.iconButton} aria-label="Next interval" disabled={!can('next')} onClick={() => send('next', projection.occurrenceId)}><Icon name="next" /></button>
+          {plan.sections.length > 1 && <button className={styles.iconButton} aria-label="Next section" disabled={!can('nextSection')} onClick={() => send('nextSection', projection.occurrenceId)}><Icon name="sectionNext" /></button>}
+        </div>
       </div>
       {status === 'paused' && projection.pauseReason === 'recovered' && recovery && <section className={styles.recovery} role="dialog" aria-label="Interrupted session">
         <div><strong>Interrupted session · saved {elapsedText(Date.now() - new Date(recovery.checkpoint.savedAt).getTime())}</strong><p>{[`Section ${current.sectionIndex + 1} of ${plan.sections.length}`, turn ? `${turn.athlete === 'A' ? names.A : names.B}’s turn · team round ${turn.teamRound + 1}` : round ? `Round ${round.iteration}` : '', clockScope === 'elapsed' ? `${displayTime(engine.readClocks().activeMs, 'floor')} elapsed` : `${displayTime(engine.readClocks().remainingMs)} left`].filter(Boolean).join(' · ')}. Time since the save is not counted; nothing was marked done for you.</p></div>
         <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send('resume', projection.occurrenceId)}><Icon name="play" />Resume</button></div>
       </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
-      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
+      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
     </div>
 
     <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={styles.quietButton} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Details</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
 
-    <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
+    <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>Shift</span><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next section</li><li><span className={styles.kbd}>J</span><span className={styles.kbd}>L</span>Back or forward {nudgeSeconds} seconds on the clock</li><li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
     <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={`${styles.primaryButton} ${styles.dangerFill}`} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
   </div>;
 }

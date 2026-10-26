@@ -174,12 +174,15 @@ test.describe('workout view settings', () => {
   test('ring width, pulse intensity and colour marks reach the player', async ({ page }) => {
     await page.goto('/#/settings/player'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
     await page.getByRole('slider', { name: /Timer ring width/ }).fill('10');
-    await page.getByRole('radio', { name: 'Bar and numbers' }).check();
+    await page.getByRole('slider', { name: /Skip buttons/ }).fill('15');
+    await page.getByRole('radio', { name: 'Bar + info + %' }).check();
     await page.getByRole('radio', { name: 'Light' }).check();
     await page.getByRole('radio', { name: 'Compact' }).check();
     await page.getByRole('slider', { name: /Pulse intensity/ }).fill('60');
     await page.getByRole('slider', { name: 'First milestone marker' }).fill('20');
     await page.getByLabel('First milestone colour').fill('#ff00ff');
+    await page.getByRole('group', { name: 'Rest colour in the dark theme' }).getByRole('button', { name: 'Pink' }).click();
+    await page.getByLabel('Custom rest colour for the light theme').fill('#ff2299');
     await page.getByRole('radio', { name: 'Pounds' }).check();
     const preview = page.locator('[data-view]');
     await expect(preview).toHaveAttribute('data-view', 'focus');
@@ -192,9 +195,17 @@ test.describe('workout view settings', () => {
     await page.getByLabel('Default view').selectOption('focus');
     await page.goto('/#/wod/fran/play'); await ready(page);
     await expect(page.locator('svg[data-perimeter] path').first()).toHaveCSS('stroke-width', '10px');
+    await expect(page.locator('[data-wash]').locator('.overallTrack, [class*=overallTrack]').first()).toHaveCSS('height', '10px'); // As thick as the ring.
+    await expect(page.getByRole('button', { name: 'Back 15 seconds' })).toBeVisible();
+    await expect(page.getByLabel('Progress beside the clock')).toHaveText(/· \d+ %/);
     const player = page.locator('[data-wash]');
     expect(await player.evaluate(element => element.style.getPropertyValue('--wash-gain'))).toBe('0.6');
     expect(await player.evaluate(element => element.style.getPropertyValue('--phase-amber'))).toBe('#ff00ff');
+    // The rest colour is a root token tinted per theme: whichever theme the browser picked, its pink choice reads as pink.
+    const rest = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--phase-rest').trim());
+    expect(rest).toMatch(/^#[0-9a-f]{6}$/);
+    expect(['#a3cbf0', '#1d5fa8']).not.toContain(rest);
+    expect(parseInt(rest.slice(1, 3), 16)).toBeGreaterThan(parseInt(rest.slice(3, 5), 16));
     await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('95 (65) lb');
     // The pulse deepens as a timed slot drains: half-way through the first 40 s slot of the partner circuit.
     await page.goto(PLAYER); await ready(page);

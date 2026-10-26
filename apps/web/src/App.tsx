@@ -56,7 +56,7 @@ export default function App() {
   audio.beepVolume = preferences.beepVolume;
   audio.tone = preferences.beepTone;
 
-  useTheme(preferences.theme, preferences.accent);
+  useTheme(preferences.theme, preferences.accent, preferences.restColor);
   useEffect(() => savePreferences(preferences), [preferences]);
   useEffect(() => { void audio.listPacks(); }, [audio]);
   useEffect(() => installFeel(), []);

@@ -39,7 +39,7 @@ const id = Type.String({ minLength: 1, maxLength: 200 });
 export const SectionResultSchema = Type.Object({
   sectionId: id,
   format: Type.Union(SECTION_FORMATS.map(format => Type.Literal(format))),
-  outcome: Type.Union([Type.Literal('completed'), Type.Literal('capped'), Type.Literal('finished')]),
+  outcome: Type.Union([Type.Literal('completed'), Type.Literal('capped'), Type.Literal('finished'), Type.Literal('skipped')]),
   sectionMs: Type.Integer({ minimum: 0 }),
   counter: Type.Optional(Type.Object({ rounds: Type.Integer({ minimum: 0 }), reps: Type.Integer({ minimum: 0 }) }, { additionalProperties: false })),
   turns: Type.Optional(Type.Integer({ minimum: 0 })),

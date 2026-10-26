@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type IconName = 'github' | 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'edit' | 'copy' | 'dice';
+export type IconName = 'github' | 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'sectionNext' | 'sectionPrevious' | 'rewind' | 'fastForward' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'edit' | 'copy' | 'dice';
 
 const paths: Record<IconName, ReactNode> = {
   play: <path d="m9 5 11 7-11 7z" />,
@@ -10,6 +10,10 @@ const paths: Record<IconName, ReactNode> = {
   settings: <><path d="M4 7h16M4 17h16" /><circle cx="8" cy="7" r="3" /><circle cx="16" cy="17" r="3" /></>,
   next: <path d="m5 5 10 7-10 7zM19 5v14" />,
   previous: <path d="m19 5-10 7 10 7zM5 5v14" />,
+  sectionNext: <path d="m2 5 8 7-8 7zM11 5l8 7-8 7zM22 5v14" />,
+  rewind: <><path d="M4.5 10.5A8 8 0 1 1 6 17" /><path d="M4 5v5.5h5.5" /></>,
+  fastForward: <><path d="M19.5 10.5A8 8 0 1 0 18 17" /><path d="M20 5v5.5h-5.5" /></>,
+  sectionPrevious: <path d="m22 5-8 7 8 7zM13 5l-8 7 8 7zM2 5v14" />,
   arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
   back: <path d="M19 12H5m5 5-5-5 5-5" />,
   check: <path d="m5 12 4 4L19 6" />,
@@ -38,6 +42,7 @@ const paths: Record<IconName, ReactNode> = {
   alert: <><path d="M12 3 2 20h20zM12 10v4" /><circle cx="12" cy="17" r=".6" /></>,
 };
 
-export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+/** `label` sets a short figure inside the glyph, as in the skip arrows of a video player. */
+export function Icon({ name, size = 20, label }: { name: IconName; size?: number; label?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}{label && <text x="12" y="15.3" fontSize={label.length > 1 ? 7 : 8.5} fontWeight="700" textAnchor="middle" fill="currentColor" stroke="none">{label}</text>}</svg>;
 }

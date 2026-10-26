@@ -7,6 +7,7 @@ import { accentTokens, type Theme } from '../theme';
 import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { type SettingsProps } from './shared';
+import { ColorChoice } from './ColorChoice';
 
 /** Ready-made accents; the first is the built-in green. Any other colour comes from the picker. */
 const ACCENTS: [string, string][] = [['', 'Green'], ['#2a9d8f', 'Teal'], ['#3b82f6', 'Blue'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f97316', 'Orange']];
@@ -28,13 +29,8 @@ export function GeneralSettings({ preferences, onPreferencesChange, entries, hou
     <section className={styles.card} aria-labelledby="appearance-title">
       <h2 id="appearance-title">Appearance</h2>
       <div className={styles.field}><span id="theme-label">Theme</span><div className={shared.segmented} role="radiogroup" aria-labelledby="theme-label">{([['auto', 'Auto', 'auto'], ['light', 'Light', 'sun'], ['dark', 'Dark', 'moon']] as const).map(([value, label, icon]) => <label key={value} data-checked={preferences.theme === value}><input type="radio" name="theme" value={value} checked={preferences.theme === value} onChange={() => update({ theme: value })} /><Icon name={icon} size={16} />{label}</label>)}</div></div>
-      {(['dark', 'light'] as const).map(theme => <div key={theme} className={styles.field}><span id={`accent-${theme}-label`}>Accent in the {theme} theme</span>
-        <div className={styles.swatches} role="group" aria-labelledby={`accent-${theme}-label`}>
-          {ACCENTS.map(([value, label]) => <button key={label} type="button" className={styles.swatch} style={{ background: shadeOf(value, theme) }} aria-label={label} aria-pressed={preferences.accent[theme] === value} title={label} onClick={() => update({ accent: { ...preferences.accent, [theme]: value } })} />)}
-          <label className={styles.swatchPicker} title="Any colour"><input type="color" aria-label={`Custom accent for the ${theme} theme`} value={preferences.accent[theme] || BUILT_IN_GREEN[theme]} onChange={event => update({ accent: { ...preferences.accent, [theme]: event.target.value.toLowerCase() } })} /><span>Custom</span></label>
-        </div>
-      </div>)}
-      <p className={styles.hint}>Buttons, links, the work-phase ring and the highlights follow the accent. Each theme keeps its own choice, shown here in the shade it will use.</p>
+      <ColorChoice id="accent" label="Accent" options={ACCENTS} value={preferences.accent} shade={shadeOf} onChange={accent => update({ accent })} />
+      <p className={styles.hint}>Buttons, links, the work-phase ring and the highlights follow the accent. Each theme keeps its own choice, shown here in the shade it will use. The colour of rest and transitions is under Training view.</p>
     </section>
     <section className={styles.card} aria-labelledby="athletes-title">
       <h2 id="athletes-title">Athletes</h2>

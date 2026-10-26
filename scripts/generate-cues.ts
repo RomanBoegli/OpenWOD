@@ -7,7 +7,7 @@
 //   PIPER_PYTHON=python3 ...                   # the Docker build: a Python with piper-tts installed
 // Requires ffmpeg. Piper's English voices are British, American and Scottish; no other accents exist in that set.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { seedMovements } from '../packages/domain/src/movements';
 
@@ -40,21 +40,33 @@ export const PACKS = [
   { id: 'american-male', label: 'American male (Ryan)', voice: 'en_US-ryan-medium' },
 ];
 
+/** Bump when the rendering changes (text, trimming, level): packs rendered with an older version are discarded, not resumed. */
+const RENDER_VERSION = 2;
+
 const outDir = resolve(process.env.CUES_OUT ?? 'apps/web/public/cues');
 const wanted = (process.env.CUE_PACKS ?? '').split(',').map(item => item.trim()).filter(Boolean);
 const packs = wanted.length ? PACKS.filter(pack => wanted.includes(pack.id)) : PACKS;
 const voicesDir = resolve(process.env.PIPER_VOICES ?? '.cache/piper-voices');
 mkdirSync(outDir, { recursive: true });
+for (const pack of packs) {
+  const packDir = join(outDir, pack.id);
+  const marker = join(packDir, '.render-version');
+  if (existsSync(packDir) && (!existsSync(marker) || readFileSync(marker, 'utf8').trim() !== String(RENDER_VERSION))) {
+    console.log(`${pack.id}: rendered with an older version, rendering again`);
+    rmSync(packDir, { recursive: true, force: true });
+  }
+}
 
 const names = Object.fromEntries(seedMovements.map(record => [record.id, `${record.spokenName ?? record.name}.`]));
 const specPath = join(outDir, '.render-spec.json');
-writeFileSync(specPath, JSON.stringify({ outDir, voicesDir, packs: packs.map(({ id, voice }) => ({ id, voice })), clips: CUES, names }, null, 2));
+writeFileSync(specPath, JSON.stringify({ renderVersion: RENDER_VERSION, outDir, voicesDir, packs: packs.map(({ id, voice }) => ({ id, voice })), clips: CUES, names }, null, 2));
 
 const python = process.env.PIPER_PYTHON;
 const result = python
   ? spawnSync(python, ['scripts/render-cues.py', specPath], { stdio: 'inherit' })
   : spawnSync('uv', ['run', '--with', 'piper-tts', 'python', 'scripts/render-cues.py', specPath], { stdio: 'inherit' });
 if (result.status !== 0) { console.error('Rendering failed. Locally this needs uv and ffmpeg; see docs/development.md.'); process.exit(result.status ?? 1); }
+for (const pack of packs) if (existsSync(join(outDir, pack.id))) writeFileSync(join(outDir, pack.id, '.render-version'), `${RENDER_VERSION}\n`);
 
 // List every pack that is complete in the output, in canonical order, with how many movement names it carries.
 const listed = PACKS.filter(pack => Object.keys(CUES).every(name => existsSync(join(outDir, pack.id, `${name}.mp3`)))).map(pack => {

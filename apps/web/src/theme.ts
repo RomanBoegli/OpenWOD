@@ -46,23 +46,41 @@ export function accentTokens(hex: string, theme: Theme): Record<(typeof ACCENT_T
   return { '--accent': accent, '--accent-text': text, '--accent-fill': fill, '--accent-fill-hover': hslToHex(h, s, 37), '--accent-ink': '#ffffff', '--accent-border': fill, '--accent-soft': `${fill}14`, '--accent-track': `${fill}22`, '--focus': fill, '--phase-work': accent, '--brand-symbol': hslToHex(h, s, 40) };
 }
 
-/** Applies a chosen accent on top of the theme's stylesheet, or clears it so the built-in green returns. */
-export function applyAccent(hex: string, theme: Theme) {
-  const style = document.documentElement.style;
-  if (!/^#[0-9a-f]{6}$/i.test(hex)) { for (const token of ACCENT_TOKENS) style.removeProperty(token); return; }
-  for (const [token, value] of Object.entries(accentTokens(hex, theme))) style.setProperty(token, value);
+const REST_TOKENS = ['--phase-rest'] as const;
+
+/**
+ * The rest colour of the player (rest and transition phases, the waiting lane) is tinted the same way: the built-in blue sits
+ * at the lightness every choice is brought to, so a chosen hue keeps the contrast of the original in either theme.
+ */
+export function restTokens(hex: string, theme: Theme): Record<(typeof REST_TOKENS)[number], string> {
+  const [h, rawS] = hexToHsl(hex);
+  const s = Math.min(85, Math.max(45, rawS));
+  return { '--phase-rest': hslToHex(h, s, theme === 'dark' ? 79 : 39) };
 }
 
-const NO_ACCENT: Preferences['accent'] = { dark: '', light: '' };
+const isHex = (value: string) => /^#[0-9a-f]{6}$/i.test(value);
 
-/** Auto follows the operating system and reacts to live changes; an explicit choice overrides it. Each theme applies its own accent. */
-export function useTheme(preference: ThemePreference, accent: Preferences['accent'] = NO_ACCENT) {
+function applyTokens(tokens: readonly string[], values: Record<string, string> | undefined) {
+  const style = document.documentElement.style;
+  for (const token of tokens) { if (values) style.setProperty(token, values[token]); else style.removeProperty(token); }
+}
+
+/** Applies a chosen accent on top of the theme's stylesheet, or clears it so the built-in green returns. */
+export function applyAccent(hex: string, theme: Theme) { applyTokens(ACCENT_TOKENS, isHex(hex) ? accentTokens(hex, theme) : undefined); }
+
+/** Applies a chosen rest colour, or clears it so the built-in blue returns. */
+export function applyRest(hex: string, theme: Theme) { applyTokens(REST_TOKENS, isHex(hex) ? restTokens(hex, theme) : undefined); }
+
+const NO_CHOICE: Preferences['accent'] = { dark: '', light: '' };
+
+/** Auto follows the operating system and reacts to live changes; an explicit choice overrides it. Each theme applies its own accent and rest colour. */
+export function useTheme(preference: ThemePreference, accent: Preferences['accent'] = NO_CHOICE, rest: Preferences['restColor'] = NO_CHOICE) {
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-    const update = () => { const theme = resolveTheme(preference, media.matches); applyTheme(theme); applyAccent(accent[theme], theme); };
+    const update = () => { const theme = resolveTheme(preference, media.matches); applyTheme(theme); applyAccent(accent[theme], theme); applyRest(rest[theme], theme); };
     update();
     if (preference !== 'auto') return;
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
-  }, [preference, accent.dark, accent.light]);
+  }, [preference, accent.dark, accent.light, rest.dark, rest.light]);
 }

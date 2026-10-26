@@ -64,6 +64,23 @@ test.describe('player', () => {
     await expect(page.getByRole('button', { name: 'Previous interval' })).toBeEnabled();
   });
 
+  test('skips a whole section and returns to it, and the context view carries the loads and notes of the focus view', async ({ page }) => {
+    await page.goto('/#/wod/full-body-partner/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.evaluate(() => window.__openwodTest!.advance(30_000));
+    await page.getByRole('button', { name: 'Next section' }).click();
+    await expect(page.getByRole('button', { name: 'Start next section' })).toBeVisible(); // The skipped section's Ready gate.
+    await expect(page.getByText('MODIFIED')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.getByRole('button', { name: 'Previous section' }).click();
+    await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Restart section' })).toBeVisible(); // Back at the first section.
+    await page.goto('/#/wod/fran/play'); await ready(page);
+    await page.getByRole('button', { name: 'Context' }).click();
+    const rows = page.getByRole('main').locator('[aria-current], [data-active]');
+    await expect(rows.first()).toContainText('kg');
+  });
+
   test('confirms destructive stop and exports a portable JSON file', async ({ page }) => {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export WOD' }).click();
@@ -281,5 +298,35 @@ test.describe('formats', () => {
     await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');
     await page.reload();
     await expect(chip('Equipment', 'Only my equipment')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('the skip buttons move the clock either way by the chosen seconds and the J and L keys do the same', async ({ page }) => {
+    await page.goto(PLAYER); await ready(page);
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await advance(page, 12_000);
+    const timer = page.getByTestId('primary-timer');
+    await expect(timer).toHaveText('00:38');
+    await page.getByRole('button', { name: 'Back 10 seconds' }).click(); // Only 2 seconds into the slot: back to its start.
+    await expect(timer).toHaveText('00:40');
+    await page.getByRole('button', { name: 'Forward 10 seconds' }).click();
+    await page.getByRole('button', { name: 'Forward 10 seconds' }).click();
+    await expect(timer).toHaveText('00:20');
+    await page.keyboard.press('j');
+    await expect(timer).toHaveText('00:30');
+    await page.keyboard.press('l');
+    await expect(timer).toHaveText('00:20');
+    await expect(page.getByText('MODIFIED')).toBeVisible();
+  });
+
+  test('the prep countdown counts down in a count-up workout and wears the rest colour', async ({ page }) => {
+    await page.goto('/#/wod/fran/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await advance(page, 3000);
+    const player = page.locator('[data-wash]');
+    await expect(player).toHaveAttribute('data-phase', 'prep');
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:07');
+    await advance(page, 8000);
+    await expect(player).toHaveAttribute('data-phase', 'work');
+    await expect(page.getByTestId('primary-timer')).toHaveText('00:01');
   });
 });

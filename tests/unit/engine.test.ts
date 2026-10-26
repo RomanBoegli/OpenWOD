@@ -86,6 +86,61 @@ describe('deterministic workout engine', () => {
     expect(engine.readClocks().sectionMs).toBe(15_000);
   });
 
+  it('skips a whole section, scoring it as skipped, and returns to the previous one to play it again', () => {
+    const { engine, at, command } = fixture(fullBodyPartner);
+    const [first, second] = engine.plan.sections;
+    command('play'); at(30_000);
+    expect(engine.project().controls).toEqual(expect.arrayContaining(['previousSection', 'nextSection']));
+    expect(command('nextSection')).toBe(true);
+    expect(engine.project().status).toBe('awaitingReady'); // The skipped section's Ready gate still applies.
+    expect(engine.project().section.id).toBe(second.id);
+    expect(engine.project().results.map(result => [result.sectionId, result.outcome])).toEqual([[first.id, 'skipped']]);
+    expect(engine.project().controls).toEqual(expect.arrayContaining(['ready', 'stop', 'previousSection']));
+    at(31_000);
+    expect(command('previousSection')).toBe(true);
+    expect(engine.project().status).toBe('paused'); // Back from a Ready gate the clock waits for Resume.
+    expect(engine.project().section.id).toBe(first.id);
+    expect(engine.project().results).toEqual([]);
+    expect(engine.readClocks().sectionMs).toBe(0);
+    expect(engine.project().modified).toBe(true);
+    command('resume'); at(400_000);
+    expect(engine.project().status).toBe('awaitingReady');
+    expect(engine.project().results.map(result => result.outcome)).toEqual(['completed']);
+    expect(command('previousSection')).toBe(true); // At the first section: restart it.
+    expect(engine.project().section.id).toBe(first.id);
+    expect(engine.readClocks().sectionMs).toBe(0);
+    command('resume');
+    while (engine.project().controls.includes('nextSection')) command('nextSection');
+    expect(engine.project().section.id).toBe(engine.plan.sections.at(-1)!.id); // No section after the last one.
+    expect(engine.project().results).toHaveLength(engine.plan.sections.length - 1);
+  });
+
+  it('nudges the clock 5 seconds either way within its span, in prep, a slot and while paused, and lets a forward nudge at the end fire the boundary', () => {
+    const { engine, at, command } = fixture();
+    const nudge = (delta: number) => engine.command({ type: 'nudge', id: `n${delta}:${Math.random()}`, occurrenceId: engine.occurrenceId, delta });
+    command('play'); at(3000);
+    expect(engine.project().controls).toContain('nudge');
+    expect(nudge(-5000)).toBe(true); // Back no further than the start of the prep: 3 of the 5 seconds.
+    expect(engine.readClocks().remainingMs).toBe(10_000);
+    nudge(5000); nudge(5000); // Forward to the end of the prep: the next tick starts the work.
+    at(3001);
+    expect(engine.project().status).toBe('running');
+    expect(engine.readClocks().remainingMs).toBe(40_000 - 1);
+    at(13_000);
+    nudge(-5000);
+    expect(engine.readClocks().remainingMs).toBe(35_000);
+    expect(engine.readClocks().sectionMs).toBe(5000); // The section clock moves with the slot.
+    expect(engine.readClocks().activeMs).toBe(10_000); // The training time stays real.
+    expect(engine.project().modified).toBe(true);
+    expect(engine.project().nudges).toBe(4);
+    command('pause'); at(20_000);
+    expect(engine.project().controls).toContain('nudge');
+    nudge(5000);
+    expect(engine.readClocks().remainingMs).toBe(30_000);
+    command('resume'); at(22_000);
+    expect(engine.readClocks().remainingMs).toBe(28_000);
+    expect(engine.events.filter(event => event.type === 'nudged').map(event => event.payload?.deltaMs)).toEqual([-3000, 5000, 5000, -5000, 5000]);
+  });
   it('stops at a manual section gate even after a long callback delay and excludes readiness waits', () => {
     const { engine, at, command } = fixture(fullBodyPartner);
     command('play'); at(1_000_000);

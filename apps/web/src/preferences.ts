@@ -33,11 +33,15 @@ export interface Preferences {
   markColors: { first: string; second: string };
   /** The accent colour per theme as #rrggbb, or '' for the built-in green. Each theme derives its tints from its own choice. */
   accent: { dark: string; light: string };
-  /** The overall progress line across every section and round: hidden, a bar, or a bar with the numbers. */
-  progress: 'off' | 'bar' | 'detail';
+  /** The colour of rest and transition phases per theme as #rrggbb, or '' for the built-in blue. */
+  restColor: { dark: string; light: string };
+  /** The overall progress line across every section and round: hidden, a bar, a bar with the numbers, or those plus a percentage beside the clock. */
+  progress: 'off' | 'bar' | 'detail' | 'percent';
   /** The big clock's digits. */
   clockWeight: 'bold' | 'light';
   clockSize: 'large' | 'compact';
+  /** How far the skip buttons and the J and L keys move the clock, in seconds. */
+  nudgeSeconds: number;
   /** Equipment available at home; the library can hide anything that needs more. */
   myEquipment: string[];
   onlyMyEquipment: boolean;
@@ -45,7 +49,7 @@ export interface Preferences {
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: { dark: '', light: '' }, progress: 'detail', clockWeight: 'bold', clockSize: 'large', myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, progress: 'detail', clockWeight: 'bold', clockSize: 'large', nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -60,7 +64,7 @@ const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']> } : {};
+    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']>; restColor?: Partial<Preferences['restColor']> } : {};
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
@@ -83,9 +87,11 @@ export function loadPreferences(): Preferences {
       markColors: { first: color(stored.markColors?.first), second: color(stored.markColors?.second) },
       // Before 1.1.0 one accent served both themes; that choice carries over to each.
       accent: typeof stored.accent === 'string' ? { dark: color(stored.accent), light: color(stored.accent) } : { dark: color(stored.accent?.dark), light: color(stored.accent?.light) },
-      progress: oneOf(stored.progress, ['off', 'bar', 'detail'], 'detail'),
+      restColor: { dark: color(stored.restColor?.dark), light: color(stored.restColor?.light) },
+      progress: oneOf(stored.progress, ['off', 'bar', 'detail', 'percent'], 'detail'),
       clockWeight: oneOf(stored.clockWeight, ['bold', 'light'], 'bold'),
       clockSize: oneOf(stored.clockSize, ['large', 'compact'], 'large'),
+      nudgeSeconds: Math.round(clamp(stored.nudgeSeconds, 1, 60, defaultPreferences.nudgeSeconds)),
       myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,
       difficulty: normaliseCalibration(stored.difficulty),
