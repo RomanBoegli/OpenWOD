@@ -401,6 +401,10 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **UI-17** Before a session starts, a phone-width screen (620 px or less) SHALL show the workouts on the library's first screen, with the filter groups and sorting folded behind a Filters button that counts the active filters, and SHALL fit the player's clock with the percentage beside it, compact controls and the page actions in one row. During a session the controls SHALL stay inside the frame and a recovered session SHALL not repeat Resume and End session. Keyboard help SHALL be hidden on touch screens without a hovering pointer.
 
+**UI-18** At every width the library SHALL show one search bar with the search, a Filters button counting the active filters, and the shuffle button. Filters SHALL open the filter groups and put the sort box into that bar between the search and Filters, with its label inside the box, and on a phone the sort box SHALL take its own row under the bar. Whether the panel is open SHALL survive navigation within the browser session. This extends the phone-only fold of UI-17 to every width.
+
+**UI-19** An address the app does not know SHALL show a "Page not found" page, and a workout link whose workout is not in the library SHALL show a "Workout not found" page naming the ID, both with a way back to the library and a confused-Travolta loop. A workout link SHALL not be called missing before the library has loaded. The library SHALL show the same loop above "Nothing matches yet". The loop SHALL keep its transparency, load only where it is shown, and hold a still frame when the system asks for reduced motion.
+
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
@@ -696,7 +700,7 @@ Recorded 26 October 2026 after version 1.8. "Done" means implemented with automa
 | 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
 | 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the device checklist, the digest and hardware lines of the release notes. |
 | 5 Static shape and Pages | Done (version 1.12, section 15.5) | User-side: Pages source "GitHub Actions", the `github-pages` environment for `v*` tags, the `v1.2.0` tag, a look at the live site and the zip. |
-| 6 Follow-up improvements | Open, version 1.2.1 prepared with household settings (DAT-12) and the phone layout before the start (UI-17) | Prioritised from real training sessions. User-side: the `v1.2.1` tag. |
+| 6 Follow-up improvements | Open, version 1.2.1 released with household settings (DAT-12) and the phone layout before the start (UI-17), version 1.3.0 prepared with the search bar at every width (UI-18) and the not-found page (UI-19) | Prioritised from real training sessions. User-side: the `v1.3.0` tag. |
 
 ## 15.4 Waves
 
@@ -746,12 +750,12 @@ The user decided: ship it in the release after the first published image (1.2.0,
 
 **User-side gates.** Enable Pages with source "GitHub Actions", push `main` or dispatch `cues.yml`, tag `v1.2.0`, open the Pages URL and check the footer version and five voices, serve the zip from a plain web root once.
 
-## 15.6 Planned wave 6: the workout generator (version 1.3.0)
+## 15.6 Planned wave 6: the workout generator (version 1.4.0)
 
-Recorded in version 1.12 before any code.
+Recorded in version 1.12 before any code, and moved from 1.3.0 to 1.4.0 in version 1.14, when 1.3.0 shipped the library and not-found changes instead.
 The user wants a Generate button on the New workout page that fills the editor with a workout drawn from the household's own movement catalogue.
 It is rule-based, deterministic and offline, so it fits NFR-11 and leaves "workout generation by AI" in section 2.2 deferred.
-The decisions, the modules, the phases and the tests are in the plan "Plan: the workout generator (version 1.3.0, after the static shape)" at the end of this document.
+The decisions, the modules, the phases and the tests are in the plan "Plan: the workout generator (version 1.4.0, after the static shape)" at the end of this document.
 Its planned requirement is BLD-13, to be appended after BLD-12 when the code starts.
 
 # 16 Risks and decisions to validate
@@ -797,6 +801,22 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 
 # 18 Plan revision record
+
+## Version 1.14 — 27 October 2026
+
+- The library's search bar is the same at every width (UI-18): search, Filters with the count of active filters, and the shuffle button, with the sort box joining the bar while the panel is open and its "Sort" label inside the box.
+  The panel's open state is kept with the other filters in session storage.
+- The sort box draws its own chevron with `appearance: none`, because WebKit drew the native one and ignored the box's padding.
+- A `notFound` route catches every hash the router does not know, and a workout, play or edit link whose workout is missing shows a not-found page instead of the library with a notice (UI-19).
+  `useLibraryData` reports `loaded` once its first load has answered, so a saved workout is not called missing while the library is still loading.
+- The confused-Travolta loop (`apps/web/src/Travolta.tsx`) shows on the not-found page and above "Nothing matches yet".
+  It is an animated WebP of 625 KB made from the 1.67 MB GIF, keeping its transparency, with a 12 KB still frame for reduced motion.
+  It lives in `apps/web/src/assets/`, because `.dockerignore` keeps the root `assets/` folder out of the image build.
+- The header's "Not born. Made." colours "Made." like the footer does, and the footer's GitHub link reads "Source".
+- The footer clips its overflow sideways and centres the deployment tooltip on a phone, so the hidden tooltip no longer widens the page.
+- The deployment tooltip in the server shape mentions the settings beside the library and the session log.
+- The workout generator of section 15.6 moves to version 1.4.0.
+- Version 1.3.0 prepared, with the database schema at version 2 and the browser library at IndexedDB version 2, both unchanged.
 
 ## Version 1.13 — 27 October 2026
 
@@ -974,7 +994,7 @@ OpenWOD ships as one container: Fastify serves the built web app and the househo
 
 Decisions made by the user: the static site carries the **recorded voices rendered in CI**; **Pages deploys on every `v*` tag** and a **static zip is attached to a GitHub Release**; backup in static mode is the **JSON export with a new Restore**, built once so it also works on the server (lifting the "export cannot be imported back" limitation). Both shapes stay fully supported.
 
-Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-13…, UI-18…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
+Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-13…, UI-20…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 
 ---
 
@@ -1080,7 +1100,7 @@ A → B → C → D → E → F. A is gated by the unchanged server suites, B by
 4. Open `https://romanboegli.ch/OpenWOD/`: footer says 1.2.0, Settings → Sound lists five voices, a saved workout survives a reload.
 5. Download the zip from the release and serve it from a plain web root once.
 
-# Plan: the workout generator (version 1.3.0, after the static shape)
+# Plan: the workout generator (version 1.4.0, after the static shape)
 
 ## Context
 
@@ -1093,7 +1113,7 @@ Decisions made by the user (27 October 2026):
 
 - A **Generate** button on the New workout page opens a dialog with knobs: duration, format or Surprise me, difficulty, gear source and focus. Athletes come from the editor's Solo/Pair choice. The result fills the editor. **Shuffle again** rerolls with the same knobs.
 - Generated loaded movements carry **levelled loads** (light/medium/heavy, men and women, kg) from a reference table inside the generator, shifted a notch by difficulty. Catalogue records stay load-free (AGENT.md decision).
-- Ships as **1.3.0**, after the static shape (wave 5, 1.2.0). This session records the plan in AGENT.md as §15.6 (as §15.5 did for the static shape). Code follows once 1.2.0 is out.
+- Ships as **1.4.0** (first planned as 1.3.0), after the static shape (wave 5, 1.2.0). This session records the plan in AGENT.md as §15.6 (as §15.5 did for the static shape). Code follows once 1.2.0 is out.
 
 Standing constraints: no runtime cloud service, deterministic and seedable, requirement IDs appended (next builder ID **BLD-13**), the user commits, Markdown one sentence per line and no semicolons, local browser tests with `--project=firefox --project=webkit`.
 
@@ -1195,13 +1215,13 @@ Titles from patterns that apply: `${gear} ${formatWord} ${n}` ("Barbell AMRAP 15
 
 | Phase | Work | Gate |
 | - | - | - |
-| 0 Record (this session) | AGENT.md §15.6 "Planned wave 6: the workout generator (version 1.3.0)" with the decisions and phase table, BLD-13 appended after BLD-12, §2.2 keeps "workout generation by AI" deferred with "(a local rule-based generator ships under BLD-13)", a revision-log bullet under the current version header. | Markdown rules, IDs appended. |
+| 0 Record (this session) | AGENT.md §15.6 "Planned wave 6: the workout generator (version 1.4.0)" with the decisions and phase table, BLD-13 appended after BLD-12, §2.2 keeps "workout generation by AI" deferred with "(a local rule-based generator ships under BLD-13)", a revision-log bullet under the current version header. | Markdown rules, IDs appended. |
 | A Random and tables | `random.ts`, `generator-loads.ts`, `generator-targets.ts` with unit tests. | Table ordered and snapped, fresh objects, fixed-seed values. |
 | B Pool | `generator-pool.ts` with tests on the seed catalogue. | Exclusions, equipment, focus rules, widening notes. |
 | C Templates | `generator-templates.ts` per format and `chooseFormat`. | Grid validity and duration ±20 %. |
 | D Loop and text | `generator.ts`, `generator-text.ts`, hit-rate tuning. | ±1 level everywhere, ≥ 80 % exact hits, unreachable cells noted. |
 | E UI | Preferences block, `GenerateDialog.tsx`, Editor actions and status, App props. | Playwright scenario, visual pass in both themes at 1024 and 390 px. |
-| F Docs and version | README feature line, `docs/architecture.md` Editor paragraph, `docs/validation.md` wave entry, `docs/development.md` package line, AGENT.md wave row and log, version 1.3.0 in `package.json`, `package-lock.json`, `CITATION.cff`, `.env.example`, `Dockerfile`, `docs/releases/v1.3.0.md`. | `npm run check`, browser suites. |
+| F Docs and version | README feature line, `docs/architecture.md` Editor paragraph, `docs/validation.md` wave entry, `docs/development.md` package line, AGENT.md wave row and log, version 1.4.0 in `package.json`, `package-lock.json`, `CITATION.cff`, `.env.example`, `Dockerfile`, `docs/releases/v1.4.0.md`. | `npm run check`, browser suites. |
 
 Phases A–F run after the static shape (1.2.0) has shipped.
 
@@ -1218,4 +1238,4 @@ Phases A–F run after the static shape (1.2.0) has shipped.
 1. `npm run check` (lint, typecheck, unit tests, build) and `npx playwright test --config tests/playwright.config.ts --project=firefox --project=webkit`.
 2. WebKit screenshots of the dialog and the editor after a generation in both themes at 1024 and 390 px.
 3. A by-hand pass: generate for each of the six formats, solo and pair, with "My equipment" against the user's ticked gear, start one generated workout in the player.
-4. Markdown rules in every touched file, `grep -n 1.3.0 CITATION.cff .env.example Dockerfile package.json`.
+4. Markdown rules in every touched file, `grep -n 1.4.0 CITATION.cff .env.example Dockerfile package.json`.

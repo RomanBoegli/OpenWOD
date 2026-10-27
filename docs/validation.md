@@ -197,3 +197,16 @@ Version 1.2.1: settings shared through the household server (DAT-12), the phone 
 | Phone screenshots | WebKit at 390 px, light theme, with the percentage beside the clock: the library shows the first workout card on the first screen with Filters closed, Filters opens sorting and the groups and counts one active filter, and the player before the start fits the clock and the percentage with Details, All workouts and Export WOD in one row (UI-17). |
 
 Not recorded in this round: the upgrade of a real version 1 database on the Portainer stack with its `pre-migration-v1-to-v2-*.sqlite`, settings shared between two physical devices, the phone layout on a physical iPhone, the dark theme at phone width, and the release workflow with the Playwright image on GitHub runners.
+
+## The search bar and the not-found page, 27 October 2026
+
+Version 1.3.0: one search bar at every width (UI-18), the not-found page and the empty-library loop (UI-19), and the header and footer touches.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 202 passed in 26 files. New: the router opens the library for an empty hash and the not-found page for an unknown one, and still reads a play link. |
+| Browser scenarios | 198 passed: Firefox 49, WebKit 49, static Firefox 50, static WebKit 50. New: an unknown address shows "Page not found" with a way back, and a removed workout's link shows "Workout not found" with its ID (UI-19). The specs that use filters or sorting open the panel first (UI-18). The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
+| Reflow | The player page measures exactly the viewport width at 1440, 1024, 768, 390 and 320 px in Firefox and WebKit, after the footer stopped letting its hidden tooltip widen the page. |
+| Screenshots | WebKit at 1280 and 390 px, in both themes: the bar closed and open with "Sort" inside the box, the sort box on its own row on a phone, the transparent loop above "Nothing matches yet" on the light background, the not-found page on the dark one, "Made." coloured in the header, and "Source" in the footer. |
+
+Not recorded in this round: a screenshot with reduced motion switched on, the loop on a physical iPhone, and the release workflow on GitHub runners.
