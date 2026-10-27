@@ -264,7 +264,7 @@ The version bump, the one-time repository settings and the complete procedure ar
 - [docs/architecture.md](docs/architecture.md): design decisions behind the engine, the formats, the catalogue and the two deployment shapes.
 - [docs/development.md](docs/development.md): repository layout, test strategy and the voice pipeline.
 - [docs/validation.md](docs/validation.md): what has been verified for each release.
-- [AGENT.md](AGENT.md): requirements, plan and change log.
+- [docs/plans/](docs/plans/): designs of planned features.
 
 To reset a working copy, run `rm -rf node_modules .cache .data dist test-results` and `docker compose -f deploy/compose.dev.yaml down -v`.
 

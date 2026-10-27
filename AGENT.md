@@ -1,15 +1,15 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.12 · 27 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.17 · 27 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
 The core interaction is synchronised workout content: the execution engine identifies the relevant row, athlete assignments, or exercise block; the player highlights and presents that content with what comes next. Repeated execution revisits the same content with a new round context. Timers must never invent progress through repetitions or distance-based work.
 Deployment is a product requirement, in two shapes built from the same sources.
 The household shape is a GitHub repository deployable through Portainer using its root Compose file, a prebuilt application image, and persistent SQLite storage.
-The static shape, delivered in version 1.2.0 (section 15.5), is the same build served as a static site from GitHub Pages or any web root, with the library kept in the browser.
+The static shape, delivered in version 1.2.0 (DEP-15 to DEP-17), is the same build served as a static site from GitHub Pages or any web root, with the library kept in the browser.
 
-**Reading guide for implementers.** Sections 5–14 are normative; sections 11, 15, and 16 hold the architecture choices, the order of work, and the open risks. Start with the backlog in section 15.1 and the fixture in section 6.4, which is the first executable test. Where an architecture note says SHOULD or MAY, the behaviour it protects remains mandatory; only the technique is optional.
+**Reading guide for implementers.** Sections 5–14 are normative; section 11 holds the architecture choices, section 15 where things stand today, and section 16 the open risks. The fixture in section 6.4 is the first executable test. Where an architecture note says SHOULD or MAY, the behaviour it protects remains mandatory; only the technique is optional.
 
 # 1 Purpose and requirement conventions
 
@@ -25,7 +25,7 @@ This specification defines observable behaviour, data semantics, operating const
 
 Requirements carry stable IDs. Changes should preserve IDs, record the reason, and update associated acceptance fixtures. All unmarked normative requirements are P0. Numerical limits and UI defaults below are proposed product decisions, not facts about the users' hardware.
 
-The complete P0 scope is the dependable first release, not a prerequisite for reviewing an early usable version. Phase 2 below delivers an initial household version for saved paired timed workouts and file sharing; the remaining formats and advanced authoring follow before the complete P0 release. Partial versions SHALL identify unsupported capabilities and SHALL NOT claim complete P0 compliance.
+The complete P0 scope is the dependable first release, not a prerequisite for reviewing an early usable version. Phase 2 of the original plan delivered an initial household version for saved paired timed workouts and file sharing; the remaining formats and advanced authoring follow before the complete P0 release. Partial versions SHALL identify unsupported capabilities and SHALL NOT claim complete P0 compliance.
 
 Success means the couple can create a workout once, select it on the iPad, press Play, and complete a timed partner session without touching the screen again. Completion-driven formats require only meaningful actions such as Switch, Done, or Finish.
 
@@ -53,7 +53,7 @@ Success means the couple can create a workout once, select it on the iPad, press
 
 P1: separate login accounts, richer progress comparisons, reusable section templates, calendar scheduling, a larger exercise catalogue, configurable language packs, and optional locally hosted speech generation.
 
-P2: independent athlete timelines, live synchronisation across multiple devices, remote-control phones, wearables, equipment sensors, automatic rep detection, voice commands, workout generation by AI, a hosted public workout directory or social sharing service, leaderboards, nutrition tracking, and official competition scoring. Sharing portable workout files between installations is P0 and requires no public service.
+P2: independent athlete timelines, live synchronisation across multiple devices, remote-control phones, wearables, equipment sensors, automatic rep detection, voice commands, workout generation by AI (a local rule-based generator is planned under BLD-13, section 15), a hosted public workout directory or social sharing service, leaderboards, nutrition tracking, and official competition scoring. Sharing portable workout files between installations is P0 and requires no public service.
 
 P0 is one authoritative player device per session. Two profiles do not imply two independently running timers. A simple household application does not require microservices or a database server.
 
@@ -301,17 +301,17 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 ## 6.5 User-provided Markdown workout
 
-[docs/source/example-wod.md](docs/source/example-wod.md) is a real authoring and display reference and the second canonical timing fixture. It contains a five-minute warm-up, four paired four-row blocks of ten minutes each, and a five-minute cool-down; the title states the sum, 50 minutes, excluding prep and Ready waits. Work is prescribed as 40 seconds with 20-second transitions; the bodyweight/dumbbell task columns exchange athlete assignments after each round. Column headings describe task groups, not permanent athlete identities.
+[docs/source/example-wod.md](docs/source/example-wod.md) is a real authoring and display reference and the second canonical timing fixture. It contains a five-minute warm-up, four paired four-row blocks of ten minutes each, and a five-minute cool-down; the source's title states 50 minutes, excluding prep and Ready waits, which the resolved timing below shortens to 48:40. Work is prescribed as 40 seconds with 20-second transitions; the bodyweight/dumbbell task columns exchange athlete assignments after each round. Column headings describe task groups, not permanent athlete identities.
 
 The resolved timing is explicit in the document: each block is two rounds of four slots at 40s with 20s transitions between them, a 20s rest between the two rounds that doubles as the column switch, and the 2-minute rest of the source after the block, which every block, including Block 4, keeps and which then runs straight into the next one, giving 3:40 + 0:20 + 3:40 + 2:00 = 9:40 per block and 38:40 for the WOD (the source's 10:00 counted a 20s transition after the last slot as well, which the editor no longer has). Warm-up and cool-down are 1-minute solo-style timed slots performed together without transitions. The builder SHALL show the authored trailing rests explicitly (BLD-04); the columns swap through BLD-12 alternation after each complete round. The general rule stands for any future prose conversion: a capped partial round SHALL NOT be described as a complete round or an equal A/B role rotation, and missing timing semantics are resolved by the author, never guessed.
 
 | Section | Expected timed duration |
 | - | - |
 | Warm-up | 5:00 |
-| Each block | 10:00, of which 8:00 work/transition and 2:00 rest |
-| WOD | 40:00 |
+| Each block | 9:40, of which 7:40 work, transitions and round rest and 2:00 rest |
+| WOD | 38:40 |
 | Cool-down | 5:00 |
-| Session | 50:00 excluding prep and Ready waits |
+| Session | 48:40 excluding prep and Ready waits |
 
 Use this document to test paired table/context layout, long movement names, multi-section navigation, trailing rest display, and per-round assignment alternation. Markdown remains a human authoring/reference format; automatic interpretation of arbitrary Markdown or natural language is outside P0. The editor or a reviewed manual conversion produces validated portable JSON; imported executable files SHALL never guess missing timing semantics from prose.
 
@@ -482,10 +482,10 @@ With the truck horn the clock SHALL hold at each timed boundary for the length o
 **DAT-12** In the server shape the settings SHALL belong to the household: one revisioned settings document on the server that every device follows, where the last change wins, picked up on start, on focus, on reconnect and on reload. Each device SHALL keep a copy for an instant and offline start, mark a change it could not upload and send it later, and validate the server's copy field by field. The first device with settings of its own SHALL seed an empty server. In the static shape the settings SHALL stay in the browser.
 
 **DAT-13** A workout that ships with the app SHALL offer the same actions as a saved one: Edit, Duplicate, Export and Remove.
-
-**DAT-14** A user SHALL be able to delete a session for good, with its score corrections, in either shape and after a confirmation. The household SHALL keep a tombstone of every deleted session id, so a later upload of that id (an outbox retry, another device) is acknowledged as already stored and never stored again (DAT-03). A session still waiting for upload on this device SHALL leave the outbox with it. Deleting SHALL be idempotent and SHALL also tombstone an id not stored yet, so an upload still on its way never lands. The export SHALL not carry the tombstones, and a restore SHALL keep the target's tombstones and leave out the sessions they name, counting them.
 Editing it saves a saved workout under the same id, which takes the bundled one's place in the library and keeps its session history.
 Removing it hides it, with any edits, through a list of removed workout ids in master data, and Settings → Collections lists the removed ones with a Restore button.
+
+**DAT-14** A user SHALL be able to delete a session for good, with its score corrections, in either shape and after a confirmation. The household SHALL keep a tombstone of every deleted session id, so a later upload of that id (an outbox retry, another device) is acknowledged as already stored and never stored again (DAT-03). A session still waiting for upload on this device SHALL leave the outbox with it. Deleting SHALL be idempotent and SHALL also tombstone an id not stored yet, so an upload still on its way never lands. The export SHALL not carry the tombstones, and a restore SHALL keep the target's tombstones and leave out the sessions they name, counting them.
 
 ## 10.1 Portable WOD sharing
 
@@ -493,7 +493,7 @@ SQLite remains the live datastore. JSON files are portable exchange documents; s
 
 **SHR-01** Each workout SHALL offer Export workout, producing one UTF-8 YAML file named from its title with a .wod.yaml suffix. The library and administration screen SHALL offer Import; administration SHALL also offer export of selected workouts/programs as one .wods.yaml pack. Import SHALL also accept the earlier JSON form, since YAML 1.2 is a superset of JSON. These actions SHALL work through ordinary browser file selection/download on desktop, tablet, and phone. Workout sharing SHALL be available when the first circuit editor is delivered.
 
-**SHR-02** A single-workout document SHALL use the discriminator `format: "openwod.workout"`, an integer `formatVersion`, and one `workout` conforming to the separately versioned domain schema. File version 2 writes durations as human-readable strings such as `40s`, `1m30s` or `1:30` under keys without the Ms suffix (`duration`, `prep`, `betweenChildrenRest`, `trailingRest`, `betweenIterationsRest`); a bare number means seconds. The internal model stays integer milliseconds (section 6.2); version 1 files with `*Ms` integer keys remain importable. A pack SHALL use `format: "openwod.workoutPack"`, `formatVersion`, and workout/program collections. Files SHALL contain the complete prescriptions, targets, units, repeats, rests, section policies, A/B roles, and required movement names/short/spoken names. Referenced exercise definitions SHALL be included or resolved into copied prescriptions during export. Files SHALL remain usable on an empty compatible installation without source-server access, catalogue IDs, household athlete profiles, or linked external assets.
+**SHR-02** A single-workout document SHALL use the discriminator `format: "openwod.workout"`, an integer `formatVersion`, and one `workout` conforming to the separately versioned domain schema. The current file version 3 writes durations as human-readable strings such as `40s`, `1m30s` or `1:30` under keys without the Ms suffix (`duration`, `prep`, `betweenChildrenRest`, `trailingRest`, `betweenIterationsRest`); a bare number means seconds. The internal model stays integer milliseconds (section 6.2); file versions 1 and 2 predate the first release and are refused with a message to export the workout again. A pack SHALL use `format: "openwod.workoutPack"`, `formatVersion`, and workout/program collections. Files SHALL contain the complete prescriptions, targets, units, repeats, rests, section policies, A/B roles, and required movement names/short/spoken names. Referenced exercise definitions SHALL be included or resolved into copied prescriptions during export. Files SHALL remain usable on an empty compatible installation without source-server access, catalogue IDs, household athlete profiles, or linked external assets.
 
 **SHR-03** Shared files SHALL contain workout/program content and optional author-entered attribution only. They SHALL exclude household profile identities, session history/results, authentication data, deployment configuration, and local draft state. Any author/source URL or workout notes intentionally included SHALL be visible in the export preview. Household A/B names SHALL export as role labels. Full application-data export under DAT-06 SHALL be a separate, clearly labelled administrative operation and SHALL NOT use the workout-sharing discriminator.
 
@@ -503,7 +503,7 @@ SQLite remains the live datastore. JSON files are portable exchange documents; s
 
 **SHR-06** The repository SHALL publish the versioned exchange/domain JSON Schemas (which validate the parsed YAML document), readable format documentation, and valid single-workout/pack examples. YAML export SHALL use one canonical serialisation, with a fixed human-friendly key order, two-space indentation, no anchors or aliases, and no document markers, for reading and stable diffs, without volatile export timestamps; the same canonical form serves the optional snapshot hashing of section 6.2. Import SHALL accept older supported versions through explicit migrations, reject unknown newer versions, and identify unsupported workout capabilities in partial releases. Round-trip and cross-installation fixtures SHALL verify semantic equivalence of prescriptions, timing, attribution, and program references after ID remapping, by comparing a normalised representation of workout meaning with local IDs and local revision mapped out; import intentionally changes IDs, so byte equality of canonical YAML is not the test. Import SHALL reject YAML anchors/aliases and duplicate keys. Parsing and expansion SHALL enforce BLD-10/NFR-10 limits before writes; source URLs SHALL be treated as metadata and SHALL NOT be fetched automatically.
 
-Example filename: `partner-circuit.wod.yaml`. Its workout payload is the complete fixture in section 6.4 in the version 2 human-duration form, wrapped with `format: "wodva.workout"` and `formatVersion: 2`; `workout.schemaVersion` versions the workout model independently of the exchange envelope. Program packs embed referenced workouts rather than depending on another installation's library. The public schemas SHALL specify required fields, optional metadata, ID remapping, and migration behaviour before the first sharing release.
+Example filename: `partner-circuit.wod.yaml`. Its workout payload is the complete fixture in section 6.4 in the human-duration form, wrapped with `format: "openwod.workout"` and `formatVersion: 3`; `workout.schemaVersion` versions the workout model independently of the exchange envelope. Program packs embed referenced workouts rather than depending on another installation's library. The public schemas SHALL specify required fields, optional metadata, ID remapping, and migration behaviour before the first sharing release.
 
 # 11 Architecture and interface boundaries
 
@@ -691,129 +691,83 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-28 | Import malformed, oversized, unknown-version or unsupported-capability sharing files. Preview reports actionable failures and no records are written. Validate published examples against schemas and round-trip supported older fixtures through migrations. | SHR-04/06, BLD-10, NFR-10 |
 | AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 3:40 with a 0:20 rest between the rounds plus a 2:00 rest after it, WOD 38:40, session 48:40 excluding prep and Ready waits, every rest shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
 
-# 15 Implementation plan and release gates
+# 15 Where things stand
 
-Build complete vertical slices, keeping the execution core independent. The first useful milestone is the paired fixture playable in desktop Safari/Firefox, including a half-monitor-width window and responsive phone/tablet layouts. Start with the real, minimal tested engine so the first player evolves into the application. Real-device trials follow desktop UX progress and SHALL NOT block editor work.
+Recorded 27 October 2026, plan version 1.17.
+All P0 requirements and the 29 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
-| Phase | Deliverables | Exit gate |
-| - | - | - |
-| 0 Tested browser fixture | Selected TypeScript stack and generated shared schema; pure sequence/repeat/timed work/rest engine with injectable clock and browser test hook; paired focus/context prototype; timer/perimeter; voice/beeps; pause/resume; responsive layout. Initial CI, image publishing and root Compose. | AT-01/02/03/09/10 pass for timed circuits; desktop Safari/Firefox full/half-window UX works with narrow-viewport checks under AT-17. Build/publish the initial image and exercise Git → registry → Portainer over HTTPS as deployment access becomes available. |
-| 1 Dependable saved workout | Thin authenticated API with SQLite/migrations; save/load fixture and immutable session snapshot; IndexedDB checkpoints/events/outbox; recovery and single-tab control; idempotent results; initial backup/restore. | Saved workout → play → reload/recover → finish/upload → redeploy → retain data works. Applicable timed-circuit cases of AT-11–14/16/21/24 pass, including completion after recovery. |
-| 2 Initial household version | Simple timed-circuit editor/library, duplicate/reuse, presets, per-athlete overrides and round assignment alternation, accurate previews, basic history, single-workout sharing and multi-workout packs, public schemas/examples and import preview. | Create → save → play → repeat → export → import on a fresh installation works. AT-25/26/28/29 pass for supported circuit capabilities; unsupported formats are identified before import/start. Desktop UX remains the review gate; later physical-device smoke tests can inform iteration. |
-| 3 Complete P0 formats and authoring | Shared engine behaviours for caps, manual gates, AMRAP, EMOM, For Time/chippers/run-station sequences and handoffs; full player layouts; advanced/nested builder; catalogue/program management; complete pack/application-data import/export. | AT-01–17/20–29 pass at applicable engine/browser layers, including program-pack references. Full complete-P0 create → play → save → share flow works. |
-| 4 Release hardening | Multi-architecture image verification, Portainer walkthrough, migration/rollback and restore rehearsal, dependency/assets review, recorded performance and physical-device validation. | Fresh Portainer deployment and AT-19 pass; all 29 acceptance scenarios pass at applicable layers, including AT-18 shared-display/audio checks and real-device smoke tests. |
-| 5 Follow-up improvements | Prioritised P1 items based on actual training sessions. | Each addition preserves engine fixtures and deployment simplicity. |
+**Releases.**
 
-A minimal image, CI publishing and Compose file start in Phase 0: the production Dockerfile and compose.yaml in their final shape, serving the static fixture build and a liveness endpoint, with no authentication or secrets until Phase 1 introduces the API. Do not build a throwaway deployment that is later replaced. Exercise the actual deployment route early; retain comprehensive migration/rollback and multi-architecture release gates in Phase 4. Program export joins the pack format when program authoring arrives in Phase 3. Phase 2 is an initial usable milestone, not the complete P0 release.
+- 1.0.0 to 1.1.0: the household server with SQLite, the device cache and outbox, recovery, single-tab control, packs and backup. The `v1.0.0` tag failed in validation before any image was built, so 1.1.0 is the first published image, adding the accent colour and the three-column library.
+- 1.1.1: the plain-HTTP fix, HTTPS served by the container itself (DEP-18) and a hardened release workflow.
+- 1.1.2: the phone layout during a session and the home-screen install (UI-16).
+- 1.2.0: the static shape on GitHub Pages with a zip on every release (DEP-15 to DEP-17), the browser-only library (DAT-10) and restore from the JSON export in both shapes (DAT-11).
+- 1.2.1: household settings on the server (DAT-12) and the phone layout before the start (UI-17).
+- 1.3.0: one search bar at every width (UI-18) and the not-found pages (UI-19).
+- 1.3.1: the session layout on tablets and short screens (UI-20).
 
-## 15.1 First implementation backlog
+**Not yet released** (in the tree since `v1.3.1`):
 
-The ten backlog items of version 1.2 (architecture decisions, repository skeleton and CI, the two fixtures and the schema source, the pure engine, the paired screens and perimeter, cue scheduling, the SQLite API with checkpoints and recovery, the circuit editor and library, export and import with packs, the remaining formats and release hardening) are all delivered.
-The revision record in section 18 names the version that closed each one.
+- Bundled workouts can be edited, duplicated and removed like saved ones, with Restore under Settings → Collections (DAT-13).
+- The header shows the running version beside the wordmark (UI-21).
+- A workout's page and the library cards show the workout's chips above the title, and formats moved to the blocks (UI-22).
+- The truck horn tone (AUD-01), with the clock holding at each timed boundary for its 1.4 s blast.
+- The transition tile between blocks: Wait for Ready, Rest then continue, or Continue straight away, for every format (BLD-14).
+- The interface says block and movement everywhere, and the editor's time fields are mm:ss fields that step with the wheel and the arrow keys.
+- The Logbook under Settings replaces the History page, and sessions can be deleted for good (UI-22, DAT-14).
+- In the focus view the big clock holds its place from slot to slot (UI-20).
+- The timer wash deepens once over the whole slot and morphs its colour at each mark (UI-13).
+- On a phone the movement name gets its own line, and the frame padding follows the ring width.
+- The bundled full-body partner workout now runs 48:40 and HYROX doubles is four blocks running 13:30, both without a rest after the last movement of a round.
 
-## 15.2 Definition of done for the first release
+**Schema and storage versions today.**
 
-- [x] All P0 requirements implemented, each mapped to an automated test, a documented inspection or a real-device result. Open: NFR-09 (login, deferred by decision). The import half of DAT-06 arrived in version 1.12 as the JSON restore of DAT-11.
-- [x] All 29 acceptance scenarios pass at their applicable automated layers. AT-18, AT-19 and the real-device parts of AT-13 stay with the user's hardware.
-- [ ] Two real household workouts completed: one automatic paired circuit and one mixed manual/timed session.
-- [x] No critical unresolved timing, data-loss, A/B assignment or duplicate-command defect in the automated suites.
-- [x] Production image deployable from Git through Portainer with persistent data. The Portainer walkthrough itself is pending on the user's side.
-- [x] Backup restored successfully into a fresh test stack (`scripts/rehearse-restore.sh`).
-- [x] A shared workout file and a pack imported into a fresh installation with equivalent prescriptions and timing, preserved attribution, and no household identities or results in the files.
-- [x] Desktop Safari/Firefox full/half-window review and responsive phone/tablet layouts pass. Physical-device smoke tests (`docs/device-checklist.md`) pending.
-- [x] Release notes identify supported browsers, hardware tested, known limitations, image digest and schema version (`docs/releases/v1.0.0.md`, digest and hardware to fill in).
-- [x] README gives another developer enough to run, test, deploy, upgrade and restore the application.
+- Workout model `schemaVersion` 2, workout file `formatVersion` 3 (`openwod.workout`), pack `formatVersion` 1, JSON export `formatVersion` 1.
+- SQLite schema version 3: migration 2 added household settings, migration 3 (`deleted sessions`) adds the `deleted_sessions` tombstone table.
+- IndexedDB version 3, which adds the `deletedSessions` store to version 2's `workouts`, `master` and `sessions`.
+- An image of 1.3.x or older refuses a database migrated to version 3, so going back needs the pre-migration backup the server writes under `/data/backups/`.
 
-## 15.3 Implementation status
+**Open gates on the user's side.**
 
-Recorded 26 October 2026 after version 1.8. "Done" means implemented with automated tests at the applicable layer.
+- Two real household workouts: one automatic paired circuit and one mixed manual and timed session.
+- The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
-| Phase | Status | Open items |
-| - | - | - |
-| 0 Tested browser fixture | Done | User-side exit gate: publish an image, one Portainer deployment, physical iPad checks. |
-| 1 Dependable saved workout | Done (version 1.8) | Login deferred by decision; the server is for a trusted network. |
-| 2 Initial household version | Done (versions 1.3 to 1.8) | None since version 1.12: the full application export restores (DAT-11). |
-| 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
-| 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the device checklist, the digest and hardware lines of the release notes. |
-| 5 Static shape and Pages | Done (version 1.12, section 15.5) | User-side: Pages source "GitHub Actions", the `github-pages` environment for `v*` tags, the `v1.2.0` tag, a look at the live site and the zip. |
-| 6 Follow-up improvements | Open, version 1.2.1 released with household settings (DAT-12) and the phone layout before the start (UI-17), version 1.3.0 released with the search bar at every width (UI-18) and the not-found page (UI-19), version 1.3.1 prepared with the session layout on tablets (UI-20) | Prioritised from real training sessions. User-side: the `v1.3.1` tag. |
+**Next.**
+The workout generator, planned for 1.4.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
+The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 
-## 15.4 Waves
+**Standing decisions and constraints.**
 
-The open items of the request list at the end of this document were reconciled with the phases above into waves, each closed by a revision entry in section 18.
-Decisions taken along the way: collections and programs (LIB-03) are one concept named Collections; the file discriminator is `openwod.workout`; a session counts as done when it finishes or reaches 80 % of a timed or capped workout; movement records carry no loads; the server is authoritative and each device a cache with an outbox; login stays deferred (NFR-09).
+- The user commits, tags and releases.
+- Release images are built by the GitHub release workflow, and a local multi-architecture push is an emergency exit only. The workflow also creates the GitHub Release and never overwrites an existing one.
+- No runtime cloud service, no analytics and no cloud AI (NFR-11).
+- Login stays deferred (NFR-09): the server shape is for a trusted home network.
+- The server is authoritative and each device is a cache with an outbox. Session events ride along with the finished session rather than streaming.
+- Local browser tests run with `--project=firefox --project=webkit`, since headless Chromium fails locally while CI uses Chromium. Temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
+- Timing is verified under the injected clock and by the production smoke, and the real-duration 60-minute run is no release gate.
+- Bundled workouts stay at revision 1. They wait for Ready unless they prescribe a rest or a straight continuation, and never have both a rest and a Ready gate (`workouts/README.md`).
+- The interface says "block" and "movement", while the code, the API and the files keep `section` and `slot`.
+- Collections and programs (LIB-03) are one concept named Collections, with one collection per workout.
+- Movement records carry no loads, and loads live on the prescriptions.
+- A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
+- The working title is gone for good, and `npm run check` guards against its return.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-06, MOD-06, NFR-15, SHR-07, UI-23 and AT-30.
+- Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
+- Markdown style: one sentence per line and no semicolons.
 
-| Wave | Delivered | Entry |
-| - | - | - |
-| 2 Library, identity and polish | Branding, inline load levels, bundled benchmarks, collections, the settings page with master data, the session log, accumulative filters, the timer wash, recorded cue packs, the tidied repository. | 1.5 |
-| 2b Exercises, search and feel | The movement catalogue with families, the `movement` id on prescriptions, one ranked search, imports as editor drafts, movement housekeeping, filters kept per session, press feedback and contrast fixes, five self-contained voices. | 1.6 |
-| 2c Registry, polish and master-data flow | The YAML workout registry with a content pass, women's loads and kg/lb display, the Training view settings with the Look & feel miniature, one CRUD flow for master data, exclusive collections, the end of the working title, the structured editor row. | 1.7 |
-| 3 Persistence and sharing | The SQLite household server and API, device cache and outbox, checkpoints and recovery, single-tab control, history with corrections, packs with provenance, backup and restore, the device-library migration. | 1.8 |
-| 4 Release hardening | Version 1.0.0, the named stack, volume and environment, deployment docs with backup, restore, upgrade and rollback, the restore rehearsal, the device checklist, release notes; the user-side gates are in 15.3. | 1.8 |
-| 5 Static shape and Pages | The static build target, the browser-only library behind a `Backend` interface, one household core shared by SQLite and IndexedDB, restore from the JSON export in both shapes, voices rendered in CI, Pages and a GitHub Release on every tag. See 15.5. | 1.12 |
-| 6 Workout generator | Planned: a rule-based Generate button in the editor (BLD-13). See 15.6. | 1.12 |
+# 16 Open risks
 
-Out of scope by decision: teams of three or four athletes; celebrity or Australian voices (Piper ships British and American English only); default loads on movement records.
-
-## 15.5 Planned wave 5: the static deployment shape (version 1.2.0)
-
-Delivered in version 1.12 as release 1.2.0: see the revision record in section 18 and DEP-15 to DEP-17, DAT-10 and DAT-11.
-
-Recorded in version 1.9 before any code.
-The user decided: ship it in the release after the first published image (1.2.0, since 1.1.0 became the release that repairs the 1.0.0 tag), voices rendered in CI, Pages on every `v*` tag with a zip on the GitHub Release, and a JSON backup with restore.
-
-**Decisions.**
-
-- Mode by Vite mode: `static` and `static-test` set `__OPENWOD_STATIC__`, `base: './'` and `dist/static`, without the `/api` proxy. `test` and `static-test` set `__OPENWOD_TEST__`. Hash routing keeps the pathname constant, so relative URLs work on Pages, from a zip and under `vite preview`.
-- `Backend` interface in `apps/web/src/data/backend.ts` with today's `remote` (HTTP) and a new `local-backend.ts` (IndexedDB), chosen at module load by `DATA_MODE`. The local backend throws the client `ApiError`, never `NetworkError`, so the hook and outbox stay unchanged.
-- One household core: the semantics of `apps/server/src/store.ts` move to `packages/household/src/core.ts` as `class Household` over a synchronous `HouseholdTables` port. SQLite implements the port with prepared statements inside `Store.transaction`, the browser with Maps inside one IndexedDB transaction. A shared conformance suite pins both.
-- IndexedDB version 2 adds `workouts`, `master` and `sessions` (indexes `byFinished`, `byWorkout`), corrections embedded in the session record. Inside a transaction only `settle()` of that transaction is awaited, so imports and restore are atomic.
-- Restore replaces everything after a confirmation with counts and export date. `parseExportDocument` checks `format` and `formatVersion <= EXPORT_VERSION`, compiles every workout and snapshot, sanitises master data. The server writes `pre-restore-<ts>.sqlite` under `/data/backups` first. The client clears the outbox and refetches.
-- Legacy pre-1.0 localStorage data migrates automatically in the static shape with one notice. The server shape keeps the banner.
-- Limits: 100 saved workouts as today, 2000 sessions in the static shape with the oldest pruned.
-- Voices in CI with `scripts/generate-cues.ts` and `PIPER_PYTHON=python3`, cached by `actions/cache` keyed on the two cue scripts and `movements.ts`, warmed on `main` by a `cues.yml` workflow because tag caches are invisible to later tags.
-
-**Phases.**
-
-| Phase | Work | Gate |
-| - | - | - |
-| A Household core | `packages/household/src/{types,errors,core,export}.ts`, `Store` becomes `SqliteTables` plus delegation, `Store.restore`, route `POST /api/v1/import/restore`, shared suite `tests/unit/helpers/household-suite.ts`. | Existing server suites pass unchanged, then the split suite passes. |
-| B Local backend | `vite.config.ts` mode matrix, `apps/web/src/globals.d.ts`, `data/mode.ts`, `data/backend.ts`, `idb.ts` v2 with `closeIdb`, `local-backend.ts`, `remote.exportAll/restore`, `clearOutbox`, static branches in `use-library-data.ts` (`mode`, `exportAll`, `restore`, `stats`). | `fake-indexeddb` suite: shared cases plus pagination, pruning, 409 as `ApiError`, atomic import, v1 to v2 upgrade. |
-| C UI | `settings/RestoreDialog.tsx`, `ServerCard` and `BrowserCard` in `GeneralSettings.tsx` ("This browser": storage estimate, Keep data on this device, counts, JSON backup, restore), `downloadBlob`, header pill only in server mode, `BASE_URL` for cues and LICENSE, mode-specific strings in Library, History, Editor. | Screenshot pass in WebKit, both themes, 1024 and 390. |
-| D Build and tests | Scripts `build:static`, `dev:static`, `preview:static`, `test:e2e:static`, `check-production.mjs` with a dist argument, Playwright webServer on 5175 with `static-*` projects reusing player, editor, settings, screens, tabs, library and recovery, `tests/e2e/static/` (library, packs, history, backup, migration, strings, settings), base-path-safe production spec with `OPENWOD_PRODUCTION_MODE`. | Firefox and WebKit in both project groups, preview smoke in static mode, container smoke unchanged. |
-| E Workflows | `release.yml` jobs `static`, `release`, `pages`, `check.yml` builds static and runs `static-chromium`, `cues.yml` warms the voice cache. | A `workflow_dispatch` run builds and smokes without publishing. |
-| F Docs and version | `docs/deploy.md` static section, README features and "Just open it", architecture, development, validation, `docs/releases/v1.2.0.md`, this document, version 1.2.0 in `package.json`, lock, `CITATION.cff`, `.env.example`, `Dockerfile`. | Markdown rules, version grep. |
-
-**User-side gates.** Enable Pages with source "GitHub Actions", push `main` or dispatch `cues.yml`, tag `v1.2.0`, open the Pages URL and check the footer version and five voices, serve the zip from a plain web root once.
-
-## 15.6 Planned wave 6: the workout generator (version 1.4.0)
-
-Recorded in version 1.12 before any code, and moved from 1.3.0 to 1.4.0 in version 1.14, when 1.3.0 shipped the library and not-found changes instead.
-The user wants a Generate button on the New workout page that fills the editor with a workout drawn from the household's own movement catalogue.
-It is rule-based, deterministic and offline, so it fits NFR-11 and leaves "workout generation by AI" in section 2.2 deferred.
-The decisions, the modules, the phases and the tests are in the plan "Plan: the workout generator (version 1.4.0, after the static shape)" at the end of this document.
-Its planned requirement is BLD-13, to be appended after BLD-12 when the code starts.
-
-# 16 Risks and decisions to validate
-
-| Risk or decision | Baseline treatment | When to validate |
-| - | - | - |
-| iPad speech timing or voices are inadequate | Keep boundary beeps local and precise; speech is advisory. Consider cached local TTS in P1. | Desktop audio in Phase 0; physical mobile smoke test later. |
-| Screen visibility and long prescriptions conflict | Prioritise essential targets, provide short names, test reflow at full/half/narrow widths, warn before starting crowded blocks. | Phase 0 desktop UX; later shared-display recognition test. |
-| Approaching the iPad for handoffs is inconvenient | Large Switch control in P0; keyboard/Bluetooth remote support is a possible later enhancement. | First you-go-I-go workout. |
-| Hidden app behaviour surprises users | Explicit auto-pause policy and interrupted-session flag; no lock-screen guarantee. | Desktop in Phases 0–1; physical mobile smoke test later. |
-| Rest interpretation changes workout duration | Explicit between-item/between-round/trailing rest settings and exact preview. | Domain fixtures before editor implementation. |
-| Independent athlete progress is requested later | Keep athlete and completion policy explicit; defer truly independent timelines. | After first household release. |
-| Browser loses unsynchronised state | Durable checkpoints, visible sync status, recovery tests; completed server data remains authoritative. | Phase 1, before full editor work. |
-| Database migration breaks rollback | Pre-upgrade consistent backup; explicit image/schema compatibility and restore procedure. | Phase 4. |
-| Private GitHub repository or image | Separate Git and registry credential instructions; neither credential belongs in source. | First Portainer deployment. |
-| Container architecture mismatch | Publish and test amd64/arm64, verify actual server architecture. | Phases 0 and 4. |
-| Shared files depend on another installation or expose household data | Self-contained copied prescriptions, role labels, separate administrative export, schemas and cross-installation tests. | Exchange schema in Phase 0; sharing delivery in Phase 2. |
-| Schema drift between TypeScript types, validators and published JSON Schema | One schema source in packages/domain with generated artefacts and a CI drift check. | Phase 0 schema setup. |
-| Timing tests take as long as the workouts they test | Injected clock and audio stub behind a test flag; fixture traces shared by unit and browser tests. | Phase 0 test setup. |
-| Prose workout leaves timing or assignment rotation ambiguous | Resolved for example-wod.md in version 1.2 by stating rounds, transitions, block rest, and column swap explicitly; future conversions request the same decisions from the author and validate authored repeats/caps/rests. | Editor validation in Phases 2–3. |
-
-No further product decision is required to begin Phase 0 with the unambiguous timed fixture. The first review examines desktop Safari/Firefox full/half-window UX, responsive A/B layouts, foreground timing/audio and pause behaviour. The real Markdown example informs content layout immediately and, with its timing now explicit, serves as the second executable fixture. Physical iPad/iPhone checks follow without holding up desktop development.
+| Risk | Treatment |
+| - | - |
+| iPad speech timing or voices are inadequate | Boundary beeps stay local and precise, and speech is advisory. Cached local TTS is a P1 option. |
+| Long prescriptions do not read at two metres | Short names, reflow at every width and a preflight warning for crowded blocks. The physical two-metre test (AT-18) is pending. |
+| Approaching the iPad for handoffs is inconvenient | A large Switch control. Keyboard or Bluetooth remote support is a possible later enhancement. |
+| Hidden-app behaviour on mobile surprises users | Explicit auto-pause and the Interrupted flag, with no lock-screen guarantee. Physical mobile checks are pending. |
+| Independent athlete progress is requested later | Athlete and completion policies stay explicit, and truly independent timelines stay deferred. |
+| A database migration breaks rollback | A consistent pre-migration backup and the documented image and database rollback (DEP-12). |
+| The browser evicts the static shape's library | Keep data on this device (`navigator.storage.persist()`) and the JSON backup with restore (DAT-10, DAT-11). |
 
 # 17 Source references
 
@@ -835,522 +789,7 @@ Sources establish terminology and platform/deployment constraints. Workout seman
 
 Reference review date: 26 October 2026. Recheck platform support and deployment documentation when selecting implementation versions.
 
+# Future feature requests
 
-# 18 Plan revision record
-
-## Version 1.16 — 27 October 2026
-
-- **Schema change: SQLite migration 3 and IndexedDB version 3.** Sessions can be deleted (DAT-14).
-  Migration 3 (`deleted sessions`) adds the table `deleted_sessions (id, deleted_at)` and changes nothing else, and the server writes `pre-migration-v2-to-v3-<timestamp>.sqlite` under `/data/backups/` before it runs.
-  IndexedDB version 3 adds the store `deletedSessions` (key `id`) and keeps every other store and row, so the upgrade from 1 or 2 is additive.
-  An image before this one refuses a migrated database, so a rollback needs the pre-migration backup.
-  `DELETE /api/v1/sessions/:id` deletes a session with its corrections and answers 204, also for a repeat or an id not stored yet, and either way it leaves a tombstone.
-  A later `PUT` of a tombstoned id answers 200 with `stored: 'existing'` and stores nothing, and so does a device import.
-  The export format stays version 1 without the tombstones, while a restore keeps the target's tombstones, leaves out the sessions they name and reports them as `deleted`.
-  Deleting a session drops it from this device's outbox and read cache, and while the server is away the delete waits in the outbox as `deleteSession`.
-- The History page became the Logbook under Settings (UI-22).
-  The header's clock icon opens `#/settings/logbook`, `#/history` leads there, and `#/history/<id>/play` still replays a session's snapshot.
-  Each session is one compact row: the title with an outcome chip only when it is not Completed, then the date, the active time and the score, with icon buttons for Repeat, Correct score and Delete.
-  The score line no longer repeats the outcome or the time already shown, in the Logbook and in a workout's past sessions.
-  On a narrow screen the settings sections scroll the current one into view.
-- Each section except the last is followed by a transition tile: Wait for Ready, Rest then continue (01:00 by default) or Continue straight away, for every format (BLD-14).
-  The rest is stored as the `blockRest` node that already ends timed-circuit sections, now also allowed at the end of an AMRAP, EMOM or you-go-I-go task list, so no schema or file version changes.
-  Outside timed circuits it follows the cap, a Finish or the last Done instead of being cut by them, and the score is taken when it starts.
-  The section card puts slot settings above round settings, and "Rest after section" moved into the tile.
-  The editor has no field for a rest after the last movement of each round any more.
-  Opening a workout that has one moves it at the same length: between rounds into the rest between rounds, after the last round into the rest between sections, and after the workout's last movement it is dropped.
-  The bundled full-body partner and HYROX doubles workouts were rewritten that way.
-  The full-body partner has a 0:20 rest between rounds and exactly the 2:00 its description names between sections, which then continue on their own, so it runs 48:40 instead of 50:00.
-  HYROX doubles is now four sections (Run 1, Stations 1, Run 2, Stations 2), each run continuing straight into its stations, so the editor can open it, and it waits for Ready after Stations 1 without a rest first; it runs 13:30 instead of 14:00.
-  The registry rule in `workouts/README.md` now reads Wait for Ready unless the workout prescribes a rest or a straight continuation, and never both a rest and a Ready gate.
-  The descriptions use the interface's words: block instead of section, part or half, movement instead of station outside the HYROX workouts, and A and B swap instead of task columns.
-  SkiErg is spoken "Ski air", for the device voice at once and for the recorded clips from the next image build.
-  The editor's time fields are mm:ss fields that step with the wheel and the arrow keys, and Duplicate buttons use the copy icon.
-  The editor and its messages say "movement" for every format, never "slot", while the code and the file format keep `slot`.
-- The interface calls a section a block: the editor's cards and buttons, the transition tiles, the overview, the player's progress line and controls, and the editor's messages say block, while the code, the API and the file format keep `section`.
-  The bundled descriptions follow and say block where the item above still says section.
-- Bundled workouts are edited, duplicated and removed like saved ones (DAT-13).
-  The first edit saves a saved workout under the bundled id, at the bundled revision plus one, with its own sharing identity derived from the bundled one.
-  Removing a bundled workout adds its id to `hiddenWorkouts` in master data, an optional field so a device on an older build can still write the document.
-  Duplicate has its own route, `#/wod/<id>/copy`, and keeps its draft under `copy:<id>`, beside the workout's own edits.
-- The header shows the running version beside the wordmark (UI-21).
-- Chips state what holds for the whole workout, and formats moved to the blocks (UI-21).
-  A card shows the athletes, the collection, the difficulty and, once done, how long ago, above the title, then the description in two lines, the duration, blocks and movements, the equipment, and Start and Details.
-  The collection label beside the title and the "Not done yet" chip are gone.
-  The workout's page shows the same chips above the title, and each block card carries its format as a chip beside its title.
-  The start screen of a session no longer lists the formats.
-  The filters run athletes, collection, difficulty (with the cards' level bars), duration, block format, equipment.
-  The workout schema already kept `participants` and `equipment` on the workout and `format` on each section, so no file or schema version changes.
-- A workout's page puts the title across, the description beside a compact action box, and the chips in one row that scrolls sideways on a phone (UI-21).
-  The duration line before the chips is gone, since the facts below show the same time.
-- Beeps can be a truck horn, a bundled recording (AUD-01).
-  At the end of a countdown the horn plays its full-level part, 1.4 s, while the next slot's clock already runs.
-- A boundary beep that has already sounded now rings out with its word when the next slot starts.
-  Before, the change of slot stopped every scheduled sound, which cut the boundary beep after a few milliseconds and could drop the Go or Rest word after it.
-  A skip, a pause or the end of the workout still stops everything at once.
-- With the truck horn the clock holds still at each timed boundary for the horn's 1.4 s blast, so the next slot starts counting as the blast ends and the Go word lands on its first second (AUD-01).
-  The engine moves its clock anchor into the future by `boundaryHoldMs`, which reports `holdMs` in the clock values, keeps the wait out of active time, and ends early on any command.
-  Every other tone keeps the plan's exact timing, and a workout with the horn runs 1.4 s longer per timed boundary.
-- When a boundary into a rest is still saying Rest, the next movements are announced after it, without a second Rest.
-  Device speech that has to wait for recorded words now waits on a timer instead of talking over them.
-- In the editor the L, M and H badges sit above their words, so a narrow load table no longer squeezes them.
-- During a session the frame's padding grows with the timer ring, so a ring wider than the default no longer covers the edge of the content.
-  On a phone the movement name has a line of its own under the athlete and the target, and breaks between words only.
-- A task pressed through by hand that starts on a boundary already saying Go no longer says Go a second time, and its names follow the boundary's Go.
-- In the focus view the big clock holds its place from slot to slot (UI-20).
-  The clock block takes a fixed share of the frame (36 % of the height, 25 % on a short screen, its own height on a phone), and Up next and the controls sit at the bottom.
-  Before, the clock block took the space left over and centred the clock in it, so a station card of three lines moved the clock against one of a single line.
-  A static browser test plays twelve slots of the full-body partner workout at four sizes and fails if the clock moves.
-- iPad screenshots of a session showed the desktop sizes, while the 1.3.1 tablet layout measured without overflow at 1180 by 796, so that device had most likely not loaded 1.3.1 yet.
-  The version in the header now makes this visible.
-- The timer wash climbs once over the whole slot instead of restarting at each colour mark (UI-13).
-  `washDrain` in the engine is now the elapsed share of the slot, and the new `washMorph` gives how far the colour has turned towards amber and red.
-  Each mark morphs the colour over one second from the mark, capped to half the time to the next mark or the end, with a smoothstep ease.
-  The player and the settings preview set `--to-amber` and `--to-red` per frame, and the wash mixes the work colour into the mark colours with `color-mix`, so the ring and the phase label morph with it.
-
-## Version 1.15 — 27 October 2026
-
-- During a session on a wide but short screen (UI-20), a media query for more than 620 px wide and at most 960 px tall sizes the clock, the target, the station card, the AMRAP rows and counter, the Done button, Up next and the controls by the viewport height.
-  At an iPad's 1180 by 750 a strength workout measured 907 px of content in a 734 px frame, so Up next and the transport controls fell below it.
-- In the context view on such a screen the AMRAP block steps aside like the stations do, since the game plan lists the same movements.
-- The view switch in the corner is a 38 px button inside the frame there, as on a phone.
-- A browser test plays a strength workout, an AMRAP and a for-time piece at 1024 by 680 and 1180 by 750 in landscape and 768 by 950 and 820 by 1110 in portrait, and fails if either view scrolls.
-- Version 1.3.1 prepared, with the database schema at version 2 and the browser library at IndexedDB version 2, both unchanged.
-
-## Version 1.14 — 27 October 2026
-
-- The library's search bar is the same at every width (UI-18): search, Filters with the count of active filters, and the shuffle button, with the sort box joining the bar while the panel is open and its "Sort" label inside the box.
-  The panel's open state is kept with the other filters in session storage.
-- The sort box draws its own chevron with `appearance: none`, because WebKit drew the native one and ignored the box's padding.
-- A `notFound` route catches every hash the router does not know, and a workout, play or edit link whose workout is missing shows a not-found page instead of the library with a notice (UI-19).
-  `useLibraryData` reports `loaded` once its first load has answered, so a saved workout is not called missing while the library is still loading.
-- The confused-Travolta loop (`apps/web/src/Travolta.tsx`) shows on the not-found page and above "Nothing matches yet".
-  It is an animated WebP of 625 KB made from the 1.67 MB GIF, keeping its transparency, with a 12 KB still frame for reduced motion.
-  It lives in `apps/web/src/assets/`, because `.dockerignore` keeps the root `assets/` folder out of the image build.
-- The header's "Not born. Made." colours "Made." like the footer does, and the footer's GitHub link reads "Source".
-- The footer clips its overflow sideways and centres the deployment tooltip on a phone, so the hidden tooltip no longer widens the page.
-- The deployment tooltip in the server shape mentions the settings beside the library and the session log.
-- The workout generator of section 15.6 moves to version 1.4.0.
-- Version 1.3.0 prepared, with the database schema at version 2 and the browser library at IndexedDB version 2, both unchanged.
-
-## Version 1.13 — 27 October 2026
-
-- In the server shape the settings are the household's (DAT-12): migration 2 adds a `settings` table holding one document with a revision, and `GET` and `PUT /api/v1/settings` read and replace it, last write wins, bounded to 64 KB.
-- `useSharedPreferences` (`apps/web/src/data/shared-preferences.ts`) replaces the browser-only preferences in the app: the browser copy makes the start instant, the server's copy is taken on start, focus, reconnect and reload, a change goes up after 400 ms, and a change that cannot go up is marked in `openwod.preferences.sync` and sent on the next chance.
-- `normalisePreferences` validates the server's copy field by field like the browser's, so a field the device does not know falls back to its default without touching the rest.
-- An empty server takes the first device's settings unless they are the defaults, so the setup a household already has survives the upgrade.
-- The static shape keeps its settings in the browser, unchanged.
-- On a phone before the start (UI-17) the library folds its filter groups and sorting behind a Filters button with a count of the active filters, the page actions sit in one compact row, and the player shrinks the clock when the percentage is shown beside it, tightens the spacing, the lanes and the controls, and lays Details, All workouts and Export WOD out as one row.
-- The Keys button and its divider are hidden on touch screens without a hovering pointer.
-- On a phone a workout's page puts Start workout, Duplicate and edit (shown as Duplicate) or Edit, and Export in one row, with Remove as an icon, the names unchanged for assistive technology.
-- On a phone during a session the view switch is a 34 px quiet button inside the frame, the context view's game plan is denser, and the recovery prompt is a short note without its own Resume and End session, which the controls above it already offer (desktop keeps the prompt's buttons).
-- In the server shape the library says it is shared by every device in the household and a saved workout reads "Saved for the household", where both still said "this device".
-- The production smoke accepts `audio/mp3` beside `audio/mpeg` for the cue clips, and waits for the voice list instead of reading its first paint.
-- After the Pages deployment the live site gets one check only: it serves the new entry script, and the script carries the tag's version.
-  The browser smoke no longer runs against the live URL, because the static job has already run it on the same files.
-- Version 1.2.1 prepared, with the database schema at version 2.
-
-## Version 1.12 — 27 October 2026
-
-- Wave 5 delivered as release 1.2.0: the static deployment shape of section 15.5 (DEP-15 to DEP-17, DAT-10, DAT-11).
-- The household's rules moved from the server's store into `packages/household` as `class Household` over a synchronous `HouseholdTables` port, which the SQLite store implements with prepared statements in one transaction per call (DAT-01, DAT-03).
-- A shared conformance suite runs the same household cases against SQLite and against IndexedDB, so both shapes keep one set of revision, import, session and correction semantics (DAT-10).
-- The static build target `vite build --mode static` writes `dist/static` with the relative base `./` from the same sources, and `scripts/check-production.mjs` fails on an absolute `href` or `src` in its `index.html` (DEP-15).
-- In the static shape the library lives in IndexedDB version 2 (stores `workouts`, `master`, `sessions` with indexes by finish time and by workout), each call one IndexedDB transaction running the core synchronously so imports and restore are atomic (DAT-10).
-- The static shape keeps the newest 2000 sessions and prunes the oldest on write and on restore, and a restore reports what it pruned (DAT-10).
-- Settings → General shows a "This browser" card in the static shape with the storage used, whether the browser keeps the data, a Keep data on this device button for `navigator.storage.persist()`, the library format, the counts, Download backup and Restore from backup (DAT-10).
-- The interface speaks of this browser instead of the server in the static shape, shows no server pill, and loads the cue clips and the LICENSE link through the build's base URL (DAT-10, DEP-15).
-- A pre-1.0 device library migrates into the browser's library automatically in the static shape with one notice, while the server shape keeps its offer to upload (DAT-10).
-- The JSON export (`openwod.export`, format version 1) restores into either shape after a confirmation with its counts and date, replacing everything, validated whole and refused when newer (DAT-06, DAT-11).
-- The server restores through `POST /api/v1/import/restore` and writes `pre-restore-<timestamp>.sqlite` under `/data/backups/` before it replaces everything in one transaction (DAT-07, DAT-11).
-- The server card under Settings → General gains Restore from backup with a hint about the copy under `/data/backups/` (DAT-11).
-- New scripts `dev:static`, `build:static`, `preview:static` and `test:e2e:static`, and the Playwright projects `static-chromium`, `static-firefox` and `static-webkit` against a `static-test` dev server, rerunning the shared specs and adding the static ones under `tests/e2e/static/` (DEP-15).
-- The production smoke uses relative URLs alone and takes `OPENWOD_PRODUCTION_MODE=static` or `server`, so one spec checks the container, `vite preview` of the static site and the live Pages URL (DEP-17).
-- The Release image workflow gains a `static` job that renders the voices on the runner, builds with all five packs required, smokes `vite preview` in three engines and zips the site (DEP-15, DEP-16).
-- On a `v*` tag a `release` job creates the GitHub Release from `docs/releases/<tag>.md` with the image digest line appended and the zip attached, refusing an existing release, and a `pages` job deploys to GitHub Pages, waits for the new entry script and smokes the live URL in Chromium (DEP-16, DEP-17).
-- A manual run of the Release image workflow builds and smokes the static site but never creates a release or deploys Pages (DEP-16).
-- The Check workflow builds the static shape and runs the `static-chromium` project, and a new Cues workflow renders the voices on `main` to warm the cache that tag runs cannot share (DEP-10, DEP-15).
-- The GitHub Release is created by the workflow from now on, where releases up to 1.1.2 were created by hand.
-- Section 15.6 records the planned wave 6, the workout generator for version 1.3.0, with its plan appended at the end of this document.
-- Version 1.2.0 prepared with the static shape and the JSON restore, with the database schema still at version 1.
-- The footer reads shape, version, the GitHub mark with OpenWOD, and the licence: the shape label says Server or Static and explains itself in one line on hover, tap or keyboard focus, and the "workouts run locally" note is gone because the shape label now says where the data lives.
-- The accent now tints the neutrals as well: the background and its glow, the cards, the inputs, the text greys, the dialog backdrop and the text selection take the hue of the chosen accent, where before they stayed green whatever the accent. A new Background choice per theme sets the depth (Black, Deep or Grey in the dark theme, White, Paper or Grey in the light one), Deep and Paper reproduce the built-in values, every depth keeps the text greys at the contrast of the built-in theme or better (unit-tested), and index.html applies the last palette before first paint so a chosen background never flashes the built-in one.
-- The README is rewritten in a plainer tone with four parts: the introduction, Setup (the static site first, then self-hosting with Docker, removing either setup, and how workout files work), developer notes with the system requirements, and the acknowledgements.
-
-## Version 1.11 — 26 October 2026
-
-- The real-duration 60-minute run is dropped as a release gate by the user's decision: NFR-01 and NFR-05 are verified under the injected clock and by the production smoke test, and the device checklist remains the only by-hand gate.
-- The Docker voice stage starts from the bare Node image with a pinned `tsx`, so version bumps and dependency updates no longer re-render the voices.
-- The Check workflow runs on branch pushes and pull requests and is callable; the Release image workflow chains onto a green Check of the tagged commit and calls the Check workflow only when there is none, so a release no longer runs the browser suite twice or three times (DEP-10: a failed Check still blocks the release).
-- The workflows run every GitHub Action on its Node 24 major (checkout 7, setup-node 7, upload-artifact 7, Docker setup-buildx 4, login 4, build-push 7) after the runner's Node 20 deprecation warning.
-- The accent is chosen per theme (dark and light each keep their own swatch or custom colour, migrated from the single 1.1.0 draft value), the rest colour of UI-12 is chosen the same way under Training view → Look & feel (one derived `--phase-rest` token per theme, the built-in blue by default), and the beeps have their own volume and one of five tones, including the held 1 kHz gym-clock beep and a sawtooth alarm (AUD-01). In Voice + beeps the beep always marks the instant and the recorded word follows it (AUD-07); before, the clip replaced the beep.
-- The first cues of a Start wait for the audio context's resume (at most two seconds), because the Start command and the unlock share one gesture and the first frame reached the audio layer while the context was still suspended: "Get ready" then fell back to the device voice and the prep countdown was never scheduled (AUD-02, AUD-07).
-- The prep countdown shows its remaining time in count-up formats as well (the count-up rule had applied during prep, showing 00:00), and the prep wears the rest colour of UI-12 with a draining ring.
-- Section navigation: Next section and Previous section controls and Shift+arrow keys in the player, a `skipped` section outcome in the records (ENG-05).
-- Clock nudge: a `nudge` command moves the current countdown (prep, slot, interval, turn or cap) by a signed number of milliseconds, clamped to the span of every clock it touches, counted in the projection so the audio layer reschedules its countdown without announcing again, and recorded as a `nudged` event that marks the session modified (ENG-05). The player's skip buttons and the J and L keys send it with the configurable length (10 seconds by default). The training time stays real.
-- Overall progress gains a fourth option that also shows the session percentage beside the clock, the progress bar follows the ring width, and the athlete columns drop the lane letter.
-- The context view's game plan shows the load levels and the notes of every prescription, so it carries everything the focus view shows.
-- The cue renderer normalises every clip in two passes (RMS to -18 dBFS, limiter at -1 dBFS) with a render version that discards older packs; single-pass loudnorm had peak-aligned the short clips about 15 dB too quiet and some 14 dB apart (AUD-03).
-- The cue renderer synthesises a clip again when it came out silent, up to three times, and names the clip when it stays silent: Piper samples noise on every synthesis, and the arm64 image build of `v1.1.0` had died on one silent clip after the amd64 build had passed (AUD-03, DEP-10).
-- The Check workflow gains a `BROWSER_SUITE` switch that pauses the browser suite while lint, typecheck, unit tests and build keep running; it is on (DEP-10).
-- The image job's amd64 runner is pinned to `ubuntu-24.04` like the arm64 one, its browser install is bounded to ten minutes and the browsers are cached per Playwright version, runner OS and architecture: the apt step of the install had twice hung on `ubuntu-latest` until the 40-minute job timeout while the arm64 candidate passed and was pushed (DEP-10).
-- Both Compose files read `DATABASE_PATH` from the stack variables with `/data/app.sqlite` as the default, as `.env.example` and the Portainer guide had implied all along (DEP-07).
-- Starting a workout over plain HTTP (a phone on `http://YOUR_SERVER_ADDRESS:8080`) crashed on `crypto.randomUUID`, which exists only in secure contexts: the first session id threw inside React, the whole tree unmounted and the player went black. The app now builds its session, command, sharing and device ids from `crypto.getRandomValues` when the function is missing (ENG-10, DAT-03), a root error boundary shows the message of any later render error instead of an empty page, and only the screen wake lock (AUD-09) and the Web Locks single-tab control (ENG-14) still need HTTPS, as the deployment guide says (DEP-14).
-- The server serves HTTPS itself when `HTTPS_KEY` and `HTTPS_CERT` are set, each a PEM file path or the PEM text with `\n` for newlines as Actual Budget takes it, so a home network without a reverse proxy gets a secure context from a mkcert certificate: the health checks of the image and both Compose files follow the protocol and accept the self-signed certificate on loopback, and the deployment guide walks through mkcert, the two ways of handing over the files and the root certificate on a phone (DEP-14, DEP-18).
-- Version 1.1.1 prepared with the plain-HTTP fix, the built-in HTTPS and the release workflow hardening, released from the same schema version 1.
-- The training view fits a phone screen without scrolling (UI-09): on a narrow viewport while performing, the header drops the section or round label that the overall line repeats, the clock and the lanes sit tighter, a lane's amount and movement share one line, the coaching sentence beside the elapsed time goes, the transport buttons shrink, the AMRAP block gets shorter rows with smaller level chips, its counter and Finish section form a two-row grid and the tap hint goes, a lane's own Done button moves into its label row, the you-go-I-go lanes drop the "Your turn" and "Rest" headings that the state pill and the phase label repeat and the resting lane keeps only its label and state, Done or Switch share a row with Finish section or Skip turn, and "Up next" names a movement once when both athletes have the same and is hidden when nothing follows. Measured in WebKit at 390 × 664 across twenty situations: the circuit, For Time, EMOM, double-AMRAP and you-go-I-go screens had overflowed by 113, 212, 276, 206 and 233 pixels and now fit, and only a three-movement you-go-I-go unit with loads and a partner chipper with two-line names still scroll by 58 and 86 pixels.
-- The app installs on a phone's home screen (UI-16): `manifest.webmanifest`, PNG icons rendered from the SVG mark (192, 512, a maskable 512 and the 180 Apple touch icon), the Apple meta tags with the status bar in the theme colour, a footer that clears the home indicator when standalone, and the production bundle check and smoke test verify it. No service worker yet: the installed app loads from the server on every start.
-- Version 1.1.2 prepared with the phone layout and the home-screen install, with the schema still at version 1.
-- The manifest job of the release workflow runs whenever both image jobs passed (`always()` with the image result), where before it was skipped whenever the chained Check job was skipped for an already-checked commit, since GitHub skips a job behind any skipped job in its chain. The `v1.1.0` and `v1.1.1` manifests had to be published by hand for that reason (DEP-10).
-- The Dockerfile's deps, cues and build stages run on the building machine's platform (`--platform=$BUILDPLATFORM`), because their output is architecture-independent: a multi-architecture build on one machine renders the voices once natively instead of once per target under emulation, and the release runners, which build their own architecture, are unaffected (DEP-10).
-
-## Version 1.10 — 26 October 2026
-
-- Release 1.1.0 prepared: the `v1.0.0` tag had failed in validation (the ignored data layer), so 1.1.0 carries everything from 1.0.0 plus the accent colour setting, the three-column library feed with whole-card clicks and the collection beside the title, the Advanced collection (formerly Coach programming), the footer with the repository link, and the hardened sound test.
-- The static deployment shape (15.5) moves to 1.2.0.
-
-## Version 1.9 — 26 October 2026
-
-- Wave 5 planned, not built: the static deployment shape for version 1.1.0 (section 15.5, DEP-15 to DEP-17, DAT-10 and DAT-11), with the user's decisions on release, voices, publishing and backup recorded there.
-- Housekeeping after 1.0.0: the `.gitignore` rule `data/` had hidden `apps/web/src/data/` from every commit and is now anchored to the root, the dead pre-1.0 storage writers and the unused helpers were removed, the frozen `workout.v1` schema was dropped, and the footer links to the GitHub repository and the release of the running version.
-
-## Version 1.8 — 26 October 2026
-
-- Wave 3 delivered as app version 1.0.0: the server is the authoritative store (SQLite through `node:sqlite`, revisioned JSON documents, immutable session records with the workout as played and the event log, a correction table), each device keeps a cache and an outbox in IndexedDB, checkpoints and per-second progress records drive recovery, a Web Lock with a BroadcastChannel takeover keeps one tab in control, packs (`openwod.workoutPack` v1) and the `sharing` key carry provenance, and a device's pre-1.0 library moves to the server once.
-- Decisions: session events ride along with the finished session rather than streaming; the JSON export is readable but not importable; login stays deferred; the Docker stack and its container are named `openwod` (`openwod-preview` for the source build); restored offsets that overran a boundary are pulled back to it rather than inventing the next slot; a session ended from the recovery prompt is recorded aborted and interrupted.
-- Phase 4 rehearsed locally (version, volume, environment, deployment docs, `scripts/rehearse-restore.sh`, device checklist, release notes); the Dockerfile keeps the voice layer independent of app edits; the release workflow checks the tag against `package.json`, caches layers and prints the digest.
-- Also in 1.8: an overall progress line and clock options in the Training view settings. AGENT.md itself was restored from a dangling git blob after the working copy had been emptied and committed; versions 1.3 to 1.7 had never been committed.
-
-## Version 1.7 — 26 October 2026
-
-- Wave 2c delivered: the hand-written YAML registry under `workouts/` with a content pass, women's loads with kg/lb display, movement records without loads, the Training view settings, one CRUD flow for master data, exclusive collections shown as a corner label, the working title removed entirely (`wodva.workout` and file versions 1 and 2 refused, `npm run check` guards against its return), the structured editor row. Randy's 34 kg heavy confirmed as the published 75 lb Rx.
-
-## Version 1.6 — 26 October 2026
-
-- Wave 2b delivered: movements as first-class master data with families (190 bundled records), the optional `movement` id on prescriptions, one ranked typo-tolerant search, imports as editor drafts with unknown movements highlighted, movement housekeeping on a settings page split into sections, filters kept per session, press ripple and card tilt, five English Piper voices rendered in the image with one clip per bundled movement.
-
-## Version 1.5 — 26 October 2026
-
-- Branding is OpenWOD ("Not born. Made."), discriminator `openwod.workout`. Wave 2 delivered: inline load levels, 16 bundled benchmarks, collections, the settings page with master data and equipment merges, the local session log with "last done", accumulative filters, equipment on the overview, one chip style, the timer wash, three recorded cue packs, the tidied repository root and the rewritten README.
-
-## Version 1.4 — 26 October 2026
-
-- Model version 2 and file version 3: the manual `task` node, the six section formats with their settings, targets `calories`, `distance` and `timeMs`, loads as a value or light/medium/heavy levels. ENG-05 to ENG-10 implemented with the engine snapshot pair for later recovery. Section 15.3 added. Login (NFR-09) deferred by decision.
-
-## Version 1.3 — 26 October 2026
-
-- Exchange format is YAML (`.wod.yaml`, `.wods.yaml`) with human durations; anchors, aliases and duplicate keys rejected; optional `attribution` on workouts. The six first requests delivered: YAML files, a projected difficulty, the overview page, sourced example workouts, better voices with recorded cues, a timed-circuit editor with autosaved drafts. Phase 0 (player, engine, fixtures, schema generation, audio and wake-lock adapters, browser tests, container and CI) was complete at this point.
-
-## Version 1.2 — 26 October 2026
-
-- Reading guide added. MOD-02 and MOD-04: a projection that changes at transitions plus a per-frame clock function and one scheduled wake-up per deadline. ENG-11 and DAT-03: checkpoints per command and transition plus a per-second progress record, batched uploads, assets preloaded before Play. AUD-07: beeps scheduled on the audio clock. ENG-14: Web Locks plus BroadcastChannel. One schema source with generated artefacts and a drift check. Test builds accept an injected clock and audio stub. Phase 0 ships the final-shape Dockerfile and Compose. example-wod.md resolved to 50 minutes with explicit rounds, transitions, block rest and column swaps.
-
-## Version 1.1 — 26 October 2026
-
-- Desktop Safari/Firefox review first with responsive layouts from the start. Stack selected (React, TypeScript, Vite, CSS Modules, Fastify, SQLite, IndexedDB, Vitest, Playwright). Milestones reordered to start with a tested engine and fixture. SHR-01 to SHR-06 and AT-25 to AT-28 added for portable files and packs; BLD-12 and AT-29 for per-round alternation. Requirement IDs preserved throughout.
-
-# Future Features Requests
-
-Every request so far is delivered. The gist of each, with where it landed; the user's original wording lives in the git history of this file.
-
-| Request | Landed in |
-| - | - |
-| Read-through overview before starting | 1.3: `#/wod/<id>`, player at `#/wod/<id>/play` |
-| YAML workout files | 1.3: `.wod.yaml` with human durations |
-| An editor for every format | 1.3 (timed circuits), 1.4 (the other five) |
-| A natural-sounding voice | 1.3 device voices, 1.5 and 1.6 recorded Piper packs |
-| A projected difficulty per workout | 1.3 `rateDifficulty`, 1.7 calibration in settings |
-| More example workouts (CrossFit and HYROX) | 1.3, 1.5 benchmarks, 1.7 the registry content pass |
-| The remaining engine formats | 1.4 |
-| Conclude the initial plan | 1.8 (section 15.3) |
-| Big rep and calorie targets, colour-coded L/M/H load chips | 1.4 |
-| Crisper UX, a full-screen timer wash | 1.5, 1.6 (ripple, tilt), 1.7 (pulse settings) |
-| Tidy repository root, a readable README | 1.5, README rewritten again in 1.8 |
-| Coach programming as standalone workouts, equipment per workout and an owned-equipment filter | 1.5 (teams of three or four left out) |
-| Voices inside the Docker image, English accents | 1.5 (three packs), 1.6 (five) |
-| Master data for equipment names with merges | 1.5 |
-| Inline load numbers instead of a toggle | 1.5 |
-| Branding OpenWOD, "Not born. Made." | 1.5 |
-| Equipment beside the movement list on the overview | 1.5 |
-| A session log with "last done" and a sort by it | 1.5 locally, 1.8 on the server |
-| Accumulative filters | 1.5 |
-| The benchmarks bundled, collections with chips and a maintenance page | 1.5, 1.7 (one collection per workout) |
-| Chips used consistently | 1.5 |
-| A dedicated settings page | 1.5, split into sections in 1.6 |
-| Movements as first-class records with variants | 1.6 |
-| Press feedback like a ripple, drop shadow, slight tilt | 1.6 |
-| Filters cached per session, one Clear button | 1.6 |
-| Better chip contrast, brand mark in dark mode | 1.6 |
-| Buttons that read as buttons | 1.7 |
-| A thicker perimeter timer | 1.7 (configurable) |
-| "Exercise" renamed to "movement" | 1.7 |
-| No remnants of the working title | 1.7 (guarded by `npm run check`) |
-| A softer click effect | 1.7 |
-| One systematic flow for editing master data | 1.7 |
-| No default loads on movement records | 1.7 (decision: dropped) |
-| Family heads on top when filtering movements | 1.7 |
-| Training view settings: kg/lb, ring width, pulse, colour marks | 1.7 |
-| Women's loads in brackets from the published Rx | 1.7 |
-| No "Bundled" label on cards | 1.7 |
-| The YAML files as the real workout registry, polished | 1.7 |
-| A cleaner editor with men's and women's L/M/H | 1.7 |
-| An overall progress indicator and a configurable clock in the training view | 1.8 |
-
-
-
-# Plan: v1.2.0 — Static deployment shape (GitHub Pages) with browser-only library and backup restore
-
-Restored 27 October 2026 from the plan written for 1.1.0 (recorded in AGENT.md §15.5 as wave 5, version 1.2.0).
-Version updates against the original text: the release is **1.2.0** (not 1.1.0), release notes go to `docs/releases/v1.2.0.md`, the AGENT.md revision log continues under a new header **"## Version 1.12 — 27 October 2026"** above "## Version 1.11", the 1.0.0 prerequisite is met (v1.1.2 is tagged and published).
-
-## Context
-
-OpenWOD ships as one container: Fastify serves the built web app and the household API, SQLite holds the library. The user wants a second shape: the same build served as a **static site** (GitHub Pages, or any web server) with **no server at all**, where the library lives permanently in the browser. The architecture already allows it: the client is cache-first with an outbox, routing is hash-based, bundled workouts are compiled in, and the engine/editor/player/recovery/single-tab code never talks to the server.
-
-Decisions made by the user: the static site carries the **recorded voices rendered in CI**; **Pages deploys on every `v*` tag** and a **static zip is attached to a GitHub Release**; backup in static mode is the **JSON export with a new Restore**, built once so it also works on the server (lifting the "export cannot be imported back" limitation). Both shapes stay fully supported.
-
-Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-14…, UI-22…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
-
----
-
-## Architecture decisions
-
-1. **Mode by Vite mode.** `vite.config.ts`: `isStatic = mode.startsWith('static')`, `isTest = mode === 'test' || mode === 'static-test'`.
-
-   | mode | `__OPENWOD_STATIC__` | `__OPENWOD_TEST__` | `base` | outDir | `/api` proxy |
-   | - | - | - | - | - | - |
-   | default | false | false | `/` | `dist/web` | yes |
-   | `test` | false | true | `/` | – | yes |
-   | `static` | true | false | `./` | `dist/static` | no |
-   | `static-test` | true | true | `./` | – | no |
-
-   Relative `base: './'` so one artifact works at `https://romanboegli.ch/OpenWOD/`, from a zip in any web root, and under `vite preview`. Hash routing keeps the pathname constant. The PWA manifest (`start_url: "./"`) and icons already use relative paths.
-2. **`Backend` interface, two implementations.** `apps/web/src/data/backend.ts` declares the method set of today's `remote` plus `exportAll`/`restore`/`counts?`. `remote.ts` is the HTTP backend (`satisfies Backend`), new `local-backend.ts` the IndexedDB one. `apps/web/src/data/mode.ts` exports `DATA_MODE: 'server' | 'static'`; `backend.ts` picks at module load. `LocalBackend` throws the client `ApiError` (never `NetworkError`), so the outbox and hook keep working unchanged: a local 409 is a conflict, a validation failure is rejected, everything else succeeds immediately.
-3. **One household core, not two copies.** Extract the semantics of `apps/server/src/store.ts` (putWorkout revision rules, archive, master revision, idempotent putSession, listSessions, correctSession, importDevice, importPack, exportAll, new restore) into `packages/household/src/core.ts`: `class Household` over a small synchronous port `HouseholdTables` (get/list/put workout, get/put master, has/get/put/list/all sessions, clear). SQLite implements the port with prepared statements inside `Store.transaction`; the local backend implements it with Maps preloaded inside one IndexedDB transaction. A shared conformance test suite pins both. Package `packages/household` depends on domain and engine (because `SessionRecord` lives in engine); nothing depends on it except server and web.
-4. **IndexedDB v2.** New stores `workouts` (keyPath `id`), `master` (one row `id: 1`), `sessions` (keyPath `id`, indexes `byFinished` on `finishedAt`, `byWorkout` on `['workoutId','finishedAt']`), corrections embedded in the session record. Existing stores untouched. Inside `transaction()` only `settle()` of the same transaction is awaited; all core logic runs synchronously between the reads and the puts, so imports and restore are atomic.
-5. **Restore replaces everything** after an explicit confirmation showing counts and export date. Validation (`parseExportDocument`) checks `format: 'openwod.export'` and `formatVersion <= EXPORT_VERSION` (the SQLite `schemaVersion` is informational only), parses and compiles every workout and session snapshot, sanitises master data. Server: pre-restore SQLite backup under `/data/backups/pre-restore-<ts>.sqlite`, then one transaction. Client: outbox cleared, then `fetchAll`.
-6. **Legacy pre-1.0 localStorage data in static mode migrates automatically** on first boot (same importDevice semantics, keys removed, `meta.migration` written, one notice). Server mode keeps today's banner.
-7. **Limits.** `SAVED_LIMIT` 100 unchanged (enforced in `App.saveDraft`). Static sessions capped at `STATIC_SESSION_LIMIT = 2000`, oldest pruned on put and on restore (reported).
-8. **Voices in CI** with the same scripts the Dockerfile uses (`scripts/generate-cues.ts` + `render-cues.py`, `PIPER_PYTHON=python3`), cached by `actions/cache` keyed on the hash of the two scripts and `packages/domain/src/movements.ts`, warmed on `main` by a small `cues.yml` workflow because tag caches are not visible to later tags.
-9. **Publishing** = new jobs in `release.yml`: `static` (build, smoke in three engines against `vite preview`, zip, Pages artifact), `release` (GitHub Release with `docs/releases/<tag>.md` as body, digest line appended, zip attached, refuses an existing release), `pages` (deploy, wait for the new asset hash, live smoke in Chromium). Both publishing jobs run only for `github.ref_type == 'tag'`. The existing `manifest` job keeps `if: always() && needs.image.result == 'success'`.
-
----
-
-## Phase A — Household core package (server unchanged in behaviour)
-
-- **New `packages/household/src/types.ts`**: `StoredWorkout`, `SessionListItem`, `PackDecision`, `PackImport`, `PackImportReport`, `DeviceImport`, `DeviceImportReport` (moved from `apps/server/src/store.ts` and `apps/web/src/data/remote.ts`, both re-export), plus `MasterRow`, `StoredSession` (`SessionRecord & { workout, revision, receivedAt, corrections }`), `ExportDocument`, `RestoreReport { workouts, archived, sessions, corrections, masterRevision, exportedAt, pruned? }`.
-- **New `packages/household/src/errors.ts`**: `HouseholdError(status, code, message, path?, extra)`, `NotFoundError`, `ConflictError(expected, current)` with the exact bodies of today's `apps/server/src/errors.ts`; the server file re-exports them (`HouseholdError as ApiError`) and keeps `errorHandler`.
-- **New `packages/household/src/core.ts`**: `HouseholdTables` port and `class Household` with the public methods of today's `Store` (same signatures) plus `exportAll(schemaVersion)` and `restore(document, { sessionLimit? })`. Bodies are today's `store.ts` logic with SQL replaced by port calls; `canonicalWorkout` (sortKeys + stringify) moves here.
-- **New `packages/household/src/export.ts`**: `EXPORT_FORMAT`, `EXPORT_VERSION = 1`, `MAX_RESTORE_BYTES = 32 MiB`, `ExportDocumentSchema` (TypeBox: ≤ 200 workouts, ≤ 5000 sessions, `MasterDataSchema`, `SessionRecordSchema` items), `parseExportDocument(value, supportedFormatVersion)` (400 `VALIDATION_FAILED` with path, 400 `FORMAT_NEWER` "update first"), `summariseExport(document)`.
-- **`apps/server/src/store.ts`**: keep `open/close/schemaVersion/backupDir/transaction/backupTo`; add private `SqliteTables implements HouseholdTables` (today's SQL incl. `rowToSession`, corrections table, `clear()`), delegate every public method as `this.transaction(() => this.core.x(...))`; new `async restore(document)` = backup file first (file-backed only), then `core.restore` in one transaction.
-- **`apps/server/src/routes.ts`**: `POST /api/v1/import/restore` (`bodyLimit: MAX_RESTORE_BYTES`) → `parseExportDocument` → `store.restore`, returns `RestoreReport & { backup? }`.
-- `tsconfig.json` `include` already covers `packages`.
-- **Tests**: `tests/unit/helpers/household-suite.ts` exports `describeHouseholdSemantics(name, open)` with the cases moved out of `store.test.ts` (documents, master revision, sessions + corrections + list filters, device import + repeat, pack import SHR-06) and new ones (export shape; restore replaces everything keeping archived rows and corrections; restore rejects bad `format`/`formatVersion`/invalid document with no partial write). Errors asserted as `rejects.toMatchObject({ status })`. `store.test.ts` keeps migrations and backup, runs the suite through a sync-to-async adapter, adds "restore writes `pre-restore-*.sqlite`". `server.test.ts` adds the restore route (happy, 400, `FORMAT_NEWER`). New `household-export.test.ts`. Gate: existing suites still pass before the suite is split.
-
-## Phase B — Local backend and the mode switch
-
-- **`vite.config.ts`**: mode matrix above; `define` gains `__OPENWOD_STATIC__`; `base`, `build.outDir`, proxy only when not static.
-- **New `apps/web/src/globals.d.ts`** declaring the `__OPENWOD_*` constants once; remove the per-file `declare const` lines.
-- **`apps/web/src/data/mode.ts`**: `DATA_MODE`. **`backend.ts`**: interface + `backend` constant.
-- **`idb.ts`**: `IDB_VERSION = 2`, new store names, idempotent `onupgradeneeded`, `closeIdb()` for tests.
-- **New `local-backend.ts`**: `createLocalBackend({ sessionLimit?, now? })`, `localBackend`, `STATIC_SESSION_LIMIT`; `IdbTables` preloads `workouts`/`master` via `getAll`, session keys via `getAllKeys`, full sessions only for `exportAll`; one `run(stores, mode, fn)` helper opens the transaction, preloads, runs the core synchronously, converts `HouseholdError` to the client `ApiError` (so `error.payload?.current` works). `listSessions` = cursor on the index, direction `prev`, strips `events`/`workout`/`corrections`. Pruning beyond the limit on put and restore. `ready()` returns `{ status:'ok', persistence:true, schemaVersion: EXPORT_VERSION, version: __OPENWOD_VERSION__ }`.
-- **`remote.ts`**: add `exportAll` (`GET /export`, 60 s) and `restore` (`POST /import/restore`, 120 s), `satisfies Backend`.
-- **`outbox.ts`**: `upload()` and the master merge call `backend.*`; add `clearOutbox()`.
-- **`use-library-data.ts`**: `remote.` → `backend.`; `LibraryData` gains `mode`, `exportAll`, `restore`, `stats?`. Static branches keyed on `DATA_MODE`: skip cache read/write; `refresh()` sets `online` and turns a storage failure into the notice "This browser's storage is not available. Workouts play, but nothing can be saved."; no `online`/`offline` listeners; auto-migrate legacy data after boot with the notice "Moved n workouts and m sessions into this browser's library."; `pendingIds` empty and `sessions` without outbox views. `restore` = backend.restore → clearOutbox → fetchAll (both modes).
-- **Tests**: add `fake-indexeddb` devDependency; `tests/unit/local-backend.test.ts` (`import 'fake-indexeddb/auto'`, fresh `IDBFactory` + `closeIdb()` per test) runs the shared suite plus: pagination over 120 sessions (clamp, `before`, `workoutId`), pruning with `sessionLimit: 3` on put and restore, 409 as client `ApiError` with `payload.current`, a failing second workout in an import leaves the first unwritten, a hand-made version-1 database upgrades to 2 keeping checkpoint rows.
-
-## Phase C — UI for both modes
-
-- **`settings/shared.ts`**: `HouseholdStatus` gains `mode`, `stats?`, `onRestore`, `onExportAll`.
-- **New `settings/RestoreDialog.tsx`**: file input (`.json`), size guard, `parseExportDocument`, `summariseExport` counts and date in a `ConfirmDialog`, mode-specific warning, calls `onRestore`, reports the outcome. Used by both cards.
-- **`settings/GeneralSettings.tsx`**: `ServerCard` (today's content plus "Restore from backup" and the hint about `/data/backups`) and `BrowserCard` for static: title "This browser", hint about IndexedDB per browser profile, rows Storage used (`navigator.storage.estimate()`), Kept on this device (persisted state + button "Keep data on this device" → `navigator.storage.persist()`, hidden without the API), Library format, Saved workouts, Sessions; actions Download backup (JSON Blob from `onExportAll`), Restore from backup. `downloadText` in `Player.tsx` becomes an exported `downloadBlob(blob, name)`.
-- **`App.tsx`**: header pill only when `mode === 'server'`; pass `mode`, `stats`, `onRestore`, `onExportAll` into `household`; pass `mode` to `Library` and `History`; LICENSE link uses `import.meta.env.BASE_URL`.
-- **`audio.ts`**: `clipBase = \`${import.meta.env.BASE_URL}cues/\``. Check every other absolute `/…` asset path (icons, manifest) is relative or `BASE_URL`-based.
-- **Strings by mode** (server → static): Library unreachable banner and legacy banner not rendered in static; conflict "another tab of this browser already saved revision N of it"; rejected "A change could not be saved and will not be retried"; History intro "Every session played in this browser, newest first."; Editor conflict dialog mode-neutral in both ("Revision N (“title”) of this workout was saved elsewhere while you were editing."); storage notices in the hook "This browser cannot store anything: browser storage is unavailable. The change is lost when this page closes."
-
-## Phase D — Build scripts, production checks, tests
-
-- **`package.json`**: scripts `build:static` (`npm run typecheck && vite build --mode static && node scripts/check-production.mjs dist/static`), `dev:static`, `preview:static` (`vite preview --mode static --host 127.0.0.1 --port 4173 --strictPort`, pass `--outDir dist/static` if preview ignores the mode), `test:e2e:static`.
-- **`scripts/check-production.mjs`**: dist dir from `argv[2]`; for `dist/static` also assert no `href="/` or `src="/` in `index.html`, and five packs in `cues/packs.json` when `OPENWOD_REQUIRE_CUES=1`. The manifest/icon checks keep working for both dirs.
-- **`tests/playwright.config.ts`**: third webServer `npm run dev -- --mode static-test --port 5175`; existing projects `testIgnore: 'static/**'`; new projects `static-chromium/-firefox/-webkit` with `baseURL` 5175 and `testMatch: ['static/**/*.spec.ts', 'player.spec.ts', 'editor.spec.ts', 'settings.spec.ts', 'screens.spec.ts', 'tabs.spec.ts', 'library.spec.ts', 'recovery.spec.ts']`.
-- **`tests/e2e/fixtures.ts`**: `isStaticProject`, `serverOnly()` (skips in static projects), the `api` fixture throws a clear error in static projects. `recovery.spec.ts`: `serverOnly()` in the API-asserting tests.
-- **New `tests/e2e/static/`**: `library.spec.ts` (save, reload, still there, no `/api` requests observed), `packs.spec.ts` (import, reimport detection, replace newer), `history.spec.ts` (finish, history, correction keeps the earlier value), `backup.spec.ts` (download JSON, fresh context, restore, data back), `migration.spec.ts` (legacy localStorage seeded via `addInitScript` migrates on first load with the notice), `strings.spec.ts` (no "household server"/"upload" wording on library, Settings → General, History), `settings.spec.ts` ("This browser" card, persist button with `navigator.storage.persist` stubbed).
-- **`tests/playwright.production.config.ts`**: normalise `baseURL` to a trailing slash. **`tests/production/player.spec.ts`**: relative URLs (`./`, `./#/settings/sound`, `./cues/packs.json`, `new Audio('cues/scottish/complete.mp3')`, manifest and icons relative); `OPENWOD_PRODUCTION_MODE=static|server` (default server) gates two new tests: server "health answers with the shipped version", static "no server, Settings shows This browser"; both assert the footer version.
-
-## Phase E — Workflows
-
-- **`.github/workflows/release.yml`**: `validate` adds `npm run build:static`. `manifest` exports `outputs.digest`. New `static` job (needs `validate`, `ubuntu-24.04`, 40 min): setup-python 3.12 + `pip install piper-tts==1.8.0`, ffmpeg, `actions/cache` on `apps/web/public/cues` and `.cache/piper-voices` (key `cues-v1-${{ hashFiles(...) }}`, `restore-keys: cues-v1-`), `PIPER_PYTHON=python3 npx tsx scripts/generate-cues.ts`, `OPENWOD_REQUIRE_CUES=1 npm run build:static`, browsers (cached and bounded like the image job), `preview:static` in the background + poll, `OPENWOD_PRODUCTION_URL=http://127.0.0.1:4173/ OPENWOD_PRODUCTION_MODE=static npm run test:production`, zip `openwod-static-<tag>.zip`, `upload-artifact` + `upload-pages-artifact`, traces on failure. New `release` job (needs `[static, manifest]`, tag only, `contents: write`): refuse if the release exists, notes = `docs/releases/<tag>.md` + "Image digest" line, `gh release create --verify-tag --notes-file … <zip>`. New `pages` job (needs `[static, manifest]`, tag only, `pages: write`, `id-token: write`, environment `github-pages`, concurrency `pages`): `deploy-pages`, poll the live URL until `index.html` carries the new `assets/index-*.js` hash (carried as a `static` job output), live smoke `--project=chromium` with mode static, Pages URL in the step summary. Check the current Actions majors used in the repo (Node 24 majors) and match them.
-- **`.github/workflows/check.yml`**: `npm run build:static`; e2e adds `--project=static-chromium` (behind the existing `BROWSER_SUITE` switch).
-- **New `.github/workflows/cues.yml`**: on push to `main` with a `paths` filter on the three cue inputs and on `workflow_dispatch`, renders and saves the cache.
-
-## Phase F — Docs, AGENT.md, release notes, version
-
-- `docs/deploy.md`: new section "Static site (GitHub Pages or any web server)" before the Portainer route: what it is, what you lose (no shared household, backup is a file you keep), Pages URL, zip on the release, self-hosting needs HTTPS (wake lock and `storage.persist`), eviction and "Keep data on this device", restore. Intro line names the two shapes.
-- `README.md`: Features `- [x] Runs as a static site (GitHub Pages) or as one container with a household server`; "Run it at home" gets "Just open it" (Pages URL, zip) before the container route; Commands table gains the three scripts; Releasing mentions the static smoke, the GitHub Release and Pages.
-- `docs/architecture.md`: "Two deployment shapes" paragraph; "Deployment and tests" lists the static projects and the relative-base rule.
-- `docs/development.md`: static commands, static projects, CI voice rendering and `cues.yml`, "Cutting a release" updated for the publishing jobs.
-- `docs/validation.md`: "Static site and release publishing" entry with the counts.
-- New `docs/releases/v1.2.0.md`: What is in it, Where to get it (image, Pages URL, zip), Known limitations (drops the export line; adds per-browser-profile data, no cross-device library in the static shape, eviction unless persisted, private windows), Upgrading.
-- `AGENT.md`: header version bumped to 1.12; the intro and deployment lines reworded to two shapes; append new DEP and DAT requirements (static build target; every `v*` tag publishes Pages and the zip; production smoke in both shapes; browser-only library in IndexedDB; JSON backup restores into either shape with replace semantics and a server backup first) after the current highest IDs; §15.5 marked delivered with a pointer; §15.4 wave row; "## Version 1.12 — 27 October 2026" log entry.
-- Version 1.2.0 in `package.json`, `package-lock.json`, `CITATION.cff` (+ date), `.env.example` (`:v1.2.0`), `Dockerfile` `ARG VERSION`.
-
-## Order
-
-A → B → C → D → E → F. A is gated by the unchanged server suites, B by the shared suite in both backends, C/D by the static browser projects, E by a dry run (`workflow_dispatch` builds and smokes without publishing).
-
-## Verification
-
-1. `npm run check && npm run build && npm run build:static`; `grep -c 'href="/\|src="/' dist/static/index.html` → 0; after `npm run cues:generate`, `ls dist/static/cues`.
-2. `npx playwright test --config tests/playwright.config.ts --project=firefox --project=webkit --project=static-firefox --project=static-webkit`.
-3. `npm run preview:static`, then `OPENWOD_PRODUCTION_URL=http://127.0.0.1:4173/ OPENWOD_PRODUCTION_MODE=static npm run test:production -- --project=firefox --project=webkit`.
-4. `docker compose -f deploy/compose.dev.yaml up --build -d`, then `npm run test:production -- --project=firefox --project=webkit` (server shape unchanged), plus a restore of a JSON export through Settings → General on the container and a check that `pre-restore-*.sqlite` appeared.
-5. Screenshot pass (WebKit, both themes, 1024/390): "This browser" card, restore dialog, static library with no server wording.
-6. Docs: one sentence per line, no semicolons; `grep -n 1.2.0 CITATION.cff .env.example Dockerfile package.json`.
-
-## User-side gates (after the code lands)
-
-1. Repository Settings → Pages → Source "GitHub Actions".
-2. Push `main` (or dispatch `cues.yml`) to warm the voice cache.
-3. Commit, tag `v1.2.0`, push; watch the Check, then validate → image → manifest and static → release/pages.
-4. Open `https://romanboegli.ch/OpenWOD/`: footer says 1.2.0, Settings → Sound lists five voices, a saved workout survives a reload.
-5. Download the zip from the release and serve it from a plain web root once.
-
-# Plan: the workout generator (version 1.4.0, after the static shape)
-
-## Context
-
-The user wants a "magic button" in the create-workout view that generates a workout, inspired by dgurkaynak/wod-generator.
-That project is a char-RNN trained on 5,000 scraped WODs, run from Python, and it invents movements ("brusseane push-up").
-It does not fit OpenWOD: AGENT.md §2.2 defers "workout generation by AI" to P2, NFR-11 forbids cloud AI, and the app must stay offline and deterministic.
-What fits is a **rules-based generator** in `packages/domain`: it draws from the household's own movement catalogue, builds a `BuilderDraft` through the existing builder model, verifies it with the same compiler and difficulty rating the editor already uses, and fills the editor with an editable draft.
-
-Decisions made by the user (27 October 2026):
-
-- A **Generate** button on the New workout page opens a dialog with knobs: duration, format or Surprise me, difficulty, gear source and focus. Athletes come from the editor's Solo/Pair choice. The result fills the editor. **Shuffle again** rerolls with the same knobs.
-- Generated loaded movements carry **levelled loads** (light/medium/heavy, men and women, kg) from a reference table inside the generator, shifted a notch by difficulty. Catalogue records stay load-free (AGENT.md decision).
-- Ships as **1.4.0** (first planned as 1.3.0), after the static shape (wave 5, 1.2.0). This session records the plan in AGENT.md as §15.6 (as §15.5 did for the static shape). Code follows once 1.2.0 is out.
-
-Standing constraints: no runtime cloud service, deterministic and seedable, requirement IDs appended (next builder ID **BLD-13**), the user commits, Markdown one sentence per line and no semicolons, local browser tests with `--project=firefox --project=webkit`.
-
----
-
-## Facts verified against the code (they shape the templates)
-
-Measured through `builderToWorkout` → `compileWorkout` → `rateDifficulty` with the default calibration:
-
-- The movement intensity tier (`movementIntensity` in `packages/domain/src/difficulty.ts`: 0.4 core, 0.6 mid, 0.9 high) is the biggest lever, then duration, then rests.
-- AMRAP and you-go-I-go are one occurrence: one loaded lane marks the whole block loaded, one lane with reps ≥ 15 boosts the whole block. EMOM and for time count per task.
-- Brutal (≥ 62) needs 15 minutes or more. Strength alone caps near 42 (Moderate), so Hard/Brutal strength needs a conditioning finisher section. Light is unreachable at 45 minutes (the duration factor alone adds 10 points) and for the manual formats at 30 minutes. Tabata tops out near 60.
-- `blockRestMs`, `betweenSlotsRestMs` and `rounds` are ignored for list formats (`builder.ts` L152–156): no rest between two AMRAP/EMOM/you-go-I-go sections except the Ready gate.
-- EMOM slots cycle across intervals (`compiler.ts` L175–177): a 20-minute EMOM of 2 movements is 2 slots with `intervals: 20`.
-- For time without a cap and you-go-I-go by team rounds only are rated as open (nominal 60 s per task): the generator always sets a cap.
-- `completion` must be absent on AMRAP and you-go-I-go tasks and present on pair for-time, strength and EMOM tasks (`compiler.ts` L80–83).
-- Shared object references fail `assertBounded` and `tidy()` keeps load objects by reference (`builder.ts` L77): every load and prescription is built fresh.
-- `alternate` reaches the workout only for a pair with rounds > 1. Percent loads cannot carry `women`.
-- `handstand-walk` rates 0.15 (the `walk\b` rule) and `muscle-up` 0.9: skill gating uses the generator's own list, not the intensity.
-
----
-
-## Design
-
-### Modules (all pure, in `packages/domain/src/`)
-
-- `random.ts`: `mulberry32(seed)` and a `Random` helper (`next`, `int`, `pick`, `weighted`, `shuffle`, `chance`). The Library's private LCG (`apps/web/src/Library.tsx` L67–77) stays.
-- `generator-pool.ts`: focus groups, exclusions, tiering, equipment filter, widening. `buildPool(catalogue, request)`.
-- `generator-loads.ts`: the load table, `loadFor(record, difficulty)` (fresh `LoadLevels` every call), `snapLoad(kg, kind)`.
-- `generator-targets.ts`: reps, calories, distance and hold targets by movement kind and tier, `targetFor(candidate, format, difficulty, random)`.
-- `generator-templates.ts`: one builder per format returning `BuilderSection[]` plus an estimated duration, and `chooseFormat(request, random)`.
-- `generator-text.ts`: titles and descriptions.
-- `generator.ts`: types, `generateWorkout`, the rate-and-nudge loop, notes.
-
-```ts
-export type GeneratorMinutes = 10 | 15 | 20 | 30 | 45;
-export type GeneratorGear = 'mine' | 'bodyweight' | 'all';
-export type GeneratorFocus = 'full' | 'upper' | 'lower' | 'core' | 'engine';
-export interface GeneratorRequest { minutes: GeneratorMinutes; format: SectionFormat | 'any'; difficulty: DifficultyLevel; gear: GeneratorGear; myEquipment: string[]; focus: GeneratorFocus; participants: 1 | 2 }
-export interface GeneratorContext { catalogue: Catalogue; calibration: DifficultyCalibration; seed: number; dayName?: string }
-export interface GeneratorResult { draft: BuilderDraft; seed: number; target: DifficultyLevel; difficulty: Difficulty; hit: boolean; estimatedMs: number; format: SectionFormat; attempts: number; notes: string[] }
-export function generateWorkout(request: GeneratorRequest, context: GeneratorContext): GeneratorResult;
-```
-
-The result's draft always passes `validateDraft` and compiles. It throws `No movements match these choices.` only when the pool is empty after every widening step.
-
-### Movement selection (`generator-pool.ts`)
-
-- Each record becomes a candidate: `head` (`catalogue.head`), `groups` (upper, lower, core, engine, full), `tier` from `movementIntensity` (< 0.5 low, 0.5–0.79 mid, ≥ 0.8 high), `kind` (reps, calories, distance, hold), `skill`, `loaded` (has a load table entry).
-- Focus groups: a table keyed by family head id with a keyword fallback on the normalised name for household records. upper: press, bench-press, pull-up, muscle-up, handstand-push-up, handstand-walk, wall-walk, push-up, dip, rope-climb, bent-over-row, biceps-curl, overhead-triceps-extension. lower: squat, deadlift, lunge, box-jump, broad-jump, good-morning, kettlebell-swing, sled-push/pull/drag. core: sit-up, plank, toes-to-bar, l-sit, turkish-get-up, dumbbell-woodchopper, farmers-carry, plate-pinch-hold. engine: every monostructural record plus burpee, jumping-jack, high-knee, mountain-climber, skater-jump. full: clean, snatch, thruster, wall-ball, slam-ball, devil-press, man-maker, ground-to-overhead, sandbag-over-shoulder, kettlebell-swing, burpee. Unknown records go to full.
-- Focus rules per section of n picks: full needs two different groups and at most one engine record. upper/lower/core need ⌈2n/3⌉ from the group, never the opposite group. engine needs at least half monostructural (up to three).
-- Exclusions: mobility records, `rest`, `active-recovery`, the umbrella heads `squat`, `press`, `dip`, and `ghd-sit-up` outside gear `all`. Skill list only at Hard and Brutal: muscle-up family, handstand-walk, rope climbs, strict and deficit HSPU, pistol, butterfly-pull-up, crossover. Same head never twice in a section (ladder rungs are one pick). At most one monostructural per section unless engine focus.
-- Equipment: `mine` → `equipmentKey` set of `myEquipment`, `bodyweight` → empty set, `all` → no filter. "Wall" is always available. A record is allowed when every item of its `equipment` is in the set. `mine` with an empty list equals bodyweight, with a note.
-- Widening in order, each noted: focus falls back to full, the monostructural limit lifts, heads may repeat across sections, the skill gate lifts at Moderate. Equipment is never widened.
-- Tier profile by level: Light at least half low tier and no loads outside strength. Moderate mid tier, at most one high, at most one loaded, reps below 15. Hard at least two high of three or four, 15+ reps allowed. Brutal all high where possible, at least one task at 15+, at least two loaded.
-
-### Templates (`generator-templates.ts`)
-
-Every section: `transitionAfter: 'manualReady'`, `prepMs: 10_000`, `equipment: []`, no attribution. Every prescription carries `movement`, `name`, and `shortName`/`spokenName` from the record. Pair slots get `B` as a fresh copy of `A` unless stated.
-
-- **AMRAP**: cap = bucket, `counter: 'roundsAndReps'`, 3–5 tasks, no `completion`. 10: one AMRAP 10 of 3. 15: one of 3–4. 20: one of 4 or two AMRAP 10. 30: two AMRAP 14 or one AMRAP 30 of 5 at Hard/Brutal. 45: two AMRAP 20 or three AMRAP 14. Reps ≥ 15 only at Hard/Brutal.
-- **For time**: cap = bucket, `betweenSlotsRestMs: 0`, `completion: 'team'` for pairs. Shapes: rounds for time (10: 3×3, 15: 4–5×3, 20: 5×3–4, 30: 5×4 with 60 s round rest, 45: two sections), ladders laid flat with `rounds: 1` (21-15-9 of two movements, 15-12-9 at Light/Moderate, 10 down to 1 at 20 minutes or more), chipper at 20 minutes or more (6–10 tasks, target factor 2.5).
-- **EMOM**: slot count divides `intervals` (prefer 3, 4, 2, 5). 10: 60 s × 10. 15: 60 s × 15. 20: 60 s × 20. 30: 90 s × 20 or 120 s × 15. 45: 120 s × 22 or EMOM 20 + EMOM 24. Target factor 0.8 (1.2 for 120 s windows). Pairs mirrored with `completion: 'team'`, with the crossed "swap" shape of `partner-emom-16` 30 % of the time at 2 slots.
-- **Timed circuit**: work/rest by level (Light 20/40 or 30/30, Moderate 40/20 or 30/15, Hard 40/20 or 45/15, Brutal 45/15 or 50/10 with 45 s round rest), 4–6 slots, round rest 60 s, `rounds = clamp(round((S + 60) / (n·work + (n−1)·rest + 60)), 2, 10)`. Tabata variant 35 % of the time at 10–30 minutes (20/10 × 8, 60 s between slots, movements 2/3/5/7/10 by bucket), never at Brutal. Pairs mirrored, or at full focus 50 % the stations shape of `full-body-partner` with `alternate: true` and even rounds.
-- **Strength**: one section per lift, `rounds` = sets, `completion: 'both'` for pairs. Lifts from the strength subset (back/front squat, deadlift, RDL, bench, shoulder press, push press, weighted pull-ups, goblet squat, DB bench, DB RDL, DB shoulder press, DB rows), picked by focus. 10: 4×5 at 90 s. 15: 5×5 at 2 min. 20: 5×5 + 3×8. 30: 5×5 at 2:30 + 4×8, or 6×3 at 3 min + accessory 3×10. 45: two lifts plus a finisher AMRAP 8–10. Hard/Brutal always add a finisher. Barbell lifts carry percent levels (65/75/85 for 5s, 60/70/80 for 8s, 75/82/90 for 3s, no `women`). Dumbbell and kettlebell lifts carry kg levels.
-- **You-go-I-go** (pairs only): cap = bucket, 1–3 movements with sprint targets (factor 0.6), `B` left empty so `builderToWorkout` mirrors A, optional `turnMs` 60–90 s and `teamRounds` at 20 minutes or more with the cap kept. Solo requests fall back to AMRAP with a note, and the dialog disables the option for solo.
-- **Surprise me**: weighted by minutes (10: amrap 30, forTime 25, emom 20, circuit 25. 15: 30/20/25/15/strength 10. 20: 25/20/25/15/15. 30: 15/20/20/25/20. 45: 10/10/10/20/15/combo 35), then adjusted: pairs move 15 points to youGoIGo, strength is zero for core and engine, engine doubles emom and circuit, Light doubles circuit and strength and zeroes amrap and youGoIGo at 30 and 45, Brutal zeroes strength-only and Tabata and doubles amrap and forTime. "Combo" is strength + conditioning, circuit + AMRAP, or EMOM + for time, each half the bucket.
-- Estimated duration = compiled active time for circuits and EMOMs, the cap for AMRAP, for time and you-go-I-go, sets × (rest + 40 s) for strength. Must land within ±20 % of the bucket.
-
-### Targets and loads
-
-- Base targets at Moderate by kind and tier, × level factor (0.75 / 1 / 1.25 / 1.5) × format factor (AMRAP and rounds 1, EMOM 0.8, you-go-I-go 0.6, chipper 2.5), rounded to whole numbers, to 5s above 20, to 50 m for distances. High-tier reps 8–12, mid 12–15 (pull-ups and dips 6–10, HSPU 5–8, muscle-ups 3–5, rope climbs 2–3), low 15–20, wall balls 15–20 (25 at Brutal), swings 15–20, double-unders 30–50, calories 12–15 (bikes 10–12), run 200 m (400 m at 20 minutes or more, 800 m only in a 30+ chipper), carries 50 m, sled 20–25 m, holds `timeMs` 20–45 s in manual formats.
-- Load table: `Record<string, { kind: 'barbell' | 'dumbbell' | 'kettlebell' | 'ball' | 'slamBall' | 'sandbag' | 'sled' | 'plate'; men: [light, medium, heavy]; women: [light, medium, heavy]; perHand?: boolean }>` keyed by family head or record id (record wins), about 25 entries following `workouts/README.md` (heavy = Rx, medium ≈ 70 %, light ≈ 45–50 %, women ≈ 0.65–0.75 × men): thruster 20/30/43 · 15/20/29, clean 30/42.5/60 · 20/30/42.5, snatch 20/30/43 · 15/20/29, press family 30/42.5/60 · 20/30/42.5, deadlift 40/60/85 · 30/42.5/60, front squat 30/42.5/60, overhead squat 20/30/43, SDHP 20/30/43, bench 40/60/80 · 25/35/50, bent-over row 30/40/50, barbell lunges 20/30/40, dumbbell pairs per hand 7.5/10/15 · 5/7.5/10, light dumbbell 5/7.5/10, single dumbbell 10/15/22.5 · 7.5/10/15, kettlebell 12/16/24 · 8/12/16, carries 16/24/32 · 12/16/24, wall and med balls 4/6/9 · 3/4/6, slam balls 10/15/20, sandbag 10/15/20, sled push 70/105/152 · 50/70/102, sled pull 50/75/103, sled drag 40/60/80, plate pinch 5/10/15.
-- Snapping ladders: barbell and dumbbell 2.5 kg, kettlebell 8/12/16/20/24/28/32, ball 2/3/4/6/9, slam ball 10/15/20/30, sandbag 5/10/15/20, sled 5 kg, plate 2.5 kg.
-- Difficulty shift: Light −1 (`snap(light × 0.7), light, medium`), Moderate and Hard 0, Brutal +1 (`medium, heavy, snap(heavy × 1.2)`).
-
-### Difficulty loop (`generator.ts`)
-
-Band from `calibration.thresholds`, centre = midpoint (Brutal: brutal + 10). Attempt 0 builds from the profile. Up to 6 reversible nudges: rate, keep the best by distance to the centre, stop on a hit, revert a nudge that fails validation or compile. Return the best with `hit` and notes.
-
-Nudge order by format: AMRAP/you-go-I-go: movement tier, the 15-rep line, cap ±2 minutes within ±20 %, drop the single load at Light/Moderate. EMOM/for time: tier, reps, intervals or rounds ±1, interval 60↔90 s. Circuit: work/rest step along 20/40 → 30/30 → 40/20 → 45/15 → 50/10, round rest 60 → 45 → 30 s, tier, rounds ±1. Strength: rest ±30 s, sets ±1, add or remove the finisher, finisher tier.
-
-Known-unreachable cells get a note at attempt 0 instead of nudges: Light at 45 minutes, Light for the manual formats at 30 minutes, Brutal at 10 minutes for EMOM, circuit and strength, Brutal Tabata, strength-only above Moderate.
-
-### Text (`generator-text.ts`)
-
-Titles from patterns that apply: `${gear} ${formatWord} ${n}` ("Barbell AMRAP 15", "Kettlebell and bar 21-15-9", "Mixed gear circuit 20"), `${focus} ${formatWord} ${n}` ("Engine EMOM 20"), `${dayName} …` when given, or record names joined for two- or three-movement pieces ("Thrusters and pull-ups for time"). Descriptions of two to four sentences built from the draft: structure, pair rule, loads sentence when loaded, and provenance ("Generated on this device: Hard, 15 minutes, full body, my equipment."). No attribution.
-
-### UI (`apps/web/src/`)
-
-- `GenerateDialog.tsx` on `FormDialog` (`settings/FormDialog.tsx`), `submitLabel="Generate"`, radio groups or selects with `aria-label`s "Duration", "Format", "Difficulty", "Gear", "Focus". You-go-I-go disabled for solo. Under Gear = My equipment with an empty list: "No equipment ticked yet, so this makes a bodyweight workout. Tick your gear in settings." linking `settingsHref('equipment')`. Athletes shown read-only from the draft.
-- Knob persistence: `generator: { minutes, format, difficulty, gear, focus }` in `Preferences` (`preferences.ts`), defaults `{ 15, 'any', 2, 'mine', 'full' }`, validated in `loadPreferences` like the other fields. Editor gains `preferences` and `onPreferencesChange` props, passed from `App.tsx` L210.
-- Placement: a right-hand actions block in the editor's `shared.workoutHeading` (as `Overview.tsx` L53–58), only when `mode === 'create'` and not `importedFrom`: **Generate** (`Icon name="dice"`). After a generation: **Shuffle again** beside it and a `role="status"` line "Generated a Hard AMRAP 15 (score 55), three movements." plus notes, with Dismiss.
-- Applying: `setDraft(result.draft)` inside the Editor. A `ConfirmDialog` "Replace the current draft?" guards a non-empty draft that is not the last generated one. Shuffle again uses a fresh `Math.random()` seed and skips the confirm when the draft still equals the last generated. `dayName` from `toLocaleDateString('en', { weekday: 'long' })` in the dialog. Participants from `draft.participants`.
-
----
-
-## Phases
-
-| Phase | Work | Gate |
-| - | - | - |
-| 0 Record (this session) | AGENT.md §15.6 "Planned wave 6: the workout generator (version 1.4.0)" with the decisions and phase table, BLD-13 appended after BLD-12, §2.2 keeps "workout generation by AI" deferred with "(a local rule-based generator ships under BLD-13)", a revision-log bullet under the current version header. | Markdown rules, IDs appended. |
-| A Random and tables | `random.ts`, `generator-loads.ts`, `generator-targets.ts` with unit tests. | Table ordered and snapped, fresh objects, fixed-seed values. |
-| B Pool | `generator-pool.ts` with tests on the seed catalogue. | Exclusions, equipment, focus rules, widening notes. |
-| C Templates | `generator-templates.ts` per format and `chooseFormat`. | Grid validity and duration ±20 %. |
-| D Loop and text | `generator.ts`, `generator-text.ts`, hit-rate tuning. | ±1 level everywhere, ≥ 80 % exact hits, unreachable cells noted. |
-| E UI | Preferences block, `GenerateDialog.tsx`, Editor actions and status, App props. | Playwright scenario, visual pass in both themes at 1024 and 390 px. |
-| F Docs and version | README feature line, `docs/architecture.md` Editor paragraph, `docs/validation.md` wave entry, `docs/development.md` package line, AGENT.md wave row and log, version 1.4.0 in `package.json`, `package-lock.json`, `CITATION.cff`, `.env.example`, `Dockerfile`, `docs/releases/v1.4.0.md`. | `npm run check`, browser suites. |
-
-Phases A–F run after the static shape (1.2.0) has shipped.
-
----
-
-## Tests
-
-- `tests/unit/generator.test.ts`: determinism per seed (equal drafts, 10 seeds give ≥ 8 distinct results). Grid formats (6 + any) × minutes (5) × difficulty (4) × gear (3, `myEquipment: ['Kettlebell', 'Pull-up bar', 'Dumbbells']`) × focus (5) × participants (2): `validateDraft` empty, compiles, `estimatedMs` within ±25 % of the bucket, every lane resolves with a `movement` id, equipment within the allowed set, no mobility or rest records, no skill records at Light/Moderate, distinct heads per section, at most one monostructural outside engine, loads only table values for the level, percent loads without `women`, pair `B` and `completion` rules per format. Difficulty `|achieved − target| ≤ 1` everywhere and exact hits ≥ 80 % with an allowlist of noted unreachable cells. Drop focus to three values if the grid runs over 20 s.
-- `tests/unit/random.test.ts`, load table tests, `preferences.test.ts` (junk `generator` block falls back), text tests (titles only from record names and gear words, ≤ 160 chars).
-- `tests/e2e/editor.spec.ts`: open `/#/new`, Generate, Duration 15, Format AMRAP, Difficulty Hard, Gear Everything, Focus Full body, submit, expect a non-empty Title, Summary "Cap 15:00", status "Generated", Shuffle again changes the title or the first movement within three tries, Save to library lands on `#/wod/<slug>` with the h1 equal to the title.
-
-## Verification
-
-1. `npm run check` (lint, typecheck, unit tests, build) and `npx playwright test --config tests/playwright.config.ts --project=firefox --project=webkit`.
-2. WebKit screenshots of the dialog and the editor after a generation in both themes at 1024 and 390 px.
-3. A by-hand pass: generate for each of the six formats, solo and pair, with "My equipment" against the user's ticked gear, start one generated workout in the player.
-4. Markdown rules in every touched file, `grep -n 1.4.0 CITATION.cff .env.example Dockerfile package.json`.
+No request is open: every earlier one is delivered, and their original wording lives in the git history of this file.
+The next planned feature is the workout generator of section 15.
