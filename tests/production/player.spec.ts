@@ -58,8 +58,8 @@ test('the production container ships the recorded cue packs', async ({ page, req
   }));
   expect(durationSeconds).toBeGreaterThan(0.5);
   await page.goto('./#/settings/sound');
-  const options = await page.getByRole('combobox', { name: 'Voice', exact: true }).locator('option').allTextContents();
-  expect(options).toEqual(['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)', 'Device voice only']);
+  // The pack list arrives with packs.json after the page renders, so wait for it instead of reading the first paint.
+  await expect(page.getByRole('combobox', { name: 'Voice', exact: true }).locator('option')).toHaveText(['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)', 'Device voice only']);
 });
 
 test('the production container is installable from a phone\'s home screen', async ({ page, request }) => {

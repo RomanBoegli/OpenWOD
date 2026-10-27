@@ -333,46 +333,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
-      - name: Wait for the new site
-        id: live
+      # The only live check: the new site is served and its bundle carries this tag's version.
+      # The browser tests already ran against the same files in the static job, so this does not repeat them.
+      - name: Check the live site serves this version
         env:
           # The Pages URL, which follows a custom domain on the owner's site (romanboegli.ch).
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           ENTRY: ${{ needs.static.outputs.entry }}
         run: |
           url="${PAGE_URL%/}/"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
+          version="${GITHUB_REF_NAME#v}"
           deadline=$((SECONDS + 300))
-          until curl --fail --silent --location --max-time 10 "$url?deploy=$GITHUB_RUN_ID-$SECONDS" | grep -q "$ENTRY"; do
-            if [ "$SECONDS" -ge "$deadline" ]; then echo "$url still does not serve $ENTRY after 5 minutes"; exit 1; fi
+          until curl --fail --silent --location --max-time 10 "$url?deploy=$GITHUB_RUN_ID-$SECONDS" | grep -q "$ENTRY" \
+            && curl --fail --silent --location --max-time 10 "$url$ENTRY" | grep -qE "[\"'\`]${version//./\\.}[\"'\`]"; do
+            if [ "$SECONDS" -ge "$deadline" ]; then echo "$url does not serve $version ($ENTRY) after 5 minutes"; exit 1; fi
             sleep 10
           done
-          echo "$url serves $ENTRY"
+          echo "$url serves $version"
           echo "## Static site $GITHUB_REF_NAME live at $url" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      # The live test runs in Playwright's own image, which carries Chromium and its system libraries.
-      # Installing them with --with-deps goes through apt, and a slow Ubuntu mirror hung that step past its 10-minute bound.
-      - name: Test the live site in Chromium
-        env:
-          OPENWOD_PRODUCTION_URL: ${{ steps.live.outputs.url }}
-          OPENWOD_PRODUCTION_MODE: static
-        run: |
-          version="$(node -p "require('@playwright/test/package.json').version")"
-          docker run --rm --ipc=host \
-            -e OPENWOD_PRODUCTION_URL -e OPENWOD_PRODUCTION_MODE -e CI \
-            -v "$PWD:/work" -w /work \
-            "mcr.microsoft.com/playwright:v$version-noble" \
-            npm run test:production -- --project=chromium
-      - name: Upload live browser failure traces
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: pages-browser-results
-          path: test-results-production/
-          if-no-files-found: ignore
-          retention-days: 7

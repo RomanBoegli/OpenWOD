@@ -810,7 +810,9 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - On a phone a workout's page puts Start workout, Duplicate and edit (shown as Duplicate) or Edit, and Export in one row, with Remove as an icon, the names unchanged for assistive technology.
 - On a phone during a session the view switch is a 34 px quiet button inside the frame, the context view's game plan is denser, and the recovery prompt is a short note without its own Resume and End session, which the controls above it already offer (desktop keeps the prompt's buttons).
 - In the server shape the library says it is shared by every device in the household and a saved workout reads "Saved for the household", where both still said "this device".
-- The production smoke accepts `audio/mp3` beside `audio/mpeg` for the cue clips, the type GitHub Pages sends, and the live-site test after the Pages deployment runs in the Playwright image instead of installing Chromium through apt.
+- The production smoke accepts `audio/mp3` beside `audio/mpeg` for the cue clips, and waits for the voice list instead of reading its first paint.
+- After the Pages deployment the live site gets one check only: it serves the new entry script, and the script carries the tag's version.
+  The browser smoke no longer runs against the live URL, because the static job has already run it on the same files.
 - Version 1.2.1 prepared, with the database schema at version 2.
 
 ## Version 1.12 — 27 October 2026

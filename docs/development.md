@@ -91,7 +91,7 @@ The jobs run in this order:
 | `manifest` | Publishes the multi-architecture manifest, refuses an existing tag, and hands its digest to the release job. |
 | `static` | Renders the voices (or restores them from the cache), builds with `OPENWOD_REQUIRE_CUES=1`, smoke-tests `vite preview` in three engines, zips `openwod-static-<tag>.zip` and uploads the Pages artifact. |
 | `release` | Tags only: creates the GitHub Release with `docs/releases/<tag>.md` as the body plus an image digest line, attaches the zip, refuses an existing release. |
-| `pages` | Tags only: deploys to GitHub Pages, waits until the live site serves the new entry script, then runs the smoke in Chromium against the live URL. |
+| `pages` | Tags only: deploys to GitHub Pages, waits until the live site serves the new entry script, and checks that the script carries the tag's version. |
 
 `release` and `pages` wait for both `static` and `manifest`, so nothing is published unless the image and the static site passed.
 A manual run (`workflow_dispatch`) publishes the image as `sha-<commit>` and builds and smokes the static site, but never creates a release or deploys Pages.
