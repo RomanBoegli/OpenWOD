@@ -355,22 +355,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # Restore only: this job installs Chromium alone and must not save a smaller browser set under the shared key.
-      - name: Restore production test browsers
-        uses: actions/cache/restore@v6
-        with:
-          path: .cache/ms-playwright
-          key: browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
-      - name: Install Chromium
-        timeout-minutes: 10
-        env:
-          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
-        run: npx playwright install --with-deps chromium
+      # The live test runs in Playwright's own image, which carries Chromium and its system libraries.
+      # Installing them with --with-deps goes through apt, and a slow Ubuntu mirror hung that step past its 10-minute bound.
       - name: Test the live site in Chromium
         env:
           OPENWOD_PRODUCTION_URL: ${{ steps.live.outputs.url }}
           OPENWOD_PRODUCTION_MODE: static
-        run: npm run test:production -- --project=chromium
+        run: |
+          version="$(node -p "require('@playwright/test/package.json').version")"
+          docker run --rm --ipc=host \
+            -e OPENWOD_PRODUCTION_URL -e OPENWOD_PRODUCTION_MODE -e CI \
+            -v "$PWD:/work" -w /work \
+            "mcr.microsoft.com/playwright:v$version-noble" \
+            npm run test:production -- --project=chromium
       - name: Upload live browser failure traces
         if: failure()
         uses: actions/upload-artifact@v7
