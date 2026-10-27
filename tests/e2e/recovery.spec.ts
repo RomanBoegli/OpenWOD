@@ -1,12 +1,25 @@
-import { expect, test } from './fixtures';
+import { apiFor, expect, isStaticProject, test } from './fixtures';
 import { advance, PLAYER, ready } from './helpers';
 
 const YGIG = '/#/wod/you-go-i-go-sprints/play';
 const flush = (page: Parameters<typeof advance>[0]) => page.evaluate(() => window.__openwodTest!.flushCheckpoints());
 const snapshot = (page: Parameters<typeof advance>[0]) => page.evaluate(() => window.__openwodTest!.snapshot());
+/** The recorded sessions: from the test server, or in the static projects from History, the only view of the browser's log. */
+const expectOneSession = async (page: Parameters<typeof advance>[0], outcome: string, label: string) => {
+  if (!isStaticProject()) {
+    const api = apiFor();
+    await expect.poll(async () => (await api.get<{ sessions: { outcome: string; interrupted: boolean }[] }>('/api/v1/sessions')).sessions).toEqual([expect.objectContaining({ outcome, interrupted: true })]);
+    return;
+  }
+  await page.goto('/#/history');
+  const rows = page.getByRole('list', { name: 'Sessions' }).getByRole('listitem');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText(label);
+  await expect(rows.first()).toContainText('Interrupted');
+};
 
 test.describe('checkpoints and recovery', () => {
-  test('AT-12: a reload in round 3 during B’s turn recovers paused with lane, round, clock and acks, then finishes Interrupted', async ({ page, api }) => {
+  test('AT-12: a reload in round 3 during B’s turn recovers paused with lane, round, clock and acks, then finishes Interrupted', async ({ page }) => {
     await page.goto(YGIG); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 10_000);
@@ -30,12 +43,12 @@ test.describe('checkpoints and recovery', () => {
     expect(await page.getByTestId('primary-timer').textContent()).toBe(timerBefore);
     await advance(page, 12 * 60_000);
     await expect(page.getByRole('status')).toHaveText('Workout complete');
-    await expect.poll(async () => (await api.get<{ sessions: { outcome: string; interrupted: boolean }[] }>('/api/v1/sessions')).sessions).toEqual([expect.objectContaining({ outcome: 'capped', interrupted: true })]);
+    await expectOneSession(page, 'capped', 'Capped');
     await page.goto('/#/history');
     await expect(page.getByRole('list', { name: 'Sessions' }).getByRole('listitem').first()).toContainText('Interrupted');
   });
 
-  test('ending from the recovery prompt records Aborted and Interrupted, and the library banner offers the session until then', async ({ page, api }) => {
+  test('ending from the recovery prompt records Aborted and Interrupted, and the library banner offers the session until then', async ({ page }) => {
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 10_000 + 65_000.125);
@@ -49,7 +62,7 @@ test.describe('checkpoints and recovery', () => {
     await expect(prompt).toContainText('Round 1 · 00:25 left');
     await prompt.getByRole('button', { name: 'End session' }).click();
     await expect(page.getByRole('status')).toHaveText('Workout ended');
-    await expect.poll(async () => (await api.get<{ sessions: { outcome: string; interrupted: boolean }[] }>('/api/v1/sessions')).sessions).toEqual([expect.objectContaining({ outcome: 'aborted', interrupted: true })]);
+    await expectOneSession(page, 'aborted', 'Ended early');
     await page.goto('/');
     await expect(page.getByRole('status', { name: 'Interrupted session' })).toHaveCount(0);
   });

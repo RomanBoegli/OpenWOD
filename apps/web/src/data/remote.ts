@@ -3,21 +3,19 @@ import type { PackCollection } from '../../../../packages/domain/src/pack';
 import type { Workout } from '../../../../packages/domain/src/schema';
 import type { SectionResult } from '../../../../packages/engine/src';
 import type { SessionRecord } from '../../../../packages/engine/src/records';
+import type { DeviceImportReport, ExportDocument, PackDecision, PackImportReport, RestoreReport, SessionListItem, StoredWorkout } from '../../../../packages/household/src/types';
+import type { Backend, Ready } from './backend';
 import { request } from './client';
 
-/** Typed calls for every household API route (apps/server/src/routes.ts). */
-export interface StoredWorkout { id: string; revision: number; origin: 'local' | 'imported'; createdAt: string; updatedAt: string; archivedAt?: string; document: Workout }
-export interface SessionListItem extends Omit<SessionRecord, 'events' | 'workout'> { receivedAt: string }
-export interface Ready { status: string; persistence: boolean; schemaVersion?: number; version?: string }
-export type PackDecision = { action: 'copy' } | { action: 'skip' } | { action: 'replace'; id: string; expectedRevision: number };
-export interface PackImportReport { created: { from: string; to: string }[]; replaced: string[]; skipped: number; collections: number; masterRevision: number }
-export interface DeviceImportReport { workouts: { created: number; skipped: number; renamed: { from: string; to: string }[] }; sessions: { created: number; skipped: number; orphaned: number }; masterData: 'created' | 'merged' | 'unchanged' }
+/** Typed calls for every household API route (apps/server/src/routes.ts). The record shapes live in packages/household. */
+export type { DeviceImportReport, PackDecision, PackImportReport, SessionListItem, StoredWorkout } from '../../../../packages/household/src/types';
+export type { Ready } from './backend';
 
 export const remote = {
   ready: () => request<Ready>('GET', '/health/ready', { timeoutMs: 4000 }),
-  listWorkouts: () => request<{ workouts: StoredWorkout[] }>('GET', '/workouts').then(result => result.workouts),
+  listWorkouts: (includeArchived = false) => request<{ workouts: StoredWorkout[] }>('GET', `/workouts${includeArchived ? '?includeArchived=1' : ''}`).then(result => result.workouts),
   getWorkout: (id: string) => request<StoredWorkout>('GET', `/workouts/${encodeURIComponent(id)}`),
-  putWorkout: (document: Workout, ifMatch: number) => request<{ id: string; revision: number; updatedAt: string }>('PUT', `/workouts/${encodeURIComponent(document.id)}`, { body: { document }, ifMatch }),
+  putWorkout: (document: Workout, ifMatch?: number) => request<{ id: string; revision: number; updatedAt: string }>('PUT', `/workouts/${encodeURIComponent(document.id)}`, { body: { document }, ifMatch }),
   archiveWorkout: (id: string, ifMatch?: number) => request<void>('DELETE', `/workouts/${encodeURIComponent(id)}`, { ifMatch }),
   getMasterData: () => request<{ revision: number; document: MasterData }>('GET', '/master-data'),
   putMasterData: (document: MasterData, ifMatch: number) => request<{ revision: number; updatedAt: string }>('PUT', '/master-data', { body: { document }, ifMatch }),
@@ -34,4 +32,6 @@ export const remote = {
   correctSession: (id: string, results: SectionResult[], note: string | undefined, ifMatch: number) => request<{ revision: number }>('PATCH', `/sessions/${encodeURIComponent(id)}/results`, { body: { results, ...(note ? { note } : {}) }, ifMatch }),
   importDevice: (payload: { deviceId: string; workouts: Workout[]; masterData: MasterData; sessions: unknown[] }) => request<DeviceImportReport>('POST', '/import/device', { body: payload, timeoutMs: 30_000 }),
   importPack: (payload: { workouts: Workout[]; collections: PackCollection[]; decisions: Record<string, PackDecision> }) => request<PackImportReport>('POST', '/import/pack', { body: payload, timeoutMs: 30_000 }),
-};
+  exportAll: () => request<ExportDocument>('GET', '/export', { timeoutMs: 60_000 }),
+  restore: (document: unknown) => request<RestoreReport & { backup?: string }>('POST', '/import/restore', { body: document, timeoutMs: 120_000 }),
+} satisfies Backend;

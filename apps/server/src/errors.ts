@@ -1,24 +1,9 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 import { WorkoutValidationError } from '../../../packages/domain/src/validate';
+import { HouseholdError as ApiError } from '../../../packages/household/src/errors';
 
-/** Structured API errors (API-02): a machine code, a readable message and a field path where one applies. */
-export class ApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string, readonly path?: string, readonly extra: Record<string, unknown> = {}) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-export class NotFoundError extends ApiError {
-  constructor(what: string) { super(404, 'NOT_FOUND', `${what} was not found.`); }
-}
-
-/** The stored revision differs from the one the client expected; the current document comes along so the client can resolve it. */
-export class ConflictError extends ApiError {
-  constructor(expected: number | undefined, readonly current: { revision: number; document?: unknown }) {
-    super(409, 'REVISION_CONFLICT', `Expected revision ${expected ?? 'none'} but the stored revision is ${current.revision}.`, undefined, { current });
-  }
-}
+/** Structured API errors (API-02) are the household's own (packages/household/src/errors.ts); this file maps them to replies. */
+export { ConflictError, HouseholdError as ApiError, NotFoundError } from '../../../packages/household/src/errors';
 
 export function errorHandler(error: FastifyError | ApiError | WorkoutValidationError | Error, request: FastifyRequest, reply: FastifyReply) {
   if (error instanceof ApiError) return reply.code(error.status).send({ error: { code: error.code, message: error.message, ...(error.path ? { path: error.path } : {}), ...error.extra } });

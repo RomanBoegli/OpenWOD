@@ -28,9 +28,12 @@ import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
 import { newId } from './ids';
 
-// Build-time constants from vite.config.ts: the package version and the repository URL.
-declare const __OPENWOD_VERSION__: string;
-declare const __OPENWOD_REPO__: string;
+/** The deployment shape in the footer, with a one-line explainer on hover or focus. */
+const SHAPE_LABELS = { server: 'Server', static: 'Static' } as const;
+const SHAPE_TIPS = {
+  server: 'Your household server keeps the library and the session log for every device.',
+  static: 'No server: the library lives in this browser only. Download a backup in Settings.',
+} as const;
 
 export default function App() {
   const { route } = useRoute();
@@ -57,7 +60,7 @@ export default function App() {
   audio.beepVolume = preferences.beepVolume;
   audio.tone = preferences.beepTone;
 
-  useTheme(preferences.theme, preferences.accent, preferences.restColor);
+  useTheme(preferences.theme, preferences.accent, preferences.restColor, preferences.background);
   useEffect(() => savePreferences(preferences), [preferences]);
   useEffect(() => { void audio.listPacks(); }, [audio]);
   useEffect(() => installFeel(), []);
@@ -190,7 +193,7 @@ export default function App() {
       <a href="#/" className={styles.brand} aria-label="OpenWOD library"><BrandMark className={styles.brandMark} /><span className={styles.wordmark}>Open<b>WOD</b></span></a>
       {backTarget ? <a href={backTarget.href} className={styles.backLink} aria-label={backTarget.aria}><Icon name="back" size={17} /><span>{backTarget.label}</span></a> : <span className={styles.headerNote}>Not born. Made.</span>}
       <div className={styles.headerActions}>
-        {(data.connection === 'offline' || data.connection === 'unreachable' || pendingCount > 0) && <span className={styles.pill} data-state={data.connection} title={data.connection === 'online' ? 'Changes are waiting to be uploaded' : 'The household server cannot be reached; this device keeps working and uploads later'}>
+        {data.mode === 'server' && (data.connection === 'offline' || data.connection === 'unreachable' || pendingCount > 0) && <span className={styles.pill} data-state={data.connection} title={data.connection === 'online' ? 'Changes are waiting to be uploaded' : 'The household server cannot be reached; this device keeps working and uploads later'}>
           <Icon name={data.connection === 'online' ? 'upload' : 'alert'} size={14} />{data.connection === 'offline' ? 'Offline' : data.connection === 'unreachable' ? 'Server unreachable' : 'Syncing'}{pendingCount > 0 && ` · ${pendingCount} ${pendingCount === 1 ? 'change' : 'changes'} waiting`}
         </span>}
         <button className={styles.quietButton} onClick={() => void audio.test()} disabled={preferences.soundMode === 'silent'}><Icon name="sound" /><span>Test sound</span></button>
@@ -205,18 +208,18 @@ export default function App() {
         : route.name === 'play' && recovery && lockKnown === 'held' ? <section className={styles.recovery} role="region" aria-label="Session in another tab"><div><strong>“{recovery.checkpoint.workout.title}” is running in another tab.</strong><p>Only one tab controls a session. Take it over here and the other tab pauses and hands over, or go back and use that tab.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href={workoutHref(recovery.checkpoint.workoutId)}>Back to overview</a><button className={styles.primaryButton} onClick={() => void takeOver()}><Icon name="play" />Take over here</button></div></section>
         : route.name === 'play' && (recovery || current) ? <Player key={route.id} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
-        : route.name === 'history' ? <History sessions={sessions} entries={entries} onCorrect={data.correctSession} onLoadMore={data.loadMoreSessions} fetchSession={data.fetchSession} />
-        : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} />
+        : route.name === 'history' ? <History mode={data.mode} sessions={sessions} entries={entries} onCorrect={data.correctSession} onLoadMore={data.loadMoreSessions} fetchSession={data.fetchSession} />
+        : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} />
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
         : route.name === 'edit' && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
         : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} onExport={workout => { void exportOne(workout); }} />
-        : <Library entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} missingId={route.name === 'library' ? undefined : (route as { id?: string }).id} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
+        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} missingId={route.name === 'library' ? undefined : (route as { id?: string }).id} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
       <ConfirmDialog open={Boolean(exportRequest)} title={`Export “${exportRequest?.title ?? ''}” as a pack?`} confirmLabel={`Export ${exportRequest?.workouts.length ?? 0} ${exportRequest?.workouts.length === 1 ? 'workout' : 'workouts'}`} cancelLabel="Cancel" onClose={() => setExportRequest(undefined)} onConfirm={() => void confirmPackExport()}>
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>
       </ConfirmDialog>
-      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer"><Icon name="github" size={15} />OpenWOD on GitHub</a> · <a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a> · workouts run locally · <a href="/LICENSE" target="_blank" rel="noreferrer">GPLv3</a></span></footer>
+      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span className={styles.footerLinks}><span className={styles.footerMode} tabIndex={0} data-tip={SHAPE_TIPS[data.mode]} aria-label={`${SHAPE_LABELS[data.mode]}: ${SHAPE_TIPS[data.mode]}`}>{SHAPE_LABELS[data.mode]}</span><a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer" title="Source code on GitHub"><Icon name="github" size={15} />OpenWOD</a><a href={`${import.meta.env.BASE_URL}LICENSE`} target="_blank" rel="noreferrer" title="GNU General Public License, version 3">GPLv3</a></span></footer>
     </main>
   </div>;
 }

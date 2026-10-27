@@ -113,9 +113,12 @@ Migrations are versioned and run in transactions, a newer schema refuses to star
 Writes require the expected revision (`If-Match`) and answer a conflict with the current document.
 Session uploads are idempotent by id.
 Validation reuses the domain parser and compiler, so invalid content never reaches the database.
+The rules themselves (revisions, archive, idempotent sessions, corrections, device and pack imports, export and restore) live once in `packages/household` as `class Household` over a small synchronous port, `HouseholdTables`.
+The server implements the port with prepared SQLite statements inside one transaction per call, and a shared conformance suite (`tests/unit/helpers/household-suite.ts`) runs against both implementations.
+The JSON export (`openwod.export`, format version 1) restores through `POST /api/v1/import/restore`: the document is validated whole, the server writes `pre-restore-<timestamp>.sqlite` under `/data/backups/`, and then everything is replaced in one transaction.
 In test builds a header selects a per-test in-memory database, which lets the browser suite run in parallel against one server process.
 
-On the device (`apps/web/src/data/`), IndexedDB holds five stores: checkpoints and progress records of running sessions, the outbox of writes that have not reached the server, a cache of the household data for an instant and offline start, and metadata.
+On the device (`apps/web/src/data/`), IndexedDB holds five stores in the server shape: checkpoints and progress records of running sessions, the outbox of writes that have not reached the server, a cache of the household data for an instant and offline start, and metadata.
 `useLibraryData` owns the household state for the app: cache first, then the server, with writes going to the server directly and into the outbox on a network failure.
 The outbox flushes single-flight with backoff on reconnect, when the tab becomes visible and on a timer, and a master-data conflict is resolved by merging ours over the server's.
 Everything not yet uploaded is labelled in the header, on the card, in history and in settings (DAT-09).
@@ -127,6 +130,20 @@ On the play route the app reads the device's checkpoints before mounting the pla
 A session ended from that prompt is recorded as aborted and interrupted.
 When checkpoint writes fail, the player says so and never claims a recovery (AT-16).
 One tab controls a session (ENG-14): a Web Lock named by the session id, a BroadcastChannel for the takeover, and a ping that distinguishes a live holder from a document on its way out.
+
+## Two deployment shapes
+
+The same sources build two shapes, chosen by the Vite mode at build time.
+The server shape (`vite build`, base `/`, `dist/web`) talks to the household API over HTTP.
+The static shape (`vite build --mode static`, base `./`, `dist/static`, `__OPENWOD_STATIC__` set) has no server and keeps the library in the browser.
+`apps/web/src/data/backend.ts` declares one `Backend` interface and picks its implementation once at module load: `remote.ts` for the server, `local-backend.ts` for the browser.
+The local backend runs the same `Household` core over IndexedDB version 2, which adds the stores `workouts`, `master` and `sessions` (indexed by finish time and by workout) beside the five above.
+Each call is one IndexedDB transaction that loads what the core needs, runs the core synchronously and writes the result, so an import or a restore is all-or-nothing.
+It throws the client's own `ApiError`, never a network error, so the outbox and `useLibraryData` work unchanged: a conflict is a conflict, a rejected write is rejected, everything else succeeds at once.
+The static shape keeps the newest 2000 sessions and prunes older ones on every write and on restore.
+A pre-1.0 device library migrates into the browser's library on the first start with one notice, where the server shape offers it for upload.
+The interface says "this browser" where the server shape says "the server", has no connection pill, and labels the library under Settings → General → This browser with the storage used, whether the browser keeps it, the counts, the JSON backup and its restore.
+Relative URLs and hash routes let one build run at `https://romanboegli.github.io/OpenWOD/`, from a zip in any web root and under `vite preview`: cue clips and the LICENSE link go through `import.meta.env.BASE_URL`, the manifest and icons are relative.
 
 ## Screens, routes and theme
 
@@ -152,7 +169,7 @@ The files are the source of truth, so a workout is changed by editing its file, 
 Movements are first-class records (`packages/domain/src/catalogue.ts`): id, display, short and spoken names, aliases, equipment, category, notes, and one optional `family` link to a parent record.
 Every variant is its own record (Hang power cleans, Kipping pull-ups).
 There is no modifier algebra and no generated naming, because coaches already think in named variants and a flat record can be named, spoken, loaded and merged without rules.
-The bundled catalogue (`movements.ts`, 190 records) seeds the device.
+The bundled catalogue (`movements.ts`, 193 records) seeds the device.
 The user's own records, overrides of bundled ones, removals and merge aliases live in master data on the device (`apps/web/src/master-data.ts`) and compose into one `Catalogue` per render.
 Names resolve loosely (`movementKey`: case, accents, punctuation and a plural s per word are ignored) and a prescription may carry a `movement` id.
 The id wins when it resolves, the name otherwise, so files stay portable (SHR-02) and editing a record never rewrites a workout (LIB-02).
@@ -197,9 +214,12 @@ Source-build Compose is a separate local route named `openwod-preview`.
 Health reports persistence and the schema version once the database is open.
 Images run the unit and schema checks during their build.
 Release CI runs browser tests, then tests amd64 and arm64 images on native runners before publishing the combined release manifest.
+The same run builds the static site with the voices rendered on the runner, tests it against `vite preview` in three engines, and on a tag publishes it to GitHub Pages and attaches the zip to the GitHub Release.
+The static build must stay relative: `scripts/check-production.mjs dist/static` fails on any `href="/` or `src="/` in `index.html`, and the production smoke uses relative URLs alone, so the same spec checks the container, the preview and the live Pages URL (`OPENWOD_PRODUCTION_MODE` selects the shape).
 `scripts/rehearse-restore.sh` rehearses backup, volume loss and restore against a throwaway stack.
 
 Browser clock and audio injection exist only in test builds.
 The Playwright configuration starts the API with an in-memory database and Vite with a proxy, and a fixture gives every test its own scope.
+A third web server runs the `static-test` build on port 5175 for the `static-chromium`, `static-firefox` and `static-webkit` projects, which rerun the player, editor, settings, screens, tabs, library and recovery specs without an API and add the static specs under `tests/e2e/static/`.
 Accelerated tests establish semantics, including reload recovery, takeover between tabs, offline finish and upload, and the device migration.
 A real-hour reliability and accuracy run and the physical device checks (`docs/device-checklist.md`) remain release work done by hand.

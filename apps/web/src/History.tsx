@@ -12,11 +12,13 @@ import { Player, resultText } from './Player';
 import type { Preferences } from './preferences';
 import { playHref, snapshotPlayHref, workoutHref } from './router';
 import type { SessionView } from './data/use-library-data';
+import type { DataMode } from './data/mode';
 import { DONE_THRESHOLD } from './session-log';
 import styles from './History.module.css';
 import shared from './App.module.css';
 
 interface HistoryProps {
+  mode: DataMode;
   sessions: SessionView[];
   entries: LibraryEntry[];
   onCorrect: (id: string, results: SectionResult[], note?: string) => Promise<boolean>;
@@ -29,12 +31,12 @@ const when = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'med
 const parseTime = (text: string): number | undefined => { const match = /^(\d+):([0-5]\d)$/.exec(text.trim()); return match ? (Number(match[1]) * 60 + Number(match[2])) * 1000 : undefined; };
 
 /** Every session the household has played, newest first: outcome, flags, scores, Repeat, and score corrections (DAT-05). */
-export function History({ sessions, entries, onCorrect, onLoadMore, fetchSession }: HistoryProps) {
+export function History({ mode, sessions, entries, onCorrect, onLoadMore, fetchSession }: HistoryProps) {
   const [correcting, setCorrecting] = useState<SessionView>();
   const [loadingMore, setLoadingMore] = useState(false);
   const entryOf = (id: string) => entries.find(entry => entry.workout.id === id);
   return <div className={styles.history}>
-    <div className={shared.workoutHeading}><div><div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> HISTORY</div><h1>What you have done</h1><p className={shared.description}>Every session the household played, newest first. Repeat one, or correct a score; the earlier value stays on record.</p></div></div>
+    <div className={shared.workoutHeading}><div><div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> HISTORY</div><h1>What you have done</h1><p className={shared.description}>{mode === 'static' ? 'Every session played in this browser, newest first.' : 'Every session the household played, newest first.'} Repeat one, or correct a score; the earlier value stays on record.</p></div></div>
     {sessions.length === 0 ? <div className={styles.empty}><h2>Nothing yet</h2><p>Finish a workout and it shows up here.</p></div> : <ul className={styles.list} aria-label="Sessions">
       {sessions.map(session => {
         const entry = entryOf(session.workoutId);

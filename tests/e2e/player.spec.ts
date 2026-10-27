@@ -334,7 +334,7 @@ test.describe('formats', () => {
 });
 
 test.describe('player without a secure context', () => {
-  // Plain HTTP on a LAN address (a phone opening http://10.10.10.11:8321) has no crypto.randomUUID; starting a workout used to throw and leave a black page.
+  // Plain HTTP on a LAN address (a phone opening http://YOUR_SERVER_ADDRESS:8080) has no crypto.randomUUID; starting a workout used to throw and leave a black page.
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { delete (Crypto.prototype as { randomUUID?: unknown }).randomUUID; });
     await page.goto(PLAYER); await ready(page);

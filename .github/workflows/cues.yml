@@ -1,0 +1,53 @@
+name: Cues
+# Renders the recorded voices on main and saves them under the key the Release image workflow's static job restores.
+# A cache saved by a tag run is not visible to the next tag, but main's caches are, so every release starts warm.
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/generate-cues.ts
+      - scripts/render-cues.py
+      - packages/domain/src/movements.ts
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cues:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Keep in step with the static job in release.yml: same paths, same key.
+      - name: Cache recorded voices
+        id: cues
+        uses: actions/cache@v6
+        with:
+          path: |
+            apps/web/public/cues
+            .cache/piper-voices
+          key: cues-v1-${{ hashFiles('scripts/generate-cues.ts', 'scripts/render-cues.py', 'packages/domain/src/movements.ts') }}
+          restore-keys: cues-v1-
+      - uses: actions/setup-python@v7
+        if: steps.cues.outputs.cache-hit != 'true'
+        with:
+          python-version: "3.12"
+      - name: Install Piper (pinned like the Dockerfile's cues stage)
+        if: steps.cues.outputs.cache-hit != 'true'
+        run: python3 -m pip install piper-tts==1.8.0
+      - name: Install ffmpeg
+        if: steps.cues.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Render voices
+        if: steps.cues.outputs.cache-hit != 'true'
+        env:
+          PIPER_PYTHON: python3
+        run: npx tsx scripts/generate-cues.ts
+      # Only a complete set may be saved: the static job skips rendering on an exact hit.
+      - name: Require the five voice packs
+        run: node -e "const packs = require('./apps/web/public/cues/packs.json'); if (packs.length !== 5) { console.error('packs.json lists ' + packs.length + ' voice packs; the release ships 5.'); process.exit(1); } console.log(packs.map(pack => pack.id + ' (' + pack.names + ' names)').join(', '));"

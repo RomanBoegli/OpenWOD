@@ -27,6 +27,13 @@ jobs:
         run: |
           runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/check.yml/runs?head_sha=$GITHUB_SHA&status=success&per_page=1" --jq '.total_count')"
           if [ "$runs" -gt 0 ]; then echo "Check already passed for $GITHUB_SHA"; echo "checked=true" >> "$GITHUB_OUTPUT"; else echo "No green Check for $GITHUB_SHA yet: running it here"; echo "checked=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # The static shape must build before anything is published; the static job below builds it again with the voices.
+      - run: npm run build:static
   check:
     needs: validate
     if: needs.validate.outputs.checked != 'true'
@@ -126,6 +133,9 @@ jobs:
     # The skipped Check upstream would skip this job too without always(): only the image jobs decide.
     if: always() && needs.image.result == 'success'
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
+      image: ${{ steps.publish.outputs.image }}
     steps:
       - uses: docker/login-action@v4
         with:
@@ -133,6 +143,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish multi-architecture manifest
+        id: publish
         env:
           REPOSITORY: ${{ github.repository }}
           REVISION: ${{ github.sha }}
@@ -148,6 +159,8 @@ jobs:
           fi
           docker buildx imagetools create --tag "$image:$version" "$image:candidate-$REVISION-amd64" "$image:candidate-$REVISION-arm64"
           digest="$(docker buildx imagetools inspect "$image:$version" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "image=$image:$version" >> "$GITHUB_OUTPUT"
           {
             echo "## Published $image:$version"
             echo
@@ -155,3 +168,213 @@ jobs:
             echo
             echo "Pin it in the stack: \`APP_IMAGE=$image@$digest\`"
           } >> "$GITHUB_STEP_SUMMARY"
+  # The static site: built with the recorded voices, tested in three engines against vite preview, zipped and handed to Pages.
+  # Runs for a manual dispatch too (build and smoke only); the release and pages jobs below publish for tags alone.
+  static:
+    needs: [validate, check]
+    # Same gate as the image jobs: a skipped Check of an already-checked commit counts as passed.
+    if: always() && needs.validate.result == 'success' && (needs.check.result == 'success' || needs.check.result == 'skipped')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    outputs:
+      entry: ${{ steps.entry.outputs.entry }}
+      zip: ${{ steps.zip.outputs.zip }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # The voices depend on these three files only (the same ones the Dockerfile's cues stage copies). cues.yml warms the
+      # key on main, because a cache saved by one tag is not visible to the next tag but main's caches are.
+      - name: Cache recorded voices
+        id: cues
+        uses: actions/cache@v6
+        with:
+          path: |
+            apps/web/public/cues
+            .cache/piper-voices
+          key: cues-v1-${{ hashFiles('scripts/generate-cues.ts', 'scripts/render-cues.py', 'packages/domain/src/movements.ts') }}
+          restore-keys: cues-v1-
+      # An exact hit holds every pack complete (only a successful run saves the key), so Piper and ffmpeg are only set up to render.
+      - uses: actions/setup-python@v7
+        if: steps.cues.outputs.cache-hit != 'true'
+        with:
+          python-version: "3.12"
+      - name: Install Piper (pinned like the Dockerfile's cues stage)
+        if: steps.cues.outputs.cache-hit != 'true'
+        run: python3 -m pip install piper-tts==1.8.0
+      - name: Install ffmpeg
+        if: steps.cues.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Render voices
+        if: steps.cues.outputs.cache-hit != 'true'
+        env:
+          PIPER_PYTHON: python3
+        run: npx tsx scripts/generate-cues.ts
+      - name: Build static site with the five voice packs
+        env:
+          OPENWOD_REQUIRE_CUES: "1"
+        run: npm run build:static
+      - name: Drop the render spec from the site
+        # It records the runner's absolute paths and is only an input for render-cues.py.
+        run: rm -f dist/static/cues/.render-spec.json
+      - name: Read the entry script name
+        id: entry
+        run: |
+          entry="$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/static/index.html | head -n 1)"
+          test -n "$entry" || { echo "No assets/index-*.js in dist/static/index.html"; exit 1; }
+          echo "entry=$entry" >> "$GITHUB_OUTPUT"
+      - name: Cache production test browsers
+        uses: actions/cache@v6
+        with:
+          path: .cache/ms-playwright
+          key: browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
+      # Bounded for the same reason as in the image job: a hung apt mirror fails fast instead of eating the job timeout.
+      - name: Install production test browsers
+        timeout-minutes: 10
+        run: npm run browsers:install -- --with-deps
+      - name: Start static preview
+        run: nohup npm run preview:static > preview-static.log 2>&1 &
+      - name: Wait for static preview
+        run: |
+          for ((attempt = 1; attempt <= 30; attempt++)); do
+            if curl --fail --silent --max-time 2 --output /dev/null http://127.0.0.1:4173/; then break; fi
+            sleep 1
+          done
+          curl --fail --show-error --silent --max-time 5 http://127.0.0.1:4173/ | grep -q "${{ steps.entry.outputs.entry }}"
+          curl --fail --show-error --silent --max-time 5 --output /dev/null http://127.0.0.1:4173/cues/packs.json
+      - name: Test static site in Chromium, Firefox and WebKit
+        env:
+          OPENWOD_PRODUCTION_URL: http://127.0.0.1:4173/
+          OPENWOD_PRODUCTION_MODE: static
+        run: npm run test:production
+      - name: Zip static site
+        id: zip
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          zip="openwod-static-${REF//\//-}.zip"
+          (cd dist/static && zip -r -q "$GITHUB_WORKSPACE/$zip" .)
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+          echo "Static site: \`$zip\` ($(du -h "$zip" | cut -f1))" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.zip.outputs.zip }}
+          path: ${{ steps.zip.outputs.zip }}
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/static
+      - name: Upload static browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: static-browser-results
+          path: |
+            test-results-production/
+            preview-static.log
+          if-no-files-found: ignore
+          retention-days: 7
+  release:
+    needs: [static, manifest]
+    # always(): the skipped Check upstream would skip this job otherwise. Tags only: a dispatch never creates a release.
+    if: always() && github.ref_type == 'tag' && needs.static.result == 'success' && needs.manifest.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.static.outputs.zip }}
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          ZIP: ${{ needs.static.outputs.zip }}
+          DIGEST: ${{ needs.manifest.outputs.digest }}
+          IMAGE: ${{ needs.manifest.outputs.image }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Refusing to overwrite an existing release: $TAG"
+            exit 1
+          fi
+          notes="docs/releases/$TAG.md"
+          test -f "$notes" || { echo "Release notes $notes are missing: add them and tag again"; exit 1; }
+          test -n "$DIGEST" || { echo "The manifest job reported no image digest"; exit 1; }
+          cp "$notes" "$RUNNER_TEMP/notes.md"
+          {
+            echo
+            echo "Image digest: \`$DIGEST\` (\`$IMAGE\`, pin it as \`${IMAGE%:*}@$DIGEST\`)"
+          } >> "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "OpenWOD $TAG" --notes-file "$RUNNER_TEMP/notes.md" "$ZIP"
+          echo "Released [$TAG]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG) with \`$ZIP\`" >> "$GITHUB_STEP_SUMMARY"
+  pages:
+    needs: [static, manifest]
+    # Tags only, like the release: a dispatch builds and smokes the static site but never deploys it.
+    if: always() && github.ref_type == 'tag' && needs.static.result == 'success' && needs.manifest.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+      - name: Wait for the new site
+        id: live
+        env:
+          OWNER: ${{ github.repository_owner }}
+          ENTRY: ${{ needs.static.outputs.entry }}
+        run: |
+          url="https://${OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          deadline=$((SECONDS + 300))
+          until curl --fail --silent --location --max-time 10 "$url?deploy=$GITHUB_RUN_ID-$SECONDS" | grep -q "$ENTRY"; do
+            if [ "$SECONDS" -ge "$deadline" ]; then echo "$url still does not serve $ENTRY after 5 minutes"; exit 1; fi
+            sleep 10
+          done
+          echo "$url serves $ENTRY"
+          echo "## Static site $GITHUB_REF_NAME live at $url" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Restore only: this job installs Chromium alone and must not save a smaller browser set under the shared key.
+      - name: Restore production test browsers
+        uses: actions/cache/restore@v6
+        with:
+          path: .cache/ms-playwright
+          key: browsers-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('node_modules/@playwright/test/package.json') }}
+      - name: Install Chromium
+        timeout-minutes: 10
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+        run: npx playwright install --with-deps chromium
+      - name: Test the live site in Chromium
+        env:
+          OPENWOD_PRODUCTION_URL: ${{ steps.live.outputs.url }}
+          OPENWOD_PRODUCTION_MODE: static
+        run: npm run test:production -- --project=chromium
+      - name: Upload live browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pages-browser-results
+          path: test-results-production/
+          if-no-files-found: ignore
+          retention-days: 7

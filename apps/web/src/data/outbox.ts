@@ -2,8 +2,8 @@ import { mergeMasterData, type MasterData } from '../../../../packages/domain/sr
 import type { Workout } from '../../../../packages/domain/src/schema';
 import type { SessionRecord } from '../../../../packages/engine/src/records';
 import { ApiError, NetworkError } from './client';
-import { idbDelete, idbGetAll, idbPut, StorageUnavailableError } from './idb';
-import { remote } from './remote';
+import { backend } from './backend';
+import { idbDelete, idbGetAll, idbPut, StorageUnavailableError, transaction } from './idb';
 
 /**
  * Writes that have not reached the server yet (DAT-02/03). Every item is idempotent on the server side: sessions by
@@ -44,6 +44,8 @@ export function classifyFailure(error: unknown): Failure {
 
 export const listOutbox = (): Promise<OutboxItem[]> => idbGetAll<OutboxItem>('outbox').then(items => items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
 export const removeOutboxItem = (id: string) => idbDelete('outbox', id).then(notify);
+/** Drops every queued write (after a restore replaced the household they were meant for). */
+export const clearOutbox = () => transaction(['outbox'], 'readwrite', get => { get('outbox').clear(); }).then(notify);
 
 export async function enqueue(item: Omit<OutboxItem, 'createdAt' | 'attempts' | 'nextAttemptAt' | 'state'>): Promise<void> {
   await idbPut('outbox', { ...item, createdAt: new Date().toISOString(), attempts: 0, nextAttemptAt: 0, state: 'pending' } satisfies OutboxItem);
@@ -93,15 +95,15 @@ async function run(now: number): Promise<FlushResult> {
 
 async function upload(item: OutboxItem): Promise<void> {
   switch (item.kind) {
-    case 'session': await remote.putSession(item.body as SessionRecord); return;
-    case 'workout': await remote.putWorkout(item.body as Workout, item.expectedRevision ?? 0); return;
-    case 'archive': await remote.archiveWorkout((item.body as { id: string }).id, item.expectedRevision); return;
+    case 'session': await backend.putSession(item.body as SessionRecord); return;
+    case 'workout': await backend.putWorkout(item.body as Workout, item.expectedRevision ?? 0); return;
+    case 'archive': await backend.archiveWorkout((item.body as { id: string }).id, item.expectedRevision); return;
     case 'master': {
-      try { await remote.putMasterData(item.body as MasterData, item.expectedRevision ?? 0); } catch (error) {
+      try { await backend.putMasterData(item.body as MasterData, item.expectedRevision ?? 0); } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 409) throw error;
         // Someone else saved settings meanwhile: fold ours on top of theirs and try once more.
-        const server = await remote.getMasterData();
-        await remote.putMasterData(mergeMasterData(item.body as MasterData, server.document), server.revision);
+        const server = await backend.getMasterData();
+        await backend.putMasterData(mergeMasterData(item.body as MasterData, server.document), server.revision);
       }
       return;
     }

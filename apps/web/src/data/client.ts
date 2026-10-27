@@ -3,7 +3,6 @@
  * Nothing here touches the timing path; the player never waits on a request.
  */
 declare global { interface Window { __openwodScope?: string } }
-declare const __OPENWOD_TEST__: boolean;
 
 export class ApiError extends Error {
   constructor(readonly status: number, readonly code: string, message: string, readonly path?: string, readonly payload?: Record<string, unknown>) {

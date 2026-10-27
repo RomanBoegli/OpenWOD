@@ -172,3 +172,16 @@ The rule is anchored to the root, the data layer is tracked, and the clean check
 | Visual pass | WebKit screenshots of history, the recovery prompt, the import preview, the household tile under General, the overall progress line in the player and the Look & feel miniature, in both themes at 1024 and 390 px. |
 
 Not run in this round: the GitHub release workflow on the user's repository, the Portainer deployment, and the device checklist.
+
+## Static site and release publishing (Wave 5), 27 October 2026
+
+Version 1.2.0: the static shape with the library in IndexedDB, one household core for both shapes, restore from the JSON export, and the publishing jobs for GitHub Pages and the GitHub Release.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 194 passed in 25 files. The shared household suite (`tests/unit/helpers/household-suite.ts`) runs against SQLite and against IndexedDB through `fake-indexeddb`: documents and revisions, master data, sessions with corrections and list filters, device and pack imports, the export shape, a restore that replaces everything with archived rows and corrections kept, and a refused restore that writes nothing. New beside it: the restore route (happy path, invalid document, `FORMAT_NEWER`), the `pre-restore-*.sqlite` file, the export document parser, pagination over 120 sessions, pruning past the session limit on write and on restore, a conflict as the client's `ApiError`, an import whose second workout fails leaving the first unwritten, and a version 1 database upgrading to version 2 with its checkpoints kept. |
+| Browser scenarios | 192 passed: Firefox 47, WebKit 47, static Firefox 49, static WebKit 49. The static projects rerun the player, editor, settings, tabs, library and recovery specs without an API and add library, packs, history, backup, migration, strings and settings specs under `tests/e2e/static/`. A JSON export restores through Settings → General on the server shape (DAT-11). The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI, because headless Chromium fails on this Mac. |
+| Static build | `npm run build:static` passed: no `href="/` or `src="/` in `dist/static/index.html`, no test injection in the bundle, manifest and icons present, the footer reads 1.2.0. |
+| Static preview smoke | `OPENWOD_PRODUCTION_MODE=static` against `preview:static` in Firefox and WebKit passed except the voice-pack test, which needs all five packs and only one was rendered on this Mac. The release job renders all five with `OPENWOD_REQUIRE_CUES=1`. |
+
+Not recorded in this round: the container smoke and a restore with its `pre-restore-*.sqlite` on the preview container, the Release image workflow with the new `static`, `release` and `pages` jobs on GitHub runners (a manual dispatch is the dry run before the tag, and it never publishes), the live Pages URL, the zip served from a plain web root, and a screenshot pass of the "This browser" card and the restore dialog.

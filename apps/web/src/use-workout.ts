@@ -6,7 +6,6 @@ import type { WorkoutAudio } from './audio';
 import { newId } from './ids';
 import { applyProgress, writeCheckpoint, writeProgress, WriteQueue, type Checkpoint, type CheckpointStatus, type Progress, type Recovery } from './data/checkpoints';
 
-declare const __OPENWOD_TEST__: boolean;
 declare global {
   interface Window {
     __openwodTest?: { advance: (ms: number) => void; snapshot: () => { projection: ReturnType<WorkoutEngine['project']>; clocks: ClockValues; events: WorkoutEngine['events'] }; command: (type: CommandType, extra?: Partial<Command>) => boolean; flushCheckpoints: () => Promise<void>; checkpointRevision: () => number };

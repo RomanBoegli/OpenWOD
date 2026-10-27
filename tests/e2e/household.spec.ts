@@ -32,7 +32,7 @@ test.describe('household server', () => {
     expect((await api.put('/api/v1/workouts/race', { document: own('race', 'Race edited elsewhere', 2) }, 1)).status).toBe(200);
     await page.getByRole('button', { name: 'Save changes' }).click();
     const dialog = page.getByRole('dialog', { name: 'Saved elsewhere since you opened it' });
-    await expect(dialog).toContainText('revision 2');
+    await expect(dialog).toContainText('Revision 2');
     await dialog.getByRole('button', { name: 'Overwrite with mine' }).click();
     await expect(page).toHaveURL(/#\/wod\/race$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Race edited here');
@@ -86,5 +86,31 @@ test.describe('household server', () => {
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     await expect.poll(async () => (await api.get<{ sessions: unknown[] }>('/api/v1/sessions')).sessions.length, { timeout: 20_000 }).toBe(1);
     await expect(page.getByText(/change(s)? waiting/)).toHaveCount(0);
+  });
+
+  test('DAT-11: a JSON export restores through Settings → General after a confirmation, replacing the library', async ({ page, api }) => {
+    expect((await api.put('/api/v1/workouts/kept', { document: own('kept', 'Kept') })).status).toBe(201);
+    const backup = await api.get<{ format: string; workouts: unknown[] }>('/api/v1/export');
+    expect(backup.format).toBe('openwod.export');
+    expect((await api.put('/api/v1/workouts/later', { document: own('later', 'Added later') })).status).toBe(201);
+    await page.goto('/#/settings/general');
+    const card = page.getByRole('region', { name: 'Household server' });
+    await expect(card.getByText('Connected')).toBeVisible();
+    const file = card.getByLabel('Backup file');
+    await file.setInputFiles({ name: 'not-a-backup.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
+    await expect(card.getByRole('alert')).toContainText('This file is not an OpenWOD export.');
+    await file.setInputFiles({ name: 'openwod-export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(backup)) });
+    const dialog = page.getByRole('dialog', { name: 'Replace the library with this backup?' });
+    await expect(dialog).toContainText('1 saved workout and 0 sessions');
+    await expect(dialog).toContainText('for every device');
+    await expect(dialog).toContainText('/data/backups');
+    await dialog.getByRole('button', { name: 'Replace library' }).click();
+    await expect(card.getByRole('status')).toContainText('Restored 1 saved workout and 0 sessions from the backup of');
+    const stored = await api.get<{ workouts: { id: string }[] }>('/api/v1/workouts');
+    expect(stored.workouts.map(item => item.id)).toEqual(['kept']);
+    await page.goto('/');
+    const workouts = page.getByRole('list', { name: 'Workouts' });
+    await expect(workouts.getByRole('listitem').filter({ hasText: 'Kept' })).toBeVisible();
+    await expect(workouts.getByRole('listitem').filter({ hasText: 'Added later' })).toHaveCount(0);
   });
 });

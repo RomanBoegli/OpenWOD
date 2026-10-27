@@ -23,9 +23,11 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
+      - run: npm run build:static
       - run: npm run browsers:install -- --with-deps
         if: env.BROWSER_SUITE == 'true'
-      - run: npm run test:e2e
+      # The server shape in the three engines, the static shape (IndexedDB, no API) in Chromium; the release smoke covers it in all three.
+      - run: npm run test:e2e -- --project=chromium --project=firefox --project=webkit --project=static-chromium
         if: env.BROWSER_SUITE == 'true'
       - uses: actions/upload-artifact@v7
         if: env.BROWSER_SUITE == 'true' && failure()

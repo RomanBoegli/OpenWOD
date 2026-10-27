@@ -3,12 +3,13 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { createReadStream } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { compileWorkout } from '../../../packages/domain/src/compiler';
 import { MasterDataSchema, sanitiseMasterData, type MasterData } from '../../../packages/domain/src/master-data';
 import type { Workout } from '../../../packages/domain/src/schema';
 import { compileSchema, issuesOf, parseWorkout, WorkoutValidationError } from '../../../packages/domain/src/validate';
 import { SectionResultSchema, SessionRecordSchema, type SessionRecord } from '../../../packages/engine/src/records';
+import { MAX_RESTORE_BYTES } from '../../../packages/household/src/export';
 import { ApiError, NotFoundError } from './errors';
 import type { PackDecision, Store } from './store';
 
@@ -144,6 +145,12 @@ export function registerRoutes(app: FastifyInstance, { storeOf, version }: Route
     const payload = body(validators.packImport, request.body, 'pack import');
     const workouts = payload.workouts.map(workoutDocument);
     return need(request).importPack({ workouts, collections: payload.collections, decisions: payload.decisions });
+  });
+
+  /** Replaces the household with a JSON export (DAT-11); the store validates it and keeps a pre-restore copy of the database first. */
+  app.post('/api/v1/import/restore', { bodyLimit: MAX_RESTORE_BYTES }, async request => {
+    const { backup, ...report } = await need(request).restore(request.body);
+    return { ...report, ...(backup ? { backup: basename(backup) } : {}) };
   });
 
   app.get('/api/v1/export', async (request, reply) => {

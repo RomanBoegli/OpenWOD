@@ -10,6 +10,7 @@ import type { Preferences } from './preferences';
 import { collectionOf, type Collection } from './master-data';
 import { agoText, lastDone, timesDone } from './session-log';
 import type { Connection, LegacyData, SessionView } from './data/use-library-data';
+import type { DataMode } from './data/mode';
 import type { OutboxItem } from './data/outbox';
 import { elapsedText, type Recovery } from './data/checkpoints';
 import { DifficultyChip } from './DifficultyChip';
@@ -31,6 +32,8 @@ export function toEntry(workout: Workout, source: LibraryEntry['source'], option
 }
 
 interface LibraryProps {
+  /** The static shape has no server: no reachability or legacy banners, and its own conflict wording. */
+  mode: DataMode;
   entries: LibraryEntry[];
   collections: Collection[];
   sessions: SessionView[];
@@ -117,7 +120,7 @@ function useMasonry(grid: RefObject<HTMLUListElement | null>) {
   });
 }
 
-export function Library({ entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
+export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
   const [migrationHidden, setMigrationHidden] = useState(false);
   const grid = useRef<HTMLUListElement>(null);
   useMasonry(grid);
@@ -191,14 +194,14 @@ export function Library({ entries, collections, sessions, onImportPack, onImport
     {missingId && <p className={shared.notice} role="status">No workout with the ID “{missingId}” is in this library. It may have been removed from this device.</p>}
     {recoveries.map(({ checkpoint }) => <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Interrupted session"><div><strong>Interrupted session of “{checkpoint.workout.title}”</strong><p>Saved {elapsedText(Date.now() - new Date(checkpoint.savedAt).getTime())} on this device. Resume where it stopped, or discard it.</p></div><div className={styles.bannerActions}><a className={shared.primaryButton} href={playHref(checkpoint.workoutId)}><Icon name="play" size={16} />Resume</a><button type="button" className={shared.quietButton} onClick={() => void onDiscardRecovery(checkpoint.sessionId)}>Discard</button></div></section>)}
     {notice && <p className={shared.notice} role="alert">{notice} <button type="button" className={styles.linkButton} onClick={onClearNotice}>Dismiss</button></p>}
-    {connection === 'unreachable' && <p className={shared.notice} role="status">The household server cannot be reached. The library shows what this device last saw; anything you save waits here and uploads when the server is back.</p>}
-    {legacy && !migrationHidden && <section className={styles.banner} role="status" aria-label="Move device data">
+    {mode === 'server' && connection === 'unreachable' && <p className={shared.notice} role="status">The household server cannot be reached. The library shows what this device last saw; anything you save waits here and uploads when the server is back.</p>}
+    {mode === 'server' && legacy && !migrationHidden && <section className={styles.banner} role="status" aria-label="Move device data">
       <div><strong>This device still holds data from before the household server.</strong><p>{[legacy.workouts.length ? `${legacy.workouts.length} saved ${legacy.workouts.length === 1 ? 'workout' : 'workouts'}` : '', legacy.sessions.length ? `${legacy.sessions.length} logged ${legacy.sessions.length === 1 ? 'session' : 'sessions'}` : '', 'your settings'].filter(Boolean).join(', ')}. Move them to the server so every device sees them; the browser copies are removed afterwards.</p></div>
       <div className={styles.bannerActions}><button type="button" className={shared.primaryButton} disabled={migrating || connection !== 'online'} onClick={() => { void onMigrate().then(report => { const summary = report as { workouts?: { created: number; renamed: { from: string; to: string }[] }; sessions?: { created: number } } | undefined; if (summary) setMigrationReport(`Moved ${summary.workouts?.created ?? 0} workouts and ${summary.sessions?.created ?? 0} sessions to the server${summary.workouts?.renamed.length ? ` (${summary.workouts.renamed.map(item => `${item.from} became ${item.to}`).join(', ')})` : ''}.`); }); }}><Icon name="upload" size={16} />{migrating ? 'Moving…' : 'Move to the server'}</button><button type="button" className={shared.quietButton} onClick={() => setMigrationHidden(true)}>Not now</button></div>
     </section>}
     {migrationReport && <p className={shared.notice} role="status">{migrationReport}</p>}
-    {conflicts.map(item => { const workout = item.body as Workout; const taken = new Set(entries.map(entry => entry.workout.id)); return <p key={item.id} className={shared.notice} role="alert">“{workout.title}” could not be saved: the household server already holds revision {item.current?.revision ?? '?'} of it, changed elsewhere. <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'copy', freeWorkoutId(`${workout.id}-copy`, taken))}>Save mine as a copy</button> <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'discard')}>Discard mine</button></p>; })}
-    {rejected.map(item => <p key={item.id} className={shared.notice} role="alert">A change could not be uploaded and will not be retried: {item.error ?? 'the server refused it'}. <button type="button" className={styles.linkButton} onClick={() => void onDismissRejected(item)}>Dismiss</button></p>)}
+    {conflicts.map(item => { const workout = item.body as Workout; const taken = new Set(entries.map(entry => entry.workout.id)); return <p key={item.id} className={shared.notice} role="alert">“{workout.title}” could not be saved: {mode === 'static' ? <>another tab of this browser already saved revision {item.current?.revision ?? '?'} of it.</> : <>the household server already holds revision {item.current?.revision ?? '?'} of it, changed elsewhere.</>} <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'copy', freeWorkoutId(`${workout.id}-copy`, taken))}>Save mine as a copy</button> <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'discard')}>Discard mine</button></p>; })}
+    {rejected.map(item => <p key={item.id} className={shared.notice} role="alert">{mode === 'static' ? `A change could not be saved and will not be retried: ${item.error ?? 'it is not valid'}.` : `A change could not be uploaded and will not be retried: ${item.error ?? 'the server refused it'}.`} <button type="button" className={styles.linkButton} onClick={() => void onDismissRejected(item)}>Dismiss</button></p>)}
 
     <div className={styles.filters} role="search" aria-label="Filter workouts">
       <div className={styles.filterTop}>

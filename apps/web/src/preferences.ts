@@ -1,6 +1,7 @@
 import type { BeepTone, CueSource, SoundMode } from './audio';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import { DEFAULT_CALIBRATION, normaliseCalibration, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
+import { DARK_BACKGROUNDS, DEFAULT_BACKGROUND, LIGHT_BACKGROUNDS, type BackgroundChoice } from './theme';
 
 export type ThemePreference = 'auto' | 'light' | 'dark';
 export interface Preferences {
@@ -35,6 +36,8 @@ export interface Preferences {
   accent: { dark: string; light: string };
   /** The colour of rest and transition phases per theme as #rrggbb, or '' for the built-in blue. */
   restColor: { dark: string; light: string };
+  /** How deep the dark theme's background is and how bright the light theme's: the neutrals take the accent's hue at this depth. */
+  background: BackgroundChoice;
   /** The overall progress line across every section and round: hidden, a bar, a bar with the numbers, or those plus a percentage beside the clock. */
   progress: 'off' | 'bar' | 'detail' | 'percent';
   /** The big clock's digits. */
@@ -49,7 +52,7 @@ export interface Preferences {
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, progress: 'detail', clockWeight: 'bold', clockSize: 'large', nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: 'detail', clockWeight: 'bold', clockSize: 'large', nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -64,7 +67,7 @@ const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']>; restColor?: Partial<Preferences['restColor']> } : {};
+    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']>; restColor?: Partial<Preferences['restColor']>; background?: Partial<BackgroundChoice> } : {};
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
@@ -88,6 +91,7 @@ export function loadPreferences(): Preferences {
       // Before 1.1.0 one accent served both themes; that choice carries over to each.
       accent: typeof stored.accent === 'string' ? { dark: color(stored.accent), light: color(stored.accent) } : { dark: color(stored.accent?.dark), light: color(stored.accent?.light) },
       restColor: { dark: color(stored.restColor?.dark), light: color(stored.restColor?.light) },
+      background: { dark: oneOf(stored.background?.dark, DARK_BACKGROUNDS, DEFAULT_BACKGROUND.dark), light: oneOf(stored.background?.light, LIGHT_BACKGROUNDS, DEFAULT_BACKGROUND.light) },
       progress: oneOf(stored.progress, ['off', 'bar', 'detail', 'percent'], 'detail'),
       clockWeight: oneOf(stored.clockWeight, ['bold', 'light'], 'bold'),
       clockSize: oneOf(stored.clockSize, ['large', 'compact'], 'large'),

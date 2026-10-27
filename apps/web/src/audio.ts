@@ -55,7 +55,7 @@ export class WorkoutAudio {
   private get beepGain() { return this.beepVolume * this.beepVolume * .5; }
   tone: BeepTone = 'classic';
   /** Base URL for the pre-rendered cue clips; packs live in subfolders listed by packs.json. */
-  clipBase = '/cues/';
+  clipBase = `${import.meta.env.BASE_URL}cues/`;
   /** Chosen pack id; '' means the first available. */
   cuePack = '';
   packs: CuePack[] = [];

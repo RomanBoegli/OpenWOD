@@ -18,6 +18,8 @@ describe('preferences', () => {
   it('keeps one rest colour per theme and falls back to the built-in blue', () => {
     store.set('openwod.preferences.v1', JSON.stringify({ restColor: { dark: '#EC4899', light: 7 } }));
     expect(loadPreferences().restColor).toEqual({ dark: '#ec4899', light: '' });
+    store.set('openwod.preferences.v1', JSON.stringify({ background: { dark: 'black', light: 'neon' } }));
+    expect(loadPreferences().background).toEqual({ dark: 'black', light: 'paper' });
     store.set('openwod.preferences.v1', JSON.stringify({}));
     expect(loadPreferences().restColor).toEqual(defaultPreferences.restColor);
   });

@@ -1,11 +1,14 @@
 /**
  * IndexedDB for what must survive a reload on this device (DAT-02): session checkpoints and progress records, the
  * outbox of writes still to reach the server, a read cache of the household data for instant and offline boot, and
- * small metadata. Every failure surfaces as StorageUnavailableError; callers decide what that means for the user.
+ * small metadata. Version 2 adds the household itself for the static shape (local-backend.ts): workouts, the master
+ * data row and sessions with their corrections. Every failure surfaces as StorageUnavailableError; callers decide
+ * what that means for the user.
  */
 export const IDB_NAME = 'openwod';
-export const IDB_VERSION = 1;
-export type StoreName = 'checkpoints' | 'progress' | 'outbox' | 'cache' | 'meta';
+export const IDB_VERSION = 2;
+export type HouseholdStoreName = 'workouts' | 'master' | 'sessions';
+export type StoreName = 'checkpoints' | 'progress' | 'outbox' | 'cache' | 'meta' | HouseholdStoreName;
 
 export class StorageUnavailableError extends Error {
   constructor(message = 'Browser storage is not available.') { super(message); this.name = 'StorageUnavailableError'; }
@@ -13,29 +16,51 @@ export class StorageUnavailableError extends Error {
 
 let opening: Promise<IDBDatabase> | undefined;
 
-export function openIdb(): Promise<IDBDatabase> {
-  opening ??= new Promise<IDBDatabase>((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') { reject(new StorageUnavailableError()); return; }
+/**
+ * Creates whatever store or index is missing, so every upgrade path (fresh, from 1, a half-finished earlier attempt)
+ * ends in the same shape. Existing stores and their rows are never touched.
+ */
+function upgrade(db: IDBDatabase, tx: IDBTransaction | null) {
+  if (!db.objectStoreNames.contains('checkpoints')) db.createObjectStore('checkpoints', { keyPath: 'sessionId' }).createIndex('byWorkout', 'workoutId');
+  if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', { keyPath: 'sessionId' });
+  if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' }).createIndex('byState', 'state');
+  if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'key' });
+  if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+  if (!db.objectStoreNames.contains('workouts')) db.createObjectStore('workouts', { keyPath: 'id' });
+  if (!db.objectStoreNames.contains('master')) db.createObjectStore('master', { keyPath: 'id' });
+  const sessions = db.objectStoreNames.contains('sessions') ? tx?.objectStore('sessions') : db.createObjectStore('sessions', { keyPath: 'id' });
+  if (sessions && !sessions.indexNames.contains('byFinished')) sessions.createIndex('byFinished', 'finishedAt');
+  if (sessions && !sessions.indexNames.contains('byWorkout')) sessions.createIndex('byWorkout', ['workoutId', 'finishedAt']);
+}
+
+/** Opens (and upgrades) the database of a factory, uncached. The app goes through openIdb; tests open their own. */
+export function openDatabase(factory: IDBFactory | undefined = typeof indexedDB === 'undefined' ? undefined : indexedDB, name = IDB_NAME): Promise<IDBDatabase> {
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    if (!factory) { reject(new StorageUnavailableError()); return; }
     let request: IDBOpenDBRequest;
-    try { request = indexedDB.open(IDB_NAME, IDB_VERSION); } catch (error) { reject(new StorageUnavailableError(String(error))); return; }
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains('checkpoints')) db.createObjectStore('checkpoints', { keyPath: 'sessionId' }).createIndex('byWorkout', 'workoutId');
-      if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', { keyPath: 'sessionId' });
-      if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id' }).createIndex('byState', 'state');
-      if (!db.objectStoreNames.contains('cache')) db.createObjectStore('cache', { keyPath: 'key' });
-      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
-    };
-    request.onsuccess = () => {
-      const db = request.result;
-      db.onversionchange = () => { db.close(); opening = undefined; };
-      resolve(db);
-    };
+    try { request = factory.open(name, IDB_VERSION); } catch (error) { reject(new StorageUnavailableError(String(error))); return; }
+    request.onupgradeneeded = () => upgrade(request.result, request.transaction);
+    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(new StorageUnavailableError(request.error?.message));
     request.onblocked = () => reject(new StorageUnavailableError('Another tab holds an older version of the database.'));
   });
+}
+
+export function openIdb(): Promise<IDBDatabase> {
+  opening ??= openDatabase().then(db => {
+    db.onversionchange = () => { db.close(); opening = undefined; };
+    return db;
+  });
   opening.catch(() => { opening = undefined; });
   return opening;
+}
+
+/** Closes the shared connection; the next call opens it again (tests swap the factory in between). */
+export async function closeIdb(): Promise<void> {
+  const current = opening;
+  opening = undefined;
+  if (!current) return;
+  try { (await current).close(); } catch { /* never opened */ }
 }
 
 const settle = <T,>(request: IDBRequest<T>): Promise<T> => new Promise((resolve, reject) => {

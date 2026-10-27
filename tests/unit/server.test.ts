@@ -96,7 +96,7 @@ describe('server', () => {
       // Export and backup
       const exported = await server.inject('/api/v1/export');
       expect(exported.headers['content-disposition']).toContain('openwod-export-');
-      expect(exported.json()).toMatchObject({ format: 'openwod.export', schemaVersion: 1 });
+      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 1 });
       const backup = await server.inject('/api/v1/backup');
       expect(backup.statusCode).toBe(200);
       expect(backup.headers['content-type']).toContain('application/vnd.sqlite3');
@@ -106,6 +106,36 @@ describe('server', () => {
       expect((copy.prepare('SELECT COUNT(*) AS n FROM sessions').get() as { n: number }).n).toBe(1);
       copy.close();
     } finally { await server.close(); store.close(); }
+  });
+
+  it('restores a JSON export over the household, refusing an invalid or newer one (DAT-11)', async () => {
+    const { store: source } = await Store.open(':memory:');
+    const { store: target } = await Store.open(join(scratch, 'restore', 'app.sqlite'));
+    const from = await createServer({ webRoot: '/does-not-exist', store: source });
+    const to = await createServer({ webRoot: '/does-not-exist', store: target });
+    const restore = (payload: unknown) => to.inject({ method: 'POST', url: '/api/v1/import/restore', payload: payload as object });
+    try {
+      await from.inject({ method: 'PUT', url: '/api/v1/workouts/a', payload: { document: own('a') } });
+      await from.inject({ method: 'PUT', url: '/api/v1/sessions/s1', payload: playedSession('s1', bundledWorkout('fran')) });
+      await from.inject({ method: 'PATCH', url: '/api/v1/sessions/s1/results', payload: { results: playedSession('s1', bundledWorkout('fran')).results, note: 'same' }, headers: { 'if-match': '"1"' } });
+      await to.inject({ method: 'PUT', url: '/api/v1/workouts/b', payload: { document: own('b') } });
+      const exported = (await from.inject('/api/v1/export')).json();
+      const invalid = await restore({ ...exported, workouts: [{ ...exported.workouts[0], document: { nonsense: true } }] });
+      expect(invalid.statusCode).toBe(400);
+      expect(invalid.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED', path: expect.stringMatching(/^\/workouts\/0\/document/) } });
+      const newer = await restore({ ...exported, formatVersion: 2 });
+      expect(newer.statusCode).toBe(400);
+      expect(newer.json()).toMatchObject({ error: { code: 'FORMAT_NEWER' } });
+      expect((await to.inject('/api/v1/workouts')).json().workouts.map((item: { id: string }) => item.id)).toEqual(['b']);
+      const restored = await restore(exported);
+      expect(restored.statusCode).toBe(200);
+      expect(restored.json()).toMatchObject({ workouts: 1, archived: 0, sessions: 1, corrections: 1, masterRevision: 0, exportedAt: exported.exportedAt, backup: expect.stringMatching(/^pre-restore-.+\.sqlite$/) });
+      expect((await to.inject('/api/v1/workouts')).json().workouts.map((item: { id: string }) => item.id)).toEqual(['a']);
+      expect((await to.inject('/api/v1/sessions/s1')).json()).toEqual((await from.inject('/api/v1/sessions/s1')).json());
+      const { exportedAt: _a, ...again } = (await to.inject('/api/v1/export')).json();
+      const { exportedAt: _b, ...original } = exported;
+      expect(again).toEqual(original);
+    } finally { await from.close(); await to.close(); source.close(); target.close(); }
   });
 
   it('isolates test scopes behind the header only when enabled', async () => {

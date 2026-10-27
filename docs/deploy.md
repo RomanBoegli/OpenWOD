@@ -1,13 +1,41 @@
 # Deploying OpenWOD
 
-One container serves the app and its API.
-The household's data lives in a SQLite database inside a named volume mounted at `/data`.
+OpenWOD comes in two shapes built from the same sources.
+The static site runs in the browser alone and keeps the library in that browser.
+The container serves the app and the household API, and the household's data lives in a SQLite database inside a named volume mounted at `/data`.
 The stack is called `openwod` and so is its single container.
+
+## Static site (GitHub Pages or any web server)
+
+The static site is the same app without a server.
+Every release is published at [https://romanboegli.github.io/OpenWOD/](https://romanboegli.github.io/OpenWOD/), with the five recorded voices.
+Open it and play: there is nothing to install and no account.
+
+The library lives in the browser's own storage (IndexedDB), so it is per browser and per browser profile.
+Two devices, or Safari and Firefox on one computer, each keep a library of their own, and nothing is shared across the household.
+The backup is a file you keep yourself: Settings → General → This browser → Download backup saves `openwod-backup-YYYY-MM-DD.json`.
+The same card shows the storage used and the counts, and Restore from backup reads such a file back after a confirmation that shows its counts and date.
+A restore replaces the browser's whole library.
+The browser keeps the newest 2000 sessions and drops older ones, and a restore says how many did not fit.
+
+A browser may clear a site's storage when the device runs low on space.
+Keep data on this device on the same card asks the browser to keep the library (`navigator.storage.persist()`), and "Kept on this device" then says Yes.
+Browsers usually agree for an installed app or a site used often, so download a backup now and then until they do.
+A private window forgets everything when it closes.
+
+To host it yourself, take `openwod-static-vX.Y.Z.zip` from the [GitHub Release](https://github.com/RomanBoegli/OpenWOD/releases) and unpack it into any web root.
+The site uses relative paths and hash routes, so it works in a subfolder and needs no rewrite rules.
+Serve it over HTTPS: the screen wake lock, the single-tab lock and persistent storage are offered in a secure context alone.
+`npm run build:static` builds the same site into `dist/static` from source, without the voices unless `npm run cues:generate` ran first.
+
+A household that wants one library for every device uses the container below.
+A backup from the static site restores into the container and the other way round.
 
 ## Portainer from Git (the standard route)
 
 The root [compose.yaml](../compose.yaml) uses a **prebuilt image**.
 Nothing is built on the server.
+Without Portainer, the same file runs with plain Docker Compose, and any LLM assistant can guide you through it.
 
 1. Push the repository to GitHub and run the release workflow (a `v*` tag publishes that tag, a manual run publishes `sha-<commit>`).
    It validates, runs the browser tests, and builds native amd64 and arm64 images with the recorded cue voices.
@@ -16,6 +44,7 @@ Nothing is built on the server.
    The combined GHCR manifest is published only when both architectures pass.
    Failures retain browser traces for seven days and print the container logs.
    Existing tags are never overwritten.
+   A tag run also builds the static site, tests it in the same three engines, publishes it to GitHub Pages and creates the GitHub Release with the zip.
    The image name is the lower-cased GitHub repository under `ghcr.io`, and a freshly published package is private until its visibility is changed or the stack gets registry credentials.
 2. In Portainer Community Edition on Docker Standalone, create a stack from **Repository**: the Git URL and reference, Compose path `compose.yaml`.
    Name the stack `openwod` so it matches the `name` in the file and the volume is `openwod_openwod-data`.
@@ -54,7 +83,7 @@ This is the route for a home network without a reverse proxy, with a certificate
 
    ```sh
    mkcert -install
-   mkcert -cert-file openwod-cert.pem -key-file openwod-key.pem 10.10.10.11 openwod.local
+   mkcert -cert-file openwod-cert.pem -key-file openwod-key.pem YOUR_SERVER_ADDRESS openwod.local
    ```
 
    `mkcert -install` puts the root certificate into this computer's trust store.
@@ -69,7 +98,7 @@ This is the route for a home network without a reverse proxy, with a certificate
    ```
 
    Or as files in the data volume, copied in with `docker cp openwod-cert.pem openwod:/data/cert.pem` and the key alike, with `HTTPS_CERT=/data/cert.pem` and `HTTPS_KEY=/data/key.pem` as the variables.
-3. Update the stack and open `https://10.10.10.11:8321`, with the host port of the stack.
+3. Update the stack and open `https://YOUR_SERVER_ADDRESS:YOUR_PORT`, with the host port of the stack (`HTTP_PORT`, default `8080`).
    The log's first line names the protocol, and a key without a certificate, or the other way round, stops the container with a message naming the variable.
 
 The private key is a secret: anyone holding it can impersonate the server on your network.
@@ -108,7 +137,16 @@ docker compose -p openwod start openwod
 ```
 
 The server also writes a backup by itself before every schema migration, under `/data/backups/`, named `pre-migration-v<from>-to-v<to>-<timestamp>.sqlite`.
-The export under Settings → General is the same data as JSON for reading elsewhere and is not a sharing file and not a backup format.
+Export all data under Settings → General is the same data as JSON.
+It is not a sharing file, but it restores into any OpenWOD, a household server or the static site.
+
+## Restore from a JSON export
+
+Settings → General → Restore from backup reads an `openwod.export` file, from this server or from the static site, and shows its counts and export date before anything changes.
+After the confirmation it replaces the household's whole library, for every device.
+The server first writes a copy of the current database under `/data/backups/`, named `pre-restore-<timestamp>.sqlite`, and then replaces everything in one transaction, so an invalid file or a failure changes nothing.
+A file written by a newer OpenWOD is refused with a request to update first.
+The same restore is `POST /api/v1/import/restore` with the export as the body.
 
 ## Restore into a fresh stack
 
@@ -179,7 +217,7 @@ Do not expose it to the public internet until the login milestone.
   The settings page says so when they are missing.
 - No screen wake lock: it needs a secure context (HTTPS or localhost) and a supporting browser.
   The app says so in the player.
-- Opened over plain HTTP on a LAN address (for example `http://10.10.10.11:8321` on a phone): everything works, including playing a workout, saving and sharing.
+- Opened over plain HTTP on a LAN address (for example `http://YOUR_SERVER_ADDRESS:8080` on a phone): everything works, including playing a workout, saving and sharing.
   Only two things still need HTTPS, because the browser offers them in a secure context alone: the screen wake lock and the single-tab lock that stops a second tab from controlling the same session.
   The [HTTPS](#https) section gives the container its own certificate for them.
   Without HTTPS the player says so for the wake lock and a second tab is only warned best-effort.

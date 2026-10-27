@@ -15,8 +15,12 @@
           theme = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         } catch (error) { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
         document.documentElement.dataset.theme = theme;
+        // The chosen accent, rest colour and background as theme.ts last applied them, so the first frame already shows them.
+        var palette = {};
+        try { palette = (JSON.parse(localStorage.getItem('openwod.palette') || '{}') || {})[theme] || {}; } catch (error) { palette = {}; }
+        for (var token in palette) if (/^--[a-z0-9-]+$/.test(token) && /^#[0-9a-f]{6,8}$/i.test(palette[token])) document.documentElement.style.setProperty(token, palette[token]);
         var meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.setAttribute('content', theme === 'dark' ? '#101613' : '#f3f5ee');
+        if (meta) meta.setAttribute('content', /^#[0-9a-f]{6}$/i.test(palette['--bg'] || '') ? palette['--bg'] : theme === 'dark' ? '#101613' : '#f3f5ee');
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

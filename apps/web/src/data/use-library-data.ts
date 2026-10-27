@@ -10,19 +10,25 @@ import { loadSessions } from '../session-log';
 import { ApiError, NetworkError } from './client';
 import { deviceId } from './device';
 import { idbGet, idbPut, StorageUnavailableError } from './idb';
-import { enqueue, flush, listOutbox, MASTER_ITEM_ID, outboxEvents, removeOutboxItem, requeue, type OutboxItem } from './outbox';
+import type { ExportDocument, RestoreReport } from '../../../../packages/household/src/types';
+import { backend, type BackendCounts } from './backend';
+import { DATA_MODE, type DataMode } from './mode';
+import { clearOutbox, enqueue, flush, listOutbox, MASTER_ITEM_ID, outboxEvents, removeOutboxItem, requeue, type OutboxItem } from './outbox';
 import { clearSession, finishSession, listRecoveries, type Recovery } from './checkpoints';
-import { remote, type DeviceImportReport, type PackDecision, type PackImportReport, type SessionListItem, type StoredWorkout } from './remote';
+import type { DeviceImportReport, PackDecision, PackImportReport, SessionListItem, StoredWorkout } from './remote';
 
 /**
  * The household's data as this device sees it (DAT-01/02/09): the server is authoritative, an IndexedDB cache makes
  * boot instant and offline reads possible, and writes that cannot reach the server wait in the outbox, labelled.
+ * In the static shape (mode.ts) the backend is this browser's IndexedDB: there is no cache, nothing goes offline,
+ * and the outbox empties as soon as it is flushed.
  */
 export type Connection = 'starting' | 'online' | 'offline' | 'unreachable';
 export type SaveResult = 'saved' | 'queued' | 'failed' | { conflict: { revision: number; document?: Workout } };
 export interface SessionView extends SessionListItem { pending?: boolean }
 export interface LegacyData { workouts: Workout[]; masterData: MasterData; sessions: SessionRecord[] }
 export interface LibraryData {
+  mode: DataMode;
   saved: StoredWorkout[];
   masterData: MasterData;
   masterRevision: number;
@@ -37,6 +43,8 @@ export interface LibraryData {
   notice: string;
   legacy?: LegacyData;
   migrating: boolean;
+  /** Static shape only: what this browser holds. */
+  stats?: BackendCounts;
   saveWorkout: (workout: Workout, expectedRevision: number) => Promise<SaveResult>;
   archiveWorkout: (id: string) => Promise<void>;
   updateMasterData: (change: (current: MasterData) => MasterData) => void;
@@ -56,12 +64,20 @@ export interface LibraryData {
   dismissRejected: (item: OutboxItem) => Promise<void>;
   refresh: () => Promise<void>;
   clearNotice: () => void;
+  /** Everything as one restorable JSON document (DAT-11). */
+  exportAll: () => Promise<ExportDocument>;
+  /** Replaces the household with a backup, drops queued writes, and reads everything again. */
+  restore: (document: unknown) => Promise<RestoreReport & { backup?: string }>;
 }
 
 interface Cache { workouts: StoredWorkout[]; master: { revision: number; document: MasterData }; sessions: SessionListItem[]; fetchedAt: string }
 const SESSION_PAGE = 50;
 const LEGACY_KEYS = ['openwod.library.v1', 'openwod.master.v1', 'openwod.sessions.v1'];
 const MIGRATION_KEY = 'migration';
+const STATIC = DATA_MODE === 'static';
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+const NO_STORAGE = "This browser's storage is not available. Workouts play, but nothing can be saved.";
+const NO_STORAGE_CHANGE = 'This browser cannot store anything: browser storage is unavailable. The change is lost when this page closes.';
 
 const toView = (record: SessionRecord): SessionView => { const { events: _events, workout: _workout, ...rest } = record; return { ...rest, receivedAt: '', pending: true }; };
 
@@ -76,6 +92,7 @@ export function useLibraryData(): LibraryData {
   const [notice, setNotice] = useState('');
   const [legacy, setLegacy] = useState<LegacyData>();
   const [migrating, setMigrating] = useState(false);
+  const [stats, setStats] = useState<BackendCounts>();
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
   const [recoveriesReady, setRecoveriesReady] = useState(false);
   const refreshRecoveries = useCallback(async () => { try { setRecoveries(await listRecoveries()); } catch { setRecoveries([]); } finally { setRecoveriesReady(true); } }, []);
@@ -86,17 +103,30 @@ export function useLibraryData(): LibraryData {
   const readOutbox = useCallback(async () => { try { setOutbox(await listOutbox()); } catch { /* no storage: nothing is queued */ } }, []);
 
   const applyCache = useCallback((cache: Cache) => { setSaved(cache.workouts); setMasterData(cache.master.document); setMasterRevision(cache.master.revision); setServerSessions(cache.sessions); }, []);
-  const writeCache = useCallback((cache: Omit<Cache, 'fetchedAt'>) => idbPut('cache', { key: 'household', ...cache, fetchedAt: new Date().toISOString() }).catch(() => undefined), []);
+  // The static shape keeps no cache: the household itself is already in this browser.
+  const writeCache = useCallback((cache: Omit<Cache, 'fetchedAt'>) => STATIC ? Promise.resolve() : idbPut('cache', { key: 'household', ...cache, fetchedAt: new Date().toISOString() }).catch(() => undefined), []);
 
   const fetchAll = useCallback(async () => {
-    const [workouts, master, sessions] = await Promise.all([remote.listWorkouts(), remote.getMasterData(), remote.listSessions({ limit: SESSION_PAGE })]);
+    const [workouts, master, sessions] = await Promise.all([backend.listWorkouts(), backend.getMasterData(), backend.listSessions({ limit: SESSION_PAGE })]);
     setSaved(workouts); setMasterData(master.document); setMasterRevision(master.revision); setServerSessions(sessions);
     void writeCache({ workouts, master, sessions });
+    if (backend.counts) void backend.counts().then(setStats, () => undefined);
   }, [writeCache]);
 
   const refresh = useCallback(async () => {
+    if (STATIC) {
+      // Nothing to reach: the library is always "online"; only the browser's storage can fail.
+      setConnection('online');
+      try {
+        const status = await backend.ready();
+        setReady({ schemaVersion: status.schemaVersion, version: status.version });
+        await fetchAll();
+        void flush();
+      } catch (error) { setNotice(error instanceof StorageUnavailableError ? NO_STORAGE : error instanceof Error ? error.message : String(error)); }
+      return;
+    }
     try {
-      const status = await remote.ready();
+      const status = await backend.ready();
       setReady({ schemaVersion: status.schemaVersion, version: status.version });
       await fetchAll();
       setConnection('online');
@@ -106,11 +136,22 @@ export function useLibraryData(): LibraryData {
     }
   }, [fetchAll]);
 
+  /** Static shape: moves pre-1.0 data from localStorage into this browser's library without asking (same import as the server's). */
+  const migrateLegacy = useCallback(async (data: LegacyData) => {
+    try {
+      const report = await backend.importDevice({ deviceId: deviceId(), workouts: data.workouts, masterData: data.masterData, sessions: data.sessions });
+      for (const key of LEGACY_KEYS) { try { localStorage.removeItem(key); } catch { /* fine */ } }
+      try { await idbPut('meta', { key: MIGRATION_KEY, value: new Date().toISOString() }); } catch { /* fine */ }
+      setNotice(`Moved ${plural(report.workouts.created, 'workout')} and ${plural(report.sessions.created, 'session')} into this browser's library.`);
+      await fetchAll();
+    } catch (error) { setNotice(error instanceof StorageUnavailableError ? NO_STORAGE : error instanceof Error ? error.message : String(error)); }
+  }, [fetchAll]);
+
   // Boot: cache first for an instant library, then the server; legacy device data is offered for migration.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try { const cache = await idbGet<Cache & { key: string }>('cache', 'household'); if (cache && !cancelled) applyCache(cache); } catch { /* no cache */ }
+      if (!STATIC) { try { const cache = await idbGet<Cache & { key: string }>('cache', 'household'); if (cache && !cancelled) applyCache(cache); } catch { /* no cache */ } }
       await readOutbox();
       await refreshRecoveries();
       if (cancelled) return;
@@ -122,10 +163,11 @@ export function useLibraryData(): LibraryData {
       const workouts = loadSavedWorkouts();
       const master = loadMasterData();
       const sessions = loadSessions();
-      if (!cancelled && (workouts.length || sessions.length || !isEmptyMasterData(master))) setLegacy({ workouts, masterData: master, sessions });
+      if (cancelled || !(workouts.length || sessions.length || !isEmptyMasterData(master))) return;
+      if (STATIC) await migrateLegacy({ workouts, masterData: master, sessions }); else setLegacy({ workouts, masterData: master, sessions });
     })();
     return () => { cancelled = true; };
-  }, [applyCache, readOutbox, refresh, refreshRecoveries]);
+  }, [applyCache, readOutbox, refresh, refreshRecoveries, migrateLegacy]);
 
   // Outbox: react to changes, retry on reconnect and while anything is pending.
   useEffect(() => {
@@ -134,8 +176,8 @@ export function useLibraryData(): LibraryData {
     const online = () => { setConnection('starting'); void refresh(); };
     const offline = () => setConnection('offline');
     const visible = () => { if (document.visibilityState === 'visible') void flush().then(result => { if (result.uploaded.length) void fetchAll().catch(() => undefined); }); };
-    window.addEventListener('online', online);
-    window.addEventListener('offline', offline);
+    // The static shape never goes offline: the network does not matter to it.
+    if (!STATIC) { window.addEventListener('online', online); window.addEventListener('offline', offline); }
     document.addEventListener('visibilitychange', visible);
     return () => { outboxEvents.removeEventListener('change', onChange); window.removeEventListener('online', online); window.removeEventListener('offline', offline); document.removeEventListener('visibilitychange', visible); };
   }, [readOutbox, refresh, fetchAll]);
@@ -147,7 +189,7 @@ export function useLibraryData(): LibraryData {
   }, [pendingCount, fetchAll, refresh, connection]);
 
   const queue = useCallback(async (item: Parameters<typeof enqueue>[0]) => {
-    try { await enqueue(item); } catch (error) { setNotice(error instanceof StorageUnavailableError ? 'This device cannot keep changes for later: browser storage is unavailable. The change is lost unless the server comes back while this page stays open.' : String(error)); throw error; }
+    try { await enqueue(item); } catch (error) { setNotice(error instanceof StorageUnavailableError ? (STATIC ? NO_STORAGE_CHANGE : 'This device cannot keep changes for later: browser storage is unavailable. The change is lost unless the server comes back while this page stays open.') : String(error)); throw error; }
   }, []);
 
   const saveWorkout = useCallback(async (workout: Workout, expectedRevision: number): Promise<SaveResult> => {
@@ -155,7 +197,7 @@ export function useLibraryData(): LibraryData {
     const previous = saved;
     setSaved(current => { const index = current.findIndex(item => item.id === workout.id); const next: StoredWorkout = { id: workout.id, revision: workout.revision, origin: current[index]?.origin ?? 'local', createdAt: current[index]?.createdAt ?? stamp, updatedAt: stamp, document: workout }; return index === -1 ? [next, ...current] : current.map((item, at) => at === index ? next : item); });
     try {
-      await remote.putWorkout(workout, expectedRevision);
+      await backend.putWorkout(workout, expectedRevision);
       void fetchAll().catch(() => undefined);
       return 'saved';
     } catch (error) {
@@ -172,7 +214,7 @@ export function useLibraryData(): LibraryData {
   const archiveWorkout = useCallback(async (id: string) => {
     const existing = saved.find(item => item.id === id);
     setSaved(current => current.filter(item => item.id !== id));
-    try { await remote.archiveWorkout(id, existing?.revision); } catch (error) {
+    try { await backend.archiveWorkout(id, existing?.revision); } catch (error) {
       if (error instanceof NetworkError) { try { await queue({ id: `archive:${id}`, kind: 'archive', body: { id }, expectedRevision: existing?.revision }); } catch { /* noticed */ } return; }
       if (error instanceof ApiError && error.status === 404) return;
       setNotice(error instanceof Error ? error.message : String(error));
@@ -182,14 +224,14 @@ export function useLibraryData(): LibraryData {
 
   const pushMaster = useCallback(async (document: MasterData, expected: number) => {
     try {
-      const result = await remote.putMasterData(document, expected);
+      const result = await backend.putMasterData(document, expected);
       setMasterRevision(result.revision);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        const server = await remote.getMasterData();
+        const server = await backend.getMasterData();
         const merged = mergeMasterData(document, server.document);
         setMasterData(merged);
-        const result = await remote.putMasterData(merged, server.revision);
+        const result = await backend.putMasterData(merged, server.revision);
         setMasterRevision(result.revision);
         return;
       }
@@ -209,8 +251,8 @@ export function useLibraryData(): LibraryData {
   // One transaction ends the session on this device: checkpoint and progress out, the record into the outbox (DAT-02).
   const recordSession = useCallback(async (record: SessionRecord) => {
     try { await finishSession(record.id, record); } catch (error) {
-      setNotice(error instanceof StorageUnavailableError ? 'This device cannot keep the session for later: browser storage is unavailable. It uploads now if the server answers, otherwise it is lost.' : String(error));
-      try { await remote.putSession(record); void fetchAll().catch(() => undefined); } catch { /* reported above */ }
+      setNotice(error instanceof StorageUnavailableError ? (STATIC ? NO_STORAGE_CHANGE : 'This device cannot keep the session for later: browser storage is unavailable. It uploads now if the server answers, otherwise it is lost.') : String(error));
+      try { await backend.putSession(record); void fetchAll().catch(() => undefined); } catch { /* reported above */ }
       return;
     }
     await refreshRecoveries();
@@ -222,7 +264,7 @@ export function useLibraryData(): LibraryData {
     const session = serverSessions.find(item => item.id === id);
     if (!session) return false;
     try {
-      const result = await remote.correctSession(id, results, note, session.revision ?? 1);
+      const result = await backend.correctSession(id, results, note, session.revision ?? 1);
       setServerSessions(current => current.map(item => item.id === id ? { ...item, results, revision: result.revision } : item));
       return true;
     } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); return false; }
@@ -231,13 +273,13 @@ export function useLibraryData(): LibraryData {
   const loadMoreSessions = useCallback(async () => {
     const last = serverSessions[serverSessions.length - 1];
     if (!last) return;
-    try { const more = await remote.listSessions({ limit: SESSION_PAGE, before: last.finishedAt }); setServerSessions(current => [...current, ...more.filter(item => !current.some(existing => existing.id === item.id))]); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
+    try { const more = await backend.listSessions({ limit: SESSION_PAGE, before: last.finishedAt }); setServerSessions(current => [...current, ...more.filter(item => !current.some(existing => existing.id === item.id))]); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
   }, [serverSessions]);
 
-  const fetchSession = useCallback(async (id: string) => { try { return await remote.getSession(id); } catch { return undefined; } }, []);
+  const fetchSession = useCallback(async (id: string) => { try { return await backend.getSession(id); } catch { return undefined; } }, []);
 
   const importPack = useCallback(async (workouts: Workout[], collections: PackCollection[], decisions: Record<string, PackDecision>) => {
-    const report = await remote.importPack({ workouts, collections, decisions });
+    const report = await backend.importPack({ workouts, collections, decisions });
     await fetchAll();
     return report;
   }, [fetchAll]);
@@ -246,7 +288,7 @@ export function useLibraryData(): LibraryData {
     if (!legacy) return undefined;
     setMigrating(true);
     try {
-      const report = await remote.importDevice({ deviceId: deviceId(), workouts: legacy.workouts, masterData: legacy.masterData, sessions: legacy.sessions });
+      const report = await backend.importDevice({ deviceId: deviceId(), workouts: legacy.workouts, masterData: legacy.masterData, sessions: legacy.sessions });
       for (const key of LEGACY_KEYS) { try { localStorage.removeItem(key); } catch { /* fine */ } }
       try { await idbPut('meta', { key: MIGRATION_KEY, value: new Date().toISOString() }); } catch { /* fine */ }
       setLegacy(undefined);
@@ -264,12 +306,22 @@ export function useLibraryData(): LibraryData {
   }, [fetchAll]);
   const dismissRejected = useCallback(async (item: OutboxItem) => { await removeOutboxItem(item.id); }, []);
 
+  const exportAll = useCallback(() => backend.exportAll(), []);
+  // Queued writes belong to the household that was just replaced, so they go too (they would conflict or resurrect it).
+  const restore = useCallback(async (document: unknown) => {
+    const report = await backend.restore(document);
+    try { await clearOutbox(); } catch { /* no storage: nothing was queued */ }
+    await fetchAll();
+    return report;
+  }, [fetchAll]);
+
   const sessions = useMemo<SessionView[]>(() => {
+    if (STATIC) return serverSessions;
     const pending = outbox.filter(item => item.kind === 'session').map(item => toView(item.body as SessionRecord));
     const known = new Set(serverSessions.map(item => item.id));
     return [...pending.filter(item => !known.has(item.id)), ...serverSessions].sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
   }, [outbox, serverSessions]);
-  const pendingIds = useMemo(() => new Set(outbox.filter(item => item.state === 'pending').map(item => item.kind === 'session' ? (item.body as SessionRecord).id : item.kind === 'workout' ? (item.body as Workout).id : item.kind === 'archive' ? (item.body as { id: string }).id : MASTER_ITEM_ID)), [outbox]);
+  const pendingIds = useMemo(() => STATIC ? new Set<string>() : new Set(outbox.filter(item => item.state === 'pending').map(item => item.kind === 'session' ? (item.body as SessionRecord).id : item.kind === 'workout' ? (item.body as Workout).id : item.kind === 'archive' ? (item.body as { id: string }).id : MASTER_ITEM_ID)), [outbox]);
   const savedWithQueued = useMemo(() => {
     const queued = outbox.filter(item => item.kind === 'workout' && item.state === 'pending').map(item => item.body as Workout).filter(workout => !saved.some(item => item.id === workout.id));
     const archived = new Set(outbox.filter(item => item.kind === 'archive' && item.state === 'pending').map(item => (item.body as { id: string }).id));
@@ -277,6 +329,7 @@ export function useLibraryData(): LibraryData {
   }, [saved, outbox]);
 
   return {
+    mode: DATA_MODE, stats, exportAll, restore,
     saved: savedWithQueued, masterData, masterRevision, sessions, connection, schemaVersion: ready.schemaVersion, serverVersion: ready.version, pendingIds,
     conflicts: outbox.filter(item => item.state === 'conflict'), rejected: outbox.filter(item => item.state === 'rejected'), notice, legacy, migrating,
     saveWorkout, archiveWorkout, updateMasterData, recordSession, recoveries, recoveriesReady, clearRecovery, refreshRecoveries, correctSession, loadMoreSessions, fetchSession, importPack, migrateDevice, resolveConflict, dismissRejected, refresh, clearNotice: () => setNotice(''),

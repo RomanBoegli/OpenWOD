@@ -8,8 +8,8 @@ authors:
 repository-code: https://github.com/RomanBoegli/OpenWOD
 url: https://github.com/RomanBoegli/OpenWOD
 license: GPL-3.0
-version: 1.1.2
-date-released: "2026-10-26"
+version: 1.2.0
+date-released: "2026-10-27"
 keywords:
   - workout timer
   - CrossFit

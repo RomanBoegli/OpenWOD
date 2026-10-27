@@ -63,3 +63,6 @@
   .nav a { min-height: 40px; padding: 6px 12px; white-space: nowrap; }
 }
 @media (max-width: 620px) { .card { padding: 18px 16px; } .athleteRow, .twoUp, .formGrid, .listTop, .previewRow { grid-template-columns: 1fr; } }
+
+/* The background a depth choice paints, beside its name. */
+.depthDot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--line-2); flex: none; }

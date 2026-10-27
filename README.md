@@ -5,7 +5,7 @@ Made.*
 
 OpenWOD is a self-hosted virtual training coach for home workouts, solo or in pairs.
 It executes structured sessions in six formats (timed circuits, AMRAP, EMOM, for time, you-go-I-go and strength sets) on a deterministic clock, announces every transition by voice, and maintains an extensible workout library.
-It runs as a single container on your own hardware and requires no account, cloud service or telemetry.
+It runs as a static site straight from GitHub Pages, or as a single container on your own hardware, and requires no account, cloud service or telemetry.
 
 <div align="center">
   <picture>
@@ -16,7 +16,7 @@ It runs as a single container on your own hardware and requires no account, clou
   <img src="docs/images/hero.png" alt="The library with its filters and cards, and the player running a partner circuit in the dark theme" width="960">
   </br></br>
 
-**[👋 Introduction](#-introduction)** | **[🚀 Setup](#-setup)** | **[🏠 Run it at home](#-run-it-at-home)** | **[📄 Workout files](#-workout-files)** | **[🔧 Developer notes](#-developer-notes)** | **[🧹 Cleanup](#-cleanup)** | **[🙏 Acknowledgements](#-acknowledgements)**
+**[👋 Introduction](#-introduction)** | **[🚀 Setup](#-setup)** | **[🔧 Developer notes](#-developer-notes)** | **[🙏 Acknowledgements](#-acknowledgements)**
 
   </br>
 
@@ -59,82 +59,118 @@ Pick a session from the library, press Start, and put the phone down.
 - [x] Library filters that stack: athletes, format, collection, duration, difficulty, equipment, only my equipment
 - [x] A projected difficulty per workout, calibrated to your taste in settings
 - [x] An editor for every format with autosaved drafts, duplicate-and-edit, and equipment derived from the movements
-- [x] A movement catalogue of 190 records grouped by family, with search, merge and rename
+- [x] A movement catalogue of 193 records grouped by family, with search, merge and rename
 - [x] Collections, a session log on every card, import and export of single `.wod.yaml` files
-- [x] One container, no account, no cloud, no tracking.
-      Light and dark themes
+- [x] No account, no cloud, no tracking, in light and dark themes with an accent and background of your choice
 - [x] A household server: one SQLite database shared by every device, with a cache and an outbox on each device for the time the server is away
 - [x] Recovery after a reload or a killed browser, and one tab in control of a session
 - [x] History with Repeat and score corrections, backups through the SQLite backup API, versioned migrations
 - [x] Workout packs with sharing provenance: reimports recognised, newer revisions can replace
 - [x] Installs on a phone's home screen as a web app, with the training view laid out to fit the screen
+- [x] Runs as a static site (GitHub Pages) or as one container with a household server
+- [x] A JSON backup that restores into either shape, replacing the library after a confirmation
 - [ ] Login (the server stays on a trusted network until then)
 
 > [!NOTE]
-> Everything you build, import or log stays in your browser until the household server milestone lands.
-> There is no login yet, so keep a shared instance on your own network.
+> On the static site everything you build, import or log stays in that browser.
+> The household server has no login yet, so keep a shared instance on your own network.
 
 ## 🚀 Setup
 
-### Requirements
+OpenWOD runs in one of two shapes built from the same code.
+The static site needs nothing but a browser and keeps the library in that browser.
+The container adds a household server, so every device in the home shares one library and one session log.
 
-| | macOS | Linux | Windows |
-| --- | --- | --- | --- |
-| **Node.js 24** | `brew install node@24` | `sudo apt install nodejs` (from NodeSource) or `nvm install 24` | `winget install OpenJS.NodeJS` |
-| **Docker** (to run the image) | `brew install --cask docker` | `sudo apt install docker.io docker-compose-v2` | `winget install Docker.DockerDesktop` |
+### Static site
 
-### 1. Clone and install
+The current release is published at **[romanboegli.github.io/OpenWOD](https://romanboegli.github.io/OpenWOD/)**.
+Open it, pick a workout and press Start.
+On a phone or tablet it installs as an app, see [On a phone or tablet](#on-a-phone-or-tablet).
 
-```sh
-git clone https://github.com/RomanBoegli/OpenWOD.git openwod
-cd openwod
-npm ci
-```
+Everything you build, import or log is stored in that browser's storage, separately for each browser and browser profile.
+Download a backup now and then under Settings → General → This browser, and use Keep data on this device on the same card so the browser does not clear the library when space runs low.
+A backup restores into any OpenWOD, static or server.
 
-### 2. Run it
-
-```sh
-npm run dev:full
-```
-
-Open http://127.0.0.1:5173, pick a workout, press Start.
-The household API runs beside the dev server and keeps its data in `.data/app.sqlite`.
+To host the site yourself, download `openwod-static-vX.Y.Z.zip` from the [latest release](https://github.com/RomanBoegli/OpenWOD/releases/latest) and unpack it into any web root.
+Serve it over HTTPS (or `localhost`), because the screen wake lock and persistent storage require a secure context.
+No rewrites or server configuration are needed.
 
 > [!TIP]
-> Press **Test sound** in the header once: browsers only play audio after a tap, and that tap unlocks the beeps and voices for the session.
+> Press **Test sound** once after opening the app.
+> Browsers only play audio after a user gesture, and that tap unlocks the beeps and voices for the session.
 
-### 3. Check your change
+### Self-hosting with Docker
 
-```sh
-npm run check      # types, generated schemas and workout bundle, unit tests
-npm run test:e2e   # Playwright in Chromium, Firefox and WebKit
-```
-
-## 🏠 Run it at home
-
-The root [compose.yaml](compose.yaml) deploys a prebuilt image, and Portainer can read it straight from Git.
-The walkthrough, the settings table and the HTTPS note are in [docs/deploy.md](docs/deploy.md).
-To build and run from source locally:
+The container serves the app and the household API on one port and stores its data in a SQLite database in the `/data` volume.
+It needs Docker on any `amd64` or `arm64` host, for example a NAS.
+Images are published to `ghcr.io/romanboegli/openwod` for every release.
 
 ```sh
-docker compose -f deploy/compose.dev.yaml up --build -d
+curl -O https://raw.githubusercontent.com/RomanBoegli/OpenWOD/main/compose.yaml
+APP_IMAGE=ghcr.io/romanboegli/openwod:v1.2.0 HTTP_PORT=8080 docker compose up -d
 ```
 
-The image build renders the cue voices with Piper, so the first build takes a few minutes.
-Afterwards the container serves the app and its API on port 8080 with no network dependency at all, and the household's data lives in the `/data` volume.
-Backup, restore, upgrade and rollback are in [docs/deploy.md](docs/deploy.md).
+Open `http://<host>:8080`.
+In Portainer, create a stack from this repository with the Compose path `compose.yaml` and set `APP_IMAGE` as a stack variable.
+The settings, HTTPS with your own certificate, backup and restore, upgrades and rollback are described in [docs/deploy.md](docs/deploy.md).
 
-## 📄 Workout files
+> [!IMPORTANT]
+> The household server has no login yet.
+> Run it on your own network or behind an authenticating proxy, never on the public internet.
 
-A workout is one `.wod.yaml` file: readable, diffable, and the same whether it is bundled, built in the editor or sent to a friend.
-Durations are human (`40s`, `1m30s`, `10m`), loads carry a women's amount, and movement names resolve against the catalogue.
-A `.wods.yaml` pack carries several workouts and their collections, and a sharing identity on each workout lets an installation recognise a reimport and offer a newer revision as a replacement.
+### On a phone or tablet
+
+OpenWOD is a [progressive web app](https://en.wikipedia.org/wiki/Progressive_web_app) (PWA), so either shape can be installed on a phone's or tablet's home screen.
+It then opens full screen under its own icon, without the browser bars, and the training view is laid out to fit the screen.
+
+| Device | How to install |
+| --- | --- |
+| iPhone and iPad | Open the app in Safari, tap Share, then Add to Home Screen. |
+| Android | Open the app in Chrome, open the menu, then Install app or Add to Home screen. |
+
+Install it from an HTTPS address, so the screen stays awake during a workout.
+The installed app still loads from its address on every start, so it needs a connection to Pages or to your server and is not an offline copy.
+On iOS the installed app keeps its own storage, separate from Safari's, so a static-site library built in Safari does not appear in the installed app.
+Move it with Download backup in Safari and Restore from backup in the installed app.
+
+### Cleanup
+
+Download a backup first if you want to keep the library, since every step below deletes it.
+
+| Setup | Remove the app | Remove its data |
+| --- | --- | --- |
+| Static site | Delete the home-screen icon, or the unpacked files on your web server. | Clear the site's data in the browser settings for `romanboegli.github.io` or your own address. |
+| Docker Compose | `docker compose down` in the folder holding `compose.yaml`, then `docker image rm ghcr.io/romanboegli/openwod:<tag>`. | `docker compose down -v`, which also deletes the `openwod_openwod-data` volume. |
+| Portainer | Remove the `openwod` stack. | Delete the volume `openwod_openwod-data` under Volumes. |
+
+### Workouts
+
+A workout is a single YAML file with the suffix `.wod.yaml`.
+The file is self-contained: prescriptions, targets, loads, repeats, rests and section rules all travel with it, and it never refers to another library.
+The same file is used for the bundled workouts, for workouts built in the editor, and for workouts exchanged between installations.
+
+A workout has one or more sections.
+Each section has a format, which defines how the clock behaves, and a body of nodes.
+
+| Node | Purpose |
+| --- | --- |
+| `timed` | Work for a fixed duration, used in timed circuits. |
+| `task` | Work that ends when the athletes tap Done, with targets such as reps, calories, distance or time. |
+| `rest` | A timed rest. |
+| `sequence` | Child nodes in order, with optional rests between them. |
+| `repeat` | A body repeated a number of times, optionally swapping the A and B assignments every round. |
+
+Each piece of work assigns a prescription to lane A, and in pair workouts to lane B.
+A prescription names the movement and carries its targets, an optional load as one value or as light, medium and heavy levels with a women's amount, and free-text notes that are never executed.
+Durations are written as `40s`, `1m30s` or `10m`.
 
 ```yaml
 format: openwod.workout
 formatVersion: 3
 workout:
+  schemaVersion: 2
   id: fran
+  revision: 1
   title: Fran
   participants: 1
   prep: 10s
@@ -142,39 +178,70 @@ workout:
     - id: fran-for-time
       title: 21-15-9
       format: forTime
+      transitionAfter: manualReady
       cap: 10m
       body:
+        id: fran-ladder
         type: sequence
         children:
-          - type: task
+          - id: thrusters-21
+            type: task
             assignments:
               A:
                 name: Thrusters
                 reps: 21
                 load:
                   heavy: { value: 43, women: 29, unit: kg }
-          - type: task
+          - id: pull-ups-21
+            type: task
             assignments:
               A: { name: Pull-ups, reps: 21 }
 ```
 
-The format is specified in [docs/formats.md](docs/formats.md) and published as JSON Schemas under [schemas/](schemas/).
-The bundled registry, its load convention and the content review are in [workouts/README.md](workouts/README.md).
-Add a file to a folder under `workouts/`, run `npm run workouts:bundle`, and it is in the app.
+Workouts are imported and exported in the library, one file at a time or as a `.wods.yaml` pack with collections.
+A sharing identity in each file lets an installation recognise a reimport and offer a newer revision as a replacement.
+The complete format is specified in [docs/formats.md](docs/formats.md) and published as JSON Schemas under [schemas/](schemas/).
+The bundled workouts, their sources and the load convention are documented in [workouts/README.md](workouts/README.md).
 
 ## 🔧 Developer notes
 
+### Requirements
+
+| Tool | Version | Needed for |
+| --- | --- | --- |
+| Node.js | `24` (pinned in `.nvmrc`), with `npm` | Everything. The server uses the built-in `node:sqlite` module. |
+| Playwright browsers | as installed by `npx playwright install` | Browser tests. |
+| Docker | with `docker compose` (Compose v2) | Building and running the image. |
+| `uv`, or `python3` with `piper-tts==1.8.0`, and `ffmpeg` | | Rendering the recorded voices locally. The Docker build and the release workflow render them on their own. |
+
+### Getting started
+
+```sh
+git clone https://github.com/RomanBoegli/OpenWOD.git
+cd OpenWOD
+npm ci
+npm run dev:full      # app on http://127.0.0.1:5173, household API on port 8787
+npm run dev:static    # the static shape: no API, the library in IndexedDB
+```
+
+`dev:full` keeps its data in `.data/app.sqlite`.
+Run `npm run cues:generate` once to render the five voices into `apps/web/public/cues`, otherwise the app falls back to the device voice.
+
 ### Commands
 
-| Command | What it does |
+| Command | Purpose |
 | --- | --- |
-| `npm run dev:full` | The API on port 8787 beside the Vite dev server, which proxies `/api` to it. |
-| `npm run dev` | Vite dev server for the web app only. |
-| `npm run check` | Typecheck, schema and registry drift, the legacy-name guard, 129 unit tests including the frozen timing traces. |
-| `npm run build` | Production bundle of the web app and the server. |
-| `npm run test:e2e` | Browser scenarios. Add `--project=firefox --project=webkit` to pick engines. |
-| `npm run workouts:bundle` | Rebuilds `packages/domain/src/generated/bundled.ts` from `workouts/`. |
-| `npm run schemas:generate` | Rebuilds the published JSON Schemas from the TypeBox source. |
+| `npm run check` | Typecheck, schema and workout bundle drift checks, unit tests. |
+| `npm run test:e2e` | Browser tests in both shapes. Select engines with `--project=firefox --project=webkit`, or the static shape with `--project=static-webkit`. |
+| `npm run build` | Production build of the web app and the server. |
+| `npm run build:static` | The static site into `dist/static`, with relative paths. |
+| `npm run preview:static` | Serves `dist/static` on port `4173`. |
+| `npm run test:production` | Smoke test against a running container or static preview, set by `OPENWOD_PRODUCTION_URL` and `OPENWOD_PRODUCTION_MODE`. |
+| `npm run workouts:bundle` | Rebuilds the bundled workouts from `workouts/`. |
+| `npm run schemas:generate` | Regenerates the published JSON Schemas from the TypeBox source. |
+
+To build and run the container from source, use `docker compose -f deploy/compose.dev.yaml up --build -d`.
+It binds to `127.0.0.1:8080` and keeps its own volume.
 
 ### Project structure
 
@@ -184,35 +251,31 @@ apps/
   web/           React 19 + Vite: library, editor, player, history, settings, the data layer under src/data/
 packages/
   domain/        Schema (TypeBox), compiler, difficulty, loads, movement catalogue, YAML exchange
-  engine/        The clock: deterministic session engine, warning marks, wash curve
-assets/brand/    Logos and the brand mark
-deploy/          Local Compose from source (the root compose.yaml deploys the image)
-docs/            architecture, deploy, development, formats, validation
+  engine/        Deterministic session engine
+  household/     Library rules (revisions, imports, sessions, export and restore) over SQLite or IndexedDB
+deploy/          Compose file for building from source
+docs/            Architecture, deployment, development, formats, validation, release notes
 schemas/         Published JSON Schemas (generated)
-scripts/         Bundle, schema generation, cue rendering, checks
-tests/           unit (Vitest), e2e (Playwright), production smoke
-workouts/        The registry: one folder per collection, one .wod.yaml per workout
+scripts/         Bundling, schema generation, voice rendering, checks
+tests/           Unit (Vitest), browser (Playwright) and production smoke tests
+workouts/        The bundled workouts, one folder per collection
 ```
-
-### Where to read more
-
-- [docs/architecture.md](docs/architecture.md): the decisions behind the engine, the formats, the catalogue and the settings.
-- [docs/development.md](docs/development.md): repository layout, test strategy, the frozen traces and the cue voices.
-- [docs/validation.md](docs/validation.md): what has been verified, wave by wave.
-- [AGENT.md](AGENT.md): the requirements, the plan and the running change log.
 
 ### Releasing
 
-Pushing a `v*` tag runs the **Release image** workflow: it validates the tag, reuses the green **Check** of that commit (or runs it when there is none), builds native amd64 and arm64 images with the voices rendered inside, smoke-tests both, and publishes a multi-arch manifest.
-A manual run publishes `sha-<commit>` instead.
-The step-by-step process, from the version bump to the digest in the Portainer stack, is in [docs/development.md](docs/development.md#cutting-a-release).
+A pushed `v*` tag runs the Release image workflow.
+It reuses the green Check of the tagged commit, builds and smoke-tests the `amd64` and `arm64` images, and publishes the multi-architecture image.
+It also builds and smoke-tests the static site, creates the GitHub Release from `docs/releases/<tag>.md` with the static zip attached, and deploys the site to GitHub Pages.
+The version bump, the one-time repository settings and the complete procedure are in [docs/development.md](docs/development.md#cutting-a-release).
 
-## 🧹 Cleanup
+### Further reading
 
-```sh
-rm -rf node_modules .cache dist test-results
-docker compose -p openwod-preview -f deploy/compose.dev.yaml down -v
-```
+- [docs/architecture.md](docs/architecture.md): design decisions behind the engine, the formats, the catalogue and the two deployment shapes.
+- [docs/development.md](docs/development.md): repository layout, test strategy and the voice pipeline.
+- [docs/validation.md](docs/validation.md): what has been verified for each release.
+- [AGENT.md](AGENT.md): requirements, plan and change log.
+
+To reset a working copy, run `rm -rf node_modules .cache .data dist test-results` and `docker compose -f deploy/compose.dev.yaml down -v`.
 
 ## 🙏 Acknowledgements
 

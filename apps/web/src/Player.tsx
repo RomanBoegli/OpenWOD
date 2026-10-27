@@ -11,6 +11,7 @@ import type { Preferences } from './preferences';
 import { slugify } from './library-store';
 import { workoutHref } from './router';
 import { Icon } from './Icon';
+import { downloadBlob } from './download';
 import { DifficultyChip } from './DifficultyChip';
 import { LoadLevels } from './LevelChip';
 import { AthletesChip, FormatChips } from './Chip';
@@ -42,23 +43,15 @@ function Perimeter({ progress, width }: { progress: RefObject<SVGPathElement | n
   return <svg className={styles.perimeter} ref={svg} aria-hidden="true" data-perimeter=""><path className={styles.borderTrack} d={d} /><path ref={progress} className={styles.borderProgress} pathLength="1" strokeDasharray="1 1" d={d} /></svg>;
 }
 
-function downloadText(text: string, name: string) {
-  const blob = new Blob([text], { type: 'application/yaml' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+const yamlBlob = (text: string) => new Blob([text], { type: 'application/yaml' });
 
 export function exportWorkoutFile(workout: Workout) {
-  downloadText(serialiseWorkoutFile(workout), `${slugify(workout.title)}${FILE_EXTENSION}`);
+  downloadBlob(yamlBlob(serialiseWorkoutFile(workout)), `${slugify(workout.title)}${FILE_EXTENSION}`);
 }
 
 /** Several workouts and their collections as one .wods.yaml pack (SHR-01). */
 export function exportPackFile(pack: WorkoutPack) {
-  downloadText(serialisePackFile(pack), `${slugify(pack.title ?? 'openwod-pack')}${PACK_EXTENSION}`);
+  downloadBlob(yamlBlob(serialisePackFile(pack)), `${slugify(pack.title ?? 'openwod-pack')}${PACK_EXTENSION}`);
 }
 
 /** The one big number of a prescription: reps, calories, distance or a target time. */

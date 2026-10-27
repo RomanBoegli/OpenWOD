@@ -320,7 +320,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
     </div>
 
     <ConfirmDialog open={Boolean(conflict)} title="Saved elsewhere since you opened it" confirmLabel="Overwrite with mine" cancelLabel="Keep editing" onClose={() => setConflict(undefined)} onConfirm={() => { const revision = conflict?.revision ?? 0; setConflict(undefined); void save(revision); }}>
-      <p>Someone saved revision {conflict?.revision}{conflict?.document ? ` (“${conflict.document.title}”)` : ''} of this workout on the household server while you were editing. Overwrite it with your version, or {workoutId ? <a href={workoutHref(workoutId)} onClick={() => onDiscard()}>open the newer version</a> : 'keep editing'} and copy your changes across.</p>
+      <p>Revision {conflict?.revision}{conflict?.document ? ` (“${conflict.document.title}”)` : ''} of this workout was saved elsewhere while you were editing. Overwrite it with your version, or {workoutId ? <a href={workoutHref(workoutId)} onClick={() => onDiscard()}>open the newer version</a> : 'keep editing'} and copy your changes across.</p>
     </ConfirmDialog>
     <ConfirmDialog open={discarding} title="Discard this draft?" confirmLabel="Discard" cancelLabel="Keep editing" onClose={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); onDiscard(); }}>
       <p>{mode === 'replace' ? 'The saved workout stays as it was. Your unsaved edits are removed from this device.' : 'The draft is removed from this device.'}</p>

@@ -4,13 +4,11 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterAll, describe, expect, it } from 'vitest';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
-import { compileWorkout } from '../../packages/domain/src/compiler';
-import { emptyMasterData } from '../../packages/domain/src/master-data';
-import { normaliseForComparison } from '../../packages/domain/src/pack';
 import type { Workout } from '../../packages/domain/src/schema';
+import { describeHouseholdSemantics, type HouseholdApi } from './helpers/household-suite';
 import { playedSession } from './helpers/session';
 import { MIGRATIONS, SchemaNewerError } from '../../apps/server/src/db';
-import { ApiError, ConflictError } from '../../apps/server/src/errors';
+import { ApiError } from '../../apps/server/src/errors';
 import { Store } from '../../apps/server/src/store';
 
 const scratch = mkdtempSync(join(tmpdir(), 'openwod-store-'));
@@ -18,6 +16,15 @@ afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const own = (id: string, revision = 1): Workout => ({ ...bundledWorkout('fran'), id, revision, title: `Own ${id}`, sharing: undefined });
 const clean = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/** The synchronous Store behind the suite's asynchronous API: a throw becomes a rejection. */
+const METHODS = ['listWorkouts', 'getWorkout', 'putWorkout', 'archiveWorkout', 'getMasterData', 'putMasterData', 'putSession', 'listSessions', 'getSession', 'correctSession', 'importDevice', 'importPack', 'exportAll', 'restore'] as const;
+const asAsync = (store: Store): HouseholdApi => Object.fromEntries(METHODS.map(name => [name, async (...args: unknown[]) => (store[name] as (...values: unknown[]) => unknown).apply(store, args)])) as unknown as HouseholdApi;
+
+describeHouseholdSemantics('store', async () => {
+  const { store } = await Store.open(':memory:');
+  return { household: asAsync(store), close: () => store.close() };
+});
 
 describe('store: migrations', () => {
   it('creates the schema in memory and on disk, refuses a newer schema, and backs up before migrating an existing file', async () => {
@@ -46,119 +53,14 @@ describe('store: migrations', () => {
   });
 });
 
-describe('store: documents', () => {
-  it('creates, updates with the expected revision, refuses stale or mismatched revisions, and archives', async () => {
+describe('store: SQLite specifics', () => {
+  it('avoids stored and bundled ids, and raises the API error classes the server maps', async () => {
     const { store } = await Store.open(':memory:');
     try {
-      expect(store.putWorkout(own('a'), undefined)).toMatchObject({ created: true, revision: 1 });
-      expect(() => store.putWorkout(own('a', 2), undefined)).toThrow(ConflictError);
-      expect(() => store.putWorkout(own('a', 3), 1)).toThrow(ApiError);
-      expect(store.putWorkout(own('a', 2), 1)).toMatchObject({ created: false, revision: 2 });
-      expect(() => store.putWorkout(own('a', 3), 1)).toThrow(ConflictError);
-      expect(store.getWorkout('a')?.document.revision).toBe(2);
+      store.putWorkout(own('a'), undefined);
       expect(store.takenIds().has('fran')).toBe(true);
-      store.archiveWorkout('a', 2);
-      expect(store.listWorkouts().map(item => item.id)).toEqual([]);
-      expect(store.listWorkouts(true)[0]?.archivedAt).toBeTruthy();
-      expect(() => store.archiveWorkout('missing')).toThrow(ApiError);
-      expect(store.putWorkout(own('a', 3), 2).created).toBe(false);
-      expect(store.getWorkout('a')?.archivedAt).toBeUndefined();
-    } finally { store.close(); }
-  });
-
-  it('keeps one master-data document with a server-managed revision', async () => {
-    const { store } = await Store.open(':memory:');
-    try {
-      expect(store.getMasterData()).toEqual({ revision: 0, document: emptyMasterData() });
-      const data = { ...emptyMasterData(), equipmentAliases: { 'kettle bell': 'Kettlebell' } };
-      expect(store.putMasterData(data, 0).revision).toBe(1);
-      expect(() => store.putMasterData(data, 0)).toThrow(ConflictError);
-      expect(store.putMasterData({ ...data, committed: ['equipment:kettle bell'] }, 1).revision).toBe(2);
-      expect(store.getMasterData().document.committed).toEqual(['equipment:kettle bell']);
-    } finally { store.close(); }
-  });
-});
-
-describe('store: sessions', () => {
-  it('stores a session once, lists without the heavy fields, and keeps score corrections with their history', async () => {
-    const { store } = await Store.open(':memory:');
-    try {
-      const session = playedSession('s1', bundledWorkout('fran'));
-      expect(store.putSession(session)).toBe('created');
-      expect(store.putSession(session)).toBe('existing');
-      const listed = store.listSessions();
-      expect(listed).toHaveLength(1);
-      expect(listed[0]).not.toHaveProperty('workout');
-      expect(listed[0]).not.toHaveProperty('events');
-      const full = store.getSession('s1')!;
-      expect(full.workout?.id).toBe('fran');
-      expect(full.events.length).toBeGreaterThan(5);
-      expect(full.revision).toBe(1);
-      const corrected = full.results.map(result => ({ ...result, sectionMs: result.sectionMs + 1000 }));
-      expect(() => store.correctSession('s1', corrected, 'typo', 2)).toThrow(ConflictError);
-      expect(store.correctSession('s1', corrected, 'typo', 1)).toEqual({ revision: 2 });
-      const after = store.getSession('s1')!;
-      expect(after.results[0].sectionMs).toBe(full.results[0].sectionMs + 1000);
-      expect(after.corrections).toHaveLength(1);
-      expect(after.corrections?.[0].previousResults[0].sectionMs).toBe(full.results[0].sectionMs);
-      expect(after.corrections?.[0].note).toBe('typo');
-      expect(after.corrections?.[0].correctedAt).toMatch(/^\d{4}-/);
-      expect(store.listSessions({ workoutId: 'cindy' })).toEqual([]);
-      expect(store.listSessions({ before: '2026-01-01T00:00:00.000Z' })).toEqual([]);
-    } finally { store.close(); }
-  });
-});
-
-describe('store: imports', () => {
-  it('moves a device library once: renames collisions, remaps sessions and collections, merges master data, skips repeats', async () => {
-    const { store } = await Store.open(':memory:');
-    try {
-      store.putWorkout(own('kept'), undefined);
-      const device = {
-        deviceId: 'device-9',
-        workouts: [{ ...own('kept', 2), title: 'Changed kept' }, { ...bundledWorkout('fran'), title: 'My Fran', sharing: undefined }, own('same')],
-        masterData: { ...emptyMasterData(), collections: [{ id: 'mine', title: 'Mine', workoutIds: ['fran', 'kept'] }] },
-        sessions: [{ ...playedSession('s-old', bundledWorkout('fran'), ''), workoutId: 'fran', workout: undefined, events: [] }, { ...playedSession('s-lost', own('ghost'), ''), workout: undefined, events: [] }],
-      };
-      store.putWorkout(own('same'), undefined);
-      const report = store.importDevice(clean(device));
-      expect(report.workouts).toEqual({ created: 2, skipped: 1, renamed: [{ from: 'kept', to: 'kept-2' }, { from: 'fran', to: 'fran-2' }] });
-      expect(report.sessions).toEqual({ created: 1, skipped: 0, orphaned: 1 });
-      expect(report.masterData).toBe('created');
-      expect(store.getMasterData().document.collections[0].workoutIds).toEqual(['fran-2', 'kept-2']);
-      expect(store.getSession('s-old')?.workoutId).toBe('fran-2');
-      expect(store.getSession('s-old')?.deviceId).toBe('device-9');
-      const repeat = store.importDevice(clean(device));
-      expect(repeat.workouts.created).toBe(2);
-      expect(repeat.sessions.skipped).toBe(1);
-    } finally { store.close(); }
-  });
-
-  it('imports a pack with copy, skip and replace decisions, remaps collections, and preserves meaning (SHR-06)', async () => {
-    const { store } = await Store.open(':memory:');
-    try {
-      store.putWorkout(own('mine'), undefined);
-      const fran = bundledWorkout('fran');
-      const cindy = bundledWorkout('cindy');
-      const report = store.importPack({
-        workouts: [fran, cindy, { ...bundledWorkout('karen'), id: 'karen' }],
-        collections: [{ title: 'Girls', workoutIds: ['fran', 'cindy', 'karen'] }],
-        decisions: { fran: { action: 'copy' }, cindy: { action: 'replace', id: 'mine', expectedRevision: 1 }, karen: { action: 'skip' } },
-      });
-      expect(report.created).toEqual([{ from: 'fran', to: 'fran-2' }]);
-      expect(report.replaced).toEqual(['mine']);
-      expect(report.skipped).toBe(1);
-      expect(report.collections).toBe(1);
-      const copy = store.getWorkout('fran-2')!;
-      expect(copy.origin).toBe('imported');
-      expect(copy.document.sharing).toEqual(fran.sharing);
-      expect(normaliseForComparison(copy.document)).toEqual(normaliseForComparison(fran));
-      expect(compileWorkout(copy.document).durationMs).toBe(compileWorkout(fran).durationMs);
-      const replaced = store.getWorkout('mine')!;
-      expect(replaced.revision).toBe(2);
-      expect(normaliseForComparison(replaced.document)).toEqual(normaliseForComparison(cindy));
-      expect(store.getMasterData().document.collections).toEqual([{ id: 'girls', title: 'Girls', workoutIds: ['fran-2', 'mine'] }]);
-      expect(() => store.importPack({ workouts: [fran], collections: [], decisions: { fran: { action: 'replace', id: 'mine', expectedRevision: 1 } } })).toThrow(ConflictError);
+      expect(store.takenIds().has('a')).toBe(true);
+      expect(() => store.putWorkout(own('a', 3), 1)).toThrow(ApiError);
     } finally { store.close(); }
   });
 });
@@ -169,7 +71,7 @@ describe('store: export and backup', () => {
     try {
       store.putWorkout(own('a'), undefined);
       store.putSession(playedSession('s1', bundledWorkout('fran')));
-      const exported = store.exportAll() as { format: string; workouts: unknown[]; sessions: { workout?: unknown }[]; schemaVersion: number };
+      const exported = store.exportAll();
       expect(exported.format).toBe('openwod.export');
       expect(exported.schemaVersion).toBe(1);
       expect(exported.workouts).toHaveLength(1);
@@ -180,6 +82,34 @@ describe('store: export and backup', () => {
       expect((copy.prepare('SELECT COUNT(*) AS n FROM workouts').get() as { n: number }).n).toBe(1);
       expect((copy.prepare('SELECT COUNT(*) AS n FROM sessions').get() as { n: number }).n).toBe(1);
       copy.close();
+    } finally { store.close(); }
+  });
+
+  it('restore writes pre-restore-*.sqlite with the old library before replacing it, and only for a valid backup', async () => {
+    const dir = join(scratch, 'restore');
+    const { store } = await Store.open(join(dir, 'app.sqlite'));
+    try {
+      store.putWorkout(own('old'), undefined);
+      store.putSession(playedSession('s-old', bundledWorkout('fran')));
+      const backups = () => readdirSync(join(dir, 'backups')).filter(name => name.startsWith('pre-restore-'));
+      await expect(store.restore({ format: 'openwod.export', formatVersion: 99 })).rejects.toMatchObject({ status: 400, code: 'FORMAT_NEWER' });
+      expect(() => backups()).toThrow();
+      const { store: source } = await Store.open(':memory:');
+      source.putWorkout(own('new'), undefined);
+      const exported = clean(source.exportAll());
+      source.close();
+      const report = await store.restore(exported);
+      expect(report).toMatchObject({ workouts: 1, archived: 0, sessions: 0, corrections: 0, masterRevision: 0 });
+      expect(report.backup).toMatch(/[\\/]backups[\\/]pre-restore-.+\.sqlite$/);
+      expect(backups()).toHaveLength(1);
+      expect(store.listWorkouts().map(item => item.id)).toEqual(['new']);
+      expect(store.listSessions()).toEqual([]);
+      const copy = new DatabaseSync(report.backup!);
+      expect(copy.prepare('SELECT id FROM workouts').all()).toEqual([{ id: 'old' }]);
+      expect((copy.prepare('SELECT COUNT(*) AS n FROM sessions').get() as { n: number }).n).toBe(1);
+      copy.close();
+      const { store: memory } = await Store.open(':memory:');
+      try { expect((await memory.restore(exported)).backup).toBeUndefined(); } finally { memory.close(); }
     } finally { store.close(); }
   });
 });

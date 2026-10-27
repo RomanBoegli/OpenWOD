@@ -4,7 +4,10 @@ import type { LibraryEntry } from '../Library';
 import type { MasterData } from '../master-data';
 import type { Preferences } from '../preferences';
 import type { SettingsSection } from '../router';
+import type { BackendCounts } from '../data/backend';
+import type { DataMode } from '../data/mode';
 import type { Connection, LegacyData } from '../data/use-library-data';
+import type { ExportDocument, RestoreReport } from '../../../../packages/household/src/types';
 
 export interface SettingsProps {
   section: SettingsSection;
@@ -21,6 +24,8 @@ export interface SettingsProps {
 }
 
 export interface HouseholdStatus {
+  /** Which shape this build is: a household server, or this browser alone. */
+  mode: DataMode;
   connection: Connection;
   schemaVersion?: number;
   serverVersion?: string;
@@ -29,6 +34,12 @@ export interface HouseholdStatus {
   migrating: boolean;
   onMigrate: () => Promise<unknown>;
   onRefresh: () => Promise<void>;
+  /** Static shape only: what this browser holds. */
+  stats?: BackendCounts;
+  /** Replaces the whole library with a backup (DAT-11); `backup` names the server's pre-restore copy. */
+  onRestore: (document: unknown) => Promise<RestoreReport & { backup?: string }>;
+  /** The whole library as one restorable JSON document. */
+  onExportAll: () => Promise<ExportDocument>;
   /** Opens the export preview for a pack of these workouts (SHR-01/03). */
   exportPack: (title: string, workoutIds: string[]) => void;
 }
