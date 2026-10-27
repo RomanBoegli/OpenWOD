@@ -13,8 +13,8 @@ import type { Connection, LegacyData, SessionView } from './data/use-library-dat
 import type { DataMode } from './data/mode';
 import type { OutboxItem } from './data/outbox';
 import { elapsedText, type Recovery } from './data/checkpoints';
-import { DifficultyChip } from './DifficultyChip';
-import { AthletesChip, Chip, FormatChips } from './Chip';
+import { DifficultyChip, DifficultyFilterChip } from './DifficultyChip';
+import { AthletesChip, Chip } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { rankBySearch } from '../../../packages/domain/src/search';
 import { copyHref, draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
@@ -215,11 +215,12 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
         <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
       </div>
       <div id="library-filters" className={styles.filterGroups}>
+      {/* Workout-level filters first (athletes, collection, difficulty, duration), then block formats, then equipment. */}
       {group('Athletes', <>{([[1, 'Solo'], [2, 'Pair']] as const).map(([value, label]) => <Chip key={value} kind={value === 2 ? 'pair' : 'solo'} icon={value === 2 ? 'users' : 'user'} pressed={participants === value} onClick={() => setParticipants(current => current === value ? '' : value)}>{label}</Chip>)}</>)}
-      {group('Format', SECTION_FORMATS.map(item => <Chip key={item} kind="format" pressed={format.includes(item)} onClick={() => setFormat(current => toggle(current, item))}>{FORMAT_LABELS[item]}</Chip>))}
       {group('Collection', collections.map(collection => <Chip key={collection.id} kind="collection" pressed={collectionIds.includes(collection.id)} onClick={() => setCollectionIds(current => toggle(current, collection.id))}>{collection.title}</Chip>))}
+      {group('Difficulty', ([1, 2, 3, 4] as const).map(level => <DifficultyFilterChip key={level} level={level} label={DIFFICULTY_LABELS[level]} pressed={difficulty.includes(level)} onClick={() => setDifficulty(current => toggle(current, level))} />))}
       {group('Duration', DURATIONS.map(([value, label]) => <Chip key={value} kind="neutral" pressed={duration.includes(value)} onClick={() => setDuration(current => toggle(current, value))}>{label}</Chip>))}
-      {group('Difficulty', ([1, 2, 3, 4] as const).map(level => <Chip key={level} kind="neutral" pressed={difficulty.includes(level)} onClick={() => setDifficulty(current => toggle(current, level))}>{DIFFICULTY_LABELS[level]}</Chip>))}
+      {group('Block format', SECTION_FORMATS.map(item => <Chip key={item} kind="format" pressed={format.includes(item)} onClick={() => setFormat(current => toggle(current, item))}>{FORMAT_LABELS[item]}</Chip>))}
       {group('Equipment', <>
         <Chip kind="neutral" icon={onlyMine ? 'check' : undefined} pressed={onlyMine} title="Only workouts that need nothing beyond the gear ticked in settings" onClick={() => setOnlyMine(!onlyMine)}>Only my equipment</Chip>
         {equipmentList.map(item => <Chip key={item} kind="neutral" pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</Chip>)}
@@ -235,17 +236,16 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
         // The whole tile opens the workout; its own links, buttons and a text selection keep their meaning.
         const open = (event: React.MouseEvent<HTMLLIElement>) => { if ((event.target as HTMLElement).closest('a, button') || window.getSelection()?.toString()) return; window.location.hash = workoutHref(workout.id).replace(/^#/, ''); };
         return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt onClick={open}>
-          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} /><FormatChips formats={summary.formats} /><DifficultyChip difficulty={summary.difficulty} /></span></div>
-          <div className={styles.titleRow}><h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>{collectionOf(collections, workout.id) && <span className={styles.cardCollection} title="Collection">{collectionOf(collections, workout.id)!.title}</span>}</div>
+          {/* Chips state what holds for the whole workout; formats belong to its blocks and show on the workout page. */}
+          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} />{collectionOf(collections, workout.id) && <Chip kind="collection" title="Collection">{collectionOf(collections, workout.id)!.title}</Chip>}<DifficultyChip difficulty={summary.difficulty} />{last && <Chip kind="done" icon="check" title={`${count === 1 ? 'Done once' : `Done ${count}×`}, last on ${new Date(last.finishedAt).toLocaleString()}`}>{agoText(last.finishedAt)}</Chip>}{pending && <Chip kind="neutral" icon="upload" title="Saved on this device; it reaches the household server when the server is back">Not yet on the server</Chip>}</span></div>
+          <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
           {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
           <dl className={styles.facts}>
-            <div><dt>Total</dt><dd>{durationLabel(summary)}</dd></div>
+            <div><dt>Duration</dt><dd>{durationLabel(summary)}</dd></div>
             <div><dt>Blocks</dt><dd>{summary.sections}</dd></div>
             <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
           </dl>
           <div className={styles.tags}>
-            {pending && <Chip kind="neutral" icon="upload" title="Saved on this device; it reaches the household server when the server is back">Not yet on the server</Chip>}
-            {last ? <Chip kind="done" icon="check" title={new Date(last.finishedAt).toLocaleString()}>{count === 1 ? 'Done once' : `Done ${count}×`} · {agoText(last.finishedAt)}</Chip> : <Chip kind="neutral">Not done yet</Chip>}
             {summary.equipmentNeeded.length > 0 ? summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</button>) : <span className={styles.tag} data-plain>Bodyweight only</span>}
           </div>
           <div className={styles.cardActions}>

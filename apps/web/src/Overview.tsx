@@ -6,7 +6,7 @@ import type { Workout } from '../../../packages/domain/src/schema';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
 import { LoadLevels } from './LevelChip';
-import { AthletesChip, Chip, FormatChips } from './Chip';
+import { AthletesChip, Chip } from './Chip';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import type { Collection } from './master-data';
 import { agoText, sessionScore } from './session-log';
@@ -54,9 +54,11 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
   }, [plan]);
 
   return <div className={styles.overview}>
-    {/* Title across the page, then the description beside a compact action box, then the chips on one row. */}
+    {/* The workout's chips on one row, the title across the page, then the description beside a compact action box. */}
     <div className={styles.head}>
       <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {pair ? 'PARTNER SESSION' : 'SOLO SESSION'}{source === 'saved' && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
+      {/* What holds for the whole workout; each block card names its own format. */}
+      <div className={`${shared.metadata} ${styles.chips}`}><AthletesChip participants={workout.participants} />{collections.map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} detailed />{sessions.length > 0 && <Chip kind="done" icon="check">{sessions.length === 1 ? 'Done once' : `Done ${sessions.length}×`} · {agoText(sessions[0].finishedAt)}</Chip>}</div>
       <h1>{workout.title}</h1>
       <div className={styles.lead}>
         <div className={styles.leadText}>
@@ -71,7 +73,6 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
           <button className={shared.quietButton} onClick={() => setRemoving(true)}><Icon name="trash" size={17} />Remove</button>
         </div>
       </div>
-      <div className={`${shared.metadata} ${styles.chips}`}><AthletesChip participants={workout.participants} /><FormatChips formats={summary.formats} />{collections.map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} detailed />{sessions.length > 0 && <Chip kind="done" icon="check">{sessions.length === 1 ? 'Done once' : `Done ${sessions.length}×`} · {agoText(sessions[0].finishedAt)}</Chip>}</div>
     </div>
 
     <dl className={styles.facts} aria-label="At a glance">
@@ -85,7 +86,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     <ol className={styles.sections} aria-label="Blocks">
       {sections.map((section, index) => <Fragment key={section.id}><li className={styles.section}>
         <div className={styles.sectionHeading}>
-          <div><span className={shared.eyebrow}>BLOCK {index + 1} OF {sections.length} <span>/</span> {FORMAT_LABELS[section.format].toUpperCase()}</span><h2>{section.title}</h2></div>
+          <div><span className={shared.eyebrow}>BLOCK {index + 1} OF {sections.length}</span><div className={styles.blockTitle}><h2>{section.title}</h2><Chip kind="format">{FORMAT_LABELS[section.format]}</Chip></div></div>
           <div className={styles.sectionFacts}><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span>{section.emom && <span>{section.emom.intervals} × {formatDuration(section.emom.intervalMs)}</span>}{section.youGoIGo?.rounds && <span>{section.youGoIGo.rounds} team rounds</span>}{section.youGoIGo?.turnMs && <span>{formatDuration(section.youGoIGo.turnMs)} per turn</span>}{index === sections.length - 1 && <span>{section.restAfterMs ? `Final block · then ${formatDuration(section.restAfterMs)} rest` : 'Final block'}</span>}</div>
         </div>
         {section.leadingRest.length > 0 && <p className={styles.restNote}>Starts with {restText(section.leadingRest)}.</p>}

@@ -427,7 +427,11 @@ In the focus view the big clock SHALL stay in the same place from one slot to th
 **UI-21** The header SHALL show the running version beside the wordmark, so a device shows at a glance which release it has loaded, except on a phone, where the footer shows it.
 
 **UI-22** Settings SHALL have a Logbook section at `#/settings/logbook` listing every session played, newest first, with paging: the workout title linked to the workout while it is in the library, the date, the active time and the score, the outcome once and only when it is not Completed, the Interrupted, Modified and Corrected flags, and small icon actions to Repeat (the snapshot when the workout is gone), Correct score (DAT-05) and Delete (DAT-14). The header's clock icon SHALL open it, `#/history` SHALL lead to it, and the per-workout past sessions SHALL reflect deletions.
-A workout's page SHALL put the title across the page, the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove), and the chips in one row below.
+A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove).
+Chips on a workout card and a workout's page SHALL state what holds for the whole workout: athletes, collection, difficulty and, once done, when it was last done.
+A format belongs to a block, so it SHALL show as a chip on each block of the workout's page and never among the workout's chips, and the library's format filter SHALL read "Block format".
+A library card SHALL show, in this order, those chips, the title, the description cut to two lines, the duration, blocks and movements, the equipment, and Start and Details.
+The library's filters SHALL come in this order: athletes, collection, difficulty with the same chips as the cards, duration, block format, equipment.
 
 # 9 Audio and spoken cues
 
@@ -870,6 +874,13 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
   Removing a bundled workout adds its id to `hiddenWorkouts` in master data, an optional field so a device on an older build can still write the document.
   Duplicate has its own route, `#/wod/<id>/copy`, and keeps its draft under `copy:<id>`, beside the workout's own edits.
 - The header shows the running version beside the wordmark (UI-21).
+- Chips state what holds for the whole workout, and formats moved to the blocks (UI-21).
+  A card shows the athletes, the collection, the difficulty and, once done, how long ago, above the title, then the description in two lines, the duration, blocks and movements, the equipment, and Start and Details.
+  The collection label beside the title and the "Not done yet" chip are gone.
+  The workout's page shows the same chips above the title, and each block card carries its format as a chip beside its title.
+  The start screen of a session no longer lists the formats.
+  The filters run athletes, collection, difficulty (with the cards' level bars), duration, block format, equipment.
+  The workout schema already kept `participants` and `equipment` on the workout and `format` on each section, so no file or schema version changes.
 - A workout's page puts the title across, the description beside a compact action box, and the chips in one row that scrolls sideways on a phone (UI-21).
   The duration line before the chips is gone, since the facts below show the same time.
 - Beeps can be a truck horn, a bundled recording (AUD-01).

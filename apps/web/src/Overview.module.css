@@ -11,7 +11,7 @@
 .actions > :not(:first-child) { min-height: 38px; padding: 6px 8px; gap: 6px; font-size: 13px; }
 .actions > :not(:first-child) svg { width: 15px; height: 15px; }
 /* One row of chips; a narrow screen scrolls it sideways instead of wrapping. */
-.chips { flex-wrap: nowrap; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.chips { margin-top: 14px; flex-wrap: nowrap; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .chips::-webkit-scrollbar { display: none; }
 .chips > * { flex-shrink: 0; }
 .attribution { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; color: var(--ink-3); font-size: 12px; }
@@ -22,7 +22,8 @@
 .sections { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .section { padding: 22px 24px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border: 1px solid var(--line); border-radius: 20px; }
 .sectionHeading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 14px; }
-.sectionHeading h2 { font-size: 24px; font-weight: 600; letter-spacing: -.6px; margin: 6px 0 0; }
+.sectionHeading h2 { font-size: 24px; font-weight: 600; letter-spacing: -.6px; margin: 0; }
+.blockTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 6px; }
 .sectionFacts { display: flex; flex-direction: column; align-items: end; gap: 3px; color: var(--ink-3); font-size: 12px; text-align: right; }
 .sectionFacts span:first-child { font-size: 20px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
 .round { margin-top: 16px; }

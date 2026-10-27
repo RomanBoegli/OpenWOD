@@ -46,8 +46,6 @@
 /* The chip row wraps in a narrow tile instead of clipping. */
 .cardTop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 /* The title with the collection as a thin label on the same line, right-aligned, like the index of a playing card. */
-.titleRow { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-width: 0; }
-.cardCollection { flex-shrink: 0; font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
 /* Cards carry Start and Details only; duplicate, export and remove live on the detail view. */
 .badges { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .4px; color: var(--lane-a); background: color-mix(in srgb, var(--lane-a) 12%, transparent); border: 1px solid color-mix(in srgb, var(--lane-a) 30%, transparent); }
@@ -58,7 +56,7 @@
 .card h2 { font-size: 20px; font-weight: 600; letter-spacing: -.5px; line-height: 1.2; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .card h2 a { text-decoration: none; }
 .card h2 a:hover { text-decoration: underline; text-underline-offset: 4px; }
-.cardDescription { margin: 0; color: var(--ink-3); font-size: 13px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.cardDescription { margin: 0; color: var(--ink-3); font-size: 13px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 0; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .facts div { min-width: 0; }
 .facts dt { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); }

@@ -148,11 +148,11 @@ test.describe('movements and search', () => {
     await expect(list.getByRole('heading', { level: 2 }).first()).toHaveText('Fran');
     await page.getByRole('searchbox', { name: 'Search workouts' }).fill('');
     await openFilters(page);
-    await page.getByRole('group', { name: 'Format' }).getByRole('button', { name: 'AMRAP' }).click();
+    await page.getByRole('group', { name: 'Block format' }).getByRole('button', { name: 'AMRAP' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(bundledCount({ format: ['amrap'] }));
     await page.goto('/#/wod/cindy');
     await page.getByRole('link', { name: 'Back to library' }).click();
-    await expect(page.getByRole('group', { name: 'Format' }).getByRole('button', { name: 'AMRAP' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('group', { name: 'Block format' }).getByRole('button', { name: 'AMRAP' })).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(BUNDLED);
   });

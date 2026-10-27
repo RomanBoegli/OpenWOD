@@ -6,3 +6,7 @@
 .dots { display: inline-flex; gap: 2px; }
 .dots i { width: 5px; height: 9px; border-radius: 2px; background: color-mix(in srgb, var(--tone) 25%, transparent); }
 .dots i[data-on=true] { background: var(--tone); }
+/* As a filter: the level's own colour stays, and pressing fills it so the chip still reads as that level. */
+button.chip { cursor: pointer; font: inherit; min-height: 36px; padding: 6px 12px; font-size: 12px; font-weight: 600; letter-spacing: .4px; line-height: 1; }
+button.chip:hover { background: color-mix(in srgb, var(--tone) 20%, transparent); }
+button.chip[aria-pressed=true] { background: color-mix(in srgb, var(--tone) 26%, transparent); border-color: var(--tone); font-weight: 700; }

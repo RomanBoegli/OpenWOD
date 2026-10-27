@@ -14,7 +14,7 @@ import { Icon } from './Icon';
 import { downloadBlob } from './download';
 import { DifficultyChip } from './DifficultyChip';
 import { LoadLevels } from './LevelChip';
-import { AthletesChip, FormatChips } from './Chip';
+import { AthletesChip } from './Chip';
 import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import { collectPrescriptions } from '../../../packages/domain/src/library';
 import { countsAsDone, type SessionRecord } from './session-log';
@@ -309,7 +309,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         <div className={styles.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> <a href={workoutHref(workout.id)}>{pair ? 'PARTNER SESSION' : 'SOLO SESSION'}</a>{!bundled && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
         <h1>{workout.title}</h1>
         {workout.description && <p className={styles.description}>{workout.description}</p>}
-        <div className={styles.metadata}><span><Icon name="clock" size={16} />{plan.durationKind === 'open' ? 'Open-ended' : `${plan.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(plan.durationMs + workout.prepMs)} incl. prep`}</span><AthletesChip participants={workout.participants} /><FormatChips formats={[...new Set(plan.sections.map(item => item.format))]} /><DifficultyChip difficulty={difficulty} /></div>
+        <div className={styles.metadata}><span><Icon name="clock" size={16} />{plan.durationKind === 'open' ? 'Open-ended' : `${plan.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(plan.durationMs + workout.prepMs)} incl. prep`}</span><AthletesChip participants={workout.participants} /><DifficultyChip difficulty={difficulty} /></div>
       </div>
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
