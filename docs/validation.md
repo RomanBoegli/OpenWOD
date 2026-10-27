@@ -223,3 +223,14 @@ Version 1.3.1: a session fits the frame on a tablet in landscape and in portrait
 | Screenshots | WebKit, light theme: back squat at 1180 by 750 and 1024 by 680, Cindy in both views and Fran at 1024 by 680 in landscape, the partner circuit at 820 by 1110 and Fran at 768 by 950 in portrait. |
 
 Not recorded in this round: a session on a physical iPad, the dark theme at tablet sizes, and an AMRAP longer than three movements on a tablet in landscape.
+
+## Release 1.4.0, 27 October 2026
+
+Version 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version in the header (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13).
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 233 passed in 29 files. Migration 2 to 3 writes `pre-migration-v2-to-v3-<timestamp>.sqlite` and adds the table of deleted sessions, in `tests/unit/store.test.ts`. |
+| Browser scenarios | 230 passed, none flaky: Firefox 53, WebKit 53, static Firefox 62, static WebKit 62. The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
+
+Not recorded in this round: a session on a physical iPad or iPhone, the horn on real speakers, and the release workflow on GitHub runners before the tag.
