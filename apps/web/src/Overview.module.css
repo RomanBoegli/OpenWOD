@@ -36,4 +36,14 @@
 .movements li { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 13px; }
 .movements small { color: var(--ink-3); }
 @media (max-width: 900px) { .facts { grid-template-columns: repeat(3, 1fr); } }
+/* Shorter labels for a phone, where Start, the edit link and Export share one row. */
+.narrowLabel { display: none; }
+@media (max-width: 620px) {
+  .actions { flex-wrap: nowrap; gap: 6px; }
+  .actions > a, .actions > button { min-height: 44px; padding: 8px 12px; gap: 7px; font-size: 13px; white-space: nowrap; }
+  .actions a:first-child { flex: 1 1 auto; margin-right: 0; }
+  .actions svg { width: 16px; height: 16px; }
+  .wideLabel { display: none; }
+  .narrowLabel { display: inline; }
+}
 @media (max-width: 620px) { .actions { margin-top: 16px; } .facts { grid-template-columns: repeat(2, 1fr); padding: 14px 16px; } .section { padding: 16px 14px; } .sectionHeading { display: block; } .sectionFacts { align-items: start; text-align: left; margin-top: 8px; } .table { font-size: 13px; } .table th, .table td { padding: 8px 6px; } }

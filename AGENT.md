@@ -399,7 +399,7 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **UI-16** The app SHALL be installable on a phone's home screen: a web app manifest with the name, standalone display, start URL and scope relative to the served path, PNG icons including a maskable one, and an Apple touch icon with the Apple meta tags. The status bar SHALL follow the theme colour, the layout SHALL respect the bottom safe area when standalone, and the production checks SHALL verify that the manifest, its icons and the tags ship with the bundle.
 
-**UI-17** Before a session starts, a phone-width screen (620 px or less) SHALL show the workouts on the library's first screen, with the filter groups and sorting folded behind a Filters button that counts the active filters, and SHALL fit the player's clock with the percentage beside it, compact controls and the page actions in one row. Keyboard help SHALL be hidden on touch screens without a hovering pointer.
+**UI-17** Before a session starts, a phone-width screen (620 px or less) SHALL show the workouts on the library's first screen, with the filter groups and sorting folded behind a Filters button that counts the active filters, and SHALL fit the player's clock with the percentage beside it, compact controls and the page actions in one row. During a session the controls SHALL stay inside the frame and a recovered session SHALL not repeat Resume and End session. Keyboard help SHALL be hidden on touch screens without a hovering pointer.
 
 # 9 Audio and spoken cues
 
@@ -807,6 +807,8 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - The static shape keeps its settings in the browser, unchanged.
 - On a phone before the start (UI-17) the library folds its filter groups and sorting behind a Filters button with a count of the active filters, the page actions sit in one compact row, and the player shrinks the clock when the percentage is shown beside it, tightens the spacing, the lanes and the controls, and lays Details, All workouts and Export WOD out as one row.
 - The Keys button and its divider are hidden on touch screens without a hovering pointer.
+- On a phone a workout's page puts Start workout, Duplicate and edit (shown as Duplicate) or Edit, and Export in one row, with Remove as an icon, the names unchanged for assistive technology.
+- On a phone during a session the view switch is a 34 px quiet button inside the frame, the context view's game plan is denser, and the recovery prompt is a short note without its own Resume and End session, which the controls above it already offer (desktop keeps the prompt's buttons).
 - In the server shape the library says it is shared by every device in the household and a saved workout reads "Saved for the household", where both still said "this device".
 - The production smoke accepts `audio/mp3` beside `audio/mpeg` for the cue clips, the type GitHub Pages sends, and the live-site test after the Pages deployment runs in the Playwright image instead of installing Chromium through apt.
 - Version 1.2.1 prepared, with the database schema at version 2.

@@ -55,9 +55,9 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
       </div>
       <div className={styles.actions}>
         <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
-        {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name={source === 'saved' ? 'edit' : 'copy'} size={16} />{source === 'saved' ? 'Edit' : 'Duplicate and edit'}</a>}
+        {editable && <a className={shared.quietButton} href={editHref(workout.id)} aria-label={source === 'saved' ? 'Edit' : 'Duplicate and edit'}><Icon name={source === 'saved' ? 'edit' : 'copy'} size={16} />{source === 'saved' ? 'Edit' : <><span className={styles.wideLabel}>Duplicate and edit</span><span className={styles.narrowLabel}>Duplicate</span></>}</a>}
         <button className={shared.quietButton} onClick={() => onExport(workout)}><Icon name="download" size={17} />Export</button>
-        {source === 'saved' && <button className={shared.quietButton} onClick={() => setRemoving(true)}><Icon name="trash" size={17} />Remove</button>}
+        {source === 'saved' && <button className={shared.quietButton} onClick={() => setRemoving(true)} aria-label="Remove"><Icon name="trash" size={17} /><span className={styles.wideLabel}>Remove</span></button>}
       </div>
     </div>
 

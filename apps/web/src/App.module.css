@@ -293,3 +293,18 @@
   .sharing .quietButton { min-height: 40px; padding: 6px 8px; gap: 6px; font-size: 11px; white-space: nowrap; }
   .sharing .quietButton svg { width: 15px; height: 15px; flex-shrink: 0; }
 }
+
+/* A phone during a session: the view switch sits inside the frame as a small quiet button, the game plan is denser, and a recovered session says so in a short note, since Resume and End session are the buttons right above it. */
+@media (max-width: 620px) {
+  .screen[data-performing=true] .playerTop { align-items: center; }
+  .screen[data-performing=true] .playerTop .iconButton { margin: 0 0 0 6px; min-width: 34px; min-height: 34px; padding: 6px; border-radius: 9px; background: transparent; }
+  .screen[data-performing=true][data-view=context] .contextSection { padding: 8px 10px; }
+  .screen[data-performing=true][data-view=context] .contextHeading .quietButton { min-height: 32px; padding: 4px 10px; gap: 6px; white-space: nowrap; max-width: none; }
+  .screen[data-performing=true][data-view=context] .contextColumns { padding: 6px 8px; }
+  .screen[data-performing=true][data-view=context] .contextRow { font-size: 15px; padding: 8px; line-height: 1.3; }
+  .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 18px; }
+  .screen[data-performing=true] .recovery { margin-top: 8px; padding: 8px 12px; gap: 0; }
+  .screen[data-performing=true] .recovery strong { font-size: 13px; }
+  .screen[data-performing=true] .recovery p { font-size: 11px; line-height: 1.4; }
+  .screen[data-performing=true] .recovery .dialogActions { display: none; }
+}
