@@ -112,3 +112,22 @@
   :global([data-performing=true]) .counterButton:last-of-type { grid-area: undo; justify-self: end; }
   :global([data-performing=true]) .actionBar[data-counter=true] .secondaryAction { grid-area: finish; }
 }
+/* Performing on a wide but short screen: the target follows the height, like the clock (App.module.css). */
+@media (min-width: 621px) and (max-height: 960px) {
+  [data-performing=true] .target { margin: 6px 0 2px; }
+  [data-performing=true] .target strong { font-size: clamp(44px, 7vh, 72px); }
+  /* Done and its neighbours stay big targets, just not 72 px tall. */
+  [data-performing=true] .actionBar { margin: 6px 0 8px; }
+  [data-performing=true] .bigAction { min-height: clamp(52px, 8vh, 72px); padding: 8px 24px; }
+  [data-performing=true] .secondaryAction { min-height: clamp(48px, 7vh, 56px); }
+  /* The AMRAP block: shorter rows and a smaller counter, and the tap hint goes. */
+  [data-performing=true] .taskList { gap: 4px; margin-bottom: 0; }
+  [data-performing=true] .taskRow { padding: 6px 14px; }
+  [data-performing=true] .taskIndex { width: 28px; height: 28px; }
+  [data-performing=true] .taskCell strong { font-size: clamp(20px, 3.4vh, 30px); }
+  [data-performing=true] .taskHint { display: none; }
+  [data-performing=true] .counterValue strong { font-size: 34px; }
+  [data-performing=true] .counterButton { min-height: 46px; padding: 6px 14px; }
+  /* The context view's game plan lists the same movements, so the block steps aside like the stations do. */
+  [data-performing=true][data-view=context] .taskList { display: none; }
+}

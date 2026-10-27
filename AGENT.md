@@ -405,6 +405,8 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **UI-19** An address the app does not know SHALL show a "Page not found" page, and a workout link whose workout is not in the library SHALL show a "Workout not found" page naming the ID, both with a way back to the library and a confused-Travolta loop. A workout link SHALL not be called missing before the library has loaded. The library SHALL show the same loop above "Nothing matches yet". The loop SHALL keep its transparency, load only where it is shown, and hold a still frame when the system asks for reduced motion.
 
+**UI-20** During a session on a screen wider than a phone but at most 960 px tall, such as a tablet or a laptop in landscape, the clock, the stations or the AMRAP block, the actions, Up next and the transport controls SHALL fit the frame without scrolling, in the focus and the context view. Sizes SHALL follow the height, and the corner view switch SHALL stay inside the frame.
+
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
@@ -802,6 +804,15 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 # 18 Plan revision record
 
+## Version 1.15 — 27 October 2026
+
+- During a session on a wide but short screen (UI-20), a media query for more than 620 px wide and at most 960 px tall sizes the clock, the target, the station card, the AMRAP rows and counter, the Done button, Up next and the controls by the viewport height.
+  At an iPad's 1180 by 750 a strength workout measured 907 px of content in a 734 px frame, so Up next and the transport controls fell below it.
+- In the context view on such a screen the AMRAP block steps aside like the stations do, since the game plan lists the same movements.
+- The view switch in the corner is a 38 px button inside the frame there, as on a phone.
+- A browser test plays a strength workout, an AMRAP and a for-time piece at 1024 by 680 and 1180 by 750 in landscape and 768 by 950 and 820 by 1110 in portrait, and fails if either view scrolls.
+- Not released yet: the next version after 1.3.0.
+
 ## Version 1.14 — 27 October 2026
 
 - The library's search bar is the same at every width (UI-18): search, Filters with the count of active filters, and the shuffle button, with the sort box joining the bar while the panel is open and its "Sort" label inside the box.
@@ -994,7 +1005,7 @@ OpenWOD ships as one container: Fastify serves the built web app and the househo
 
 Decisions made by the user: the static site carries the **recorded voices rendered in CI**; **Pages deploys on every `v*` tag** and a **static zip is attached to a GitHub Release**; backup in static mode is the **JSON export with a new Restore**, built once so it also works on the server (lifting the "export cannot be imported back" limitation). Both shapes stay fully supported.
 
-Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-13…, UI-20…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
+Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-13…, UI-21…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 
 ---
 

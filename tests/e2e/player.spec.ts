@@ -160,6 +160,25 @@ test.describe('player', () => {
   });
 });
 
+test.describe('player on a tablet', () => {
+  // An iPad in landscape or portrait, or a laptop: the whole session, transport controls included, fits the frame without scrolling.
+  for (const id of ['back-squat-5x5', 'cindy', 'fran']) test(`${id} fits at tablet sizes in both views`, async ({ page }) => {
+    await page.goto(`/#/wod/${id}/play`); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 16_000);
+    const overflow = () => page.locator('[data-performing=true] [data-progress]').evaluate(player => player.scrollHeight - player.clientHeight);
+    for (const [width, height] of [[1024, 680], [1180, 750], [768, 950], [820, 1110]]) {
+      await page.setViewportSize({ width, height });
+      await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
+      expect(await overflow()).toBeLessThanOrEqual(1);
+      await page.getByRole('button', { name: 'Switch to context view' }).click();
+      await expect(page.getByRole('region', { name: 'Workout context' })).toBeVisible();
+      expect(await overflow()).toBeLessThanOrEqual(1);
+      await page.getByRole('button', { name: 'Switch to focus view' }).click();
+    }
+  });
+});
+
 test.describe('overview', () => {
   test('lays out every section and round for study, then starts the player', async ({ page }) => {
     await page.goto('/#/wod/full-body-partner');

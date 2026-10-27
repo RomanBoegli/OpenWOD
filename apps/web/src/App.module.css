@@ -258,6 +258,24 @@
   .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 22px; }
 }
 
+/* Performing on a wide but short screen (an iPad or a laptop in landscape): sizes follow the height, so the transport controls stay inside the frame. */
+@media (min-width: 621px) and (max-height: 960px) {
+  .screen[data-performing=true] .player { padding: 12px 24px 14px; }
+  .screen[data-performing=true] .playerTop { min-height: 36px; }
+  .screen[data-performing=true] .playerTop .iconButton { min-width: 38px; min-height: 38px; padding: 6px; margin: 0 0 0 8px; }
+  .screen[data-performing=true] .overall { margin-top: 6px; }
+  .screen[data-performing=true] .clockBlock { flex: 1 1 auto; padding: 2px 0 8px; }
+  .screen[data-performing=true] .timer { font-size: clamp(84px, 15vh, 156px); line-height: 1; }
+  .screen[data-performing=true] .laneHeading { margin-bottom: 8px; }
+  .screen[data-performing=true] .lane { min-height: 0; padding: 12px 18px; }
+  .screen[data-performing=true] .lane h2 { font-size: clamp(30px, 4.6vh, 44px); margin: 6px 0 4px; }
+  .screen[data-performing=true] .athleteLabel { font-size: 22px; }
+  .screen[data-performing=true] .athleteBadge { min-width: 34px; height: 34px; font-size: 22px; }
+  .screen[data-performing=true] .nextStrip { font-size: clamp(16px, 2.6vh, 24px); min-height: 0; padding: 8px 0; }
+  .screen[data-performing=true] .controls { padding-top: 10px; }
+  .screen[data-performing=true] .sessionLine { margin-top: 8px; }
+}
+
 /* Open-ended work: a neutral, full border and no warning colours (UI-14). */
 .player[data-scope=elapsed] { --phase-color: var(--neutral-track); }
 .player[data-scope=elapsed][data-phase=paused] { --phase-color: var(--phase-paused); }
