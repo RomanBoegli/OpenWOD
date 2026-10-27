@@ -30,6 +30,8 @@ export interface LegacyData { workouts: Workout[]; masterData: MasterData; sessi
 export interface LibraryData {
   mode: DataMode;
   saved: StoredWorkout[];
+  /** True once the first load has answered (or failed), so a missing workout can be told from one still loading. */
+  loaded: boolean;
   masterData: MasterData;
   masterRevision: number;
   sessions: SessionView[];
@@ -87,6 +89,8 @@ export function useLibraryData(): LibraryData {
   const [masterRevision, setMasterRevision] = useState(0);
   const [serverSessions, setServerSessions] = useState<SessionListItem[]>([]);
   const [connection, setConnection] = useState<Connection>('starting');
+  /** True once the first load has answered, so a workout link is only called missing after the library is known. */
+  const [loaded, setLoaded] = useState(false);
   const [ready, setReady] = useState<{ schemaVersion?: number; version?: string }>({});
   const [outbox, setOutbox] = useState<OutboxItem[]>([]);
   const [notice, setNotice] = useState('');
@@ -123,6 +127,7 @@ export function useLibraryData(): LibraryData {
         await fetchAll();
         void flush();
       } catch (error) { setNotice(error instanceof StorageUnavailableError ? NO_STORAGE : error instanceof Error ? error.message : String(error)); }
+      setLoaded(true);
       return;
     }
     try {
@@ -134,6 +139,7 @@ export function useLibraryData(): LibraryData {
     } catch (error) {
       setConnection(error instanceof NetworkError || (error instanceof ApiError && error.status === 503) ? (navigator.onLine === false ? 'offline' : 'unreachable') : 'unreachable');
     }
+    setLoaded(true);
   }, [fetchAll]);
 
   /** Static shape: moves pre-1.0 data from localStorage into this browser's library without asking (same import as the server's). */
@@ -330,7 +336,7 @@ export function useLibraryData(): LibraryData {
 
   return {
     mode: DATA_MODE, stats, exportAll, restore,
-    saved: savedWithQueued, masterData, masterRevision, sessions, connection, schemaVersion: ready.schemaVersion, serverVersion: ready.version, pendingIds,
+    saved: savedWithQueued, loaded, masterData, masterRevision, sessions, connection, schemaVersion: ready.schemaVersion, serverVersion: ready.version, pendingIds,
     conflicts: outbox.filter(item => item.state === 'conflict'), rejected: outbox.filter(item => item.state === 'rejected'), notice, legacy, migrating,
     saveWorkout, archiveWorkout, updateMasterData, recordSession, recoveries, recoveriesReady, clearRecovery, refreshRecoveries, correctSession, loadMoreSessions, fetchSession, importPack, migrateDevice, resolveConflict, dismissRejected, refresh, clearNotice: () => setNotice(''),
   };

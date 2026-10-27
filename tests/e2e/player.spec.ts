@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { PLAYER, ready, advance } from './helpers';
+import { PLAYER, ready, advance, openFilters } from './helpers';
 
 test.describe('player', () => {
   test.beforeEach(async ({ page }) => { await page.goto(PLAYER); await ready(page); });
@@ -280,6 +280,7 @@ test.describe('formats', () => {
   test('the library filters by format and by the equipment you own', async ({ page }) => {
     await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
     const chip = (group: string, name: string) => page.getByRole('group', { name: group }).getByRole('button', { name, exact: true });
+    await openFilters(page);
     await chip('Format', 'AMRAP').click();
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Cindy');
     await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');

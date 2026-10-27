@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 export const SETTINGS_SECTIONS = ['general', 'player', 'equipment', 'movements', 'collections'] as const;
 export type SettingsSection = typeof SETTINGS_SECTIONS[number];
-export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string } | { name: 'history' } | { name: 'historyPlay'; id: string };
+export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string } | { name: 'history' } | { name: 'historyPlay'; id: string } | { name: 'notFound' };
 
 /** Hash routes keep the back button and reloads working on a static host without server rewrites. */
 export function parseRoute(hash: string): Route {
@@ -15,7 +15,7 @@ export function parseRoute(hash: string): Route {
   const draft = /^#\/draft\/([^/?#]+)\/?$/.exec(hash);
   if (draft) return { name: 'draft', id: decodeURIComponent(draft[1]) };
   const match = /^#\/wod\/([^/?#]+)(?:\/(play|edit))?\/?$/.exec(hash);
-  if (!match) return { name: 'library' };
+  if (!match) return /^#?\/?$/.test(hash) ? { name: 'library' } : { name: 'notFound' };
   return { name: match[2] === 'play' ? 'play' : match[2] === 'edit' ? 'edit' : 'workout', id: decodeURIComponent(match[1]) };
 }
 

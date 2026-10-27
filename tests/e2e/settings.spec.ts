@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { BUNDLED, partnerCircuit, bundledCount, PLAYER, ready } from './helpers';
+import { BUNDLED, partnerCircuit, bundledCount, PLAYER, ready, openFilters } from './helpers';
 import { serialiseWorkoutFile } from '../../packages/domain/src';
 
 test.describe('settings and log', () => {
@@ -15,6 +15,7 @@ test.describe('settings and log', () => {
     await expect(page.getByRole('region', { name: 'Past sessions' })).toContainText('03:20 active');
     await expect(page.getByRole('main')).toContainText('Done once · today');
     await page.goto('/');
+    await openFilters(page);
     await page.getByRole('combobox', { name: 'Sort' }).selectOption('longestAgo');
     const titles = page.getByRole('list', { name: 'Workouts' }).getByRole('heading', { level: 2 });
     await expect(titles.last()).toHaveText('Karen');
@@ -46,6 +47,7 @@ test.describe('settings and log', () => {
     await edit.getByRole('button', { name: 'Save collection' }).click();
     await expect(page.getByRole('list', { name: 'Collections' })).toContainText('Under ten minutes');
     await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
+    await openFilters(page);
     await page.getByRole('group', { name: 'Collection' }).getByRole('button', { name: 'Short and sharp' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(2);
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Wallball');
@@ -144,6 +146,7 @@ test.describe('movements and search', () => {
     await page.getByRole('searchbox', { name: 'Search workouts' }).fill('fran');
     await expect(list.getByRole('heading', { level: 2 }).first()).toHaveText('Fran');
     await page.getByRole('searchbox', { name: 'Search workouts' }).fill('');
+    await openFilters(page);
     await page.getByRole('group', { name: 'Format' }).getByRole('button', { name: 'AMRAP' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(bundledCount({ format: ['amrap'] }));
     await page.goto('/#/wod/cindy');

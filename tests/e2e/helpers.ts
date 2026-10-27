@@ -8,6 +8,8 @@ export const partnerCircuit = bundledWorkout('partner-circuit');
 export const bundledCount = (filter: LibraryFilter) => bundledWorkouts.filter(workout => matchesFilter(summariseWorkout(workout), filter)).length;
 export const PLAYER = '/#/wod/partner-circuit/play';
 /** The test build exposes an injected clock; wait for it before driving the player. */
+/** Opens the library's filter panel unless it is open already; it stays open for the rest of the browser session. */
+export const openFilters = async (page: Page) => { const toggle = page.getByRole('button', { name: /^Filters/ }); if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click(); };
 export const ready = (page: Page) => page.waitForFunction(() => Boolean(window.__openwodTest));
 export const communityFile = (title = 'Community circuit', id = partnerCircuit.id) => ({ name: 'community.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile({ ...partnerCircuit, id, title })) });
 /** A workout file of one's own: no sharing identity, so the import never takes it for a copy of a bundled workout. */

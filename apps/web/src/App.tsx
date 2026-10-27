@@ -9,6 +9,7 @@ import type { PackCollection } from '../../../packages/domain/src/pack';
 import type { PackDecision } from './data/remote';
 import { Player } from './Player';
 import { Overview } from './Overview';
+import { NotFound } from './NotFound';
 import { Editor } from './Editor';
 import { Settings } from './Settings';
 import { History, SnapshotPlayer } from './History';
@@ -31,7 +32,7 @@ import { newId } from './ids';
 /** The deployment shape in the footer, with a one-line explainer on hover or focus. */
 const SHAPE_LABELS = { server: 'Server', static: 'Static' } as const;
 const SHAPE_TIPS = {
-  server: 'Your household server keeps the library and the session log for every device.',
+  server: 'Your household server keeps the library, the session log and the settings for every device.',
   static: 'No server: the library lives in this browser only. Download a backup in Settings.',
 } as const;
 
@@ -168,7 +169,7 @@ export default function App() {
   // Until the probe for this checkpoint has answered, the lock is unknown and the player must not mount (it would take the lock itself).
   const lockKnown = recovery ? (lockState?.sessionId === recovery.checkpoint.sessionId ? lockState.state : 'checking') : 'free';
   const takeOver = async () => { if (!recovery) return; await takeOverSession(recovery.checkpoint.sessionId); await data.refreshRecoveries(); setLockState({ sessionId: recovery.checkpoint.sessionId, state: 'free' }); };
-  const current = route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' ? undefined : entries.find(entry => entry.workout.id === route.id);
+  const current = route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
   const importedDraft = route.name === 'draft' ? drafts.find(draft => draft.id === route.id) : undefined;
   // Editor inputs: a resumed draft wins; otherwise the workout itself, or a titled copy of a bundled one.
   const editing = route.name === 'new' ? { id: NEW_DRAFT_ID, mode: 'create' as const, initial: drafts.find(draft => draft.id === NEW_DRAFT_ID)?.draft ?? emptyDraft(2) }
@@ -185,12 +186,12 @@ export default function App() {
   const pendingCount = data.pendingIds.size;
   // The running server's version when known (that is what is deployed), else the version this bundle was built from.
   const appVersion = data.serverVersion ?? __OPENWOD_VERSION__;
-  const backTarget = current && (route.name === 'play' || route.name === 'edit') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
+  const backTarget = current && (route.name === 'play' || route.name === 'edit') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
 
   return <div className={styles.app} data-performing={performing}>
     <header className={styles.header}>
       <a href="#/" className={styles.brand} aria-label="OpenWOD library"><BrandMark className={styles.brandMark} /><span className={styles.wordmark}>Open<b>WOD</b></span></a>
-      {backTarget ? <a href={backTarget.href} className={styles.backLink} aria-label={backTarget.aria}><Icon name="back" size={17} /><span>{backTarget.label}</span></a> : <span className={styles.headerNote}>Not born. Made.</span>}
+      {backTarget ? <a href={backTarget.href} className={styles.backLink} aria-label={backTarget.aria}><Icon name="back" size={17} /><span>{backTarget.label}</span></a> : <span className={styles.headerNote}>Not born. <em className={styles.made}>Made.</em></span>}
       <div className={styles.headerActions}>
         {data.mode === 'server' && (data.connection === 'offline' || data.connection === 'unreachable' || pendingCount > 0) && <span className={styles.pill} data-state={data.connection} title={data.connection === 'online' ? 'Changes are waiting to be uploaded' : 'The household server cannot be reached; this device keeps working and uploads later'}>
           <Icon name={data.connection === 'online' ? 'upload' : 'alert'} size={14} />{data.connection === 'offline' ? 'Offline' : data.connection === 'unreachable' ? 'Server unreachable' : 'Syncing'}{pendingCount > 0 && ` · ${pendingCount} ${pendingCount === 1 ? 'change' : 'changes'} waiting`}
@@ -213,12 +214,15 @@ export default function App() {
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
         : route.name === 'edit' && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
         : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} onExport={workout => { void exportOne(workout); }} />
-        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} missingId={route.name === 'library' ? undefined : (route as { id?: string }).id} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
+        : route.name === 'notFound' ? <NotFound />
+        : route.name !== 'library' && !data.loaded ? <p className={styles.headerNote}>Loading the library…</p>
+        : route.name !== 'library' ? <NotFound missingId={'id' in route ? route.id : undefined} />
+        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
       <ConfirmDialog open={Boolean(exportRequest)} title={`Export “${exportRequest?.title ?? ''}” as a pack?`} confirmLabel={`Export ${exportRequest?.workouts.length ?? 0} ${exportRequest?.workouts.length === 1 ? 'workout' : 'workouts'}`} cancelLabel="Cancel" onClose={() => setExportRequest(undefined)} onConfirm={() => void confirmPackExport()}>
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>
       </ConfirmDialog>
-      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span className={styles.footerLinks}><span className={styles.footerMode} tabIndex={0} data-tip={SHAPE_TIPS[data.mode]} aria-label={`${SHAPE_LABELS[data.mode]}: ${SHAPE_TIPS[data.mode]}`}>{SHAPE_LABELS[data.mode]}</span><a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer" title="Source code on GitHub"><Icon name="github" size={15} />OpenWOD</a><a href={`${import.meta.env.BASE_URL}LICENSE`} target="_blank" rel="noreferrer" title="GNU General Public License, version 3">GPLv3</a></span></footer>
+      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span className={styles.footerLinks}><span className={styles.footerMode} tabIndex={0} data-tip={SHAPE_TIPS[data.mode]} aria-label={`${SHAPE_LABELS[data.mode]}: ${SHAPE_TIPS[data.mode]}`}>{SHAPE_LABELS[data.mode]}</span><a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer" title="Source code on GitHub"><Icon name="github" size={15} />Source</a><a href={`${import.meta.env.BASE_URL}LICENSE`} target="_blank" rel="noreferrer" title="GNU General Public License, version 3">GPLv3</a></span></footer>
     </main>
   </div>;
 }

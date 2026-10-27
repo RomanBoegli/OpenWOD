@@ -21,6 +21,7 @@ import { draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } fr
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
 import { freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
+import { Travolta } from './Travolta';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './Library.module.css';
 import shared from './App.module.css';
@@ -44,7 +45,6 @@ interface LibraryProps {
   onExportLibrary: () => void;
   notice: string;
   onClearNotice: () => void;
-  missingId?: string;
   connection: Connection;
   legacy?: LegacyData;
   migrating: boolean;
@@ -79,16 +79,17 @@ function shuffled<T>(items: T[], seed: number): T[] {
   return result;
 }
 
-/** Filters and sort survive navigation within the browser session; every read is validated. */
-interface StoredFilters { query: string; participants: '' | 1 | 2; equipment: string[]; duration: DurationBucket[]; difficulty: DifficultyLevel[]; format: SectionFormat[]; collectionIds: string[]; sort: Sort; randomSeed: number }
+/** Filters, sort and whether the filter panel is open survive navigation within the browser session; every read is validated. */
+interface StoredFilters { open: boolean; query: string; participants: '' | 1 | 2; equipment: string[]; duration: DurationBucket[]; difficulty: DifficultyLevel[]; format: SectionFormat[]; collectionIds: string[]; sort: Sort; randomSeed: number }
 const FILTER_KEY = 'openwod.libraryFilters';
-const emptyFilters = (): StoredFilters => ({ query: '', participants: '', equipment: [], duration: [], difficulty: [], format: [], collectionIds: [], sort: 'title', randomSeed: 0 });
+const emptyFilters = (): StoredFilters => ({ open: false, query: '', participants: '', equipment: [], duration: [], difficulty: [], format: [], collectionIds: [], sort: 'title', randomSeed: 0 });
 function loadFilters(): StoredFilters {
   try {
     const stored = JSON.parse(sessionStorage.getItem(FILTER_KEY) ?? 'null') as Partial<StoredFilters> | null;
     if (!stored || typeof stored !== 'object') return emptyFilters();
     const strings = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
     return {
+      open: stored.open === true,
       query: typeof stored.query === 'string' ? stored.query.slice(0, 200) : '',
       participants: stored.participants === 1 || stored.participants === 2 ? stored.participants : '',
       equipment: strings(stored.equipment), duration: strings(stored.duration).filter((item): item is DurationBucket => ['short', 'medium', 'long'].includes(item)),
@@ -120,13 +121,13 @@ function useMasonry(grid: RefObject<HTMLUListElement | null>) {
   });
 }
 
-export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, missingId, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
+export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
   const [migrationHidden, setMigrationHidden] = useState(false);
   const grid = useRef<HTMLUListElement>(null);
   useMasonry(grid);
   const [migrationReport, setMigrationReport] = useState('');
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [stored] = useState(loadFilters);
+  const [filtersOpen, setFiltersOpen] = useState(stored.open);
   const [query, setQuery] = useState(stored.query);
   const [participants, setParticipants] = useState<'' | 1 | 2>(stored.participants);
   const [equipment, setEquipment] = useState<string[]>(stored.equipment);
@@ -136,7 +137,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
   const [collectionIds, setCollectionIds] = useState<string[]>(stored.collectionIds);
   const [sort, setSort] = useState<Sort>(stored.sort);
   const [randomSeed, setRandomSeed] = useState(stored.randomSeed);
-  useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed]);
+  useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ open: filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed]);
   const [preview, setPreview] = useState<{ file: SharedFile; name: string }>();
   const [importError, setImportError] = useState('');
   const [discarding, setDiscarding] = useState<StoredDraft>();
@@ -193,7 +194,6 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     </div>
 
     {drafts.length > 0 && <section className={styles.drafts} aria-label="Drafts"><h2>Drafts</h2><ul>{drafts.map(draft => <li key={draft.id}><div><strong>{draft.draft.title.trim() || 'Untitled workout'}</strong><small>{draft.mode === 'replace' ? `Edits to “${entries.find(entry => entry.workout.id === draft.id)?.summary.title ?? draft.id}”` : draft.importedFrom ? `Imported from ${draft.importedFrom}, not saved yet` : 'New workout'} · saved {new Date(draft.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</small></div><div className={styles.draftActions}><a className={shared.primaryButton} href={draft.id === NEW_DRAFT_ID ? NEW_HREF : draft.importedFrom ? draftHref(draft.id) : editHref(draft.id)}>Continue editing</a><button className={shared.quietButton} onClick={() => setDiscarding(draft)} aria-label={`Discard draft ${draft.draft.title.trim() || 'Untitled workout'}`}><Icon name="trash" size={16} />Discard</button></div></li>)}</ul></section>}
-    {missingId && <p className={shared.notice} role="status">No workout with the ID “{missingId}” is in this library. It may have been removed from this device.</p>}
     {recoveries.map(({ checkpoint }) => <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Interrupted session"><div><strong>Interrupted session of “{checkpoint.workout.title}”</strong><p>Saved {elapsedText(Date.now() - new Date(checkpoint.savedAt).getTime())} on this device. Resume where it stopped, or discard it.</p></div><div className={styles.bannerActions}><a className={shared.primaryButton} href={playHref(checkpoint.workoutId)}><Icon name="play" size={16} />Resume</a><button type="button" className={shared.quietButton} onClick={() => void onDiscardRecovery(checkpoint.sessionId)}>Discard</button></div></section>)}
     {notice && <p className={shared.notice} role="alert">{notice} <button type="button" className={styles.linkButton} onClick={onClearNotice}>Dismiss</button></p>}
     {mode === 'server' && connection === 'unreachable' && <p className={shared.notice} role="status">The household server cannot be reached. The library shows what this device last saw; anything you save waits here and uploads when the server is back.</p>}
@@ -208,12 +208,11 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     <div className={styles.filters} role="search" aria-label="Filter workouts" data-open={filtersOpen}>
       <div className={styles.filterTop}>
         <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment (typos welcome)" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
-        {/* On a phone the filter groups fold away behind this button, so the workouts start on the first screen. */}
+        {/* The sort sits in the bar only while the panel is open; its label lives inside the box, like the search hint. */}
+        <label className={styles.sort}><span aria-hidden="true">Sort</span><select aria-label="Sort" value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
+        {/* Sorting and the filter groups fold away behind this button, so the workouts start right under the search. */}
         <button type="button" className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls="library-filters" onClick={() => setFiltersOpen(open => !open)}><Icon name="filter" size={17} />Filters{activeFilters > 0 && <span className={styles.filterCount} aria-label={`${activeFilters} active`}>{activeFilters}</span>}</button>
-        <div className={styles.sortControls}>
-          <label className={styles.sort}>Sort<select value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
-          <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
-        </div>
+        <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
       </div>
       <div id="library-filters" className={styles.filterGroups}>
       {group('Athletes', <>{([[1, 'Solo'], [2, 'Pair']] as const).map(([value, label]) => <Chip key={value} kind={value === 2 ? 'pair' : 'solo'} icon={value === 2 ? 'users' : 'user'} pressed={participants === value} onClick={() => setParticipants(current => current === value ? '' : value)}>{label}</Chip>)}</>)}
@@ -229,7 +228,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     </div>
     <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}{onlyMine && preferences.myEquipment.length === 0 && <> · bodyweight only, <a href={settingsHref('equipment')}>tick your gear in settings</a></>}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 
-    {visible.length === 0 ? <div className={styles.empty}><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul ref={grid} className={styles.grid} aria-label="Workouts">
+    {visible.length === 0 ? <div className={styles.empty}><Travolta /><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul ref={grid} className={styles.grid} aria-label="Workouts">
       {visible.map(({ workout, summary, source, pending }) => {
         const last = lastDone(sessions, workout.id);
         const count = timesDone(sessions, workout.id);

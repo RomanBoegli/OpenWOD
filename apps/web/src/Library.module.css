@@ -3,9 +3,17 @@
 .heading h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 12px 0 6px; }
 .headingActions { display: flex; gap: 10px; flex-shrink: 0; }
 .filters { display: grid; gap: 12px; padding: 16px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; }
-.filterTop { display: grid; grid-template-columns: minmax(200px, 1fr) 280px; gap: 12px; align-items: end; }
-.sortControls { display: flex; align-items: end; gap: 8px; min-width: 0; }
-.sortControls .sort { flex: 1; }
+/* One bar: search, the sort while the panel is open, Filters and the dice. */
+.filterTop { display: grid; grid-template-columns: minmax(200px, 1fr) auto auto; gap: 8px; align-items: center; }
+.filters[data-open=true] .filterTop { grid-template-columns: minmax(200px, 1fr) 240px auto auto; }
+/* Sorting and the groups fold away until Filters opens them. */
+.filters[data-open=false] .sort, .filters[data-open=false] .filterGroups { display: none; }
+/* The sort's label sits inside the box, like the search hint; the box draws its own chevron, since WebKit's native one ignores padding. */
+.filters .sort { position: relative; }
+.sort span, .sort::after { position: absolute; top: 50%; pointer-events: none; }
+.sort span { left: 13px; transform: translateY(-50%); }
+.sort::after { content: ''; right: 16px; width: 7px; height: 7px; border-right: 1.5px solid var(--ink-3); border-bottom: 1.5px solid var(--ink-3); transform: translateY(-70%) rotate(45deg); }
+.filters .sort select { appearance: none; -webkit-appearance: none; padding-left: 52px; padding-right: 36px; }
 .randomButton { display: grid; place-items: center; flex: 0 0 48px; width: 48px; height: 48px; padding: 0; border: 1px solid var(--line-2); border-radius: 10px; background: var(--input-bg); color: var(--ink-2); }
 .randomButton:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
 .randomButton[aria-pressed=true] { color: var(--accent-text); border-color: var(--accent-border); background: color-mix(in srgb, var(--accent-fill) 12%, var(--input-bg)); }
@@ -14,8 +22,8 @@
 .filterLabel { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-3); padding-top: 11px; }
 .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
 .filterGroups { display: grid; gap: 12px; }
-/* The fold-away button and its count exist for phones only. */
-.filterToggle { display: none; align-items: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--input-bg); color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.filterToggle { display: inline-flex; align-items: center; gap: 7px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--input-bg); color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.filterToggle:hover { background: var(--hover); color: var(--ink); }
 .filterToggle[aria-expanded=true] { color: var(--accent-text); border-color: var(--accent-border); }
 .filterCount { display: inline-grid; place-items: center; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--accent-fill); color: var(--accent-ink); font-size: 11px; font-weight: 700; }
 .resultLine a { color: var(--accent-text); }
@@ -88,15 +96,15 @@
   .headingActions { margin-top: 14px; flex-wrap: wrap; gap: 6px; }
   .headingActions > a, .headingActions > button { flex: 1 1 auto; min-height: 42px; padding: 8px 12px; gap: 7px; font-size: 13px; white-space: nowrap; }
   .headingActions svg { width: 16px; height: 16px; }
-  /* Search and the Filters button stay; sorting and the groups fold away until Filters opens them. */
+  /* Sorting drops under the search when the panel is open. */
   .filters { gap: 10px; padding: 10px; border-radius: 14px; }
-  .filterTop { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-  .filterToggle { display: inline-flex; }
+  .filterTop, .filters[data-open=true] .filterTop { grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+  /* No room beside the search on a phone: the open sort takes its own row under the bar. */
+  .filters .sort { grid-column: 1 / -1; order: 1; }
+  .filterToggle { min-height: 44px; }
   .filters input, .filters select { min-height: 44px; }
   .search svg { bottom: 13px; }
-  .sortControls { grid-column: 1 / -1; }
   .randomButton { flex-basis: 44px; width: 44px; height: 44px; }
-  .filters[data-open=false] .sortControls, .filters[data-open=false] .filterGroups { display: none; }
   .filterGroups { gap: 10px; }
   .filterGroup { grid-template-columns: 1fr; gap: 6px; }
   .filterLabel { padding-top: 0; }

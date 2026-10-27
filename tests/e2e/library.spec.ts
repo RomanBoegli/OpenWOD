@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { BUNDLED, partnerCircuit, bundledCount, ready, communityFile } from './helpers';
+import { BUNDLED, partnerCircuit, bundledCount, ready, communityFile, openFilters } from './helpers';
 import { serialiseWorkoutFile } from '../../packages/domain/src';
 import { bundledWorkouts } from '../../packages/domain/src/bundled';
 
@@ -13,6 +13,7 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(1);
     await expect(list).toContainText('Partner circuit');
     await page.getByRole('button', { name: 'Clear filters' }).click();
+    await openFilters(page);
     const chip = (group: string, name: string) => page.getByRole('group', { name: group }).getByRole('button', { name, exact: true });
     await chip('Duration', 'Over 40 min').click();
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long'] }));
@@ -76,7 +77,15 @@ test.describe('library', () => {
     await page.getByRole('button', { name: 'Remove workout' }).click();
     await expect(list.getByRole('listitem')).toHaveCount(BUNDLED);
     await page.goto('/#/wod/partner-circuit-2');
-    await expect(page.getByRole('status')).toContainText('No workout with the ID');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Workout not found');
+    await expect(page.getByRole('main')).toContainText('No workout with the ID “partner-circuit-2”');
+  });
+
+  test('an unknown address shows the not-found page with a way back', async ({ page }) => {
+    await page.goto('/#/nowhere');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found');
+    await page.getByRole('main').getByRole('link', { name: 'Back to the library' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pick your next session');
   });
 
   test('rejects invalid, newer and pre-release files without touching the library', async ({ page }) => {

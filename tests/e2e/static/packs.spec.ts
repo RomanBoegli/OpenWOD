@@ -2,7 +2,7 @@ import { expect, test } from '../fixtures';
 import { bundledWorkout } from '../../../packages/domain/src/bundled';
 import { serialisePackFile, type WorkoutPack } from '../../../packages/domain/src/pack';
 import type { Workout } from '../../../packages/domain/src/schema';
-import { browserRows } from '../helpers';
+import { browserRows, openFilters } from '../helpers';
 
 const shared = (id: string, title: string, sharingId: string, sourceRevision: number): Workout => ({ ...bundledWorkout('fran'), id, revision: 1, title, sharing: { id: sharingId, sourceRevision } });
 const packFile = (pack: WorkoutPack, name = 'friends.wods.yaml') => ({ name, mimeType: 'application/yaml', buffer: Buffer.from(serialisePackFile(pack)) });
@@ -22,6 +22,7 @@ test.describe('static workout packs', () => {
     await dialog.getByRole('button', { name: 'Import 2 workouts' }).click();
     await expect(page.getByText('Import done: 2 imported, 1 collection created.')).toBeVisible();
     expect((await stored(page)).map(item => [item.id, item.origin, item.document.sharing?.id]).sort()).toEqual([['fran-a', 'imported', 'share-a'], ['fran-b', 'imported', 'share-b']]);
+    await openFilters(page);
     await expect(page.getByRole('group', { name: 'Collection' })).toContainText('Friends');
 
     // After a reload the pack is still known by provenance: skipped unless asked for another copy.

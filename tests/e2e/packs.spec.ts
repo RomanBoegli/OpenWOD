@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { openFilters } from './helpers';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
 import { parsePackFile, serialisePackFile, type WorkoutPack } from '../../packages/domain/src/pack';
 import type { Workout } from '../../packages/domain/src/schema';
@@ -20,6 +21,7 @@ test.describe('workout packs and provenance', () => {
     await expect(page.getByText('Import done: 2 imported, 1 collection created.')).toBeVisible();
     const stored = await api.get<{ workouts: { id: string; origin: string; document: Workout }[] }>('/api/v1/workouts');
     expect(stored.workouts.map(item => [item.id, item.origin, item.document.sharing?.id]).sort()).toEqual([['fran-a', 'imported', 'share-a'], ['fran-b', 'imported', 'share-b']]);
+    await openFilters(page);
     await expect(page.getByRole('group', { name: 'Collection' })).toContainText('Friends');
 
     // The same pack again: both are known by provenance and skipped unless asked for another copy.

@@ -1,0 +1,2 @@
+.clip { display: block; width: min(220px, 56vw); margin: 0 auto 16px; }
+.clip img { display: block; width: 100%; height: auto; }
