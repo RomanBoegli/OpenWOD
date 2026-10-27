@@ -59,7 +59,7 @@ Pick a session from the library, press Start, and put the phone down.
 - [x] See **what you trained** and when, and repeat a session with one tap
 - [x] **Make it yours**: pick one of five offline voices, show weights in kg or lb, tune the difficulty scale to your fitness, and choose your theme and accent colour
 - [x] Open it in the browser or add it to your **phone's home screen**, no install needed
-- [x] Optionally **self-host** it, so every device at home shares the same library
+- [x] Optionally **self-host** it, so every device at home shares the same library and settings
 - [x] **No account, no cloud, no tracking**
 
 > [!NOTE]
@@ -98,7 +98,7 @@ Images are published to `ghcr.io/romanboegli/openwod` for every release.
 
 ```sh
 curl -O https://raw.githubusercontent.com/RomanBoegli/OpenWOD/main/compose.yaml
-APP_IMAGE=ghcr.io/romanboegli/openwod:v1.2.0 HTTP_PORT=8080 docker compose up -d
+APP_IMAGE=ghcr.io/romanboegli/openwod:v1.2.1 HTTP_PORT=8080 docker compose up -d
 ```
 
 Open `http://<host>:8080`.

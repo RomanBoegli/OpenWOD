@@ -185,3 +185,15 @@ Version 1.2.0: the static shape with the library in IndexedDB, one household cor
 | Static preview smoke | `OPENWOD_PRODUCTION_MODE=static` against `preview:static` in Firefox and WebKit passed except the voice-pack test, which needs all five packs and only one was rendered on this Mac. The release job renders all five with `OPENWOD_REQUIRE_CUES=1`. |
 
 Not recorded in this round: the container smoke and a restore with its `pre-restore-*.sqlite` on the preview container, the Release image workflow with the new `static`, `release` and `pages` jobs on GitHub runners (a manual dispatch is the dry run before the tag, and it never publishes), the live Pages URL, the zip served from a plain web root, and a screenshot pass of the "This browser" card and the restore dialog.
+
+## Household settings and the phone layout, 27 October 2026
+
+Version 1.2.1: settings shared through the household server (DAT-12), the phone layout before the start (UI-17), and the live-site check after the Pages deployment.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 201 passed in 25 files. New: migration 2 with the `settings` table (fresh, kept on reopen, and a test-only migration 3 still backing up first), one settings document where the last write wins and a restore leaves it alone, the settings routes (empty read as revision 0, write and read back, a non-object or unwrapped body refused with 400, more than 64 KB refused with 413), and `normalisePreferences` on the server's copy. |
+| Browser scenarios | 194 passed: Firefox 48, WebKit 48, static Firefox 49, static WebKit 49. New in the server shape: Dark set on one device reaches a second browser context on start, Light set there reaches the first on focus, and the server holds each change (DAT-12). The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
+| Phone screenshots | WebKit at 390 px, light theme, with the percentage beside the clock: the library shows the first workout card on the first screen with Filters closed, Filters opens sorting and the groups and counts one active filter, and the player before the start fits the clock and the percentage with Details, All workouts and Export WOD in one row (UI-17). |
+
+Not recorded in this round: the upgrade of a real version 1 database on the Portainer stack with its `pre-migration-v1-to-v2-*.sqlite`, settings shared between two physical devices, the phone layout on a physical iPhone, the dark theme at phone width, and the release workflow with the Playwright image on GitHub runners.

@@ -399,6 +399,8 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **UI-16** The app SHALL be installable on a phone's home screen: a web app manifest with the name, standalone display, start URL and scope relative to the served path, PNG icons including a maskable one, and an Apple touch icon with the Apple meta tags. The status bar SHALL follow the theme colour, the layout SHALL respect the bottom safe area when standalone, and the production checks SHALL verify that the manifest, its icons and the tags ship with the bundle.
 
+**UI-17** Before a session starts, a phone-width screen (620 px or less) SHALL show the workouts on the library's first screen, with the filter groups and sorting folded behind a Filters button that counts the active filters, and SHALL fit the player's clock with the percentage beside it, compact controls and the page actions in one row. Keyboard help SHALL be hidden on touch screens without a hovering pointer.
+
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
@@ -442,6 +444,8 @@ Use this document to test paired table/context layout, long movement names, mult
 **DAT-10** In the static shape the library SHALL live in IndexedDB of the browser profile, behind the same `Backend` interface as the server client, with the same revision, import and correction semantics, and the Settings page SHALL say where the data lives and offer persistent storage. The interface SHALL label the library as this browser's, without server wording. The static shape SHALL keep at least the newest 2000 sessions, pruning the oldest beyond that and reporting what a restore pruned.
 
 **DAT-11** The `openwod.export` JSON SHALL restore into either shape, replacing everything after an explicit confirmation that shows the counts and export date. The server SHALL write a pre-restore SQLite backup first. Restore SHALL be validated and all-or-nothing.
+
+**DAT-12** In the server shape the settings SHALL belong to the household: one revisioned settings document on the server that every device follows, where the last change wins, picked up on start, on focus, on reconnect and on reload. Each device SHALL keep a copy for an instant and offline start, mark a change it could not upload and send it later, and validate the server's copy field by field. The first device with settings of its own SHALL seed an empty server. In the static shape the settings SHALL stay in the browser.
 
 ## 10.1 Portable WOD sharing
 
@@ -692,7 +696,7 @@ Recorded 26 October 2026 after version 1.8. "Done" means implemented with automa
 | 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
 | 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the device checklist, the digest and hardware lines of the release notes. |
 | 5 Static shape and Pages | Done (version 1.12, section 15.5) | User-side: Pages source "GitHub Actions", the `github-pages` environment for `v*` tags, the `v1.2.0` tag, a look at the live site and the zip. |
-| 6 Follow-up improvements | Open | Prioritised from real training sessions. |
+| 6 Follow-up improvements | Open, version 1.2.1 prepared with household settings (DAT-12) and the phone layout before the start (UI-17) | Prioritised from real training sessions. User-side: the `v1.2.1` tag. |
 
 ## 15.4 Waves
 
@@ -793,6 +797,19 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 
 # 18 Plan revision record
+
+## Version 1.13 — 27 October 2026
+
+- In the server shape the settings are the household's (DAT-12): migration 2 adds a `settings` table holding one document with a revision, and `GET` and `PUT /api/v1/settings` read and replace it, last write wins, bounded to 64 KB.
+- `useSharedPreferences` (`apps/web/src/data/shared-preferences.ts`) replaces the browser-only preferences in the app: the browser copy makes the start instant, the server's copy is taken on start, focus, reconnect and reload, a change goes up after 400 ms, and a change that cannot go up is marked in `openwod.preferences.sync` and sent on the next chance.
+- `normalisePreferences` validates the server's copy field by field like the browser's, so a field the device does not know falls back to its default without touching the rest.
+- An empty server takes the first device's settings unless they are the defaults, so the setup a household already has survives the upgrade.
+- The static shape keeps its settings in the browser, unchanged.
+- On a phone before the start (UI-17) the library folds its filter groups and sorting behind a Filters button with a count of the active filters, the page actions sit in one compact row, and the player shrinks the clock when the percentage is shown beside it, tightens the spacing, the lanes and the controls, and lays Details, All workouts and Export WOD out as one row.
+- The Keys button and its divider are hidden on touch screens without a hovering pointer.
+- In the server shape the library says it is shared by every device in the household and a saved workout reads "Saved for the household", where both still said "this device".
+- The production smoke accepts `audio/mp3` beside `audio/mpeg` for the cue clips, the type GitHub Pages sends, and the live-site test after the Pages deployment runs in the Playwright image instead of installing Chromium through apt.
+- Version 1.2.1 prepared, with the database schema at version 2.
 
 ## Version 1.12 — 27 October 2026
 
@@ -953,7 +970,7 @@ OpenWOD ships as one container: Fastify serves the built web app and the househo
 
 Decisions made by the user: the static site carries the **recorded voices rendered in CI**; **Pages deploys on every `v*` tag** and a **static zip is attached to a GitHub Release**; backup in static mode is the **JSON export with a new Restore**, built once so it also works on the server (lifting the "export cannot be imported back" limitation). Both shapes stay fully supported.
 
-Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-12…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
+Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-13…, UI-18…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 
 ---
 

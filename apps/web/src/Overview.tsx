@@ -10,6 +10,7 @@ import { AthletesChip, Chip, FormatChips } from './Chip';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import type { Collection } from './master-data';
 import { agoText } from './session-log';
+import { DATA_MODE } from './data/mode';
 import type { SessionView } from './data/use-library-data';
 import { resultText } from './Player';
 import { displayTime } from '../../../packages/engine/src';
@@ -46,7 +47,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
   return <div className={styles.overview}>
     <div className={shared.workoutHeading}>
       <div>
-        <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {pair ? 'PARTNER SESSION' : 'SOLO SESSION'}{source === 'saved' && <><span>/</span>SAVED ON THIS DEVICE</>}</div>
+        <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {pair ? 'PARTNER SESSION' : 'SOLO SESSION'}{source === 'saved' && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
         <h1>{workout.title}</h1>
         {workout.description && <p className={shared.description}>{workout.description}</p>}
         {attribution && <p className={styles.attribution}>{attribution.author && <span>By {attribution.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}

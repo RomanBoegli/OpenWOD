@@ -122,6 +122,9 @@ On the device (`apps/web/src/data/`), IndexedDB holds five stores in the server 
 `useLibraryData` owns the household state for the app: cache first, then the server, with writes going to the server directly and into the outbox on a network failure.
 The outbox flushes single-flight with backoff on reconnect, when the tab becomes visible and on a timer, and a master-data conflict is resolved by merging ours over the server's.
 Everything not yet uploaded is labelled in the header, on the card, in history and in settings (DAT-09).
+The settings are the household's too (DAT-12): `useSharedPreferences` keeps a copy in the browser for an instant start and follows one settings document on the server, read with `GET /api/v1/settings` on start, focus and reconnect and replaced with `PUT` after a change.
+The last change wins, a change made offline is marked and sent on the next chance, and each device validates the server's copy field by field with `normalisePreferences`.
+An empty server takes the first device's settings unless they are the defaults, and the static shape keeps its settings in the browser.
 A pre-1.0 device library is offered for a one-time move to the server, in one transaction that renames colliding ids and remaps sessions and collections.
 
 Recovery (ENG-11/12) writes a full checkpoint (`engine.toJSON()` plus the workout as played) after every accepted command and transition, and a small progress record about once a second that names the checkpoint revision it extends.

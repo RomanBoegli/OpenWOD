@@ -264,3 +264,32 @@
 
 /* Installed on a home screen the page runs down to the screen's edge, so the footer clears the home indicator (the player's fixed panel already does). */
 @media (display-mode: standalone) { .footer { padding-bottom: env(safe-area-inset-bottom); } }
+
+/* Keyboard help is for keyboards: touch screens without a pointer that hovers leave it out. */
+@media (hover: none) and (pointer: coarse) { .keysButton, .readinessDivider:has(+ .keysButton) { display: none; } }
+
+/* A phone before the start: the same pieces, tighter. The clock makes room for the percentage beside it, and the page actions share one row. */
+@media (max-width: 620px) {
+  .workoutHeading { margin-bottom: 14px; }
+  .metadata { gap: 8px 10px; }
+  .viewSwitch { margin-top: 12px; padding: 3px; border-radius: 10px; }
+  .viewSwitch button { min-height: 34px; padding: 5px 12px; gap: 6px; }
+  .viewSwitch svg { width: 15px; height: 15px; }
+  .player { --pad-top: 16px; --pad-x: 16px; --pad-bottom: 14px; }
+  .clockBlock { padding: 14px 0 10px; }
+  .timer { margin: 2px 0 4px; }
+  .screen .player[data-progress=percent] .timer { font-size: min(112px, 21vw); letter-spacing: -4px; }
+  .clockPercent { font-size: clamp(18px, 5.5vw, 24px); }
+  .lane { padding: 14px 16px; }
+  .lane h2 { margin: 10px 0 4px; font-size: 32px; }
+  .nextStrip { justify-content: center; padding: 12px 0; }
+  .controls { padding-top: 12px; }
+  .transportCentre .primaryButton, .transportCentre .stopButton { min-height: 46px; }
+  .transport .iconButton { min-height: 40px; min-width: 40px; }
+  .sessionLine { margin-top: 8px; }
+  .bottomBar { padding-top: 12px; gap: 6px; }
+  .readiness { gap: 6px; }
+  .sharing { width: 100%; margin-left: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .sharing .quietButton { min-height: 40px; padding: 6px 8px; gap: 6px; font-size: 11px; white-space: nowrap; }
+  .sharing .quietButton svg { width: 15px; height: 15px; flex-shrink: 0; }
+}

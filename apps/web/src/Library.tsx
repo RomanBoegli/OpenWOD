@@ -125,6 +125,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
   const grid = useRef<HTMLUListElement>(null);
   useMasonry(grid);
   const [migrationReport, setMigrationReport] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [stored] = useState(loadFilters);
   const [query, setQuery] = useState(stored.query);
   const [participants, setParticipants] = useState<'' | 1 | 2>(stored.participants);
@@ -156,6 +157,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     return sort === 'random' ? shuffled(ranked, randomSeed) : ranked;
   }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, onlyMine, preferences.myEquipment, sort, sessions, randomSeed]);
   const randomise = () => { setRandomSeed(Math.floor(Math.random() * 0x1_0000_0000)); setSort('random'); };
+  const activeFilters = (participants ? 1 : 0) + equipment.length + duration.length + difficulty.length + format.length + collectionIds.length + (onlyMine ? 1 : 0);
   const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || onlyMine);
   const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
 
@@ -180,7 +182,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
       <div>
         <div className={shared.eyebrow}>YOUR LIBRARY <span>/</span> {entries.length} {entries.length === 1 ? 'WORKOUT' : 'WORKOUTS'}</div>
         <h1>Pick your next session</h1>
-        <p className={shared.description}>Benchmarks, advanced pieces and the WODs you’ve built or imported, all on this device. Filter, then press Start.</p>
+        <p className={shared.description}>Benchmarks, advanced pieces and the WODs you’ve built or imported, {mode === 'server' ? 'shared by every device in the household' : 'all on this device'}. Filter, then press Start.</p>
       </div>
       <div className={styles.headingActions}>
         <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
@@ -203,14 +205,17 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     {conflicts.map(item => { const workout = item.body as Workout; const taken = new Set(entries.map(entry => entry.workout.id)); return <p key={item.id} className={shared.notice} role="alert">“{workout.title}” could not be saved: {mode === 'static' ? <>another tab of this browser already saved revision {item.current?.revision ?? '?'} of it.</> : <>the household server already holds revision {item.current?.revision ?? '?'} of it, changed elsewhere.</>} <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'copy', freeWorkoutId(`${workout.id}-copy`, taken))}>Save mine as a copy</button> <button type="button" className={styles.linkButton} onClick={() => void onResolveConflict(item, 'discard')}>Discard mine</button></p>; })}
     {rejected.map(item => <p key={item.id} className={shared.notice} role="alert">{mode === 'static' ? `A change could not be saved and will not be retried: ${item.error ?? 'it is not valid'}.` : `A change could not be uploaded and will not be retried: ${item.error ?? 'the server refused it'}.`} <button type="button" className={styles.linkButton} onClick={() => void onDismissRejected(item)}>Dismiss</button></p>)}
 
-    <div className={styles.filters} role="search" aria-label="Filter workouts">
+    <div className={styles.filters} role="search" aria-label="Filter workouts" data-open={filtersOpen}>
       <div className={styles.filterTop}>
         <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment (typos welcome)" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
+        {/* On a phone the filter groups fold away behind this button, so the workouts start on the first screen. */}
+        <button type="button" className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls="library-filters" onClick={() => setFiltersOpen(open => !open)}><Icon name="filter" size={17} />Filters{activeFilters > 0 && <span className={styles.filterCount} aria-label={`${activeFilters} active`}>{activeFilters}</span>}</button>
         <div className={styles.sortControls}>
           <label className={styles.sort}>Sort<select value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
           <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
         </div>
       </div>
+      <div id="library-filters" className={styles.filterGroups}>
       {group('Athletes', <>{([[1, 'Solo'], [2, 'Pair']] as const).map(([value, label]) => <Chip key={value} kind={value === 2 ? 'pair' : 'solo'} icon={value === 2 ? 'users' : 'user'} pressed={participants === value} onClick={() => setParticipants(current => current === value ? '' : value)}>{label}</Chip>)}</>)}
       {group('Format', SECTION_FORMATS.map(item => <Chip key={item} kind="format" pressed={format.includes(item)} onClick={() => setFormat(current => toggle(current, item))}>{FORMAT_LABELS[item]}</Chip>))}
       {group('Collection', collections.map(collection => <Chip key={collection.id} kind="collection" pressed={collectionIds.includes(collection.id)} onClick={() => setCollectionIds(current => toggle(current, collection.id))}>{collection.title}</Chip>))}
@@ -220,6 +225,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
         <Chip kind="neutral" icon={onlyMine ? 'check' : undefined} pressed={onlyMine} title="Only workouts that need nothing beyond the gear ticked in settings" onClick={() => setOnlyMine(!onlyMine)}>Only my equipment</Chip>
         {equipmentList.map(item => <Chip key={item} kind="neutral" pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</Chip>)}
       </>)}
+      </div>
     </div>
     <div className={styles.resultLine} aria-live="polite"><span>{visible.length === entries.length ? `${entries.length} ${entries.length === 1 ? 'workout' : 'workouts'}` : `${visible.length} of ${entries.length} workouts`}{onlyMine && preferences.myEquipment.length === 0 && <> · bodyweight only, <a href={settingsHref('equipment')}>tick your gear in settings</a></>}</span>{filtering && <button className={shared.quietButton} onClick={clearFilters}><Icon name="close" size={15} />Clear filters</button>}</div>
 

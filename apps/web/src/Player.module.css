@@ -49,7 +49,8 @@
 .keyHint { color: var(--ink-4); font-size: 9px; letter-spacing: 1px; }
 @media (max-width: 620px) {
   .target { margin-top: 10px; }
-  .target strong { font-size: 48px; letter-spacing: -2px; }
+  .target strong { font-size: 44px; letter-spacing: -2px; }
+  .target small { font-size: 13px; }
   .bigAction { font-size: 18px; min-height: 64px; flex-basis: 100%; }
   .counterValue strong { font-size: 36px; }
   .taskRow { padding: 10px 12px; gap: 10px; }
