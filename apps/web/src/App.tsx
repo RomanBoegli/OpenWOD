@@ -14,7 +14,7 @@ import { Editor } from './Editor';
 import { Settings } from './Settings';
 import { History, SnapshotPlayer } from './History';
 import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } from '../../../packages/domain/src/builder';
-import { freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
+import { copyDraftId, copySource, freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
 import { allCollections, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
 import { draftHref, HISTORY_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
@@ -30,6 +30,7 @@ import styles from './App.module.css';
 import { newId } from './ids';
 
 /** The deployment shape in the footer, with a one-line explainer on hover or focus. */
+const BUNDLED_IDS = new Set(bundledWorkouts.map(workout => workout.id));
 const SHAPE_LABELS = { server: 'Server', static: 'Static' } as const;
 const SHAPE_TIPS = {
   server: 'Your household server keeps the library, the session log and the settings for every device.',
@@ -70,8 +71,10 @@ export default function App() {
   const catalogue = useMemo(() => effectiveCatalogue(masterData), [masterData]);
   audio.resolveMovement = lane => catalogue.resolve(lane)?.id;
   const summaryOptions = useCallback((id: string) => ({ canonicalEquipment: canonicalEquipment(masterData.equipmentAliases), catalogue, collections: collections.filter(collection => collection.workoutIds.includes(id)).map(collection => collection.id), difficulty: preferences.difficulty }), [masterData.equipmentAliases, catalogue, collections, preferences.difficulty]);
-  const bundledEntries = useMemo(() => bundledWorkouts.map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions]);
-  const savedEntries = useMemo(() => saved.map(item => ({ ...toEntry(item.document, 'saved', summaryOptions(item.id)), pending: data.pendingIds.has(item.id), origin: item.origin })), [saved, summaryOptions, data.pendingIds]);
+  // A bundled workout you edited is a saved workout with its id and takes its place; one you removed is listed in master data.
+  const hiddenWorkouts = useMemo(() => new Set(masterData.hiddenWorkouts), [masterData.hiddenWorkouts]);
+  const bundledEntries = useMemo(() => bundledWorkouts.filter(workout => !hiddenWorkouts.has(workout.id) && !saved.some(item => item.id === workout.id)).map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions, hiddenWorkouts, saved]);
+  const savedEntries = useMemo(() => saved.filter(item => !hiddenWorkouts.has(item.id)).map(item => ({ ...toEntry(item.document, 'saved', summaryOptions(item.id)), pending: data.pendingIds.has(item.id), origin: item.origin, ...(BUNDLED_IDS.has(item.id) ? { bundled: true } : {}) })), [saved, summaryOptions, data.pendingIds, hiddenWorkouts]);
   const entries = useMemo<LibraryEntry[]>(() => [...bundledEntries, ...savedEntries], [bundledEntries, savedEntries]);
   /** Applies an import preview's decisions on the server; a single imported workout opens its overview. */
   const importPack = useCallback(async (workouts: Workout[], packCollections: PackCollection[], decisions: Record<string, PackDecision>) => {
@@ -113,7 +116,11 @@ export default function App() {
     const own = collections.filter(collection => !collection.builtIn);
     requestPackExport('My OpenWOD library', saved.map(item => item.id), own.map(collection => ({ title: collection.title, ...(collection.description ? { description: collection.description } : {}), workoutIds: collection.workoutIds.filter(id => saved.some(item => item.id === id)) })).filter(collection => collection.workoutIds.length));
   }, [collections, saved, requestPackExport]);
-  const removeWorkout = useCallback((id: string) => { void data.archiveWorkout(id); }, [data]);
+  // A bundled workout cannot be deleted, so removing one hides it (and any edits to it) until it is restored in settings.
+  const removeWorkout = useCallback((id: string) => {
+    if (BUNDLED_IDS.has(id)) updateMasterData(current => ({ ...current, hiddenWorkouts: [...new Set([...current.hiddenWorkouts, id])] }));
+    else void data.archiveWorkout(id);
+  }, [data, updateMasterData]);
   const addMovement = useCallback((record: Movement) => updateMasterData(current => upsertMovement(current, record)), [updateMasterData]);
   // Draft updates are functional so autosave never depends on a stale list and never changes identity.
   const updateDrafts = useCallback((change: (current: StoredDraft[]) => StoredDraft[]) => setDrafts(current => { const next = change(current); const error = persistDrafts(next); if (error) setStorageError(error); return next; }), []);
@@ -136,6 +143,16 @@ export default function App() {
    */
   const saveDraft = useCallback(async (id: string, mode: StoredDraft['mode'], draft: BuilderDraft, overwriteRevision?: number): Promise<SaveResult> => {
     const existing = mode === 'replace' ? saved.find(item => item.id === id) : undefined;
+    const original = mode === 'replace' && !existing ? bundledWorkouts.find(workout => workout.id === id) : undefined;
+    if (original) {
+      // The first edit of a bundled workout saves it under the same id, as a derivative with its own sharing identity.
+      if (saved.length >= SAVED_LIMIT) { setStorageError(`The library keeps up to ${SAVED_LIMIT} saved workouts. Remove one before saving another.`); return 'failed'; }
+      const sharing = original.sharing ? { id: newId(), sourceRevision: 1, derivedFrom: { id: original.sharing.id, sourceRevision: original.sharing.sourceRevision } } : undefined;
+      const workout = { ...builderToWorkout(linkDraft(draft, catalogue), { id, revision: original.revision + 1 }), ...(sharing ? { sharing } : {}) };
+      const result = await data.saveWorkout(workout, 0);
+      if (result === 'saved' || result === 'queued') { updateDrafts(current => current.filter(item => item.id !== id)); window.location.hash = workoutHref(id); }
+      return result;
+    }
     if (existing) {
       const base = overwriteRevision ?? existing.revision;
       const sharing = existing.origin === 'imported' && existing.document.sharing ? { id: newId(), sourceRevision: 1, derivedFrom: { id: existing.document.sharing.id, sourceRevision: existing.document.sharing.sourceRevision } } : existing.document.sharing;
@@ -146,7 +163,7 @@ export default function App() {
     }
     if (saved.length >= SAVED_LIMIT) { setStorageError(`The library keeps up to ${SAVED_LIMIT} saved workouts. Remove one before saving another.`); return 'failed'; }
     const freshId = freeWorkoutId(slugify(draft.title), new Set(entries.map(entry => entry.workout.id)));
-    const source = entries.find(entry => entry.workout.id === id)?.workout.sharing;
+    const source = entries.find(entry => entry.workout.id === copySource(id))?.workout.sharing;
     const workout = { ...builderToWorkout(linkDraft(draft, catalogue), { id: freshId, revision: 1 }), ...(source ? { sharing: { id: newId(), sourceRevision: 1, derivedFrom: { id: source.id, sourceRevision: source.sourceRevision } } } : {}) };
     const result = await data.saveWorkout(workout, 0);
     if (result === 'saved' || result === 'queued') { updateDrafts(current => current.filter(item => item.id !== id)); window.location.hash = workoutHref(freshId); }
@@ -169,28 +186,32 @@ export default function App() {
   // Until the probe for this checkpoint has answered, the lock is unknown and the player must not mount (it would take the lock itself).
   const lockKnown = recovery ? (lockState?.sessionId === recovery.checkpoint.sessionId ? lockState.state : 'checking') : 'free';
   const takeOver = async () => { if (!recovery) return; await takeOverSession(recovery.checkpoint.sessionId); await data.refreshRecoveries(); setLockState({ sessionId: recovery.checkpoint.sessionId, state: 'free' }); };
-  const current = route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
+  const current = route.name === 'copy' ? entries.find(entry => entry.workout.id === route.id) : route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
   const importedDraft = route.name === 'draft' ? drafts.find(draft => draft.id === route.id) : undefined;
-  // Editor inputs: a resumed draft wins; otherwise the workout itself, or a titled copy of a bundled one.
+  // Editor inputs: a resumed draft wins; otherwise the workout itself, or a titled copy for Duplicate.
   const editing = route.name === 'new' ? { id: NEW_DRAFT_ID, mode: 'create' as const, initial: drafts.find(draft => draft.id === NEW_DRAFT_ID)?.draft ?? emptyDraft(2) }
     : importedDraft ? { id: importedDraft.id, mode: 'create' as const, initial: importedDraft.draft, importedFrom: importedDraft.importedFrom }
     : route.name === 'edit' && current ? (() => {
-      const mode = current.source === 'saved' ? 'replace' as const : 'create' as const;
-      const stored = drafts.find(draft => draft.id === current.workout.id);
+      const initial = drafts.find(draft => draft.id === current.workout.id && draft.mode === 'replace')?.draft ?? workoutToBuilder(current.workout);
+      return initial ? { id: current.workout.id, mode: 'replace' as const, initial } : undefined;
+    })()
+    : route.name === 'copy' && current ? (() => {
+      // Earlier builds kept the copy of a bundled workout under that workout's own id.
+      const stored = drafts.find(draft => draft.mode === 'create' && (draft.id === copyDraftId(current.workout.id) || draft.id === current.workout.id));
       const fromWorkout = workoutToBuilder(current.workout);
-      const initial = stored?.draft ?? (fromWorkout && mode === 'create' ? { ...fromWorkout, title: `Copy of ${fromWorkout.title}` } : fromWorkout);
-      return initial ? { id: current.workout.id, mode, initial } : undefined;
+      const initial = stored?.draft ?? (fromWorkout && { ...fromWorkout, title: `Copy of ${fromWorkout.title}` });
+      return initial ? { id: stored?.id ?? copyDraftId(current.workout.id), mode: 'create' as const, initial } : undefined;
     })() : undefined;
   const editingDraft = editing && drafts.find(draft => draft.id === editing.id);
   const notice = [data.notice, storageError, importReport].filter(Boolean).join(' ');
   const pendingCount = data.pendingIds.size;
   // The running server's version when known (that is what is deployed), else the version this bundle was built from.
   const appVersion = data.serverVersion ?? __OPENWOD_VERSION__;
-  const backTarget = current && (route.name === 'play' || route.name === 'edit') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
+  const backTarget = current && (route.name === 'play' || route.name === 'edit' || route.name === 'copy') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
 
   return <div className={styles.app} data-performing={performing}>
     <header className={styles.header}>
-      <a href="#/" className={styles.brand} aria-label="OpenWOD library"><BrandMark className={styles.brandMark} /><span className={styles.wordmark}>Open<b>WOD</b></span></a>
+      <a href="#/" className={styles.brand} aria-label="OpenWOD library"><BrandMark className={styles.brandMark} /><span className={styles.wordmark}>Open<b>WOD</b></span><span className={styles.brandVersion}>v{appVersion}</span></a>
       {backTarget ? <a href={backTarget.href} className={styles.backLink} aria-label={backTarget.aria}><Icon name="back" size={17} /><span>{backTarget.label}</span></a> : <span className={styles.headerNote}>Not born. <em className={styles.made}>Made.</em></span>}
       <div className={styles.headerActions}>
         {data.mode === 'server' && (data.connection === 'offline' || data.connection === 'unreachable' || pendingCount > 0) && <span className={styles.pill} data-state={data.connection} title={data.connection === 'online' ? 'Changes are waiting to be uploaded' : 'The household server cannot be reached; this device keeps working and uploads later'}>
@@ -210,9 +231,9 @@ export default function App() {
         : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'history' ? <History mode={data.mode} sessions={sessions} entries={entries} onCorrect={data.correctSession} onLoadMore={data.loadMoreSessions} fetchSession={data.fetchSession} />
         : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} />
-        : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : '#/'; }} />
+        : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
-        : route.name === 'edit' && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
+        : (route.name === 'edit' || route.name === 'copy') && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
         : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} onExport={workout => { void exportOne(workout); }} />
         : route.name === 'notFound' ? <NotFound />
         : route.name !== 'library' && !data.loaded ? <p className={styles.headerNote}>Loading the library…</p>

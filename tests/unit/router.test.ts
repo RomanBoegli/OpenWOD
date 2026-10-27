@@ -6,5 +6,6 @@ describe('router', () => {
     for (const hash of ['', '#', '#/']) expect(parseRoute(hash)).toEqual({ name: 'library' });
     for (const hash of ['#/nowhere', '#/wod', '#/wod/fran/delete']) expect(parseRoute(hash)).toEqual({ name: 'notFound' });
     expect(parseRoute('#/wod/fran/play')).toEqual({ name: 'play', id: 'fran' });
+    expect(parseRoute('#/wod/fran/copy')).toEqual({ name: 'copy', id: 'fran' });
   });
 });

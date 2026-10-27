@@ -15,7 +15,7 @@ import type { SessionView } from './data/use-library-data';
 import { resultText } from './Player';
 import { displayTime } from '../../../packages/engine/src';
 import type { LibraryEntry } from './Library';
-import { editHref, playHref } from './router';
+import { copyHref, editHref, playHref } from './router';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
@@ -32,6 +32,8 @@ interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; 
 const targetText = (value: Prescription) => value.reps || value.calories || value.distance || value.timeMs ? prescriptionText({ ...value, load: undefined }) : '';
 export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove, onExport }: OverviewProps) {
   const { workout, summary, source, editable } = entry;
+  /** Shipped with the app, edited or not: removing it only hides it. */
+  const builtIn = source === 'bundled' || entry.bundled === true;
   const cell = (value: Prescription | undefined, role: 'A' | 'B') => value ? <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{value.load ? <small><LoadLevels load={value.load} unit={loadUnit} sex={workout.participants === 2 ? loadsFor[role] : undefined} /></small> : null}</> : null;
   const [removing, setRemoving] = useState(false);
   const plan = useMemo(() => compileWorkout(workout), [workout]);
@@ -45,20 +47,24 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
   }, [plan]);
 
   return <div className={styles.overview}>
-    <div className={shared.workoutHeading}>
-      <div>
-        <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {pair ? 'PARTNER SESSION' : 'SOLO SESSION'}{source === 'saved' && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
-        <h1>{workout.title}</h1>
-        {workout.description && <p className={shared.description}>{workout.description}</p>}
-        {attribution && <p className={styles.attribution}>{attribution.author && <span>By {attribution.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
-        <div className={shared.metadata}><span><Icon name="clock" size={16} />{summary.durationKind === 'open' ? 'Open-ended' : `${summary.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(summary.totalMs)} incl. prep`}</span><AthletesChip participants={workout.participants} /><FormatChips formats={summary.formats} />{collections.map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} detailed />{sessions.length > 0 && <Chip kind="done" icon="check">{sessions.length === 1 ? 'Done once' : `Done ${sessions.length}×`} · {agoText(sessions[0].finishedAt)}</Chip>}</div>
+    {/* Title across the page, then the description beside a compact action box, then the chips on one row. */}
+    <div className={styles.head}>
+      <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {pair ? 'PARTNER SESSION' : 'SOLO SESSION'}{source === 'saved' && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
+      <h1>{workout.title}</h1>
+      <div className={styles.lead}>
+        <div className={styles.leadText}>
+          {workout.description && <p className={shared.description}>{workout.description}</p>}
+          {attribution && <p className={styles.attribution}>{attribution.author && <span>By {attribution.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
+        </div>
+        <div className={styles.actions}>
+          <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
+          {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name="edit" size={16} />Edit</a>}
+          {editable && <a className={shared.quietButton} href={copyHref(workout.id)}><Icon name="copy" size={16} />Duplicate</a>}
+          <button className={shared.quietButton} onClick={() => onExport(workout)}><Icon name="download" size={17} />Export</button>
+          <button className={shared.quietButton} onClick={() => setRemoving(true)}><Icon name="trash" size={17} />Remove</button>
+        </div>
       </div>
-      <div className={styles.actions}>
-        <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
-        {editable && <a className={shared.quietButton} href={editHref(workout.id)} aria-label={source === 'saved' ? 'Edit' : 'Duplicate and edit'}><Icon name={source === 'saved' ? 'edit' : 'copy'} size={16} />{source === 'saved' ? 'Edit' : <><span className={styles.wideLabel}>Duplicate and edit</span><span className={styles.narrowLabel}>Duplicate</span></>}</a>}
-        <button className={shared.quietButton} onClick={() => onExport(workout)}><Icon name="download" size={17} />Export</button>
-        {source === 'saved' && <button className={shared.quietButton} onClick={() => setRemoving(true)} aria-label="Remove"><Icon name="trash" size={17} /><span className={styles.wideLabel}>Remove</span></button>}
-      </div>
+      <div className={`${shared.metadata} ${styles.chips}`}><AthletesChip participants={workout.participants} /><FormatChips formats={summary.formats} />{collections.map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} detailed />{sessions.length > 0 && <Chip kind="done" icon="check">{sessions.length === 1 ? 'Done once' : `Done ${sessions.length}×`} · {agoText(sessions[0].finishedAt)}</Chip>}</div>
     </div>
 
     <dl className={styles.facts} aria-label="At a glance">
@@ -109,7 +115,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     </section>}
 
     <ConfirmDialog open={removing} title={`Remove “${summary.title}”?`} confirmLabel="Remove workout" cancelLabel="Keep it" onClose={() => setRemoving(false)} onConfirm={() => { setRemoving(false); onRemove(workout.id); window.location.hash = '#/'; }}>
-      <p>It disappears from this device. Export it first if you want to keep a copy.</p>
+      <p>{builtIn ? 'It leaves the library, edits included. Restore it any time under Settings → Collections.' : `It leaves the library ${DATA_MODE === 'server' ? 'on every device' : 'in this browser'}. Export it first if you want to keep a copy.`}</p>
     </ConfirmDialog>
   </div>;
 }

@@ -27,6 +27,11 @@ export interface StoredDraft { id: string; draft: BuilderDraft; updatedAt: strin
 const DRAFTS_KEY = 'openwod.drafts.v1';
 /** The single draft for a brand-new workout; editing an existing workout uses that workout's ID. */
 export const NEW_DRAFT_ID = 'new';
+/** Duplicate keeps its draft beside the workout's own edits. */
+const COPY_PREFIX = 'copy:';
+export const copyDraftId = (id: string) => `${COPY_PREFIX}${id}`;
+/** The workout a copy draft was made from (earlier builds used the workout's id itself). */
+export const copySource = (draftId: string) => draftId.startsWith(COPY_PREFIX) ? draftId.slice(COPY_PREFIX.length) : draftId;
 
 export function loadDrafts(): StoredDraft[] {
   try {

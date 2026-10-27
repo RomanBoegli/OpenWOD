@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { defaultPreferences, loadPreferences, normalisePreferences } from '../../apps/web/src/preferences';
+import { BEEP_TONES } from '../../apps/web/src/audio';
 
 const store = new Map<string, string>();
 Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (key: string) => store.get(key) ?? null, setItem: (key: string, value: string) => { store.set(key, value); }, removeItem: (key: string) => { store.delete(key); } } });
@@ -10,6 +11,11 @@ describe('preferences', () => {
     expect(normalisePreferences({ theme: 'dark', names: { A: 'Sam' }, volume: 4 })).toMatchObject({ theme: 'dark', names: { A: 'Sam', B: defaultPreferences.names.B }, volume: 1 });
     expect(normalisePreferences(null)).toEqual(defaultPreferences);
     expect(normalisePreferences(['dark'])).toEqual(defaultPreferences);
+  });
+  it('accepts every offered beep tone, the truck horn included, and falls back on an unknown one', () => {
+    for (const [tone] of BEEP_TONES) expect(normalisePreferences({ beepTone: tone }).beepTone).toBe(tone);
+    expect(normalisePreferences({ beepTone: 'horn' }).beepTone).toBe('horn');
+    expect(normalisePreferences({ beepTone: 'kazoo' }).beepTone).toBe(defaultPreferences.beepTone);
   });
   it('carries a pre-1.1 single accent over to both themes', () => {
     store.set('openwod.preferences.v1', JSON.stringify({ accent: '#ec4899' }));

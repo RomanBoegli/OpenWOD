@@ -1,6 +1,19 @@
 .overview { min-height: 60vh; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex-shrink: 0; }
-.actions a:first-child { text-decoration: none; margin-right: 8px; }
+/* The heading: title across, then the description beside a compact action box, then the chips on one row. */
+.head { margin-bottom: 28px; }
+.head h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 12px 0 6px; }
+.lead { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 28px; }
+.leadText > :last-child { margin-bottom: 14px; }
+/* Start across the top of the box, then Edit and Duplicate, then Export and Remove. */
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; width: 300px; margin-top: 7px; }
+.actions > a, .actions > button { justify-content: center; text-decoration: none; white-space: nowrap; }
+.actions > a:first-child { grid-column: 1 / -1; }
+.actions > :not(:first-child) { min-height: 38px; padding: 6px 8px; gap: 6px; font-size: 13px; }
+.actions > :not(:first-child) svg { width: 15px; height: 15px; }
+/* One row of chips; a narrow screen scrolls it sideways instead of wrapping. */
+.chips { flex-wrap: nowrap; gap: 10px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chips > * { flex-shrink: 0; }
 .attribution { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; color: var(--ink-3); font-size: 12px; }
 .attribution a { color: var(--accent-text); text-underline-offset: 3px; }
 .facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 0 0 26px; padding: 18px 22px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; }
@@ -37,13 +50,10 @@
 .movements small { color: var(--ink-3); }
 @media (max-width: 900px) { .facts { grid-template-columns: repeat(3, 1fr); } }
 /* Shorter labels for a phone, where Start, the edit link and Export share one row. */
-.narrowLabel { display: none; }
 @media (max-width: 620px) {
-  .actions { flex-wrap: nowrap; gap: 6px; }
-  .actions > a, .actions > button { min-height: 44px; padding: 8px 12px; gap: 7px; font-size: 13px; white-space: nowrap; }
-  .actions a:first-child { flex: 1 1 auto; margin-right: 0; }
-  .actions svg { width: 16px; height: 16px; }
-  .wideLabel { display: none; }
-  .narrowLabel { display: inline; }
+  .head h1 { font-size: 30px; }
+  .lead { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .actions { width: 100%; margin: 4px 0 16px; }
+  .actions > a, .actions > button { min-height: 44px; }
 }
-@media (max-width: 620px) { .actions { margin-top: 16px; } .facts { grid-template-columns: repeat(2, 1fr); padding: 14px 16px; } .section { padding: 16px 14px; } .sectionHeading { display: block; } .sectionFacts { align-items: start; text-align: left; margin-top: 8px; } .table { font-size: 13px; } .table th, .table td { padding: 8px 6px; } }
+@media (max-width: 620px) { .facts { grid-template-columns: repeat(2, 1fr); padding: 14px 16px; } .section { padding: 16px 14px; } .sectionHeading { display: block; } .sectionFacts { align-items: start; text-align: left; margin-top: 8px; } .table { font-size: 13px; } .table th, .table td { padding: 8px 6px; } }

@@ -21,6 +21,8 @@ export interface MasterData {
   movements: Movement[];
   /** Bundled record ids you removed. */
   hiddenMovements: string[];
+  /** Bundled workout ids you removed from the library. An edited bundled workout is a saved workout with the same id. */
+  hiddenWorkouts: string[];
   /** Extra spellings → record id, from merges and renames ("Wall-ball shots" → wall-ball). */
   movementAliases: Record<string, string>;
   /** Merges you committed: they keep working but no longer appear in the history with an Undo. */
@@ -54,6 +56,8 @@ export const MasterDataSchema = Type.Object({
   collectionEdits: Type.Record(Type.String({ maxLength: 120 }), CollectionEditSchema),
   movements: Type.Array(MovementRecordSchema, { maxItems: MOVEMENT_LIMIT }),
   hiddenMovements: Type.Array(name(80), { maxItems: MOVEMENT_LIMIT }),
+  // Optional, so a device still on an older build can write the document without it.
+  hiddenWorkouts: Type.Optional(Type.Array(name(120), { maxItems: COLLECTION_SIZE })),
   movementAliases: Type.Record(Type.String({ maxLength: 160 }), Type.String({ maxLength: 80 })),
   committed: Type.Array(name(200), { maxItems: 2000 }),
 }, { $id: 'MasterData', additionalProperties: false });
@@ -62,7 +66,7 @@ export type MasterDataDocument = Static<typeof MasterDataSchema>;
 /** Collections that ship with the app: one per registry folder with a collection.yaml. They are not editable; your own collections sit beside them. */
 export const builtInCollections: Collection[] = bundledCollections.map(collection => ({ ...collection, builtIn: true }));
 
-export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], collectionEdits: {}, movements: [], hiddenMovements: [], movementAliases: {}, committed: [] });
+export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], collectionEdits: {}, movements: [], hiddenMovements: [], hiddenWorkouts: [], movementAliases: {}, committed: [] });
 
 const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
@@ -109,12 +113,13 @@ export function sanitiseMasterData(value: unknown): MasterData {
     const collections: Collection[] = Array.isArray(stored.collections) ? stored.collections.filter((item): item is Collection => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.workoutIds))).slice(0, COLLECTION_LIMIT).map(item => ({ id: text(item.id, 120), title: text(item.title, 120) || 'Collection', ...(item.description ? { description: text(item.description, 500) } : {}), workoutIds: item.workoutIds.filter((id): id is string => typeof id === 'string').slice(0, COLLECTION_SIZE) })) : [];
     const movements = (Array.isArray(stored.movements) ? stored.movements : []).map(readMovement).filter((item): item is Movement => Boolean(item)).slice(0, MOVEMENT_LIMIT);
     const hiddenMovements = strings(stored.hiddenMovements, MOVEMENT_LIMIT);
+    const hiddenWorkouts = strings(stored.hiddenWorkouts, COLLECTION_SIZE, 120);
     const movementAliases: Record<string, string> = {};
     if (stored.movementAliases && typeof stored.movementAliases === 'object') for (const [key, id] of Object.entries(stored.movementAliases)) if (text(key, 160) && text(id, 80)) movementAliases[text(key, 160)] = text(id, 80);
     const collectionEdits: Record<string, CollectionEdit> = {};
     if (stored.collectionEdits && typeof stored.collectionEdits === 'object') for (const [id, edit] of Object.entries(stored.collectionEdits as Record<string, Partial<CollectionEdit>>)) if (builtInCollections.some(item => item.id === id) && edit && typeof edit === 'object') collectionEdits[id] = { ...(text(edit.title, 120) ? { title: text(edit.title, 120) } : {}), ...(typeof edit.description === 'string' ? { description: text(edit.description, 500) } : {}), added: strings(edit.added, COLLECTION_SIZE, 120), removed: strings(edit.removed, COLLECTION_SIZE, 120) };
     for (const copy of collections.filter(item => builtInCollections.some(bundled => bundled.id === item.id))) collectionEdits[copy.id] = editFor(builtInCollections.find(bundled => bundled.id === copy.id)!, copy);
-    return { equipmentAliases: aliases, collections: collections.filter(item => !builtInCollections.some(bundled => bundled.id === item.id)), collectionEdits, movements, hiddenMovements, movementAliases, committed: strings(stored.committed, 2000, 200) };
+    return { equipmentAliases: aliases, collections: collections.filter(item => !builtInCollections.some(bundled => bundled.id === item.id)), collectionEdits, movements, hiddenMovements, hiddenWorkouts, movementAliases, committed: strings(stored.committed, 2000, 200) };
   } catch { return emptyMasterData(); }
 }
 
@@ -135,10 +140,11 @@ export function mergeMasterData(base: MasterData, incoming: MasterData): MasterD
     collectionEdits,
     movements: movements.slice(0, MOVEMENT_LIMIT),
     hiddenMovements: [...new Set([...base.hiddenMovements, ...incoming.hiddenMovements])].slice(0, MOVEMENT_LIMIT),
+    hiddenWorkouts: [...new Set([...base.hiddenWorkouts, ...incoming.hiddenWorkouts])].slice(0, COLLECTION_SIZE),
     movementAliases: { ...incoming.movementAliases, ...base.movementAliases },
     committed: [...new Set([...base.committed, ...incoming.committed])].slice(0, 2000),
   };
 }
 
 export const isEmptyMasterData = (data: MasterData): boolean =>
-  !Object.keys(data.equipmentAliases).length && !data.collections.length && !Object.keys(data.collectionEdits).length && !data.movements.length && !data.hiddenMovements.length && !Object.keys(data.movementAliases).length && !data.committed.length;
+  !Object.keys(data.equipmentAliases).length && !data.collections.length && !Object.keys(data.collectionEdits).length && !data.movements.length && !data.hiddenMovements.length && !data.hiddenWorkouts.length && !Object.keys(data.movementAliases).length && !data.committed.length;

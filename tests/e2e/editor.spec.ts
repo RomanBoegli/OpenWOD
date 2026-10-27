@@ -54,7 +54,9 @@ test.describe('editor', () => {
   });
 
   test('duplicates a bundled workout into an editable copy and explains structures it cannot edit', async ({ page }) => {
-    await page.goto('/#/wod/partner-circuit/edit');
+    await page.goto('/#/wod/partner-circuit');
+    await page.getByRole('link', { name: 'Duplicate' }).click();
+    await expect(page).toHaveURL(/#\/wod\/partner-circuit\/copy$/);
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Copy of Partner circuit');
     await expect(page.getByRole('complementary', { name: 'Summary' })).toContainText('19:50');
     await page.getByRole('button', { name: 'Save to library' }).click();
@@ -62,6 +64,31 @@ test.describe('editor', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner circuit');
     await page.goto('/#/wod/hyrox-doubles-circuit/edit');
     await expect(page.getByRole('status')).toContainText('cannot change yet');
+  });
+
+  test('edits a bundled workout in place, removes it, and restores it with the edits from settings', async ({ page }) => {
+    await page.goto('/#/wod/cindy');
+    await page.getByRole('link', { name: 'Edit', exact: true }).click();
+    await expect(page).toHaveURL(/#\/wod\/cindy\/edit$/);
+    await page.getByLabel('Title', { exact: true }).fill('Cindy at home');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page).toHaveURL(/#\/wod\/cindy$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Cindy at home');
+    await page.goto('/');
+    const list = page.getByRole('list', { name: 'Workouts' });
+    await expect(list.getByRole('heading', { name: 'Cindy at home', exact: true })).toHaveCount(1);
+    await expect(list.getByRole('heading', { name: 'Cindy', exact: true })).toHaveCount(0);
+    await page.goto('/#/wod/cindy');
+    await page.getByRole('button', { name: 'Remove', exact: true }).click();
+    const confirm = page.getByRole('dialog', { name: 'Remove “Cindy at home”?' });
+    await expect(confirm).toContainText('Settings → Collections');
+    await confirm.getByRole('button', { name: 'Remove workout' }).click();
+    await expect(list.getByRole('heading', { name: 'Cindy at home', exact: true })).toHaveCount(0);
+    await page.goto('/#/settings/collections');
+    await page.getByRole('button', { name: 'Restore Cindy' }).click();
+    await expect(page.getByRole('region', { name: 'Removed workouts' })).toHaveCount(0);
+    await page.goto('/');
+    await expect(list.getByRole('heading', { name: 'Cindy at home', exact: true })).toHaveCount(1);
   });
 });
 

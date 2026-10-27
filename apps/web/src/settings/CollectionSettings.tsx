@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { allCollections, removeCollection, upsertCollection, type Collection } from '../master-data';
+import { bundledWorkouts } from '../../../../packages/domain/src/bundled';
 import { MasterList } from './MasterList';
 import { FormDialog } from './FormDialog';
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -25,6 +26,8 @@ export function CollectionSettings({ masterData, onMasterDataChange, entries, ho
     setForm(undefined);
   };
   const open = (collection?: Collection) => { setSearch(''); setForm(collection ? { id: collection.id, title: collection.title, description: collection.description ?? '', workoutIds: [...collection.workoutIds] } : { title: '', description: '', workoutIds: [] }); };
+  const hidden = masterData.hiddenWorkouts.map(id => bundledWorkouts.find(workout => workout.id === id)).filter(workout => workout !== undefined);
+  const restore = (id: string) => onMasterDataChange(data => ({ ...data, hiddenWorkouts: data.hiddenWorkouts.filter(item => item !== id) }));
   const visibleWorkouts = entries.filter(entry => !search.trim() || entry.summary.title.toLowerCase().includes(search.toLowerCase()));
   return <>
     <section className={styles.card} aria-labelledby="collections-title">
@@ -43,6 +46,17 @@ export function CollectionSettings({ masterData, onMasterDataChange, entries, ho
           </>,
         }))} />
     </section>
+    {hidden.length > 0 && <section className={styles.card} aria-labelledby="removed-title">
+      <div className={styles.cardHeading}><h2 id="removed-title">Removed workouts</h2><span className={styles.hint}>{plural(hidden.length, 'workout')}</span></div>
+      <p className={styles.hint}>Workouts that come with the app are hidden when you remove them, never deleted. Restore one to bring it back to the library, with any edits you made to it.</p>
+      <MasterList label="Removed workouts" actionsWidth="120px" empty="Nothing removed."
+        columns={[{ key: 'title', caption: 'Workout' }]}
+        rows={hidden.map(workout => ({
+          id: workout.id,
+          cells: { title: <strong>{workout.title}</strong> },
+          actions: <button type="button" className={shared.quietButton} aria-label={`Restore ${workout.title}`} onClick={() => restore(workout.id)}><Icon name="back" size={14} />Restore</button>,
+        }))} />
+    </section>}
     <FormDialog open={Boolean(form)} wide title={form?.id ? `Edit ${collections.find(item => item.id === form.id)?.title ?? 'collection'}` : 'New collection'} submitLabel={form?.id ? 'Save collection' : 'Create collection'} disabled={!form?.title.trim()} onSubmit={save} onClose={() => setForm(undefined)}>
       {form && <>
         <div className={styles.formGrid}>

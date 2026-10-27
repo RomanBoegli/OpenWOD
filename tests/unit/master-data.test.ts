@@ -5,6 +5,16 @@ import { emptyMasterData, isEmptyMasterData, MasterDataSchema, mergeMasterData, 
 const validate = compileSchema<MasterData>(MasterDataSchema);
 
 describe('master data document', () => {
+  it('keeps the removed bundled workouts, and reads a document from before they existed', () => {
+    const data = sanitiseMasterData({ ...emptyMasterData(), hiddenWorkouts: ['fran', '', 3] });
+    expect(data.hiddenWorkouts).toEqual(['fran']);
+    expect(isEmptyMasterData(data)).toBe(false);
+    const { hiddenWorkouts: _dropped, ...older } = emptyMasterData();
+    expect(validate(older)).toBe(true);
+    expect(sanitiseMasterData(older).hiddenWorkouts).toEqual([]);
+    expect(mergeMasterData({ ...emptyMasterData(), hiddenWorkouts: ['fran'] }, { ...emptyMasterData(), hiddenWorkouts: ['cindy', 'fran'] }).hiddenWorkouts).toEqual(['fran', 'cindy']);
+  });
+
   it('sanitises a stored document, dropping what is out of bounds, and the result validates', () => {
     const data = sanitiseMasterData({
       equipmentAliases: { 'kettle bells': 'Kettlebell', '': 'nothing', bad: 42 },

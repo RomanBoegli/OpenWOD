@@ -17,16 +17,16 @@ import { DifficultyChip } from './DifficultyChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { rankBySearch } from '../../../packages/domain/src/search';
-import { draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
+import { copyHref, draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
-import { freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
+import { copySource, freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
 import { Travolta } from './Travolta';
 import { ConfirmDialog } from './ConfirmDialog';
 import styles from './Library.module.css';
 import shared from './App.module.css';
 
-export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean; /** Saved on this device, not yet on the household server. */ pending?: boolean; origin?: 'local' | 'imported' }
+export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean; /** Saved on this device, not yet on the household server. */ pending?: boolean; /** A saved edit of a bundled workout, under the same id. */ bundled?: boolean; origin?: 'local' | 'imported' }
 
 export function toEntry(workout: Workout, source: LibraryEntry['source'], options: SummaryOptions = {}): LibraryEntry {
   return { workout, summary: summariseWorkout(workout, options), source, editable: workoutToBuilder(workout) !== null };
@@ -193,7 +193,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
       </div>
     </div>
 
-    {drafts.length > 0 && <section className={styles.drafts} aria-label="Drafts"><h2>Drafts</h2><ul>{drafts.map(draft => <li key={draft.id}><div><strong>{draft.draft.title.trim() || 'Untitled workout'}</strong><small>{draft.mode === 'replace' ? `Edits to “${entries.find(entry => entry.workout.id === draft.id)?.summary.title ?? draft.id}”` : draft.importedFrom ? `Imported from ${draft.importedFrom}, not saved yet` : 'New workout'} · saved {new Date(draft.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</small></div><div className={styles.draftActions}><a className={shared.primaryButton} href={draft.id === NEW_DRAFT_ID ? NEW_HREF : draft.importedFrom ? draftHref(draft.id) : editHref(draft.id)}>Continue editing</a><button className={shared.quietButton} onClick={() => setDiscarding(draft)} aria-label={`Discard draft ${draft.draft.title.trim() || 'Untitled workout'}`}><Icon name="trash" size={16} />Discard</button></div></li>)}</ul></section>}
+    {drafts.length > 0 && <section className={styles.drafts} aria-label="Drafts"><h2>Drafts</h2><ul>{drafts.map(draft => <li key={draft.id}><div><strong>{draft.draft.title.trim() || 'Untitled workout'}</strong><small>{draft.mode === 'replace' ? `Edits to “${entries.find(entry => entry.workout.id === draft.id)?.summary.title ?? draft.id}”` : draft.importedFrom ? `Imported from ${draft.importedFrom}, not saved yet` : draft.id === NEW_DRAFT_ID ? 'New workout' : `Copy of “${entries.find(entry => entry.workout.id === copySource(draft.id))?.summary.title ?? copySource(draft.id)}”`} · saved {new Date(draft.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</small></div><div className={styles.draftActions}><a className={shared.primaryButton} href={draft.id === NEW_DRAFT_ID ? NEW_HREF : draft.importedFrom ? draftHref(draft.id) : draft.mode === 'create' ? copyHref(copySource(draft.id)) : editHref(draft.id)}>Continue editing</a><button className={shared.quietButton} onClick={() => setDiscarding(draft)} aria-label={`Discard draft ${draft.draft.title.trim() || 'Untitled workout'}`}><Icon name="trash" size={16} />Discard</button></div></li>)}</ul></section>}
     {recoveries.map(({ checkpoint }) => <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Interrupted session"><div><strong>Interrupted session of “{checkpoint.workout.title}”</strong><p>Saved {elapsedText(Date.now() - new Date(checkpoint.savedAt).getTime())} on this device. Resume where it stopped, or discard it.</p></div><div className={styles.bannerActions}><a className={shared.primaryButton} href={playHref(checkpoint.workoutId)}><Icon name="play" size={16} />Resume</a><button type="button" className={shared.quietButton} onClick={() => void onDiscardRecovery(checkpoint.sessionId)}>Discard</button></div></section>)}
     {notice && <p className={shared.notice} role="alert">{notice} <button type="button" className={styles.linkButton} onClick={onClearNotice}>Dismiss</button></p>}
     {mode === 'server' && connection === 'unreachable' && <p className={shared.notice} role="status">The household server cannot be reached. The library shows what this device last saw; anything you save waits here and uploads when the server is back.</p>}

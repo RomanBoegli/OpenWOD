@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { CUE_NAMES, pickDefaultVoice, sortVoices, WorkoutAudio } from '../../apps/web/src/audio';
+import { CUE_NAMES, hornSpan, pickDefaultVoice, sortVoices, WorkoutAudio } from '../../apps/web/src/audio';
 import { WorkoutEngine } from '../../packages/engine/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
@@ -13,7 +13,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 interface Source { at?: number; stopAt?: number; cancelled: boolean; kind: 'beep' | 'clip'; clip?: string; frequency?: number; wave?: string }
 
-function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
+function setup({ clips = false, horn = false, workout = partnerCircuit as Workout } = {}) {
   const sources: Source[] = [];
   const spoken: string[] = [];
   class FakeContext {
@@ -33,16 +33,16 @@ function setup({ clips = false, workout = partnerCircuit as Workout } = {}) {
     createBufferSource() {
       const record: Source = { at: undefined, cancelled: false, kind: 'clip' };
       sources.push(record);
-      return { buffer: undefined as { name: string } | undefined, connect: (target: unknown) => target, disconnect: () => {}, start(at: number) { record.at = at; record.clip = this.buffer?.name; }, stop: (at?: number) => { if (at === undefined) record.cancelled = true; }, onended: undefined };
+      return { buffer: undefined as { name: string } | undefined, connect: (target: unknown) => target, disconnect: () => {}, start(at: number) { record.at = at; record.clip = this.buffer?.name; }, stop: (at?: number) => { if (at === undefined) record.cancelled = true; else record.stopAt = at; }, onended: undefined };
     }
     createGain() { return { gain: { value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: () => ({ destination: {} }), disconnect() {} }; }
-    async decodeAudioData(data: ArrayBuffer) { return { name: new TextDecoder().decode(data) }; }
+    async decodeAudioData(data: ArrayBuffer) { return { name: new TextDecoder().decode(data), duration: 2.2 }; }
   }
   const context = new FakeContext();
   vi.stubGlobal('AudioContext', function () { return context; });
   vi.stubGlobal('window', { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (utterance: { text: string }) => spoken.push(utterance.text) } });
   vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} });
-  vi.stubGlobal('fetch', async (url: string) => !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)', names: 190 }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
+  vi.stubGlobal('fetch', async (url: string) => url.includes('truck-horn') ? (horn ? { ok: true, arrayBuffer: async () => new TextEncoder().encode('horn').buffer } : { ok: false }) : !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)', names: 190 }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
   let now = 0;
   const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' });
@@ -189,6 +189,24 @@ it('shapes every beep by the chosen tone', async () => {
   audio.tone = 'alarm'; sources.length = 0;
   await audio.testBeeps();
   expect(sources.map(source => source.wave)).toEqual(Array(5).fill('sawtooth'));
+});
+
+it('plays the recorded truck horn on the audio clock: a short blast per count, about a second for the Go, all of it at the end', async () => {
+  const { audio, sources, engine } = setup({ horn: true });
+  audio.tone = 'horn';
+  await audio.unlock(); await audio.loadHorn(); sources.length = 0;
+  audio.update(engine.project(), engine.readClocks());
+  expect(sources.map(source => [source.kind, source.clip, source.at])).toEqual([['clip', 'horn', 137], ['clip', 'horn', 138], ['clip', 'horn', 139], ['clip', 'horn', 140]]);
+  expect(sources.map(source => Math.round((source.stopAt! - source.at!) * 100) / 100)).toEqual([.31, .31, .31, 1.01]);
+  expect([hornSpan(.08, 2.2), hornSpan(.06, 2.2), hornSpan(.18, 2.2), hornSpan(.35, 2.2), hornSpan(.35, .5)]).toEqual([.3, .3, 1, 2.2, .5]);
+});
+
+it('falls back to the classic beep while the horn is missing', async () => {
+  const { audio, sources } = setup();
+  audio.tone = 'horn';
+  await audio.unlock(); sources.length = 0;
+  await audio.testBeeps();
+  expect(sources.map(source => [source.kind, source.wave, source.frequency])).toEqual([['beep', 'sine', 660], ...Array(3).fill(['beep', 'sine', 620]), ['beep', 'sine', 880]]);
 });
 
 it('holds the first cues of a Start until the audio context has resumed, so Get ready and the prep countdown use the clips', async () => {

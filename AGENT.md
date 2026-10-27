@@ -407,9 +407,13 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **UI-20** During a session on a screen wider than a phone but at most 960 px tall, such as a tablet or a laptop in landscape, the clock, the stations or the AMRAP block, the actions, Up next and the transport controls SHALL fit the frame without scrolling, in the focus and the context view. Sizes SHALL follow the height, and the corner view switch SHALL stay inside the frame.
 
+**UI-21** The header SHALL show the running version beside the wordmark, so a device shows at a glance which release it has loaded, except on a phone, where the footer shows it.
+A workout's page SHALL put the title across the page, the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove), and the chips in one row below.
+
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
+One tone, the truck horn, SHALL play a bundled recording scheduled on the same audio clock as the synthesised beeps, a short blast for each countdown second and a longer one for the boundary, and SHALL fall back to the classic beep until the recording has loaded or if it cannot be decoded.
 
 **AUD-02** Audio SHALL consume semantic engine events: prep, work start, rest start, upcoming assignment, countdown, round start, cap reached, paused, resumed, and completed. Components SHALL not independently trigger their own timers or announcements.
 
@@ -452,6 +456,10 @@ Use this document to test paired table/context layout, long movement names, mult
 **DAT-11** The `openwod.export` JSON SHALL restore into either shape, replacing everything after an explicit confirmation that shows the counts and export date. The server SHALL write a pre-restore SQLite backup first. Restore SHALL be validated and all-or-nothing.
 
 **DAT-12** In the server shape the settings SHALL belong to the household: one revisioned settings document on the server that every device follows, where the last change wins, picked up on start, on focus, on reconnect and on reload. Each device SHALL keep a copy for an instant and offline start, mark a change it could not upload and send it later, and validate the server's copy field by field. The first device with settings of its own SHALL seed an empty server. In the static shape the settings SHALL stay in the browser.
+
+**DAT-13** A workout that ships with the app SHALL offer the same actions as a saved one: Edit, Duplicate, Export and Remove.
+Editing it saves a saved workout under the same id, which takes the bundled one's place in the library and keeps its session history.
+Removing it hides it, with any edits, through a list of removed workout ids in master data, and Settings → Collections lists the removed ones with a Restore button.
 
 ## 10.1 Portable WOD sharing
 
@@ -804,6 +812,19 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 # 18 Plan revision record
 
+## Version 1.16 — 27 October 2026
+
+- Bundled workouts are edited, duplicated and removed like saved ones (DAT-13).
+  The first edit saves a saved workout under the bundled id, at the bundled revision plus one, with its own sharing identity derived from the bundled one.
+  Removing a bundled workout adds its id to `hiddenWorkouts` in master data, an optional field so a device on an older build can still write the document.
+  Duplicate has its own route, `#/wod/<id>/copy`, and keeps its draft under `copy:<id>`, beside the workout's own edits.
+- The header shows the running version beside the wordmark (UI-21).
+- A workout's page puts the title across, the description beside a compact action box, and the chips in one row that scrolls sideways on a phone (UI-21).
+  The duration line before the chips is gone, since the facts below show the same time.
+- Beeps can be a truck horn, a bundled recording (AUD-01).
+- iPad screenshots of a session showed the desktop sizes, while the 1.3.1 tablet layout measured without overflow at 1180 by 796, so that device had most likely not loaded 1.3.1 yet.
+  The version in the header now makes this visible.
+
 ## Version 1.15 — 27 October 2026
 
 - During a session on a wide but short screen (UI-20), a media query for more than 620 px wide and at most 960 px tall sizes the clock, the target, the station card, the AMRAP rows and counter, the Done button, Up next and the controls by the viewport height.
@@ -1005,7 +1026,7 @@ OpenWOD ships as one container: Fastify serves the built web app and the househo
 
 Decisions made by the user: the static site carries the **recorded voices rendered in CI**; **Pages deploys on every `v*` tag** and a **static zip is attached to a GitHub Release**; backup in static mode is the **JSON export with a new Restore**, built once so it also works on the server (lifting the "export cannot be imported back" limitation). Both shapes stay fully supported.
 
-Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-13…, UI-21…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
+Standing constraints: no runtime cloud service; imports never start a session; requirement IDs never renumbered (append DEP-19…, DAT-14…, UI-22…, check the current highest first); the user commits; local browser tests with `--project=firefox --project=webkit` (Chromium headless fails locally, CI uses Chromium); Markdown one sentence per line, no semicolons; temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 
 ---
 
