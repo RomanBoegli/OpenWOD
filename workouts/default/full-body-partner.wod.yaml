@@ -5,7 +5,7 @@ workout:
   id: full-body-partner
   revision: 1
   title: Full body partner workout
-  description: "Bodyweight meets dumbbells. Every loaded movement in the B column uses dumbbells: one pair for the squats, hinges, cleans and carries and a lighter pair for the presses, curls, extensions and chops. A and B swap each round, then take two minutes to recover before the next section."
+  description: "Bodyweight meets dumbbells. Every loaded movement in the B column uses dumbbells: one pair for the squats, hinges, cleans and carries and a lighter pair for the presses, curls, extensions and chops. A and B swap each round, then take two minutes to recover before the next block."
   attribution:
     author: OpenWOD
     notes: Encoded from docs/source/example-wod.md with its timing made explicit (section 6.5 of AGENT.md).

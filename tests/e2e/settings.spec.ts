@@ -11,7 +11,8 @@ test.describe('settings and log', () => {
     await page.getByTestId('done').click();
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await page.goto('/#/wod/karen');
-    await expect(page.getByRole('region', { name: 'Past sessions' })).toContainText('Completed');
+    // A completed session needs no outcome chip; only Capped, Ended early and the like are shown.
+    await expect(page.getByRole('region', { name: 'Past sessions' })).not.toContainText('Completed');
     await expect(page.getByRole('region', { name: 'Past sessions' })).toContainText('03:20 active');
     await expect(page.getByRole('main')).toContainText('Done once · today');
     await page.goto('/');
@@ -65,7 +66,7 @@ test.describe('movements and search', () => {
   test('the editor picks movements from the catalogue, derives their equipment, and adds unknown movements', async ({ page }) => {
     await page.goto('/#/new');
     await page.getByLabel('Title', { exact: true }).fill('Picker check');
-    const lane = page.getByRole('combobox', { name: 'Section 1 movement 1 athlete A', exact: true });
+    const lane = page.getByRole('combobox', { name: 'Block 1 movement 1 athlete A', exact: true });
     await lane.pressSequentially('thru');
     const options = page.getByRole('listbox', { name: 'Movements matching thru' });
     await expect(options.getByRole('option').first()).toContainText('Thrusters');
@@ -73,7 +74,7 @@ test.describe('movements and search', () => {
     await expect(lane).toHaveValue('Thrusters');
     await expect(page.getByRole('main')).toContainText('Thrusters · Barbell');
     await expect(page.getByRole('group', { name: 'Equipment needed' })).toContainText('Barbell');
-    const partner = page.getByRole('combobox', { name: 'Section 1 movement 1 athlete B', exact: true });
+    const partner = page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true });
     await partner.pressSequentially('Pogo hops');
     await partner.press('Escape');
     const unknown = page.getByRole('status', { name: 'Movements not in your catalogue' });
@@ -216,7 +217,7 @@ test.describe('workout view settings', () => {
     await page.evaluate(() => window.__openwodTest!.advance(30_000));
     await expect.poll(async () => Number(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--drained')))).toBeGreaterThan(0.3);
     const overall = page.getByTestId('overall-progress');
-    await expect(overall).toContainText('SECTION 1 / 1');
+    await expect(overall).toContainText('BLOCK 1 / 1');
     await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-weight', 'light');
     await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-size', 'compact');
     await expect(overall.locator('span span')).toHaveAttribute('style', /width/);

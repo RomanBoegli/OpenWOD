@@ -77,20 +77,20 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     <dl className={styles.facts} aria-label="At a glance">
       <div><dt>{summary.durationKind === 'exact' ? 'Active time' : summary.durationKind === 'capped' ? 'Up to' : 'Timed parts'}</dt><dd>{displayTime(summary.activeMs)}</dd></div>
       <div><dt>Prep</dt><dd>{formatDuration(workout.prepMs)}</dd></div>
-      <div><dt>Sections</dt><dd>{sections.length}</dd></div>
+      <div><dt>Blocks</dt><dd>{sections.length}</dd></div>
       <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
       <div><dt>Ready gates</dt><dd>{Math.max(0, sections.filter((section, index) => index < sections.length - 1 && section.transitionAfter === 'manualReady').length)}</dd></div>
     </dl>
 
-    <ol className={styles.sections} aria-label="Sections">
+    <ol className={styles.sections} aria-label="Blocks">
       {sections.map((section, index) => <Fragment key={section.id}><li className={styles.section}>
         <div className={styles.sectionHeading}>
-          <div><span className={shared.eyebrow}>SECTION {index + 1} OF {sections.length} <span>/</span> {FORMAT_LABELS[section.format].toUpperCase()}</span><h2>{section.title}</h2></div>
-          <div className={styles.sectionFacts}><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span>{section.emom && <span>{section.emom.intervals} × {formatDuration(section.emom.intervalMs)}</span>}{section.youGoIGo?.rounds && <span>{section.youGoIGo.rounds} team rounds</span>}{section.youGoIGo?.turnMs && <span>{formatDuration(section.youGoIGo.turnMs)} per turn</span>}{index === sections.length - 1 && <span>{section.restAfterMs ? `Final section · then ${formatDuration(section.restAfterMs)} rest` : 'Final section'}</span>}</div>
+          <div><span className={shared.eyebrow}>BLOCK {index + 1} OF {sections.length} <span>/</span> {FORMAT_LABELS[section.format].toUpperCase()}</span><h2>{section.title}</h2></div>
+          <div className={styles.sectionFacts}><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span>{section.emom && <span>{section.emom.intervals} × {formatDuration(section.emom.intervalMs)}</span>}{section.youGoIGo?.rounds && <span>{section.youGoIGo.rounds} team rounds</span>}{section.youGoIGo?.turnMs && <span>{formatDuration(section.youGoIGo.turnMs)} per turn</span>}{index === sections.length - 1 && <span>{section.restAfterMs ? `Final block · then ${formatDuration(section.restAfterMs)} rest` : 'Final block'}</span>}</div>
         </div>
         {section.leadingRest.length > 0 && <p className={styles.restNote}>Starts with {restText(section.leadingRest)}.</p>}
         {section.rounds.map((round, roundIndex) => <div key={roundIndex} className={styles.round}>
-          {(round.label || round.roundRestMs > 0 || round.block) && <div className={styles.roundHeading}><strong>{round.block ? section.format === 'amrap' ? 'One round of the block · repeat until the cap' : 'One turn · then switch' : round.label || 'Once through'}</strong>{round.roundRestMs > 0 && <span>{formatDuration(round.roundRestMs)} rest between {section.format === 'strength' ? 'sets' : 'rounds'}</span>}</div>}
+          {(round.label || round.roundRestMs > 0 || round.block) && <div className={styles.roundHeading}><strong>{round.block ? section.format === 'amrap' ? 'One round · repeat until the cap' : 'One turn · then switch' : round.label || 'Once through'}</strong>{round.roundRestMs > 0 && <span>{formatDuration(round.roundRestMs)} rest between {section.format === 'strength' ? 'sets' : 'rounds'}</span>}</div>}
           <table className={styles.table}>
             <thead><tr><th scope="col">#</th><th scope="col">{pair ? names.A : 'Movement'}</th>{pair && <th scope="col">{names.B}</th>}<th scope="col">{round.block ? 'Clock' : 'Work'}</th><th scope="col">Then</th></tr></thead>
             <tbody>{round.rows.map((row, rowIndex) => <tr key={row.anchor + rowIndex}>
@@ -103,7 +103,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
           </table>
           {round.restAfter.length > 0 && <p className={styles.restNote}>Then {restText(round.restAfter)}.</p>}
         </div>)}
-      </li>{index < sections.length - 1 && <li className={transition.tile} aria-label={`Between section ${index + 1} and ${index + 2}`}><span>Then</span><span>{transitionText(section)}</span></li>}</Fragment>)}
+      </li>{index < sections.length - 1 && <li className={transition.tile} aria-label={`Between block ${index + 1} and ${index + 2}`}><span>Then</span><span>{transitionText(section)}</span></li>}</Fragment>)}
     </ol>
 
     <div className={styles.lists}>

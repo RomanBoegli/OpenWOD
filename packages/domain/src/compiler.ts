@@ -70,12 +70,12 @@ export function compileWorkout(input: unknown): ExecutionPlan {
     claim(node.id);
     const listOnly = section.format === 'amrap' || section.format === 'emom' || section.format === 'youGoIGo';
     if (node.type === 'repeat') {
-      if (listOnly) fail(node.id, `${label(section.format)} sections list manual tasks; repeats are not supported inside them.`);
+      if (listOnly) fail(node.id, `${label(section.format)} blocks list manual tasks; repeats are not supported inside them.`);
       if (depth >= 2) fail(node.id, 'Use at most two nested repeat levels.');
       if (node.assignmentPolicy === 'alternate' && !pair) fail(node.id, 'Alternating assignments requires two athletes.');
       inspect(node.body, depth + 1, section);
     } else if (node.type === 'sequence') {
-      if (listOnly && depth > 0) fail(node.id, `${label(section.format)} sections take one flat list of tasks.`);
+      if (listOnly && depth > 0) fail(node.id, `${label(section.format)} blocks take one flat list of tasks.`);
       node.children.forEach((child, index) => {
         // A list may end in one rest, the rest after the section (BLD-14).
         if (listOnly && depth === 0 && child.type === 'rest' && index === node.children.length - 1 && index > 0 && !node.betweenChildrenRestMs && !node.trailingRestMs) claim(child.id);
@@ -85,21 +85,21 @@ export function compileWorkout(input: unknown): ExecutionPlan {
       if (Boolean(node.assignments.B) !== pair) fail(node.id, 'Every work slot must match the workout’s athlete count.');
       for (const lane of [node.assignments.A, node.assignments.B]) for (const load of lane?.load ? 'value' in lane.load ? [lane.load] : Object.values(lane.load) : []) if (load.unit === 'percent' && load.women !== undefined) fail(node.id, 'A percentage of 1RM is each athlete’s own; it takes no women’s value.');
       if (node.type === 'task') {
-        if (section.format === 'timedCircuit') fail(node.id, 'Timed circuits need durations. Use a For time, strength, AMRAP, EMOM or you-go-I-go section for manual tasks.');
+        if (section.format === 'timedCircuit') fail(node.id, 'Timed circuits need durations. Use a For time, strength, AMRAP, EMOM or you-go-I-go block for manual tasks.');
         const standalone = section.format === 'forTime' || section.format === 'strength' || section.format === 'emom';
         if (standalone && pair && !node.completion) fail(node.id, 'Choose a completion rule for pairs: team (one Done) or both (each athlete taps Done).');
         if (node.completion === 'both' && !pair) fail(node.id, 'Both-done completion needs two athletes.');
         if (!standalone && node.completion) fail(node.id, 'AMRAP and you-go-I-go blocks finish by cap, Finish or Switch; remove the task completion rule.');
-      } else if (listOnly) fail(node.id, `${label(section.format)} sections list manual tasks; timed slots belong in a timed circuit or For time section.`);
-    } else if (listOnly) fail(node.id, `${label(section.format)} sections list manual tasks without rests.`);
+      } else if (listOnly) fail(node.id, `${label(section.format)} blocks list manual tasks; timed slots belong in a timed circuit or For time block.`);
+    } else if (listOnly) fail(node.id, `${label(section.format)} blocks list manual tasks without rests.`);
   }
   for (const section of workout.sections) {
     claim(section.id);
-    if ((section.format === 'amrap' || section.format === 'emom' || section.format === 'youGoIGo') && section.body.type !== 'task' && section.body.type !== 'sequence') fail(section.id, `${label(section.format)} sections take one task or a list of tasks.`);
+    if ((section.format === 'amrap' || section.format === 'emom' || section.format === 'youGoIGo') && section.body.type !== 'task' && section.body.type !== 'sequence') fail(section.id, `${label(section.format)} blocks take one task or a list of tasks.`);
     const allowed: Record<SectionFormat, (keyof WorkoutSection)[]> = { timedCircuit: [], amrap: ['capMs', 'counter'], emom: ['intervalMs', 'intervals'], forTime: ['capMs'], youGoIGo: ['capMs', 'rounds', 'turnMs'], strength: [] };
-    for (const key of ['capMs', 'intervalMs', 'intervals', 'counter', 'rounds', 'turnMs'] as const) if (section[key] !== undefined && !allowed[section.format].includes(key)) fail(section.id, `${label(section.format)} sections do not use ${key.replace(/Ms$/, '')}.`);
-    if (section.format === 'amrap' && !section.capMs) fail(section.id, 'AMRAP sections need a cap.');
-    if (section.format === 'emom' && (!section.intervalMs || !section.intervals)) fail(section.id, 'EMOM sections need an interval length and a number of intervals.');
+    for (const key of ['capMs', 'intervalMs', 'intervals', 'counter', 'rounds', 'turnMs'] as const) if (section[key] !== undefined && !allowed[section.format].includes(key)) fail(section.id, `${label(section.format)} blocks do not use ${key.replace(/Ms$/, '')}.`);
+    if (section.format === 'amrap' && !section.capMs) fail(section.id, 'AMRAP blocks need a cap.');
+    if (section.format === 'emom' && (!section.intervalMs || !section.intervals)) fail(section.id, 'EMOM blocks need an interval length and a number of intervals.');
     if (section.format === 'youGoIGo') {
       if (!pair) fail(section.id, 'You go, I go needs two athletes.');
       if (!section.capMs && !section.rounds) fail(section.id, 'Give you-go-I-go a cap or a number of team rounds so it can finish.');
@@ -196,7 +196,7 @@ export function compileWorkout(input: unknown): ExecutionPlan {
       const last = section.body.type === 'sequence' ? section.body.children.at(-1) : undefined;
       if (last?.type === 'rest') append(last.id, last.kind ?? 'blockRest', last.durationMs, []);
     }
-    if (!occurrences.slice(startIndex).some(item => item.phase === 'work')) fail(section.id, 'Each section needs at least one work slot.');
+    if (!occurrences.slice(startIndex).some(item => item.phase === 'work')) fail(section.id, 'Each block needs at least one work slot.');
     if (kind === 'capped' && capMs) {
       if (elapsed + capMs > MAX_MS) fail(section.id, 'Workout duration exceeds 24 hours.');
       elapsed += capMs;

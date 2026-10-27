@@ -157,7 +157,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
 
   const laneCell = (s: number, i: number, role: 'A' | 'B', slot: BuilderSlot) => {
     const value = slot[role] ?? { name: '' };
-    const label = `Section ${s + 1} movement ${i + 1}${pair ? ` athlete ${role}` : ''}`;
+    const label = `Block ${s + 1} movement ${i + 1}${pair ? ` athlete ${role}` : ''}`;
     const kind = targetKindOf(value);
     const loadMode = loadModeOf(value);
     const levelled = levelledOf(value);
@@ -203,7 +203,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
       <div>
         <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {importedFrom ? 'IMPORTED WORKOUT' : mode === 'replace' ? 'EDIT WORKOUT' : 'NEW WORKOUT'}</div>
         <h1>{draft.title.trim() || (mode === 'replace' ? 'Edit workout' : 'Build a workout')}</h1>
-        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Sections of timed or manual movements with targets, in any of the six formats. Type a movement to pick it from your catalogue; the summary on the right updates as you type.'}</p>
+        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Blocks of timed or manual movements with targets, in any of the six formats. Type a movement to pick it from your catalogue; the summary on the right updates as you type.'}</p>
       </div>
     </div>
 
@@ -226,7 +226,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
           </details>
         </section>
 
-        <ol className={styles.sections} aria-label="Sections">
+        <ol className={styles.sections} aria-label="Blocks">
           {draft.sections.map((section, s) => {
             const manual = MANUAL_FORMATS.includes(section.format);
             const list = LIST_FORMATS.includes(section.format);
@@ -237,17 +237,17 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
             const after = afterOf(section);
             return <Fragment key={s}><li className={styles.card}>
               <div className={styles.sectionTop}>
-                <span className={shared.eyebrow}>SECTION {s + 1} OF {draft.sections.length}</span>
+                <span className={shared.eyebrow}>BLOCK {s + 1} OF {draft.sections.length}</span>
                 <div className={styles.toolbar}>
-                  <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} up`} disabled={s === 0} onClick={() => update({ sections: move(draft.sections, s, s - 1) })}><Icon name="previous" size={16} /></button>
-                  <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} down`} disabled={s === draft.sections.length - 1} onClick={() => update({ sections: move(draft.sections, s, s + 1) })}><Icon name="next" size={16} /></button>
-                  <button type="button" className={shared.quietButton} aria-label={`Duplicate section ${s + 1}`} onClick={() => update({ sections: [...draft.sections.slice(0, s + 1), structuredClone(section), ...draft.sections.slice(s + 1)] })}><Icon name="copy" size={15} />Duplicate</button>
-                  <button type="button" className={shared.quietButton} aria-label={`Delete section ${s + 1}`} disabled={draft.sections.length === 1} onClick={() => update({ sections: draft.sections.filter((_, i) => i !== s) })}><Icon name="trash" size={15} />Delete</button>
+                  <button type="button" className={shared.iconButton} aria-label={`Move block ${s + 1} up`} disabled={s === 0} onClick={() => update({ sections: move(draft.sections, s, s - 1) })}><Icon name="previous" size={16} /></button>
+                  <button type="button" className={shared.iconButton} aria-label={`Move block ${s + 1} down`} disabled={s === draft.sections.length - 1} onClick={() => update({ sections: move(draft.sections, s, s + 1) })}><Icon name="next" size={16} /></button>
+                  <button type="button" className={shared.quietButton} aria-label={`Duplicate block ${s + 1}`} onClick={() => update({ sections: [...draft.sections.slice(0, s + 1), structuredClone(section), ...draft.sections.slice(s + 1)] })}><Icon name="copy" size={15} />Duplicate</button>
+                  <button type="button" className={shared.quietButton} aria-label={`Delete block ${s + 1}`} disabled={draft.sections.length === 1} onClick={() => update({ sections: draft.sections.filter((_, i) => i !== s) })}><Icon name="trash" size={15} />Delete</button>
                 </div>
               </div>
               <div className={styles.row}>
-                <label className={styles.field}>Section title<input value={section.title} maxLength={160} onChange={event => updateSection(s, { title: event.target.value })} aria-invalid={issueFor(`sections.${s}.title`) ? true : undefined} /></label>
-                <label className={styles.field}>Format<select value={section.format} aria-label={`Section ${s + 1} format`} onChange={event => setFormat(s, event.target.value as SectionFormat)}>{SECTION_FORMATS.map(format => <option key={format} value={format} disabled={format === 'youGoIGo' && !pair}>{FORMAT_LABELS[format]}</option>)}</select></label>
+                <label className={styles.field}>Block title<input value={section.title} maxLength={160} onChange={event => updateSection(s, { title: event.target.value })} aria-invalid={issueFor(`sections.${s}.title`) ? true : undefined} /></label>
+                <label className={styles.field}>Format<select value={section.format} aria-label={`Block ${s + 1} format`} onChange={event => setFormat(s, event.target.value as SectionFormat)}>{SECTION_FORMATS.map(format => <option key={format} value={format} disabled={format === 'youGoIGo' && !pair}>{FORMAT_LABELS[format]}</option>)}</select></label>
                 {/* The final section has no tile after it: a rest left there by an older workout stays editable here. */}
                 {last && section.blockRestMs > 0 && <DurationField label="Rest at the end of the workout" value={section.blockRestMs} onChange={blockRestMs => updateSection(s, { blockRestMs })} />}
               </div>
@@ -259,14 +259,14 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
                 {ygig && <><label className={styles.field}>Team rounds (0 = by cap)<input type="number" min={0} max={999} value={section.teamRounds} onChange={event => updateSection(s, { teamRounds: Number(event.target.value) })} /></label><DurationField label="Fixed turn (optional)" value={section.turnMs} allowEmpty onChange={turnMs => updateSection(s, { turnMs })} /></>}
               </div>}
               {/* Slot level first, then round level. What happens at the section's edges is the tile between sections (BLD-14). */}
-              {!list && <div className={styles.row} role="group" aria-label={`Section ${s + 1} movement settings`}>
+              {!list && <div className={styles.row} role="group" aria-label={`Block ${s + 1} movement settings`}>
                 {section.format === 'timedCircuit' && <label className={styles.field}>Repeat each movement<input type="number" min={1} max={999} value={section.slotRepeats} onChange={event => updateSection(s, { slotRepeats: Number(event.target.value) })} /></label>}
                 {section.format === 'timedCircuit' && section.slotRepeats > 1 && <DurationField label="Rest within repeats" value={section.slotRepeatRestMs} onChange={slotRepeatRestMs => updateSection(s, { slotRepeatRestMs })} />}
                 <DurationField label={manual ? 'Rest between movements' : 'Transition between movements'} value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
                 {/* Older workouts can end every round with a transition after the last slot. It is kept and shown only while it is set. */}
               </div>}
-              {!list && <div className={styles.row} role="group" aria-label={`Section ${s + 1} ${section.format === 'strength' ? 'set' : 'round'} settings`}>
-                <label className={styles.field}>{roundsWord}<input type="number" min={1} max={999} value={section.rounds} aria-label={`Section ${s + 1} ${roundsWord.toLowerCase()}`} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>
+              {!list && <div className={styles.row} role="group" aria-label={`Block ${s + 1} ${section.format === 'strength' ? 'set' : 'round'} settings`}>
+                <label className={styles.field}>{roundsWord}<input type="number" min={1} max={999} value={section.rounds} aria-label={`Block ${s + 1} ${roundsWord.toLowerCase()}`} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>
                 {section.rounds > 1 && <DurationField label={`Rest between ${roundsWord.toLowerCase()}`} value={section.betweenRoundsRestMs} onChange={betweenRoundsRestMs => updateSection(s, { betweenRoundsRestMs })} />}
                 {section.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={section.alternate} onChange={event => updateSection(s, { alternate: event.target.checked })} />Swap A/B tasks each round</label>}
               </div>}
@@ -277,7 +277,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
                   {laneCell(s, i, 'A', slot)}
                   {pair && !ygig && laneCell(s, i, 'B', slot)}
                   {!manual && <td><DurationField label="" id={`s${s}-slot${i}-duration`} value={slot.durationMs} min={1000} onChange={durationMs => updateSlot(s, i, { durationMs })} /></td>}
-                  {pair && standalone && <td><select aria-label={`Section ${s + 1} movement ${i + 1} completion`} value={slot.completion ?? 'team'} onChange={event => updateSlot(s, i, { completion: event.target.value as BuilderSlot['completion'] })}><option value="team">One Done</option><option value="both">Both tap Done</option></select></td>}
+                  {pair && standalone && <td><select aria-label={`Block ${s + 1} movement ${i + 1} completion`} value={slot.completion ?? 'team'} onChange={event => updateSlot(s, i, { completion: event.target.value as BuilderSlot['completion'] })}><option value="team">One Done</option><option value="both">Both tap Done</option></select></td>}
                   <td><div className={styles.toolbar}>
                     <button type="button" className={shared.iconButton} aria-label={`Move movement ${i + 1} up`} disabled={i === 0} onClick={() => updateSection(s, { slots: move(section.slots, i, i - 1) })}><Icon name="previous" size={15} /></button>
                     <button type="button" className={shared.iconButton} aria-label={`Move movement ${i + 1} down`} disabled={i === section.slots.length - 1} onClick={() => updateSection(s, { slots: move(section.slots, i, i + 1) })}><Icon name="next" size={15} /></button>
@@ -287,13 +287,13 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
                 </tr>)}</tbody>
               </table>
               <button type="button" className={shared.quietButton} onClick={() => updateSection(s, { slots: [...section.slots, emptySlot(draft.participants)] })}><Icon name="arrow" size={15} />Add movement</button>
-            </li>{!last && <li className={transition.tile} role="group" aria-label={`Between section ${s + 1} and ${s + 2}`}>
-              <label className={styles.field}>Then<select aria-label={`After section ${s + 1}`} value={after} onChange={event => setAfter(s, event.target.value as AfterSection)}>{(Object.keys(AFTER_LABELS) as AfterSection[]).filter(item => item !== 'restReady' || after === 'restReady').map(item => <option key={item} value={item}>{AFTER_LABELS[item]}</option>)}</select></label>
+            </li>{!last && <li className={transition.tile} role="group" aria-label={`Between block ${s + 1} and ${s + 2}`}>
+              <label className={styles.field}>Then<select aria-label={`After block ${s + 1}`} value={after} onChange={event => setAfter(s, event.target.value as AfterSection)}>{(Object.keys(AFTER_LABELS) as AfterSection[]).filter(item => item !== 'restReady' || after === 'restReady').map(item => <option key={item} value={item}>{AFTER_LABELS[item]}</option>)}</select></label>
               {(after === 'rest' || after === 'restReady') && <DurationField label="Rest" value={section.blockRestMs} min={1000} onChange={blockRestMs => updateSection(s, { blockRestMs })} />}
             </li>}</Fragment>;
           })}
         </ol>
-        <button type="button" className={shared.quietButton} onClick={() => update({ sections: [...draft.sections, emptySection(draft.participants)] })}><Icon name="arrow" size={15} />Add section</button>
+        <button type="button" className={shared.quietButton} onClick={() => update({ sections: [...draft.sections, emptySection(draft.participants)] })}><Icon name="arrow" size={15} />Add block</button>
       </div>
 
       <aside className={styles.summary} aria-label="Summary">

@@ -6,7 +6,7 @@ test.describe('static settings', () => {
     await page.goto('/#/settings/general');
     const card = page.getByRole('region', { name: 'This browser' });
     await expect(card).toContainText('live in this browser’s storage (IndexedDB) on this device');
-    await expect(fact(card, 'Library format')).toHaveText('Version 2');
+    await expect(fact(card, 'Library format')).toHaveText('Version 3');
     await expect(fact(card, 'Saved workouts')).toHaveText('0');
     await expect(fact(card, 'Sessions')).toHaveText('0');
     await expect(fact(card, 'Storage used')).not.toHaveText('');

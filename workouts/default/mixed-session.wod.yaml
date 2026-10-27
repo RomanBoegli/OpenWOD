@@ -5,7 +5,7 @@ workout:
   id: mixed-session
   revision: 1
   title: Mixed session
-  description: Three minutes of timed warm-up, three sets of deadlifts at your own pace with ninety seconds between, then a ten-minute AMRAP of kettlebell swings, box step-ups and sit-ups. You press Ready between the three sections.
+  description: Three minutes of timed warm-up, three sets of deadlifts at your own pace with ninety seconds between, then a ten-minute AMRAP of kettlebell swings, box step-ups and sit-ups. You press Ready between the three blocks.
   attribution:
     author: OpenWOD
   equipment:

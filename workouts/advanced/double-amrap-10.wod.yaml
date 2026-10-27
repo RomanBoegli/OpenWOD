@@ -5,7 +5,7 @@ workout:
   id: double-amrap-10
   revision: 1
   title: Double AMRAP 10
-  description: Two ten-minute AMRAPs of row, toes-to-bar, front squats and burpees over the bar, scored as rounds plus reps. Rest two minutes between the two, then tap Ready. Aim to match the first score in the second section.
+  description: Two ten-minute AMRAPs of row, toes-to-bar, front squats and burpees over the bar, scored as rounds plus reps. Rest two minutes between the two, then tap Ready. Aim to match the first score in the second block.
   attribution:
     author: Coach programming, shared in a members chat
     notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.

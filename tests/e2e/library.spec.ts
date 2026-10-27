@@ -38,8 +38,8 @@ test.describe('library', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__openwodTest!.advance(310_000));
-    await expect(page.getByRole('status')).toHaveText('Next section · ready?');
-    await page.getByRole('button', { name: 'Start next section' }).click();
+    await expect(page.getByRole('status')).toHaveText('Next block · ready?');
+    await page.getByRole('button', { name: 'Start next block' }).click();
     await expect(page.getByTestId('movement-A')).toHaveText('Air squats');
     await page.evaluate(() => window.__openwodTest!.advance(240_000));
     await expect(page.getByTestId('movement-A')).toHaveText('Dumbbell thrusters');

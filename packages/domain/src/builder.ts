@@ -104,11 +104,11 @@ export function validateDraft(draft: BuilderDraft): BuilderIssue[] {
   const issues: BuilderIssue[] = [];
   if (!draft.title.trim()) issues.push({ path: 'title', message: 'Give the workout a title.' });
   if (!Number.isInteger(draft.prepMs) || draft.prepMs < 0 || draft.prepMs > 60_000) issues.push({ path: 'prepMs', message: 'Prep is 0 to 60 seconds.' });
-  if (!draft.sections.length) issues.push({ path: 'sections', message: 'Add at least one section.' });
+  if (!draft.sections.length) issues.push({ path: 'sections', message: 'Add at least one block.' });
   const pair = draft.participants === 2;
   draft.sections.forEach((section, s) => {
     const at = `sections.${s}`;
-    const name = `Section ${s + 1}`;
+    const name = `Block ${s + 1}`;
     if (!section.title.trim()) issues.push({ path: `${at}.title`, message: `${name} needs a title.` });
     if (!isList(section.format) && (!Number.isInteger(section.rounds) || section.rounds < 1 || section.rounds > 999)) issues.push({ path: `${at}.rounds`, message: `${name}: rounds must be 1 to 999.` });
     if (section.format === 'timedCircuit' && (!Number.isInteger(section.slotRepeats) || section.slotRepeats < 1 || section.slotRepeats > 999)) issues.push({ path: `${at}.slotRepeats`, message: `${name}: repeats per movement must be 1 to 999.` });

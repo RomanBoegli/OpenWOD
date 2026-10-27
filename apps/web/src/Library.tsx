@@ -240,7 +240,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
           {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
           <dl className={styles.facts}>
             <div><dt>Total</dt><dd>{durationLabel(summary)}</dd></div>
-            <div><dt>Sections</dt><dd>{summary.sections}</dd></div>
+            <div><dt>Blocks</dt><dd>{summary.sections}</dd></div>
             <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
           </dl>
           <div className={styles.tags}>

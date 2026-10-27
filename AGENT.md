@@ -117,7 +117,8 @@ HYROX combines eight 1 km runs with eight intervening functional stations. The a
 | Run/station sequence | Usually count-up with manually acknowledged distances and reps. | Current run/station, target, next station, total elapsed and optional split. |
 | Strength or skill | Manual set completion, optionally followed by timed rest. | Movement, load, reps, set number; no inferred lifting tempo. |
 
-A **round** repeats a specified block. An **interval** is a scheduled time window. A **turn** is one athlete's work unit before handoff. An **exercise** is a movement definition. An **activity** is its prescription in this workout. A **section** groups work such as warm-up, strength, conditioning, or cooldown. Labels must not use these words interchangeably.
+A **round** repeats a set of movements. An **interval** is a scheduled time window. A **turn** is one athlete's work unit before handoff. An **exercise** is a movement definition. An **activity** is its prescription in this workout. A **section** groups work such as warm-up, strength, conditioning, or cooldown. Labels must not use these words interchangeably.
+The interface calls a section a block, while the code and the file format keep `section`.
 
 # 5 Functional requirements for authoring and the library
 
@@ -858,10 +859,12 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
   The full-body partner has a 0:20 rest between rounds and exactly the 2:00 its description names between sections, which then continue on their own, so it runs 48:40 instead of 50:00.
   HYROX doubles is now four sections (Run 1, Stations 1, Run 2, Stations 2), each run continuing straight into its stations, so the editor can open it, and it waits for Ready after Stations 1 without a rest first; it runs 13:30 instead of 14:00.
   The registry rule in `workouts/README.md` now reads Wait for Ready unless the workout prescribes a rest or a straight continuation, and never both a rest and a Ready gate.
-  The descriptions use the editor's words: section instead of block, part or half, movement instead of station outside the HYROX workouts, and A and B swap instead of task columns.
+  The descriptions use the interface's words: block instead of section, part or half, movement instead of station outside the HYROX workouts, and A and B swap instead of task columns.
   SkiErg is spoken "Ski air", for the device voice at once and for the recorded clips from the next image build.
   The editor's time fields are mm:ss fields that step with the wheel and the arrow keys, and Duplicate buttons use the copy icon.
   The editor and its messages say "movement" for every format, never "slot", while the code and the file format keep `slot`.
+- The interface calls a section a block: the editor's cards and buttons, the transition tiles, the overview, the player's progress line and controls, and the editor's messages say block, while the code, the API and the file format keep `section`.
+  The bundled descriptions follow and say block where the item above still says section.
 - Bundled workouts are edited, duplicated and removed like saved ones (DAT-13).
   The first edit saves a saved workout under the bundled id, at the bundled revision plus one, with its own sharing identity derived from the bundled one.
   Removing a bundled workout adds its id to `hiddenWorkouts` in master data, an optional field so a device on an older build can still write the document.

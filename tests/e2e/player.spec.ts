@@ -68,13 +68,13 @@ test.describe('player', () => {
     await page.goto('/#/wod/full-body-partner/play'); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__openwodTest!.advance(30_000));
-    await page.getByRole('button', { name: 'Next section' }).click();
-    await expect(page.getByRole('button', { name: 'Start next section' })).toBeVisible(); // The skipped section's Ready gate.
+    await page.getByRole('button', { name: 'Next block' }).click();
+    await expect(page.getByRole('button', { name: 'Start next block' })).toBeVisible(); // The skipped section's Ready gate.
     await expect(page.getByText('MODIFIED')).toBeVisible();
     await page.waitForTimeout(400);
-    await page.getByRole('button', { name: 'Previous section' }).click();
+    await page.getByRole('button', { name: 'Previous block' }).click();
     await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Restart section' })).toBeVisible(); // Back at the first section.
+    await expect(page.getByRole('button', { name: 'Restart block' })).toBeVisible(); // Back at the first section.
     await page.goto('/#/wod/fran/play'); await ready(page);
     await page.getByRole('button', { name: 'Context' }).click();
     const rows = page.getByRole('main').locator('[aria-current], [data-active]');
@@ -184,10 +184,10 @@ test.describe('overview', () => {
     await page.goto('/#/wod/full-body-partner');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
     // Between the section cards, a tile tells what follows each section (BLD-14).
-    const sections = page.getByRole('list', { name: 'Sections' }).getByRole('listitem').filter({ hasText: /Section \d of 6/i });
+    const sections = page.getByRole('list', { name: 'Blocks' }).getByRole('listitem').filter({ hasText: /Block \d of 6/i });
     await expect(sections).toHaveCount(6);
-    await expect(page.getByRole('list', { name: 'Sections' }).getByRole('listitem', { name: /^Between section/ })).toHaveCount(5);
-    await expect(page.getByRole('listitem', { name: 'Between section 2 and 3' })).toContainText('Rest 02:00, then continues');
+    await expect(page.getByRole('list', { name: 'Blocks' }).getByRole('listitem', { name: /^Between block/ })).toHaveCount(5);
+    await expect(page.getByRole('listitem', { name: 'Between block 2 and 3' })).toContainText('Rest 02:00, then continues');
     const block = sections.nth(1);
     await expect(block).toContainText('Legs & strength');
     await expect(block).toContainText('Round 1 of 2');
@@ -197,7 +197,7 @@ test.describe('overview', () => {
     await expect(firstRows.nth(1)).toContainText('Dumbbell thrusters');
     await expect(block.getByRole('table').nth(1).getByRole('row').nth(1)).toContainText('Dumbbell thrusters');
     await page.goto('/#/wod/partner-circuit');
-    await expect(page.getByRole('list', { name: 'Sections' }).getByRole('listitem').first()).toContainText('Rounds 1–5 of 5');
+    await expect(page.getByRole('list', { name: 'Blocks' }).getByRole('listitem').first()).toContainText('Rounds 1–5 of 5');
     await expect(page.getByText('1m rest between rounds')).toBeVisible();
     await expect(page.getByLabel('Projected difficulty: Hard')).toBeVisible();
     await page.getByRole('link', { name: 'Start workout' }).click();
@@ -205,7 +205,7 @@ test.describe('overview', () => {
     expect(page.url()).toContain('#/wod/partner-circuit/play');
     await expect(page.getByRole('status')).toHaveText('Ready when you are');
     await page.getByRole('link', { name: 'Back to workout overview' }).click();
-    await expect(page.getByRole('list', { name: 'Sections' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Blocks' })).toBeVisible();
   });
 });
 
@@ -232,8 +232,8 @@ test.describe('formats', () => {
     await expect(page.getByRole('list', { name: 'AMRAP block' }).getByRole('listitem')).toHaveCount(3);
     await advance(page, 1_140_000);
     await expect(page.getByRole('status')).toHaveText('Workout complete');
-    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('2 rounds');
-    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('capped');
+    await expect(page.getByRole('list', { name: 'Block results' })).toContainText('2 rounds');
+    await expect(page.getByRole('list', { name: 'Block results' })).toContainText('capped');
   });
 
   test('EMOM keeps its boundaries whatever is tapped and shows rest after an early Done', async ({ page }) => {
@@ -277,7 +277,7 @@ test.describe('formats', () => {
     await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('9');
     await page.getByTestId('done').click();
     await expect(page.getByRole('status')).toHaveText('Workout complete');
-    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('completed');
+    await expect(page.getByRole('list', { name: 'Block results' })).toContainText('completed');
   });
 
   test('You go, I go hands over on Switch and ignores a rapid second tap', async ({ page }) => {
@@ -295,7 +295,7 @@ test.describe('formats', () => {
     await expect(page.getByText('TEAM ROUND 2 · TURN 3')).toBeVisible();
     await advance(page, 720_000);
     await expect(page.getByRole('status')).toHaveText('Workout complete');
-    await expect(page.getByRole('list', { name: 'Section results' })).toContainText('1 team round');
+    await expect(page.getByRole('list', { name: 'Block results' })).toContainText('1 team round');
   });
 
   test('the library filters by format and by the equipment you own', async ({ page }) => {
