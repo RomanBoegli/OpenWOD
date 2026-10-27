@@ -16,7 +16,7 @@ test.describe('static backup', () => {
     expect(file.suggestedFilename()).toMatch(/^openwod-backup-\d{4}-\d{2}-\d{2}\.json$/);
     const text = await readFile(await file.path() as string, 'utf8');
     const backup = JSON.parse(text) as { format: string; formatVersion: number; schemaVersion: number; workouts: { id: string }[] };
-    expect(backup).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 2 });
+    expect(backup).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 3 });
     expect(backup.workouts.map(workout => workout.id)).toEqual(['community-circuit']);
 
     // Another browser profile: its own empty library until the file comes back.

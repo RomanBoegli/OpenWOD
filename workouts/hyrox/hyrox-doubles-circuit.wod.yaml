@@ -42,11 +42,11 @@ workout:
             type: repeat
             count: 2
             assignmentPolicy: alternate
+            betweenIterationsRest: 15s
             body:
               id: doubles-1-stations
               type: sequence
               betweenChildrenRest: 15s
-              trailingRest: 15s
               children:
                 - id: doubles-1-skierg
                   type: timed
@@ -92,6 +92,10 @@ workout:
                           unit: kg
                     B:
                       name: Burpee broad jumps
+          - id: doubles-1-rest
+            type: rest
+            duration: 15s
+            kind: blockRest
     - id: doubles-2
       title: Block 2
       format: timedCircuit
@@ -112,11 +116,11 @@ workout:
             type: repeat
             count: 2
             assignmentPolicy: alternate
+            betweenIterationsRest: 15s
             body:
               id: doubles-2-stations
               type: sequence
               betweenChildrenRest: 15s
-              trailingRest: 15s
               children:
                 - id: doubles-2-row
                   type: timed

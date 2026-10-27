@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { displayTime, warningLevel, washDrain } from '../../../../packages/engine/src';
+import { displayTime, warningLevel, washDrain, washMorph } from '../../../../packages/engine/src';
 import { Icon } from '../Icon';
 import shared from '../App.module.css';
 import styles from './TimerPreview.module.css';
@@ -49,10 +49,11 @@ export function TimerPreview({ view, ringWidth, washGain, amberMs, redMs, colors
     frame.current = requestAnimationFrame(tick);
   };
 
-  // The same overlay as the player, fed the same numbers: the gain and floor from the settings and the drain of the running slot.
-  // At rest the overlay sits at its full gain so the slider has a visible effect; a run climbs to it within each colour segment.
-  const drained = phase === 'work' ? washDrain(remainingMs, slotMs, { amberMs, redMs }) : phase === 'idle' ? 1 : 0;
-  const style = { '--ring': `${ringWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), '--drained': drained.toFixed(3), ...(colors.first ? { '--phase-amber': colors.first } : {}), ...(colors.second ? { '--phase-red': colors.second } : {}) } as CSSProperties;
+  // The same overlay as the player, fed the same numbers: the gain and floor from the settings, the drain of the running slot and the colour morph at the marks.
+  // At rest the overlay sits at its full gain so the slider has a visible effect; a run climbs to it once over the slot while the marks only change the colour.
+  const drained = phase === 'work' ? washDrain(remainingMs, slotMs) : phase === 'idle' ? 1 : 0;
+  const morph = phase === 'work' ? washMorph(remainingMs, slotMs, { amberMs, redMs }) : { amber: 0, red: 0 };
+  const style = { '--ring': `${ringWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), '--drained': drained.toFixed(3), '--to-amber': morph.amber.toFixed(3), '--to-red': morph.red.toFixed(3), ...(colors.first ? { '--phase-amber': colors.first } : {}), ...(colors.second ? { '--phase-red': colors.second } : {}) } as CSSProperties;
   const time = phase === 'idle' ? displayTime(slotMs) : phase === 'complete' ? '00:00' : displayTime(remainingMs);
   return <div className={styles.wrap}>
     <div className={`${shared.wash} ${styles.panel}`} data-view={view} data-phase={phase} data-warning={warning} data-clock-weight={clockWeight} data-clock-size={clockSize} style={style} aria-hidden="true">

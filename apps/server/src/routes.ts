@@ -15,6 +15,7 @@ import type { PackDecision, Store } from './store';
 
 const LARGE_BODY = 4 * 1_048_576;
 const STAMP = Type.String({ minLength: 10, maxLength: 40 });
+const SESSION_ID_MAX = 120;
 
 const SETTINGS_BYTES = 64 * 1024;
 const SettingsBody = Type.Object({ document: Type.Record(Type.String({ maxLength: 60 }), Type.Unknown()) }, { additionalProperties: false });
@@ -135,6 +136,13 @@ export function registerRoutes(app: FastifyInstance, { storeOf, version }: Route
     const workout = workoutDocument(record.workout);
     const stored = need(request).putSession({ ...record, workout });
     return reply.code(stored === 'created' ? 201 : 200).send({ id: record.id, stored });
+  });
+  /** Deletes a session and its score corrections for good (DAT-14). Idempotent: a repeat, or an id not stored yet, also answers 204. */
+  app.delete<{ Params: { id: string } }>('/api/v1/sessions/:id', async (request, reply) => {
+    const { id } = request.params;
+    if (!id || id.length > SESSION_ID_MAX) throw new ApiError(400, 'VALIDATION_FAILED', `A session id has 1 to ${SESSION_ID_MAX} characters.`, '/id');
+    need(request).deleteSession(id);
+    return reply.code(204).send();
   });
   app.patch<{ Params: { id: string } }>('/api/v1/sessions/:id/results', async request => {
     const { results, note } = body(validators.correction, request.body, 'correction');

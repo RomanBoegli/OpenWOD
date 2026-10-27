@@ -51,7 +51,7 @@ describe('the workout registry (workouts/**)', () => {
     expect(compileWorkout(bundledWorkout('fight-gone-bad')).durationMs).toBe(3 * 300_000 + 2 * 60_000); // 17:00
     expect(compileWorkout(bundledWorkout('row-burpee-emom-20')).durationMs).toBe(20 * 60_000); // 20:00
     expect(compileWorkout(bundledWorkout('hyrox-pace-intervals')).durationMs).toBe(8 * 180_000 + 8 * 120_000 + 15 * 30_000); // 47:30
-    expect(compileWorkout(bundledWorkout('hyrox-doubles-circuit')).durationMs).toBe(2 * (180_000 + 2 * (2 * 45_000 + 2 * 15_000))); // 14:00
+    expect(compileWorkout(bundledWorkout('hyrox-doubles-circuit')).durationMs).toBe(2 * (180_000 + 2 * (2 * 45_000 + 15_000) + 15_000) + 15_000); // 13:45
     expect(compileWorkout(bundledWorkout('hyrox-engine-emom-24')).durationMs).toBe(24 * 60_000); // 24:00
     for (const id of ['partner-circuit', 'full-body-partner', 'tabata-this', 'fight-gone-bad', 'row-burpee-emom-20', 'hyrox-pace-intervals', 'hyrox-doubles-circuit', 'hyrox-engine-emom-24']) expect(compileWorkout(bundledWorkout(id)).durationKind, id).toBe('exact');
   });

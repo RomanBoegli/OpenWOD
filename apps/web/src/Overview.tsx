@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { formatDuration } from '../../../packages/domain/src';
 import { compileWorkout, type Phase } from '../../../packages/domain/src/compiler';
-import { outlineWorkout } from '../../../packages/domain/src/outline';
+import { outlineWorkout, type OutlineSection } from '../../../packages/domain/src/outline';
 import type { Workout } from '../../../packages/domain/src/schema';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
@@ -9,10 +9,9 @@ import { LoadLevels } from './LevelChip';
 import { AthletesChip, Chip, FormatChips } from './Chip';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import type { Collection } from './master-data';
-import { agoText } from './session-log';
+import { agoText, sessionScore } from './session-log';
 import { DATA_MODE } from './data/mode';
 import type { SessionView } from './data/use-library-data';
-import { resultText } from './Player';
 import { displayTime } from '../../../packages/engine/src';
 import type { LibraryEntry } from './Library';
 import { copyHref, editHref, playHref } from './router';
@@ -21,9 +20,17 @@ import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
 import styles from './Overview.module.css';
 import shared from './App.module.css';
+import transition from './Transition.module.css';
 
 const REST_NAMES: Record<Phase, string> = { work: 'work', transition: 'transition', roundRest: 'round rest', blockRest: 'block rest' };
 const restText = (segments: { kind: Phase; ms: number }[]) => segments.map(segment => `${formatDuration(segment.ms)} ${REST_NAMES[segment.kind]}`).join(' + ');
+
+/** What happens after a section (BLD-14), as the tile between two section cards says it. */
+function transitionText(section: OutlineSection): string {
+  const rest = section.restAfterMs ? `Rest ${displayTime(section.restAfterMs)}, then ` : '';
+  if (section.transitionAfter === 'manualReady') return rest ? `${rest}wait for Ready` : 'Wait for Ready';
+  return rest ? `${rest}continues` : 'Continues straight away';
+}
 
 interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionView[]; loadsFor: { A: Sex; B: Sex }; loadUnit: LoadUnit; onRemove: (id: string) => void; onExport: (workout: Workout) => void }
 
@@ -76,10 +83,10 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     </dl>
 
     <ol className={styles.sections} aria-label="Sections">
-      {sections.map((section, index) => <li key={section.id} className={styles.section}>
+      {sections.map((section, index) => <Fragment key={section.id}><li className={styles.section}>
         <div className={styles.sectionHeading}>
           <div><span className={shared.eyebrow}>SECTION {index + 1} OF {sections.length} <span>/</span> {FORMAT_LABELS[section.format].toUpperCase()}</span><h2>{section.title}</h2></div>
-          <div className={styles.sectionFacts}><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span>{section.emom && <span>{section.emom.intervals} × {formatDuration(section.emom.intervalMs)}</span>}{section.youGoIGo?.rounds && <span>{section.youGoIGo.rounds} team rounds</span>}{section.youGoIGo?.turnMs && <span>{formatDuration(section.youGoIGo.turnMs)} per turn</span>}<span>{index < sections.length - 1 ? section.transitionAfter === 'manualReady' ? 'Then wait for Ready' : 'Then continues automatically' : 'Final section'}</span></div>
+          <div className={styles.sectionFacts}><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span>{section.emom && <span>{section.emom.intervals} × {formatDuration(section.emom.intervalMs)}</span>}{section.youGoIGo?.rounds && <span>{section.youGoIGo.rounds} team rounds</span>}{section.youGoIGo?.turnMs && <span>{formatDuration(section.youGoIGo.turnMs)} per turn</span>}{index === sections.length - 1 && <span>{section.restAfterMs ? `Final section · then ${formatDuration(section.restAfterMs)} rest` : 'Final section'}</span>}</div>
         </div>
         {section.leadingRest.length > 0 && <p className={styles.restNote}>Starts with {restText(section.leadingRest)}.</p>}
         {section.rounds.map((round, roundIndex) => <div key={roundIndex} className={styles.round}>
@@ -96,7 +103,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
           </table>
           {round.restAfter.length > 0 && <p className={styles.restNote}>Then {restText(round.restAfter)}.</p>}
         </div>)}
-      </li>)}
+      </li>{index < sections.length - 1 && <li className={transition.tile} aria-label={`Between section ${index + 1} and ${index + 2}`}><span>Then</span><span>{transitionText(section)}</span></li>}</Fragment>)}
     </ol>
 
     <div className={styles.lists}>
@@ -111,7 +118,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     </div>
     {sessions.length > 0 && <section className={styles.history} aria-label="Past sessions">
       <h2>Past sessions</h2>
-      <ul>{sessions.slice(0, 10).map(session => <li key={session.id}><span>{new Date(session.finishedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{session.outcome === 'completed' ? 'Completed' : session.outcome === 'capped' ? 'Capped' : `Ended at ${Math.round(session.completion * 100)} %`}{session.interrupted ? ' · interrupted' : ''} · {displayTime(session.activeMs, 'floor')} active</span><span>{session.results.map(result => resultText(result)).join(' · ')}</span></li>)}</ul>
+      <ul>{sessions.slice(0, 10).map(session => <li key={session.id}><span>{new Date(session.finishedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{[session.outcome === 'capped' ? 'Capped' : session.outcome === 'aborted' ? `Ended at ${Math.round(session.completion * 100)} %` : '', session.interrupted ? 'Interrupted' : '', `${displayTime(session.activeMs, 'floor')} active`].filter(Boolean).join(' · ')}</span><span>{sessionScore(session)}</span></li>)}</ul>
     </section>}
 
     <ConfirmDialog open={removing} title={`Remove “${summary.title}”?`} confirmLabel="Remove workout" cancelLabel="Keep it" onClose={() => setRemoving(false)} onConfirm={() => { setRemoving(false); onRemove(workout.id); window.location.hash = '#/'; }}>

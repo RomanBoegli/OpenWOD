@@ -12,12 +12,12 @@ import { Overview } from './Overview';
 import { NotFound } from './NotFound';
 import { Editor } from './Editor';
 import { Settings } from './Settings';
-import { History, SnapshotPlayer } from './History';
+import { SnapshotPlayer } from './History';
 import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } from '../../../packages/domain/src/builder';
 import { copyDraftId, copySource, freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
 import { allCollections, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
-import { draftHref, HISTORY_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
+import { draftHref, LOGBOOK_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
 import { Icon } from './Icon';
 import { BrandMark } from './BrandMark';
@@ -186,7 +186,7 @@ export default function App() {
   // Until the probe for this checkpoint has answered, the lock is unknown and the player must not mount (it would take the lock itself).
   const lockKnown = recovery ? (lockState?.sessionId === recovery.checkpoint.sessionId ? lockState.state : 'checking') : 'free';
   const takeOver = async () => { if (!recovery) return; await takeOverSession(recovery.checkpoint.sessionId); await data.refreshRecoveries(); setLockState({ sessionId: recovery.checkpoint.sessionId, state: 'free' }); };
-  const current = route.name === 'copy' ? entries.find(entry => entry.workout.id === route.id) : route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
+  const current = route.name === 'copy' ? entries.find(entry => entry.workout.id === route.id) : route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
   const importedDraft = route.name === 'draft' ? drafts.find(draft => draft.id === route.id) : undefined;
   // Editor inputs: a resumed draft wins; otherwise the workout itself, or a titled copy for Duplicate.
   const editing = route.name === 'new' ? { id: NEW_DRAFT_ID, mode: 'create' as const, initial: drafts.find(draft => draft.id === NEW_DRAFT_ID)?.draft ?? emptyDraft(2) }
@@ -207,7 +207,7 @@ export default function App() {
   const pendingCount = data.pendingIds.size;
   // The running server's version when known (that is what is deployed), else the version this bundle was built from.
   const appVersion = data.serverVersion ?? __OPENWOD_VERSION__;
-  const backTarget = current && (route.name === 'play' || route.name === 'edit' || route.name === 'copy') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'history' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
+  const backTarget = current && (route.name === 'play' || route.name === 'edit' || route.name === 'copy') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
 
   return <div className={styles.app} data-performing={performing}>
     <header className={styles.header}>
@@ -218,7 +218,7 @@ export default function App() {
           <Icon name={data.connection === 'online' ? 'upload' : 'alert'} size={14} />{data.connection === 'offline' ? 'Offline' : data.connection === 'unreachable' ? 'Server unreachable' : 'Syncing'}{pendingCount > 0 && ` · ${pendingCount} ${pendingCount === 1 ? 'change' : 'changes'} waiting`}
         </span>}
         <button className={styles.quietButton} onClick={() => void audio.test()} disabled={preferences.soundMode === 'silent'}><Icon name="sound" /><span>Test sound</span></button>
-        <a className={styles.iconButton} aria-label="History" href={HISTORY_HREF}><Icon name="clock" /></a>
+        <a className={styles.iconButton} aria-label="Logbook" href={LOGBOOK_HREF}><Icon name="clock" /></a>
         <a className={styles.iconButton} aria-label="Settings" href={SETTINGS_HREF}><Icon name="settings" /></a>
       </div>
     </header>
@@ -229,8 +229,7 @@ export default function App() {
         : route.name === 'play' && recovery && lockKnown === 'held' ? <section className={styles.recovery} role="region" aria-label="Session in another tab"><div><strong>“{recovery.checkpoint.workout.title}” is running in another tab.</strong><p>Only one tab controls a session. Take it over here and the other tab pauses and hands over, or go back and use that tab.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href={workoutHref(recovery.checkpoint.workoutId)}>Back to overview</a><button className={styles.primaryButton} onClick={() => void takeOver()}><Icon name="play" />Take over here</button></div></section>
         : route.name === 'play' && (recovery || current) ? <Player key={route.id} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
-        : route.name === 'history' ? <History mode={data.mode} sessions={sessions} entries={entries} onCorrect={data.correctSession} onLoadMore={data.loadMoreSessions} fetchSession={data.fetchSession} />
-        : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} />
+        : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} logbook={{ sessions, onCorrect: data.correctSession, onDelete: data.deleteSession, onLoadMore: data.loadMoreSessions, fetchSession: data.fetchSession }} />
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
         : (route.name === 'edit' || route.name === 'copy') && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>

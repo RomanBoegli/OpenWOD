@@ -63,8 +63,9 @@ export function RestoreFromBackup({ mode, disabled, onRestore, onMessage }: Rest
     try {
       const report = await onRestore(value);
       const pruned = report.pruned ? ` The oldest ${plural(report.pruned, 'session')} did not fit: this browser keeps the newest ${STATIC_SESSION_LIMIT}.` : '';
+      const deleted = report.deleted ? ` ${plural(report.deleted, 'session')} deleted since stayed deleted.` : '';
       const backup = report.backup ? ` The library as it was before is saved as ${report.backup} under /data/backups.` : '';
-      onMessage({ text: `Restored ${contents(report)} from the backup of ${when(report.exportedAt)}.${pruned}${backup}`, tone: 'status' });
+      onMessage({ text: `Restored ${contents(report)} from the backup of ${when(report.exportedAt)}.${pruned}${deleted}${backup}`, tone: 'status' });
     } catch (error) {
       onMessage({ text: `The backup was not restored, the library is unchanged. ${error instanceof Error ? error.message : String(error)}`, tone: 'alert' });
     } finally { setBusy(false); }

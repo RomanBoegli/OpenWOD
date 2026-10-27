@@ -2,12 +2,13 @@
  * IndexedDB for what must survive a reload on this device (DAT-02): session checkpoints and progress records, the
  * outbox of writes still to reach the server, a read cache of the household data for instant and offline boot, and
  * small metadata. Version 2 adds the household itself for the static shape (local-backend.ts): workouts, the master
- * data row and sessions with their corrections. Every failure surfaces as StorageUnavailableError; callers decide
+ * data row and sessions with their corrections. Version 3 adds `deletedSessions`, the tombstones of deleted session
+ * ids (DAT-14), and changes nothing else. Every failure surfaces as StorageUnavailableError; callers decide
  * what that means for the user.
  */
 export const IDB_NAME = 'openwod';
-export const IDB_VERSION = 2;
-export type HouseholdStoreName = 'workouts' | 'master' | 'sessions';
+export const IDB_VERSION = 3;
+export type HouseholdStoreName = 'workouts' | 'master' | 'sessions' | 'deletedSessions';
 export type StoreName = 'checkpoints' | 'progress' | 'outbox' | 'cache' | 'meta' | HouseholdStoreName;
 
 export class StorageUnavailableError extends Error {
@@ -17,7 +18,7 @@ export class StorageUnavailableError extends Error {
 let opening: Promise<IDBDatabase> | undefined;
 
 /**
- * Creates whatever store or index is missing, so every upgrade path (fresh, from 1, a half-finished earlier attempt)
+ * Creates whatever store or index is missing, so every upgrade path (fresh, from 1 or 2, a half-finished earlier attempt)
  * ends in the same shape. Existing stores and their rows are never touched.
  */
 function upgrade(db: IDBDatabase, tx: IDBTransaction | null) {
@@ -31,6 +32,7 @@ function upgrade(db: IDBDatabase, tx: IDBTransaction | null) {
   const sessions = db.objectStoreNames.contains('sessions') ? tx?.objectStore('sessions') : db.createObjectStore('sessions', { keyPath: 'id' });
   if (sessions && !sessions.indexNames.contains('byFinished')) sessions.createIndex('byFinished', 'finishedAt');
   if (sessions && !sessions.indexNames.contains('byWorkout')) sessions.createIndex('byWorkout', ['workoutId', 'finishedAt']);
+  if (!db.objectStoreNames.contains('deletedSessions')) db.createObjectStore('deletedSessions', { keyPath: 'id' });
 }
 
 /** Opens (and upgrades) the database of a factory, uncached. The app goes through openIdb; tests open their own. */

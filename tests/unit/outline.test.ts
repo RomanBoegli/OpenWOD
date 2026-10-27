@@ -23,7 +23,7 @@ describe('workout outline', () => {
     ]);
   });
 
-  it('AT-29: keeps alternating rounds separate and attaches trailing transition and block rest to the last row', () => {
+  it('AT-29: keeps alternating rounds separate, with the rest between rounds after a round and the block rest after the section', () => {
     const sections = outlineWorkout(compileWorkout(fullBodyPartner));
     expect(sections.map(section => section.title)).toEqual(['Warm-up', 'Legs & strength', 'Upper body & arms', 'Abs & core', 'HYROX finisher', 'Cool-down']);
     expect(sections[0].rounds).toHaveLength(1);
@@ -34,10 +34,13 @@ describe('workout outline', () => {
     expect(block.rounds.map(round => round.label)).toEqual(['Round 1 of 2', 'Round 2 of 2']);
     expect(block.rounds[0].rows[0].A?.name).toBe('Air squats');
     expect(block.rounds[1].rows[0].A?.name).toBe('Dumbbell thrusters');
-    expect(block.rounds[0].rows.at(-1)?.restAfter).toEqual([{ kind: 'transition', ms: 20_000 }]);
+    expect(block.rounds[0].rows.at(-1)?.restAfter).toEqual([]);
+    expect(block.rounds[0].roundRestMs).toBe(20_000);
     expect(block.rounds[0].restAfter).toEqual([]);
-    expect(block.rounds[1].rows.at(-1)?.restAfter).toEqual([{ kind: 'transition', ms: 20_000 }]);
-    expect(block.rounds[1].restAfter).toEqual([{ kind: 'blockRest', ms: 120_000 }]);
+    expect(block.rounds[1].rows.at(-1)?.restAfter).toEqual([]);
+    // The block rest is the rest after the section (BLD-14), told once beside the transition.
+    expect(block.rounds[1].restAfter).toEqual([]);
+    expect(block.restAfterMs).toBe(140_000);
   });
 
   it('labels nested repeats with sets and rounds', () => {

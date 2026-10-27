@@ -75,11 +75,11 @@ workout:
             type: repeat
             count: 2
             assignmentPolicy: alternate
+            betweenIterationsRest: 20s
             body:
               id: block-1-stations
               type: sequence
               betweenChildrenRest: 20s
-              trailingRest: 20s
               children:
                 - id: block-1-slot-1
                   type: timed
@@ -157,7 +157,7 @@ workout:
                       name: Alternating lunges
           - id: block-1-rest
             type: rest
-            duration: 2m
+            duration: 2m20s
             kind: blockRest
     - id: block-2
       title: Upper body & arms
@@ -171,11 +171,11 @@ workout:
             type: repeat
             count: 2
             assignmentPolicy: alternate
+            betweenIterationsRest: 20s
             body:
               id: block-2-stations
               type: sequence
               betweenChildrenRest: 20s
-              trailingRest: 20s
               children:
                 - id: block-2-slot-1
                   type: timed
@@ -267,7 +267,7 @@ workout:
                           unit: kg
           - id: block-2-rest
             type: rest
-            duration: 2m
+            duration: 2m20s
             kind: blockRest
     - id: block-3
       title: Abs & core
@@ -281,11 +281,11 @@ workout:
             type: repeat
             count: 2
             assignmentPolicy: alternate
+            betweenIterationsRest: 20s
             body:
               id: block-3-stations
               type: sequence
               betweenChildrenRest: 20s
-              trailingRest: 20s
               children:
                 - id: block-3-slot-1
                   type: timed
@@ -363,7 +363,7 @@ workout:
                           unit: kg
           - id: block-3-rest
             type: rest
-            duration: 2m
+            duration: 2m20s
             kind: blockRest
     - id: block-4
       title: HYROX finisher
@@ -377,11 +377,11 @@ workout:
             type: repeat
             count: 2
             assignmentPolicy: alternate
+            betweenIterationsRest: 20s
             body:
               id: block-4-stations
               type: sequence
               betweenChildrenRest: 20s
-              trailingRest: 20s
               children:
                 - id: block-4-slot-1
                   type: timed
@@ -459,7 +459,7 @@ workout:
                           unit: kg
           - id: block-4-rest
             type: rest
-            duration: 2m
+            duration: 2m20s
             kind: blockRest
     - id: cool-down
       title: Cool-down

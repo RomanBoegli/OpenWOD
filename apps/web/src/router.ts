@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const SETTINGS_SECTIONS = ['general', 'player', 'equipment', 'movements', 'collections'] as const;
+export const SETTINGS_SECTIONS = ['general', 'player', 'equipment', 'movements', 'collections', 'logbook'] as const;
 export type SettingsSection = typeof SETTINGS_SECTIONS[number];
-export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string } | { name: 'copy'; id: string } | { name: 'history' } | { name: 'historyPlay'; id: string } | { name: 'notFound' };
+export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string } | { name: 'copy'; id: string } | { name: 'historyPlay'; id: string } | { name: 'notFound' };
 
 /** Hash routes keep the back button and reloads working on a static host without server rewrites. */
 export function parseRoute(hash: string): Route {
   if (/^#\/new\/?$/.test(hash)) return { name: 'new' };
-  if (/^#\/history\/?$/.test(hash)) return { name: 'history' };
+  // The History page became the Logbook under Settings (UI-22); old links and bookmarks open it there.
+  if (/^#\/history\/?$/.test(hash)) return { name: 'settings', section: 'logbook' };
   const snapshot = /^#\/history\/([^/?#]+)\/play\/?$/.exec(hash);
   if (snapshot) return { name: 'historyPlay', id: decodeURIComponent(snapshot[1]) };
   const settings = /^#\/settings(?:\/([a-z]+))?\/?$/.exec(hash);
@@ -25,7 +26,8 @@ export const editHref = (id: string) => `#/wod/${encodeURIComponent(id)}/edit`;
 export const copyHref = (id: string) => `#/wod/${encodeURIComponent(id)}/copy`;
 export const NEW_HREF = '#/new';
 export const SETTINGS_HREF = '#/settings';
-export const HISTORY_HREF = '#/history';
+/** Every session played, under Settings (UI-22); `#/history` still leads here. */
+export const LOGBOOK_HREF = '#/settings/logbook';
 /** Plays the workout saved with a session, for workouts that have left the library. */
 export const snapshotPlayHref = (sessionId: string) => `#/history/${encodeURIComponent(sessionId)}/play`;
 export const settingsHref = (section: SettingsSection) => section === 'general' ? SETTINGS_HREF : `#/settings/${section}`;

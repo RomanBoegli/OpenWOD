@@ -55,6 +55,8 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   useEffect(() => { const previous = audio.onError; audio.onError = setSoundError; return () => { audio.onError = previous; }; }, [audio]);
 
   const refresh = useCallback(() => {
+    // The horn's blast holds the clock at each boundary; other tones keep the plan's exact timing.
+    engine.boundaryHoldMs = audio.boundaryHoldMs;
     engine.tick();
     const next = engine.project();
     if (revision.current !== engine.revision) {

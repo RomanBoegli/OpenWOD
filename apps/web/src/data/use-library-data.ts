@@ -13,7 +13,7 @@ import { idbGet, idbPut, StorageUnavailableError } from './idb';
 import type { ExportDocument, RestoreReport } from '../../../../packages/household/src/types';
 import { backend, type BackendCounts } from './backend';
 import { DATA_MODE, type DataMode } from './mode';
-import { clearOutbox, enqueue, flush, listOutbox, MASTER_ITEM_ID, outboxEvents, removeOutboxItem, requeue, type OutboxItem } from './outbox';
+import { clearOutbox, deleteSessionItemId, enqueue, flush, listOutbox, MASTER_ITEM_ID, outboxEvents, removeOutboxItem, requeue, sessionItemId, type OutboxItem } from './outbox';
 import { clearSession, finishSession, listRecoveries, type Recovery } from './checkpoints';
 import type { DeviceImportReport, PackDecision, PackImportReport, SessionListItem, StoredWorkout } from './remote';
 
@@ -58,7 +58,10 @@ export interface LibraryData {
   clearRecovery: (sessionId: string) => Promise<void>;
   refreshRecoveries: () => Promise<void>;
   correctSession: (id: string, results: SectionResult[], note?: string) => Promise<boolean>;
-  loadMoreSessions: () => Promise<void>;
+  /** Deletes a session for good (DAT-14): gone from the list at once, from this device's outbox, and from the household. */
+  deleteSession: (id: string) => Promise<boolean>;
+  /** Reads the next page of sessions; false when it was the last. */
+  loadMoreSessions: () => Promise<boolean>;
   fetchSession: (id: string) => Promise<(SessionRecord & { receivedAt: string }) | undefined>;
   importPack: (workouts: Workout[], collections: PackCollection[], decisions: Record<string, PackDecision>) => Promise<PackImportReport>;
   migrateDevice: () => Promise<DeviceImportReport | undefined>;
@@ -276,10 +279,28 @@ export function useLibraryData(): LibraryData {
     } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); return false; }
   }, [serverSessions]);
 
+  const deleteSession = useCallback(async (id: string) => {
+    setServerSessions(current => current.filter(item => item.id !== id));
+    // A session still waiting for its upload on this device goes with it, and so does its row in the read cache.
+    try { await removeOutboxItem(sessionItemId(id)); } catch { /* no storage: nothing was queued */ }
+    if (!STATIC) void idbGet<Cache & { key: string }>('cache', 'household').then(cache => cache ? idbPut('cache', { ...cache, sessions: cache.sessions.filter(item => item.id !== id) }) : undefined).catch(() => undefined);
+    // The household is told even then: an upload that reached it without an answer is deleted, one still on its way meets the tombstone.
+    try {
+      await backend.deleteSession(id);
+      void fetchAll().catch(() => undefined);
+      return true;
+    } catch (error) {
+      if (error instanceof NetworkError) { try { await queue({ id: deleteSessionItemId(id), kind: 'deleteSession', body: { id } }); return true; } catch { return false; } }
+      setNotice(error instanceof Error ? error.message : String(error));
+      void fetchAll().catch(() => undefined);
+      return false;
+    }
+  }, [fetchAll, queue]);
+
   const loadMoreSessions = useCallback(async () => {
     const last = serverSessions[serverSessions.length - 1];
-    if (!last) return;
-    try { const more = await backend.listSessions({ limit: SESSION_PAGE, before: last.finishedAt }); setServerSessions(current => [...current, ...more.filter(item => !current.some(existing => existing.id === item.id))]); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
+    if (!last) return false;
+    try { const more = await backend.listSessions({ limit: SESSION_PAGE, before: last.finishedAt }); setServerSessions(current => [...current, ...more.filter(item => !current.some(existing => existing.id === item.id))]); return more.length >= SESSION_PAGE; } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); return true; }
   }, [serverSessions]);
 
   const fetchSession = useCallback(async (id: string) => { try { return await backend.getSession(id); } catch { return undefined; } }, []);
@@ -325,9 +346,10 @@ export function useLibraryData(): LibraryData {
     if (STATIC) return serverSessions;
     const pending = outbox.filter(item => item.kind === 'session').map(item => toView(item.body as SessionRecord));
     const known = new Set(serverSessions.map(item => item.id));
-    return [...pending.filter(item => !known.has(item.id)), ...serverSessions].sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
+    const deleted = new Set(outbox.filter(item => item.kind === 'deleteSession').map(item => (item.body as { id: string }).id));
+    return [...pending.filter(item => !known.has(item.id)), ...serverSessions].filter(item => !deleted.has(item.id)).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
   }, [outbox, serverSessions]);
-  const pendingIds = useMemo(() => STATIC ? new Set<string>() : new Set(outbox.filter(item => item.state === 'pending').map(item => item.kind === 'session' ? (item.body as SessionRecord).id : item.kind === 'workout' ? (item.body as Workout).id : item.kind === 'archive' ? (item.body as { id: string }).id : MASTER_ITEM_ID)), [outbox]);
+  const pendingIds = useMemo(() => STATIC ? new Set<string>() : new Set(outbox.filter(item => item.state === 'pending').map(item => item.kind === 'session' ? (item.body as SessionRecord).id : item.kind === 'workout' ? (item.body as Workout).id : item.kind === 'archive' || item.kind === 'deleteSession' ? (item.body as { id: string }).id : MASTER_ITEM_ID)), [outbox]);
   const savedWithQueued = useMemo(() => {
     const queued = outbox.filter(item => item.kind === 'workout' && item.state === 'pending').map(item => item.body as Workout).filter(workout => !saved.some(item => item.id === workout.id));
     const archived = new Set(outbox.filter(item => item.kind === 'archive' && item.state === 'pending').map(item => (item.body as { id: string }).id));
@@ -338,6 +360,6 @@ export function useLibraryData(): LibraryData {
     mode: DATA_MODE, stats, exportAll, restore,
     saved: savedWithQueued, loaded, masterData, masterRevision, sessions, connection, schemaVersion: ready.schemaVersion, serverVersion: ready.version, pendingIds,
     conflicts: outbox.filter(item => item.state === 'conflict'), rejected: outbox.filter(item => item.state === 'rejected'), notice, legacy, migrating,
-    saveWorkout, archiveWorkout, updateMasterData, recordSession, recoveries, recoveriesReady, clearRecovery, refreshRecoveries, correctSession, loadMoreSessions, fetchSession, importPack, migrateDevice, resolveConflict, dismissRejected, refresh, clearNotice: () => setNotice(''),
+    saveWorkout, archiveWorkout, updateMasterData, recordSession, recoveries, recoveriesReady, clearRecovery, refreshRecoveries, correctSession, deleteSession, loadMoreSessions, fetchSession, importPack, migrateDevice, resolveConflict, dismissRejected, refresh, clearNotice: () => setNotice(''),
   };
 }

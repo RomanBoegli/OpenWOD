@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { displayTime } from '../../../packages/engine/src';
 import type { SectionResult } from '../../../packages/engine/src';
 import type { SessionRecord } from '../../../packages/engine/src/records';
@@ -7,74 +7,94 @@ import type { WorkoutAudio } from './audio';
 import { Chip } from './Chip';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from './Icon';
+import { TimeInput } from './TimeInput';
 import type { LibraryEntry } from './Library';
-import { Player, resultText } from './Player';
+import { Player } from './Player';
+import { sessionScore } from './session-log';
 import type { Preferences } from './preferences';
-import { playHref, snapshotPlayHref, workoutHref } from './router';
+import { LOGBOOK_HREF, playHref, snapshotPlayHref, workoutHref } from './router';
 import type { SessionView } from './data/use-library-data';
 import type { DataMode } from './data/mode';
-import { DONE_THRESHOLD } from './session-log';
 import styles from './History.module.css';
+import settings from './Settings.module.css';
 import shared from './App.module.css';
 
-interface HistoryProps {
+export interface LogbookProps {
   mode: DataMode;
   sessions: SessionView[];
   entries: LibraryEntry[];
   onCorrect: (id: string, results: SectionResult[], note?: string) => Promise<boolean>;
-  onLoadMore: () => Promise<void>;
+  onDelete: (id: string) => Promise<boolean>;
+  /** Reads the next page; false when it was the last. */
+  onLoadMore: () => Promise<boolean>;
   fetchSession: (id: string) => Promise<(SessionRecord & { receivedAt: string }) | undefined>;
 }
 
-const OUTCOME: Record<SessionView['outcome'], string> = { completed: 'Completed', capped: 'Capped', aborted: 'Ended early' };
 const when = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-const parseTime = (text: string): number | undefined => { const match = /^(\d+):([0-5]\d)$/.exec(text.trim()); return match ? (Number(match[1]) * 60 + Number(match[2])) * 1000 : undefined; };
+const thisYear = new Date().getFullYear();
+/** "Oct 27, 15:59", with the year only when it is not this one. */
+const shortWhen = (iso: string) => { const date = new Date(iso); return date.toLocaleString([], { month: 'short', day: 'numeric', ...(date.getFullYear() === thisYear ? {} : { year: 'numeric' }), hour: '2-digit', minute: '2-digit' }); };
 
-/** Every session the household has played, newest first: outcome, flags, scores, Repeat, and score corrections (DAT-05). */
-export function History({ mode, sessions, entries, onCorrect, onLoadMore, fetchSession }: HistoryProps) {
+/** The page size of the session list (use-library-data SESSION_PAGE): a full first page means there may be more. */
+const PAGE = 50;
+
+/**
+ * The logbook under Settings (UI-22): every session played, newest first, with outcome, flags, scores, Repeat, score
+ * corrections (DAT-05) and Delete (DAT-14).
+ */
+export function Logbook({ mode, sessions, entries, onCorrect, onDelete, onLoadMore, fetchSession }: LogbookProps) {
   const [correcting, setCorrecting] = useState<SessionView>();
+  const [deleting, setDeleting] = useState<SessionView>();
   const [loadingMore, setLoadingMore] = useState(false);
+  // Once a full page was listed more may exist, even after a delete shortens the list, until a page comes back short.
+  const [paged, setPaged] = useState(false);
+  const [exhausted, setExhausted] = useState(false);
+  useEffect(() => { if (sessions.length >= PAGE) setPaged(true); }, [sessions.length]);
   const entryOf = (id: string) => entries.find(entry => entry.workout.id === id);
-  return <div className={styles.history}>
-    <div className={shared.workoutHeading}><div><div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> HISTORY</div><h1>What you have done</h1><p className={shared.description}>{mode === 'static' ? 'Every session played in this browser, newest first.' : 'Every session the household played, newest first.'} Repeat one, or correct a score; the earlier value stays on record.</p></div></div>
-    {sessions.length === 0 ? <div className={styles.empty}><h2>Nothing yet</h2><p>Finish a workout and it shows up here.</p></div> : <ul className={styles.list} aria-label="Sessions">
+  return <section className={settings.card} aria-labelledby="logbook-title">
+    <div className={settings.cardHeading}><h2 id="logbook-title">Logbook</h2><span className={settings.hint}>{sessions.length === 1 ? '1 session' : `${sessions.length}${paged && !exhausted ? '+' : ''} sessions`}</span></div>
+    <p className={settings.hint}>{mode === 'static' ? 'Every session played in this browser, newest first.' : 'Every session the household played, newest first.'} Repeat one, correct a score (the earlier value stays on record), or delete a session for good.</p>
+    {sessions.length === 0 ? <div className={styles.empty}><h3>Nothing yet</h3><p>Finish a workout and it shows up here.</p></div> : <ul className={styles.list} aria-label="Sessions">
       {sessions.map(session => {
         const entry = entryOf(session.workoutId);
-        const done = session.outcome !== 'aborted' || session.completion >= DONE_THRESHOLD;
+        const outcome = session.outcome === 'capped' ? 'Capped' : session.outcome === 'aborted' ? `Ended early · ${Math.round(session.completion * 100)} %` : undefined;
+        const score = sessionScore(session);
         return <li key={session.id} className={styles.row} data-pending={session.pending || undefined}>
-          <div className={styles.rowTop}>
-            <span className={styles.when}>{when(session.finishedAt)}</span>
-            <span className={styles.chips}>
-              <Chip kind={done ? 'done' : 'neutral'} icon={done ? 'check' : undefined}>{OUTCOME[session.outcome]}{session.outcome === 'aborted' ? ` · ${Math.round(session.completion * 100)} %` : ''}</Chip>
-              {session.interrupted && <Chip kind="neutral" icon="alert" title="Recovered from a checkpoint after a reload or a closed tab">Interrupted</Chip>}
+          <div className={styles.main}>
+            <div className={styles.titleLine}>
+              <span className={styles.title}>{entry ? <a href={workoutHref(session.workoutId)}>{session.title}</a> : session.title}</span>
+              {outcome && <Chip kind="neutral">{outcome}</Chip>}
+              {session.interrupted && <Chip kind="neutral" title="Recovered from a checkpoint after a reload or a closed tab">Interrupted</Chip>}
               {session.modified && <Chip kind="neutral" title="Steps were skipped or repeated during the session">Modified</Chip>}
-              {(session.revision ?? 1) > 1 && <Chip kind="neutral" icon="edit" title="The score was corrected; the earlier value is kept">Corrected</Chip>}
-              {session.pending && <Chip kind="neutral" icon="upload" title="Waiting for the household server">Not yet uploaded</Chip>}
-            </span>
+              {(session.revision ?? 1) > 1 && <Chip kind="neutral" title="The score was corrected; the earlier value is kept">Corrected</Chip>}
+              {session.pending && <Chip kind="neutral" title="Waiting for the household server">Not yet uploaded</Chip>}
+            </div>
+            <p className={styles.meta}><time dateTime={session.finishedAt}>{shortWhen(session.finishedAt)}</time> · {displayTime(session.activeMs, 'floor')}{score ? ` · ${score}` : ''}</p>
           </div>
-          <h2>{entry ? <a href={workoutHref(session.workoutId)}>{session.title}</a> : session.title}</h2>
-          <p className={styles.scores}>{displayTime(session.activeMs, 'floor')} active{session.results.length ? ` · ${session.results.map(resultText).join(' · ')}` : ''}</p>
           <div className={styles.actions}>
-            <a className={shared.quietButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} title={entry ? undefined : 'The workout is no longer in the library; this plays the copy saved with the session'}><Icon name="play" size={15} />Repeat</a>
-            {!session.pending && session.results.length > 0 && <button type="button" className={shared.quietButton} onClick={() => setCorrecting(session)}><Icon name="edit" size={15} />Correct score</button>}
+            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} aria-label="Repeat" title={entry ? 'Repeat' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name="play" size={16} /></a>
+            {!session.pending && session.results.length > 0 && <button type="button" className={shared.iconButton} aria-label="Correct score" title="Correct score" onClick={() => setCorrecting(session)}><Icon name="edit" size={16} /></button>}
+            <button type="button" className={shared.iconButton} aria-label="Delete" title="Delete" onClick={() => setDeleting(session)}><Icon name="trash" size={16} /></button>
           </div>
         </li>;
       })}
     </ul>}
-    {sessions.length >= 50 && <div><button type="button" className={shared.quietButton} disabled={loadingMore} onClick={() => { setLoadingMore(true); void onLoadMore().finally(() => setLoadingMore(false)); }}>Load earlier sessions</button></div>}
+    {paged && !exhausted && <div><button type="button" className={shared.quietButton} disabled={loadingMore} onClick={() => { setLoadingMore(true); void onLoadMore().then(more => { if (!more) setExhausted(true); }).finally(() => setLoadingMore(false)); }}>Load earlier sessions</button></div>}
     {correcting && <CorrectionDialog session={correcting} fetchSession={fetchSession} onClose={() => setCorrecting(undefined)} onSave={async (results, note) => { const ok = await onCorrect(correcting.id, results, note); if (ok) setCorrecting(undefined); }} />}
-  </div>;
+    <ConfirmDialog open={Boolean(deleting)} title="Delete this session?" confirmLabel="Delete" cancelLabel="Keep it" onClose={() => setDeleting(undefined)} onConfirm={() => { if (deleting) void onDelete(deleting.id); setDeleting(undefined); }}>
+      <p>{deleting ? `${deleting.title}, ${when(deleting.finishedAt)}.` : ''} The session and its score corrections are deleted for good{mode === 'static' ? ' from this browser' : ' on every device'}. This cannot be undone, and restoring an older backup does not bring it back.</p>
+    </ConfirmDialog>
+  </section>;
 }
 
-function CorrectionDialog({ session, fetchSession, onClose, onSave }: { session: SessionView; fetchSession: HistoryProps['fetchSession']; onClose: () => void; onSave: (results: SectionResult[], note?: string) => Promise<void> }) {
+function CorrectionDialog({ session, fetchSession, onClose, onSave }: { session: SessionView; fetchSession: LogbookProps['fetchSession']; onClose: () => void; onSave: (results: SectionResult[], note?: string) => Promise<void> }) {
   const [results, setResults] = useState<SectionResult[]>(() => structuredClone(session.results));
-  const [times, setTimes] = useState<string[]>(() => session.results.map(result => displayTime(result.sectionMs, 'floor')));
+  const [times, setTimes] = useState<number[]>(() => session.results.map(result => result.sectionMs));
   const [note, setNote] = useState('');
   const [history, setHistory] = useState<SessionRecord['corrections']>();
   useEffect(() => { if ((session.revision ?? 1) > 1) void fetchSession(session.id).then(full => setHistory(full?.corrections)); }, [session, fetchSession]);
-  const valid = useMemo(() => times.every((time, index) => results[index].format !== 'forTime' && results[index].format !== 'strength' || parseTime(time) !== undefined), [times, results]);
   const update = (index: number, patch: Partial<SectionResult>) => setResults(current => current.map((result, at) => at === index ? { ...result, ...patch } : result));
-  return <ConfirmDialog open title={`Correct the score of “${session.title}”`} confirmLabel="Save correction" cancelLabel="Keep as is" onClose={onClose} onConfirm={() => { if (!valid) return; const fixed = results.map((result, index) => parseTime(times[index]) !== undefined && (result.format === 'forTime' || result.format === 'strength') ? { ...result, sectionMs: parseTime(times[index])! } : result); void onSave(fixed, note.trim() || undefined); }}>
+  return <ConfirmDialog open title={`Correct the score of “${session.title}”`} confirmLabel="Save correction" cancelLabel="Keep as is" onClose={onClose} onConfirm={() => { const fixed = results.map((result, index) => result.format === 'forTime' || result.format === 'strength' ? { ...result, sectionMs: times[index] } : result); void onSave(fixed, note.trim() || undefined); }}>
     <div className={styles.form}>
       {results.map((result, index) => <fieldset key={result.sectionId} className={styles.section}>
         <legend>{result.sectionId}</legend>
@@ -82,22 +102,22 @@ function CorrectionDialog({ session, fetchSession, onClose, onSave }: { session:
           <label>Rounds<input type="number" min={0} value={result.counter.rounds} onChange={event => update(index, { counter: { rounds: Math.max(0, Number(event.target.value) || 0), reps: result.counter!.reps } })} /></label>
           <label>Reps<input type="number" min={0} value={result.counter.reps} onChange={event => update(index, { counter: { rounds: result.counter!.rounds, reps: Math.max(0, Number(event.target.value) || 0) } })} /></label>
         </div>}
-        {(result.format === 'forTime' || result.format === 'strength') && <label>Time (mm:ss)<input value={times[index]} onChange={event => setTimes(current => current.map((time, at) => at === index ? event.target.value : time))} aria-invalid={parseTime(times[index]) === undefined ? true : undefined} /></label>}
+        {(result.format === 'forTime' || result.format === 'strength') && <label>Time (mm:ss)<TimeInput value={times[index]} stepMs={1000} onChange={ms => setTimes(current => current.map((time, at) => at === index ? ms : time))} /></label>}
         {result.teamRounds !== undefined && <div className={styles.pair}>
           <label>Team rounds<input type="number" min={0} value={result.teamRounds} onChange={event => update(index, { teamRounds: Math.max(0, Number(event.target.value) || 0) })} /></label>
           <label>Turns<input type="number" min={0} value={result.turns ?? 0} onChange={event => update(index, { turns: Math.max(0, Number(event.target.value) || 0) })} /></label>
         </div>}
       </fieldset>)}
       <label>Note<input value={note} maxLength={500} placeholder="Why the score changes" onChange={event => setNote(event.target.value)} /></label>
-      <p className={styles.prior}>Current: {session.results.map(resultText).join(' · ')}</p>
-      {history?.map((item, index) => <p key={index} className={styles.prior}>Before {when(item.correctedAt)}: {item.previousResults.map(resultText).join(' · ')}{item.note ? ` (${item.note})` : ''}</p>)}
+      <p className={styles.prior}>Current: {sessionScore({ activeMs: -1, results: session.results }) || 'no score'}</p>
+      {history?.map((item, index) => <p key={index} className={styles.prior}>Before {when(item.correctedAt)}: {sessionScore({ activeMs: -1, results: item.previousResults }) || 'no score'}{item.note ? ` (${item.note})` : ''}</p>)}
     </div>
   </ConfirmDialog>;
 }
 
 interface SnapshotPlayerProps {
   sessionId: string;
-  fetchSession: HistoryProps['fetchSession'];
+  fetchSession: LogbookProps['fetchSession'];
   audio: WorkoutAudio;
   preferences: Preferences;
   catalogue: Catalogue;
@@ -112,6 +132,6 @@ export function SnapshotPlayer({ sessionId, fetchSession, ...player }: SnapshotP
   const [state, setState] = useState<{ status: 'loading' } | { status: 'missing' } | { status: 'ready'; record: SessionRecord }>({ status: 'loading' });
   useEffect(() => { let cancelled = false; void fetchSession(sessionId).then(record => { if (!cancelled) setState(record?.workout ? { status: 'ready', record } : { status: 'missing' }); }); return () => { cancelled = true; }; }, [sessionId, fetchSession]);
   if (state.status === 'loading') return <p className={shared.notice} role="status">Loading the saved workout…</p>;
-  if (state.status === 'missing') return <p className={shared.notice} role="status">That session has no saved workout to repeat. <a href="#/history">Back to history</a>.</p>;
+  if (state.status === 'missing') return <p className={shared.notice} role="status">That session has no saved workout to repeat. <a href={LOGBOOK_HREF}>Back to the logbook</a>.</p>;
   return <Player key={sessionId} workout={state.record.workout!} {...player} />;
 }

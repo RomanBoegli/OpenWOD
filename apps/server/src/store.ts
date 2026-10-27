@@ -105,6 +105,16 @@ class SqliteTables implements HouseholdTables {
     return rows.map(row => this.rowToSession(row));
   }
 
+  deleteSession(id: string): void {
+    this.db.prepare('DELETE FROM session_corrections WHERE session_id = ?').run(id);
+    this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id);
+  }
+
+  isDeletedSession(id: string): boolean { return Boolean(this.db.prepare('SELECT 1 FROM deleted_sessions WHERE id = ?').get(id)); }
+
+  putDeletedSession(row: { id: string; deletedAt: string }): void { this.db.prepare('INSERT INTO deleted_sessions (id, deleted_at) VALUES (?, ?) ON CONFLICT(id) DO NOTHING').run(row.id, row.deletedAt); }
+
+  /** Everything but the tombstones in deleted_sessions, which outlive a restore (DAT-14). */
   clear(): void { this.db.exec('DELETE FROM session_corrections; DELETE FROM sessions; DELETE FROM master_data; DELETE FROM workouts;'); }
 }
 
@@ -169,6 +179,8 @@ export class Store {
   listSessions(query: { limit?: number; before?: string; workoutId?: string } = {}): SessionListItem[] { return this.transaction(() => this.core.listSessions(query)); }
   getSession(id: string): StoredSession | undefined { return this.transaction(() => this.core.getSession(id)); }
   correctSession(id: string, results: SectionResult[], note: string | undefined, expectedRevision: number | undefined): { revision: number } { return this.transaction(() => this.core.correctSession(id, results, note, expectedRevision)); }
+  /** Deletes a session with its corrections and keeps a tombstone of the id (DAT-14). */
+  deleteSession(id: string): 'deleted' | 'absent' { return this.transaction(() => this.core.deleteSession(id)); }
 
   importDevice(payload: DeviceImport): DeviceImportReport { return this.transaction(() => this.core.importDevice(payload)); }
   importPack(payload: PackImport): PackImportReport { return this.transaction(() => this.core.importPack(payload)); }

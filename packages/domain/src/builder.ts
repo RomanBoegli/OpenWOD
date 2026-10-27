@@ -23,6 +23,10 @@ export interface BuilderSection {
   alternate: boolean;
   betweenSlotsRestMs: number;
   trailingRestMs: number;
+  /**
+   * The rest after the section (BLD-14), for every format. With `transitionAfter: 'automatic'` it is the timed rest
+   * before the next section starts on its own. A Ready gate after a rest is kept for timed circuits that had both.
+   */
   blockRestMs: number;
   /** Each slot repeated on its own before the next (Tabata: 8 × 20 s with 10 s between). */
   slotRepeats: number;
@@ -52,7 +56,7 @@ export interface BuilderIssue { path: string; message: string }
 
 /** Formats whose slots are manual tasks. */
 export const MANUAL_FORMATS: SectionFormat[] = ['amrap', 'emom', 'forTime', 'youGoIGo', 'strength'];
-/** Formats whose body is one flat list of tasks with no rests or rounds. */
+/** Formats whose body is one flat list of tasks with no rounds, and no rests except the rest after the section. */
 export const LIST_FORMATS: SectionFormat[] = ['amrap', 'emom', 'youGoIGo'];
 
 export const emptySlot = (participants: 1 | 2): BuilderSlot => ({ A: { name: '' }, ...(participants === 2 ? { B: { name: '' } } : {}), durationMs: 40_000 });
@@ -107,8 +111,8 @@ export function validateDraft(draft: BuilderDraft): BuilderIssue[] {
     const name = `Section ${s + 1}`;
     if (!section.title.trim()) issues.push({ path: `${at}.title`, message: `${name} needs a title.` });
     if (!isList(section.format) && (!Number.isInteger(section.rounds) || section.rounds < 1 || section.rounds > 999)) issues.push({ path: `${at}.rounds`, message: `${name}: rounds must be 1 to 999.` });
-    if (section.format === 'timedCircuit' && (!Number.isInteger(section.slotRepeats) || section.slotRepeats < 1 || section.slotRepeats > 999)) issues.push({ path: `${at}.slotRepeats`, message: `${name}: repeats per slot must be 1 to 999.` });
-    if (!section.slots.length) issues.push({ path: `${at}.slots`, message: `${name} needs at least one ${isManual(section.format) ? 'movement' : 'slot'}.` });
+    if (section.format === 'timedCircuit' && (!Number.isInteger(section.slotRepeats) || section.slotRepeats < 1 || section.slotRepeats > 999)) issues.push({ path: `${at}.slotRepeats`, message: `${name}: repeats per movement must be 1 to 999.` });
+    if (!section.slots.length) issues.push({ path: `${at}.slots`, message: `${name} needs at least one movement.` });
     for (const [field, value] of [['betweenRoundsRestMs', section.betweenRoundsRestMs], ['betweenSlotsRestMs', section.betweenSlotsRestMs], ['trailingRestMs', section.trailingRestMs], ['blockRestMs', section.blockRestMs], ['slotRepeatRestMs', section.slotRepeatRestMs]] as const) {
       if (!Number.isInteger(value) || value < 0) issues.push({ path: `${at}.${field}`, message: `${name}: rests cannot be negative.` });
     }
@@ -124,7 +128,7 @@ export function validateDraft(draft: BuilderDraft): BuilderIssue[] {
     }
     section.slots.forEach((slot, i) => {
       const slotAt = `${at}.slots.${i}`;
-      const label = `${name}, ${isManual(section.format) ? 'movement' : 'slot'} ${i + 1}`;
+      const label = `${name}, movement ${i + 1}`;
       validatePrescription(slot.A, `${slotAt}.A`, pair ? `${label} (A)` : label, issues);
       if (pair && section.format !== 'youGoIGo') validatePrescription(slot.B, `${slotAt}.B`, `${label} (B)`, issues);
       if (!isManual(section.format) && (!Number.isInteger(slot.durationMs) || slot.durationMs < 1000)) issues.push({ path: `${slotAt}.durationMs`, message: `${label}: work must be at least 1 second.` });
@@ -150,7 +154,9 @@ export function builderToWorkout(draft: BuilderDraft, identity: { id: string; re
     });
     const base: Omit<WorkoutSection, 'body'> = { id: key, title: section.title.trim(), format: section.format, transitionAfter: section.transitionAfter };
     if (isList(section.format)) {
-      const body: WorkoutNode = items.length === 1 ? items[0] : { id: `${key}-list`, type: 'sequence', children: items };
+      // The rest after the section ends the flat task list (BLD-14).
+      const rest: WorkoutNode[] = section.blockRestMs > 0 ? [{ id: `${key}-rest`, type: 'rest', kind: 'blockRest', durationMs: section.blockRestMs }] : [];
+      const body: WorkoutNode = items.length === 1 && !rest.length ? items[0] : { id: `${key}-list`, type: 'sequence', children: [...items, ...rest] };
       if (section.format === 'amrap') return { ...base, capMs: section.capMs, counter: section.counter, body };
       if (section.format === 'emom') return { ...base, intervalMs: section.intervalMs, intervals: section.intervals, body };
       return { ...base, ...(section.capMs ? { capMs: section.capMs } : {}), ...(section.teamRounds ? { rounds: section.teamRounds } : {}), ...(section.turnMs ? { turnMs: section.turnMs } : {}), body };
@@ -180,9 +186,12 @@ const slotOf = (node: Extract<WorkoutNode, { type: 'timed' | 'task' }>, duration
 function sectionToBuilder(section: WorkoutSection): BuilderSection | null {
   const base = { ...emptySection(2, section.format), title: section.title, transitionAfter: section.transitionAfter, capMs: section.capMs ?? 0, counter: section.counter ?? 'roundsAndReps', intervalMs: section.intervalMs ?? 60_000, intervals: section.intervals ?? 10, teamRounds: section.rounds ?? 0, turnMs: section.turnMs ?? 0 };
   if (isList(section.format)) {
-    const items = section.body.type === 'task' ? [section.body] : section.body.type === 'sequence' ? section.body.children : [];
+    const children = section.body.type === 'task' ? [section.body] : section.body.type === 'sequence' ? section.body.children : [];
+    const ending = children.at(-1);
+    const blockRestMs = children.length > 1 && ending?.type === 'rest' ? ending.durationMs : 0;
+    const items = blockRestMs ? children.slice(0, -1) : children;
     if (!items.length || !items.every(item => item.type === 'task') || (section.body.type === 'sequence' && (section.body.betweenChildrenRestMs || section.body.trailingRestMs))) return null;
-    return { ...base, slots: items.map(item => slotOf(item as Extract<WorkoutNode, { type: 'task' }>, 0)) };
+    return { ...base, blockRestMs, slots: items.map(item => slotOf(item as Extract<WorkoutNode, { type: 'task' }>, 0)) };
   }
   let node = section.body;
   let blockRestMs = 0;
@@ -226,12 +235,28 @@ function sectionToBuilder(section: WorkoutSection): BuilderSection | null {
 }
 
 /** The inverse mapping, or null when the workout uses a structure the editor cannot represent. */
+/**
+ * The editor has no field for a rest after the last movement of each round. Opening a workout that has one moves it,
+ * at the same length: between rounds it joins the rest between rounds, after the last round the rest between this
+ * section and the next, and after the last movement of the workout it is dropped. Only the kind of pause changes.
+ */
+function foldTrailingRest(section: BuilderSection, last: boolean): BuilderSection {
+  const trailing = section.trailingRestMs;
+  if (!trailing) return section;
+  return {
+    ...section,
+    trailingRestMs: 0,
+    betweenRoundsRestMs: section.rounds > 1 ? section.betweenRoundsRestMs + trailing : section.betweenRoundsRestMs,
+    blockRestMs: last ? section.blockRestMs : section.blockRestMs + trailing,
+  };
+}
+
 export function workoutToBuilder(workout: Workout): BuilderDraft | null {
   const sections: BuilderSection[] = [];
-  for (const section of workout.sections) {
+  for (const [index, section] of workout.sections.entries()) {
     const built = sectionToBuilder(section);
     if (!built) return null;
-    sections.push(built);
+    sections.push(foldTrailingRest(built, index === workout.sections.length - 1));
   }
   return { title: workout.title, description: workout.description ?? '', participants: workout.participants, prepMs: workout.prepMs, equipment: [...workout.equipment], ...(workout.attribution ? { attribution: structuredClone(workout.attribution) } : {}), sections };
 }

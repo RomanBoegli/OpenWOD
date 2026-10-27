@@ -13,11 +13,11 @@ export const BEEP_TONES: [BeepTone, string][] = [['classic', 'Classic'], ['soft'
 interface Tone { wave: OscillatorType; pitch: number; gain: number; tail: number; /** One fixed pitch for every beep, in Hz. */ fixed?: number; /** Held at full level until the end, capped at this many seconds. */ hold?: number }
 const TONES: Record<Exclude<BeepTone, 'horn'>, Tone> = { classic: { wave: 'sine', pitch: 1, gain: 1, tail: 1 }, soft: { wave: 'triangle', pitch: .75, gain: .9, tail: 1.6 }, sharp: { wave: 'square', pitch: 1.25, gain: .4, tail: .8 }, gym: { wave: 'sine', pitch: 1, fixed: 1000, gain: 1.2, tail: 4, hold: .8 }, alarm: { wave: 'sawtooth', pitch: 1, gain: .6, tail: 3.2, hold: 1.2 } };
 /**
- * How much of the recorded horn a beep plays, in seconds: a short blast for each countdown second and a Done, about a second
- * for the Go or Rest boundary, and the whole recording (2.2 s, held then fading) when the workout is complete.
+ * How much of the recorded horn a beep plays, in seconds: a short blast for each countdown second and a Done, the full-level
+ * part (1.4 s) at the Go or Rest boundary, and the whole recording (2.2 s, held then fading) when the workout is complete.
  */
 export function hornSpan(length: number, duration: number): number {
-  return Math.min(duration, length >= .3 ? Infinity : length >= .15 ? 1 : .3);
+  return Math.min(duration, length >= .3 ? Infinity : length >= .15 ? 1.4 : .3);
 }
 export type CueSource = 'clips' | 'device';
 export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' | 'one' | 'paused' | 'resume' | 'complete' | 'a' | 'b' | 'next' | 'last-interval' | 'a-waiting' | 'b-waiting' | 'ended';
@@ -49,6 +49,11 @@ export function pickDefaultVoice(voices: SpeechSynthesisVoice[], lang = 'en'): S
 export class WorkoutAudio {
   private context?: AudioContext;
   private sources: AudioScheduledSourceNode[] = [];
+  /** The boundary beep and the word after it, so a boundary already sounding can ring out when the next slot starts. */
+  private ringing?: { at: number; end: number; word?: CueName; sources: AudioScheduledSourceNode[] };
+  /** Device speech held back until a ringing boundary has finished; cleared with everything else. */
+  private timers: ReturnType<typeof setTimeout>[] = [];
+  private collecting?: AudioScheduledSourceNode[];
   private token = '';
   private spoken = new Set<string>();
   private clips = new Map<CueName, AudioBuffer>();
@@ -175,7 +180,13 @@ export class WorkoutAudio {
 
   private track(source: AudioScheduledSourceNode, ...nodes: AudioNode[]) {
     this.sources.push(source);
+    this.collecting?.push(source);
     source.onended = () => { source.disconnect(); nodes.forEach(node => node.disconnect()); this.sources = this.sources.filter(item => item !== source); };
+  }
+
+  /** How long the clock should wait at a boundary so the next slot starts as the horn's blast ends; other tones need no wait. */
+  get boundaryHoldMs(): number {
+    return this.mode !== 'silent' && this.tone === 'horn' && this.horn ? Math.round(hornSpan(.18, this.horn.duration) * 1000) : 0;
   }
 
   /** Fetches and decodes the truck horn once. Failure is silent: the horn tone keeps falling back to the classic beep. */
@@ -260,9 +271,17 @@ export class WorkoutAudio {
     return true;
   }
 
-  cancel() {
-    for (const source of this.sources) { try { source.stop(); } catch { /* Already ended. */ } }
-    this.sources = [];
+  /**
+   * Stops what is scheduled. With `letRing`, used when the session simply moves on, a boundary beep that has already
+   * sounded keeps playing with its word: the next slot starts on that very beep, which would otherwise be cut off.
+   */
+  cancel(letRing = false) {
+    const keep = letRing && this.ringing && this.context && this.ringing.at <= this.context.currentTime + .05 ? new Set(this.ringing.sources) : undefined;
+    for (const source of this.sources) if (!keep?.has(source)) { try { source.stop(); } catch { /* Already ended. */ } }
+    this.sources = keep ? this.sources.filter(source => keep.has(source)) : [];
+    if (!keep) this.ringing = undefined;
+    for (const timer of this.timers) clearTimeout(timer);
+    this.timers = [];
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     this.token = '';
   }
@@ -273,6 +292,13 @@ export class WorkoutAudio {
   private get speechLang(): string {
     const voice = this.packs.find(item => item.id === (this.loadedPack || this.cuePack))?.voice ?? '';
     return /^en[_-]US/i.test(voice) ? 'en-US' : 'en-GB';
+  }
+
+  /** Device speech cannot be scheduled on the audio clock, so a later start waits on a timer. */
+  private speakAt(text: string, at: number) {
+    const wait = at - (this.context?.currentTime ?? 0);
+    if (wait <= .05) { this.speak(text); return; }
+    this.timers.push(setTimeout(() => this.speak(text), wait * 1000));
   }
 
   speak(text: string) {
@@ -320,10 +346,10 @@ export class WorkoutAudio {
         return true;
       });
       if (complete) { for (const buffer of sequence) time = this.play(buffer, time) + .08; return 'clips'; }
-      this.speak(WorkoutAudio.assignmentText(assignment));
+      this.speakAt(WorkoutAudio.assignmentText(assignment), time);
       return 'mixed';
     }
-    this.speak(`${leadText} ${WorkoutAudio.assignmentText(assignment)}`.trim());
+    this.speakAt(`${leadText} ${WorkoutAudio.assignmentText(assignment)}`.trim(), at);
     return 'speech';
   }
 
@@ -374,7 +400,10 @@ export class WorkoutAudio {
     const wasPaused = this.token.includes(':paused:');
     const previous = this.lastEnded;
     this.lastEnded = { occurrenceId: projection.occurrenceId.replace(/\/turn:\d+$/, ''), manual: projection.timing === 'manual' && !projection.tasks, status: projection.status };
-    this.cancel();
+    this.cancel(['running', 'preparing'].includes(projection.status));
+    // The boundary that started this slot, if it is still ringing; read before this slot schedules its own.
+    const audioNow = this.context?.currentTime ?? 0;
+    const ringing = this.ringing && this.ringing.at <= audioNow + .05 && this.ringing.end > audioNow ? this.ringing : undefined;
     this.token = token;
     this.lastAcks = `${projection.acks.A}${projection.acks.B}${projection.acks.team}`;
     if (this.mode === 'silent') return;
@@ -406,7 +435,8 @@ export class WorkoutAudio {
     const assignment = projection.status === 'preparing' ? projection.current.assignments : projection.current.phase !== 'work' ? projection.nextWork?.assignments : undefined;
     if (assignment && (clocks.remainingMs > 5000 || projection.clockScope === 'elapsed')) {
       const lead = projection.status === 'preparing' ? 'get-ready' : 'rest';
-      this.announce(assignment, lead === 'get-ready' ? 'Get ready.' : 'Rest.', [lead]);
+      // A boundary still ringing goes first; when it already said the lead word, the names follow it without a second one.
+      this.announce(assignment, ringing?.word === lead ? '' : lead === 'get-ready' ? 'Get ready.' : 'Rest.', ringing?.word === lead ? [] : [lead], ringing ? ringing.end + .1 : audioNow);
       return;
     }
     if (projection.status !== 'running' || clocks.slotMs >= 1000 || wasPaused || switched || sameOccurrence) return;
@@ -415,8 +445,10 @@ export class WorkoutAudio {
     if (previous?.manual && this.context?.state === 'running') this.beep(this.context.currentTime + .01, .06, 740); // The Done that ended the last task.
     if (projection.current.phase !== 'work') { if (!announced) this.cue('rest', 'Rest.'); return; }
     if (!announced || projection.timing === 'manual') {
-      this.cue('go', 'Go.');
-      if (projection.timing === 'manual' && !projection.tasks && projection.current.assignments) this.announce(projection.current.assignments, '', [], (this.context?.currentTime ?? 0) + .7);
+      // The boundary that started this task may already be saying Go: then the names follow it, without a second Go.
+      const saidGo = ringing?.word === 'go';
+      if (!saidGo) this.cue('go', 'Go.');
+      if (projection.timing === 'manual' && !projection.tasks && projection.current.assignments) this.announce(projection.current.assignments, '', [], saidGo ? ringing!.end + .1 : audioNow + .7);
     }
     if (projection.interval && projection.interval.index === projection.interval.count) this.cue('last-interval', 'Last interval.', (this.context?.currentTime ?? 0) + 1);
     void scheduled;
@@ -429,7 +461,8 @@ export class WorkoutAudio {
   private scheduleBoundary(projection: Projection, clocks: ClockValues, clips: boolean): boolean {
     if (this.context?.state !== 'running' || projection.clockScope === 'elapsed') return false;
     const audioNow = this.context.currentTime;
-    const secondsLeft = clocks.remainingMs / 1000;
+    // A clock still waiting at the last boundary starts counting only after the wait.
+    const secondsLeft = (clocks.remainingMs + (clocks.holdMs ?? 0)) / 1000;
     // Only schedule cues that are still in the future. Missed numbers are dropped (AUD-06).
     for (const seconds of [3, 2, 1] as const) if (secondsLeft > seconds + .05) {
       const end = this.beep(audioNow + secondsLeft - seconds, .08, 620);
@@ -445,8 +478,11 @@ export class WorkoutAudio {
       const last = projection.nextWork === undefined && projection.current.phase === 'work';
       boundary = last || gateFollows ? undefined : nextIsWork ? 'go' : 'rest';
     }
+    this.collecting = [];
     const end = this.beep(audioNow + secondsLeft, .18, 880);
-    if (clips && boundary) this.clip(boundary, end);
+    const word = clips && boundary && this.clip(boundary, end) ? boundary : undefined;
+    this.ringing = { at: audioNow + secondsLeft, end: word ? end + (this.clips.get(word)!.duration || .6) : end, word, sources: this.collecting };
+    this.collecting = undefined;
     return true;
   }
 

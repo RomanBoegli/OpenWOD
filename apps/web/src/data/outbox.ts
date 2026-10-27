@@ -10,12 +10,12 @@ import { idbDelete, idbGetAll, idbPut, StorageUnavailableError, transaction } fr
  * id, workouts and master data by expected revision. The flush is single-flight, retries with backoff, and never
  * blocks the player.
  */
-export type OutboxKind = 'session' | 'workout' | 'archive' | 'master';
+export type OutboxKind = 'session' | 'workout' | 'archive' | 'master' | 'deleteSession';
 export type OutboxState = 'pending' | 'rejected' | 'conflict';
 export interface OutboxItem {
   id: string;
   kind: OutboxKind;
-  /** The session record, the workout document, the archived id, or the master-data document. */
+  /** The session record, the workout document, the archived or deleted id, or the master-data document. */
   body: SessionRecord | Workout | { id: string } | MasterData;
   expectedRevision?: number;
   createdAt: string;
@@ -44,6 +44,9 @@ export function classifyFailure(error: unknown): Failure {
 
 export const listOutbox = (): Promise<OutboxItem[]> => idbGetAll<OutboxItem>('outbox').then(items => items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
 export const removeOutboxItem = (id: string) => idbDelete('outbox', id).then(notify);
+/** The outbox id of a finished session's upload (checkpoints.ts finishSession) and of its deletion. */
+export const sessionItemId = (sessionId: string) => `session:${sessionId}`;
+export const deleteSessionItemId = (sessionId: string) => `delete-session:${sessionId}`;
 /** Drops every queued write (after a restore replaced the household they were meant for). */
 export const clearOutbox = () => transaction(['outbox'], 'readwrite', get => { get('outbox').clear(); }).then(notify);
 
@@ -98,6 +101,7 @@ async function upload(item: OutboxItem): Promise<void> {
     case 'session': await backend.putSession(item.body as SessionRecord); return;
     case 'workout': await backend.putWorkout(item.body as Workout, item.expectedRevision ?? 0); return;
     case 'archive': await backend.archiveWorkout((item.body as { id: string }).id, item.expectedRevision); return;
+    case 'deleteSession': await backend.deleteSession((item.body as { id: string }).id); return;
     case 'master': {
       try { await backend.putMasterData(item.body as MasterData, item.expectedRevision ?? 0); } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 409) throw error;

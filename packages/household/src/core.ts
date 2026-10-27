@@ -31,7 +31,13 @@ export interface HouseholdTables {
   listSessions(query: { limit: number; before?: string; workoutId?: string }): SessionListItem[];
   /** Every session in full, newest first. */
   allSessions(): StoredSession[];
-  /** Removes every row: workouts, master data, sessions and their corrections. */
+  /** Removes the session and its score corrections; nothing happens when it is not stored. */
+  deleteSession(id: string): void;
+  /** True when the session id was deleted once (a tombstone), so an upload of it is acknowledged and never stored again. */
+  isDeletedSession(id: string): boolean;
+  /** Records the tombstone of a deleted session id; writing one twice keeps the first. */
+  putDeletedSession(row: { id: string; deletedAt: string }): void;
+  /** Removes every row: workouts, master data, sessions and their corrections. The tombstones of deleted sessions stay. */
   clear(): void;
 }
 
@@ -107,9 +113,12 @@ export class Household {
 
   // ---- Sessions --------------------------------------------------------------------------------------------
 
-  /** Idempotent by id (DAT-03): a repeated upload of the same session is acknowledged, never duplicated. */
+  /**
+   * Idempotent by id (DAT-03): a repeated upload of the same session is acknowledged, never duplicated. A deleted
+   * session's id is acknowledged the same way and stays deleted (DAT-14).
+   */
   putSession(record: SessionRecord & { workout: Workout }): 'created' | 'existing' {
-    if (this.tables.hasSession(record.id)) return 'existing';
+    if (this.tables.hasSession(record.id) || this.tables.isDeletedSession(record.id)) return 'existing';
     this.tables.putSession({
       id: record.id, workoutId: record.workoutId, workoutRevision: record.workoutRevision, title: record.title, startedAt: record.startedAt, finishedAt: record.finishedAt,
       outcome: record.outcome, interrupted: record.interrupted, modified: record.modified, completion: record.completion, activeMs: record.activeMs,
@@ -132,6 +141,18 @@ export class Household {
     const correction = { correctedAt: this.now().toISOString(), previousResults: session.results, ...(note ? { note } : {}) };
     this.tables.putSession({ ...session, results, revision: session.revision + 1, corrections: [...session.corrections, correction] });
     return { revision: session.revision + 1 };
+  }
+
+  /**
+   * Deletes a session with its score corrections and leaves a tombstone of its id (DAT-14), so a later upload of the
+   * same id (an outbox retry, another device) is acknowledged without storing it. Repeating it is harmless, and an
+   * id not stored yet gets its tombstone too: an upload still on its way then never lands.
+   */
+  deleteSession(id: string): 'deleted' | 'absent' {
+    const stored = this.tables.hasSession(id);
+    if (stored) this.tables.deleteSession(id);
+    if (!this.tables.isDeletedSession(id)) this.tables.putDeletedSession({ id, deletedAt: this.now().toISOString() });
+    return stored ? 'deleted' : 'absent';
   }
 
   // ---- Imports ---------------------------------------------------------------------------------------------
@@ -228,10 +249,13 @@ export class Household {
   /**
    * Replaces the whole household with a parsed export (parseExportDocument): archived workouts, revisions, master
    * data and score corrections come back as they were. With a session limit the oldest sessions beyond it are left
-   * out and counted as pruned.
+   * out and counted as pruned. The tombstones survive the restore: a session deleted after the backup was made stays
+   * deleted, left out and counted as `deleted` (DAT-14).
    */
   restore(document: ExportDocument, { sessionLimit }: { sessionLimit?: number } = {}): RestoreReport {
-    const sessions = [...document.sessions].sort(newestFirst);
+    const live = document.sessions.filter(session => !this.tables.isDeletedSession(session.id));
+    const deleted = document.sessions.length - live.length;
+    const sessions = live.sort(newestFirst);
     const kept = sessionLimit === undefined ? sessions : sessions.slice(0, Math.max(0, sessionLimit));
     this.tables.clear();
     for (const workout of document.workouts) this.tables.putWorkout(workout);
@@ -239,6 +263,6 @@ export class Household {
     if (master.revision > 0 || !isEmptyMasterData(master.document)) this.tables.putMaster({ revision: Math.max(1, master.revision), document: sanitiseMasterData(master.document), updatedAt: master.updatedAt ?? document.exportedAt });
     for (const session of kept) this.tables.putSession(session);
     const pruned = sessions.length - kept.length;
-    return { ...summariseExport({ ...document, sessions: kept }), masterRevision: this.getMasterData().revision, ...(pruned ? { pruned } : {}) };
+    return { ...summariseExport({ ...document, sessions: kept }), masterRevision: this.getMasterData().revision, ...(pruned ? { pruned } : {}), ...(deleted ? { deleted } : {}) };
   }
 }

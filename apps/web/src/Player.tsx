@@ -4,7 +4,7 @@ import { bundledWorkouts } from '../../../packages/domain/src/bundled';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import type { Occurrence, TaskItem } from '../../../packages/domain/src/compiler';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
-import { displayTime, overallProgress, warningLevel, washDrain, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
+import { displayTime, overallProgress, warningLevel, washDrain, washMorph, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
 import { useWorkout } from './use-workout';
 import type { WorkoutAudio } from './audio';
 import type { Preferences } from './preferences';
@@ -238,12 +238,17 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     const fraction = status === 'ready' || status === 'awaitingReady' || clockScope === 'elapsed' ? 1 : clocks.fraction;
     if (border.current) border.current.style.strokeDashoffset = String(-(1 - fraction));
     if (player.current) {
-      const drained = (status === 'running' || status === 'preparing' || status === 'paused') && clockScope !== 'elapsed' ? (!isRest && !isPrep ? washDrain(clocks.remainingMs, clocks.durationMs, { amberMs, redMs }) : 1 - fraction).toFixed(3) : '0';
+      // One opacity ramp over the whole slot; the marks only morph the colour (--to-amber, --to-red), never the strength.
+      const timed = (status === 'running' || status === 'preparing' || status === 'paused') && clockScope !== 'elapsed';
+      const drained = timed ? (!isRest && !isPrep ? washDrain(clocks.remainingMs, clocks.durationMs) : 1 - fraction).toFixed(3) : '0';
       if (player.current.style.getPropertyValue('--drained') !== drained) player.current.style.setProperty('--drained', drained);
-    }
-    if (player.current) {
       const warning = clockScope === 'elapsed' || status === 'ready' || status === 'awaitingReady' ? 'normal' : warningLevel(clocks.remainingMs, clocks.durationMs, { amberMs, redMs });
       if (player.current.dataset.warning !== warning) player.current.dataset.warning = warning;
+      const morph = warning === 'normal' ? { amber: 0, red: 0 } : washMorph(clocks.remainingMs, clocks.durationMs, { amberMs, redMs });
+      for (const [name, value] of [['--to-amber', morph.amber], ['--to-red', morph.red]] as const) {
+        const text = value.toFixed(3);
+        if (player.current.style.getPropertyValue(name) !== text) player.current.style.setProperty(name, text);
+      }
     }
   }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp, amberMs, redMs, isRest, isPrep]);
 
@@ -317,8 +322,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
         <div className={styles.clockLine}><div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>{clockPercent && <span ref={clockPercentRef} className={styles.clockPercent} aria-label="Progress beside the clock">· 0 %</span>}</div>
         <div className={styles.clockCaption}>{caption}</div>
-        {!terminal && !editable && ((section.capMs !== undefined && (clockScope !== 'cap' || countUp)) || clockScope === 'turn' || (isBlock && format === 'youGoIGo')) && <div className={own.secondaryClock}>
-          {section.capMs !== undefined && (clockScope !== 'cap' || countUp) && <span>CAP<strong ref={capClock}>{displayTime(section.capMs)}</strong></span>}
+        {!terminal && !editable && ((projection.capMs !== undefined && (clockScope !== 'cap' || countUp)) || clockScope === 'turn' || (isBlock && format === 'youGoIGo')) && <div className={own.secondaryClock}>
+          {projection.capMs !== undefined && (clockScope !== 'cap' || countUp) && <span>CAP<strong ref={capClock}>{displayTime(projection.capMs)}</strong></span>}
           {isBlock && format === 'youGoIGo' && clockScope !== 'turn' && <span>TURN<strong ref={turnClock}>00:00</strong></span>}
         </div>}
       </div>

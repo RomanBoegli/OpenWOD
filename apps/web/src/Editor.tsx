@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { formatDuration, parseDuration } from '../../../packages/domain/src';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { builderToWorkout, emptySection, emptySlot, LIST_FORMATS, MANUAL_FORMATS, validateDraft, type BuilderDraft, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
 import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src/compiler';
 import { rateDifficulty, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
@@ -18,20 +17,16 @@ import { Chip } from './Chip';
 import { LEVEL_LABELS, LEVEL_LETTERS } from './LevelChip';
 import styles from './Editor.module.css';
 import shared from './App.module.css';
+import { TimeInput } from './TimeInput';
+import transition from './Transition.module.css';
 
-const toText = (ms: number) => ms % 1000 === 0 ? displayTime(ms, 'floor') : formatDuration(ms);
-
-/** A duration entered as m:ss, 40s, 1m30s or seconds; the model only ever receives valid milliseconds. */
-function DurationField({ value, onChange, label, min = 0, id, allowEmpty = false }: { value: number; onChange: (ms: number) => void; label: string; min?: number; id?: string; allowEmpty?: boolean }) {
-  const [text, setText] = useState(() => allowEmpty && !value ? '' : toText(value));
-  const [invalid, setInvalid] = useState(false);
-  useEffect(() => { setText(current => { if (allowEmpty && !value && !current.trim()) return ''; try { return parseDuration(current) === value ? current : toText(value); } catch { return allowEmpty && !value ? '' : toText(value); } }); }, [value, allowEmpty]);
-  return <label className={styles.field}>{label}<input id={id} inputMode="numeric" value={text} placeholder={allowEmpty ? 'none' : undefined} aria-invalid={invalid || undefined} onChange={event => {
-    setText(event.target.value);
-    if (allowEmpty && !event.target.value.trim()) { setInvalid(false); onChange(0); return; }
-    try { const ms = parseDuration(event.target.value); if (ms < min) throw new Error('short'); setInvalid(false); onChange(ms); } catch { setInvalid(true); }
-  }} /></label>;
+/** A duration as mm:ss (TimeInput); the model only ever receives valid milliseconds. */
+function DurationField({ value, onChange, label, min = 0, id, allowEmpty = false, className }: { value: number; onChange: (ms: number) => void; label: string; min?: number; id?: string; allowEmpty?: boolean; className?: string }) {
+  return <label className={className ? `${styles.field} ${className}` : styles.field}>{label}<TimeInput id={id} value={value} min={min} allowEmpty={allowEmpty} placeholder={allowEmpty ? 'none' : undefined} onChange={onChange} /></label>;
 }
+
+type AfterSection = 'ready' | 'rest' | 'straight' | 'restReady';
+const AFTER_LABELS: Record<AfterSection, string> = { ready: 'Wait for Ready', rest: 'Rest, then continue', straight: 'Continue straight away', restReady: 'Rest, then wait for Ready' };
 
 type TargetKind = 'none' | 'reps' | 'calories' | 'm' | 'km' | 'time';
 const TARGET_LABELS: Record<TargetKind, string> = { none: 'No target', reps: 'Reps', calories: 'Calories', m: 'Metres', km: 'Kilometres', time: 'Seconds' };
@@ -88,7 +83,7 @@ interface EditorProps {
 }
 
 const FORMAT_HELP: Record<SectionFormat, string> = {
-  timedCircuit: 'Work slots with fixed seconds and explicit rests. The clock drives everything.',
+  timedCircuit: 'Movements with fixed seconds and explicit rests. The clock drives everything.',
   amrap: 'One block of movements, repeated as many times as the cap allows. Athletes count rounds on the screen.',
   emom: 'Work starts on every interval boundary. Done shows rest until the next one; the boundary never waits.',
   forTime: 'Ordered movements, each ended by Done. The clock counts up, with an optional cap.',
@@ -144,7 +139,10 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
   const updateLane = (s: number, i: number, role: 'A' | 'B', change: (value: Prescription) => Prescription) => setDraft(value => ({ ...value, sections: value.sections.map((section, j) => j === s ? { ...section, slots: section.slots.map((slot, k) => k === i ? { ...slot, [role]: change(slot[role] ?? { name: '' }) } : slot) } : section) }));
   const move = <T,>(list: T[], from: number, to: number) => { if (to < 0 || to >= list.length) return list; const copy = [...list]; const [item] = copy.splice(from, 1); copy.splice(to, 0, item); return copy; };
   const setParticipants = (participants: 1 | 2) => setDraft(value => ({ ...value, participants, sections: value.sections.map(section => ({ ...section, alternate: participants === 2 && section.alternate, slots: section.slots.map(slot => participants === 2 ? { ...slot, B: slot.B ?? { name: '' } } : { A: slot.A, durationMs: slot.durationMs }) })) }));
-  const setFormat = (s: number, format: SectionFormat) => updateSection(s, { format, ...(LIST_FORMATS.includes(format) ? { rounds: 1, betweenSlotsRestMs: 0, trailingRestMs: 0, blockRestMs: 0, slotRepeats: 1 } : {}), ...(format === 'amrap' && !draft.sections[s].capMs ? { capMs: 600_000 } : {}), ...(format !== 'timedCircuit' ? { slotRepeats: 1 } : {}) });
+  const setFormat = (s: number, format: SectionFormat) => updateSection(s, { format, ...(LIST_FORMATS.includes(format) ? { rounds: 1, betweenSlotsRestMs: 0, trailingRestMs: 0, slotRepeats: 1 } : {}), ...(format === 'amrap' && !draft.sections[s].capMs ? { capMs: 600_000 } : {}), ...(format !== 'timedCircuit' ? { slotRepeats: 1 } : {}) });
+  /** What happens after a section (BLD-14): the Ready gate, a timed rest that then continues, or straight on. */
+  const afterOf = (section: BuilderSection): AfterSection => section.transitionAfter === 'manualReady' ? section.blockRestMs > 0 ? 'restReady' : 'ready' : section.blockRestMs > 0 ? 'rest' : 'straight';
+  const setAfter = (s: number, after: AfterSection) => updateSection(s, after === 'ready' ? { transitionAfter: 'manualReady', blockRestMs: 0 } : after === 'restReady' ? { transitionAfter: 'manualReady' } : after === 'rest' ? { transitionAfter: 'automatic', blockRestMs: draft.sections[s].blockRestMs || 60_000 } : { transitionAfter: 'automatic', blockRestMs: 0 });
   const issueFor = (path: string) => issues.find(issue => issue.path === path)?.message;
   const pair = draft.participants === 2;
   /** Creates records for names the catalogue does not know and links every lane that uses them. */
@@ -157,9 +155,9 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
     return created;
   };
 
-  const laneCell = (s: number, i: number, role: 'A' | 'B', slot: BuilderSlot, section: BuilderSection) => {
+  const laneCell = (s: number, i: number, role: 'A' | 'B', slot: BuilderSlot) => {
     const value = slot[role] ?? { name: '' };
-    const label = `Section ${s + 1} ${MANUAL_FORMATS.includes(section.format) ? 'movement' : 'slot'} ${i + 1}${pair ? ` athlete ${role}` : ''}`;
+    const label = `Section ${s + 1} movement ${i + 1}${pair ? ` athlete ${role}` : ''}`;
     const kind = targetKindOf(value);
     const loadMode = loadModeOf(value);
     const levelled = levelledOf(value);
@@ -205,7 +203,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
       <div>
         <div className={shared.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> {importedFrom ? 'IMPORTED WORKOUT' : mode === 'replace' ? 'EDIT WORKOUT' : 'NEW WORKOUT'}</div>
         <h1>{draft.title.trim() || (mode === 'replace' ? 'Edit workout' : 'Build a workout')}</h1>
-        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Sections of timed slots or manual movements with targets, in any of the six formats. Type a movement to pick it from your catalogue; the summary on the right updates as you type.'}</p>
+        <p className={shared.description}>{importedFrom ? `Read from ${importedFrom}. Nothing is saved yet: check the movements, then save it to your library.` : 'Sections of timed or manual movements with targets, in any of the six formats. Type a movement to pick it from your catalogue; the summary on the right updates as you type.'}</p>
       </div>
     </div>
 
@@ -235,56 +233,64 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
             const standalone = section.format === 'forTime' || section.format === 'strength' || section.format === 'emom';
             const ygig = section.format === 'youGoIGo';
             const roundsWord = section.format === 'strength' ? 'Sets' : 'Rounds';
-            return <li key={s} className={styles.card}>
+            const last = s === draft.sections.length - 1;
+            const after = afterOf(section);
+            return <Fragment key={s}><li className={styles.card}>
               <div className={styles.sectionTop}>
                 <span className={shared.eyebrow}>SECTION {s + 1} OF {draft.sections.length}</span>
                 <div className={styles.toolbar}>
                   <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} up`} disabled={s === 0} onClick={() => update({ sections: move(draft.sections, s, s - 1) })}><Icon name="previous" size={16} /></button>
                   <button type="button" className={shared.iconButton} aria-label={`Move section ${s + 1} down`} disabled={s === draft.sections.length - 1} onClick={() => update({ sections: move(draft.sections, s, s + 1) })}><Icon name="next" size={16} /></button>
-                  <button type="button" className={shared.quietButton} aria-label={`Duplicate section ${s + 1}`} onClick={() => update({ sections: [...draft.sections.slice(0, s + 1), structuredClone(section), ...draft.sections.slice(s + 1)] })}>Duplicate</button>
+                  <button type="button" className={shared.quietButton} aria-label={`Duplicate section ${s + 1}`} onClick={() => update({ sections: [...draft.sections.slice(0, s + 1), structuredClone(section), ...draft.sections.slice(s + 1)] })}><Icon name="copy" size={15} />Duplicate</button>
                   <button type="button" className={shared.quietButton} aria-label={`Delete section ${s + 1}`} disabled={draft.sections.length === 1} onClick={() => update({ sections: draft.sections.filter((_, i) => i !== s) })}><Icon name="trash" size={15} />Delete</button>
                 </div>
               </div>
               <div className={styles.row}>
                 <label className={styles.field}>Section title<input value={section.title} maxLength={160} onChange={event => updateSection(s, { title: event.target.value })} aria-invalid={issueFor(`sections.${s}.title`) ? true : undefined} /></label>
                 <label className={styles.field}>Format<select value={section.format} aria-label={`Section ${s + 1} format`} onChange={event => setFormat(s, event.target.value as SectionFormat)}>{SECTION_FORMATS.map(format => <option key={format} value={format} disabled={format === 'youGoIGo' && !pair}>{FORMAT_LABELS[format]}</option>)}</select></label>
-                <label className={styles.field}>Then<select value={section.transitionAfter} onChange={event => updateSection(s, { transitionAfter: event.target.value as BuilderSection['transitionAfter'] })}><option value="manualReady">Wait for Ready</option><option value="automatic">Continue automatically</option></select></label>
+                {/* The final section has no tile after it: a rest left there by an older workout stays editable here. */}
+                {last && section.blockRestMs > 0 && <DurationField label="Rest at the end of the workout" value={section.blockRestMs} onChange={blockRestMs => updateSection(s, { blockRestMs })} />}
               </div>
               <p className={styles.formatHelp}>{FORMAT_HELP[section.format]}</p>
-              <div className={styles.row}>
+              {(section.format !== 'timedCircuit' && section.format !== 'strength') && <div className={styles.row}>
                 {(section.format === 'amrap' || section.format === 'forTime' || ygig) && <DurationField label={section.format === 'forTime' || ygig ? 'Time cap (optional)' : 'Time cap'} value={section.capMs} allowEmpty={section.format !== 'amrap'} onChange={capMs => updateSection(s, { capMs })} />}
                 {section.format === 'amrap' && <label className={styles.field}>Counter<select value={section.counter} onChange={event => updateSection(s, { counter: event.target.value as BuilderSection['counter'] })}><option value="roundsAndReps">Rounds and reps</option><option value="rounds">Rounds only</option><option value="none">No counter</option></select></label>}
                 {section.format === 'emom' && <><DurationField label="Every" value={section.intervalMs} min={1000} onChange={intervalMs => updateSection(s, { intervalMs })} /><label className={styles.field}>Intervals<input type="number" min={1} max={999} value={section.intervals} onChange={event => updateSection(s, { intervals: Number(event.target.value) })} /></label></>}
                 {ygig && <><label className={styles.field}>Team rounds (0 = by cap)<input type="number" min={0} max={999} value={section.teamRounds} onChange={event => updateSection(s, { teamRounds: Number(event.target.value) })} /></label><DurationField label="Fixed turn (optional)" value={section.turnMs} allowEmpty onChange={turnMs => updateSection(s, { turnMs })} /></>}
-                {!list && <label className={styles.field}>{roundsWord}<input type="number" min={1} max={999} value={section.rounds} aria-label={`Section ${s + 1} ${roundsWord.toLowerCase()}`} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>}
-                {!list && section.rounds > 1 && <DurationField label={`Rest between ${roundsWord.toLowerCase()}`} value={section.betweenRoundsRestMs} onChange={betweenRoundsRestMs => updateSection(s, { betweenRoundsRestMs })} />}
-                {!list && section.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={section.alternate} onChange={event => updateSection(s, { alternate: event.target.checked })} />Swap A/B tasks each round</label>}
-              </div>
-              {!list && <div className={styles.row}>
-                <DurationField label={manual ? 'Rest between movements' : 'Transition between slots'} value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
-                <DurationField label={manual ? 'Rest after last movement' : 'Transition after last slot'} value={section.trailingRestMs} onChange={trailingRestMs => updateSection(s, { trailingRestMs })} />
-                <DurationField label="Rest after section" value={section.blockRestMs} onChange={blockRestMs => updateSection(s, { blockRestMs })} />
-                {section.format === 'timedCircuit' && <label className={styles.field}>Repeat each slot<input type="number" min={1} max={999} value={section.slotRepeats} onChange={event => updateSection(s, { slotRepeats: Number(event.target.value) })} /></label>}
+              </div>}
+              {/* Slot level first, then round level. What happens at the section's edges is the tile between sections (BLD-14). */}
+              {!list && <div className={styles.row} role="group" aria-label={`Section ${s + 1} movement settings`}>
+                {section.format === 'timedCircuit' && <label className={styles.field}>Repeat each movement<input type="number" min={1} max={999} value={section.slotRepeats} onChange={event => updateSection(s, { slotRepeats: Number(event.target.value) })} /></label>}
                 {section.format === 'timedCircuit' && section.slotRepeats > 1 && <DurationField label="Rest within repeats" value={section.slotRepeatRestMs} onChange={slotRepeatRestMs => updateSection(s, { slotRepeatRestMs })} />}
+                <DurationField label={manual ? 'Rest between movements' : 'Transition between movements'} value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
+                {/* Older workouts can end every round with a transition after the last slot. It is kept and shown only while it is set. */}
+              </div>}
+              {!list && <div className={styles.row} role="group" aria-label={`Section ${s + 1} ${section.format === 'strength' ? 'set' : 'round'} settings`}>
+                <label className={styles.field}>{roundsWord}<input type="number" min={1} max={999} value={section.rounds} aria-label={`Section ${s + 1} ${roundsWord.toLowerCase()}`} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>
+                {section.rounds > 1 && <DurationField label={`Rest between ${roundsWord.toLowerCase()}`} value={section.betweenRoundsRestMs} onChange={betweenRoundsRestMs => updateSection(s, { betweenRoundsRestMs })} />}
+                {section.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={section.alternate} onChange={event => updateSection(s, { alternate: event.target.checked })} />Swap A/B tasks each round</label>}
               </div>}
               <table className={styles.slots}>
                 <thead><tr><th scope="col">#</th><th scope="col">{ygig ? 'Work unit (both athletes)' : pair ? 'Athlete A' : 'Movement'}</th>{pair && !ygig && <th scope="col">Athlete B</th>}{!manual && <th scope="col">Work</th>}{pair && standalone && <th scope="col">Done by</th>}<th scope="col"><span className={styles.srOnly}>Actions</span></th></tr></thead>
                 <tbody>{section.slots.map((slot, i) => <tr key={i}>
                   <td>{String(i + 1).padStart(2, '0')}</td>
-                  {laneCell(s, i, 'A', slot, section)}
-                  {pair && !ygig && laneCell(s, i, 'B', slot, section)}
+                  {laneCell(s, i, 'A', slot)}
+                  {pair && !ygig && laneCell(s, i, 'B', slot)}
                   {!manual && <td><DurationField label="" id={`s${s}-slot${i}-duration`} value={slot.durationMs} min={1000} onChange={durationMs => updateSlot(s, i, { durationMs })} /></td>}
                   {pair && standalone && <td><select aria-label={`Section ${s + 1} movement ${i + 1} completion`} value={slot.completion ?? 'team'} onChange={event => updateSlot(s, i, { completion: event.target.value as BuilderSlot['completion'] })}><option value="team">One Done</option><option value="both">Both tap Done</option></select></td>}
                   <td><div className={styles.toolbar}>
-                    <button type="button" className={shared.iconButton} aria-label={`Move slot ${i + 1} up`} disabled={i === 0} onClick={() => updateSection(s, { slots: move(section.slots, i, i - 1) })}><Icon name="previous" size={15} /></button>
-                    <button type="button" className={shared.iconButton} aria-label={`Move slot ${i + 1} down`} disabled={i === section.slots.length - 1} onClick={() => updateSection(s, { slots: move(section.slots, i, i + 1) })}><Icon name="next" size={15} /></button>
-                    <button type="button" className={shared.iconButton} aria-label={`Duplicate slot ${i + 1}`} onClick={() => updateSection(s, { slots: [...section.slots.slice(0, i + 1), structuredClone(slot), ...section.slots.slice(i + 1)] })}><Icon name="grid" size={15} /></button>
-                    <button type="button" className={shared.iconButton} aria-label={`Delete slot ${i + 1}`} disabled={section.slots.length === 1} onClick={() => updateSection(s, { slots: section.slots.filter((_, j) => j !== i) })}><Icon name="trash" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Move movement ${i + 1} up`} disabled={i === 0} onClick={() => updateSection(s, { slots: move(section.slots, i, i - 1) })}><Icon name="previous" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Move movement ${i + 1} down`} disabled={i === section.slots.length - 1} onClick={() => updateSection(s, { slots: move(section.slots, i, i + 1) })}><Icon name="next" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Duplicate movement ${i + 1}`} onClick={() => updateSection(s, { slots: [...section.slots.slice(0, i + 1), structuredClone(slot), ...section.slots.slice(i + 1)] })}><Icon name="copy" size={15} /></button>
+                    <button type="button" className={shared.iconButton} aria-label={`Delete movement ${i + 1}`} disabled={section.slots.length === 1} onClick={() => updateSection(s, { slots: section.slots.filter((_, j) => j !== i) })}><Icon name="trash" size={15} /></button>
                   </div></td>
                 </tr>)}</tbody>
               </table>
-              <button type="button" className={shared.quietButton} onClick={() => updateSection(s, { slots: [...section.slots, emptySlot(draft.participants)] })}><Icon name="arrow" size={15} />{manual ? 'Add movement' : 'Add slot'}</button>
-            </li>;
+              <button type="button" className={shared.quietButton} onClick={() => updateSection(s, { slots: [...section.slots, emptySlot(draft.participants)] })}><Icon name="arrow" size={15} />Add movement</button>
+            </li>{!last && <li className={transition.tile} role="group" aria-label={`Between section ${s + 1} and ${s + 2}`}>
+              <label className={styles.field}>Then<select aria-label={`After section ${s + 1}`} value={after} onChange={event => setAfter(s, event.target.value as AfterSection)}>{(Object.keys(AFTER_LABELS) as AfterSection[]).filter(item => item !== 'restReady' || after === 'restReady').map(item => <option key={item} value={item}>{AFTER_LABELS[item]}</option>)}</select></label>
+              {(after === 'rest' || after === 'restReady') && <DurationField label="Rest" value={section.blockRestMs} min={1000} onChange={blockRestMs => updateSection(s, { blockRestMs })} />}
+            </li>}</Fragment>;
           })}
         </ol>
         <button type="button" className={shared.quietButton} onClick={() => update({ sections: [...draft.sections, emptySection(draft.participants)] })}><Icon name="arrow" size={15} />Add section</button>

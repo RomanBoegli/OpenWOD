@@ -39,6 +39,8 @@ export interface OutlineSection {
   emom?: CompiledSection['emom'];
   youGoIGo?: CompiledSection['youGoIGo'];
   transitionAfter: 'manualReady' | 'automatic';
+  /** The rest after the section (BLD-14), told once beside the transition instead of in the rounds. */
+  restAfterMs?: number;
   leadingRest: RestSegment[];
   rounds: OutlineRound[];
 }
@@ -73,7 +75,7 @@ function row(item: Occurrence): OutlineRow {
 
 export function outlineWorkout(plan: ExecutionPlan): OutlineSection[] {
   return plan.sections.map(section => {
-    const occurrences: Occurrence[] = plan.occurrences.slice(section.startIndex, section.endIndex + 1);
+    const occurrences: Occurrence[] = plan.occurrences.slice(section.startIndex, (section.restAfter?.index ?? section.endIndex + 1));
     const groups: OutlineRound[] = [];
     const leadingRest: RestSegment[] = [];
     let group: OutlineRound | undefined;
@@ -107,6 +109,7 @@ export function outlineWorkout(plan: ExecutionPlan): OutlineSection[] {
     }
     const result: OutlineSection = { id: section.id, title: section.title, format: section.format, durationMs: section.durationMs, durationKind: section.durationKind, transitionAfter: section.transitionAfter, leadingRest, rounds };
     if (section.startMs !== undefined) result.startMs = section.startMs;
+    if (section.restAfter) result.restAfterMs = section.restAfter.durationMs;
     if (section.capMs !== undefined) result.capMs = section.capMs;
     if (section.emom) result.emom = section.emom;
     if (section.youGoIGo) result.youGoIGo = section.youGoIGo;

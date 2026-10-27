@@ -30,7 +30,7 @@ describe('canonical workout compiler', () => {
     expect(secondRound.assignments?.A.name).toBe('Row');
   });
 
-  it('AT-29: compiles the supplied workout into 50 minutes with explicit trailing rests and alternating columns', () => {
+  it('AT-29: compiles the supplied workout into 50 minutes with explicit rests between rounds and sections and alternating columns', () => {
     const plan = compileWorkout(fullBodyPartner);
     expect(plan.durationMs).toBe(3_000_000);
     expect(plan.sections.map(section => section.durationMs)).toEqual([300_000, 600_000, 600_000, 600_000, 600_000, 300_000]);
@@ -39,7 +39,7 @@ describe('canonical workout compiler', () => {
     expect(first.assignments?.A.name).toBe('Air squats');
     expect(second.assignments?.A.name).toBe('Dumbbell thrusters');
     expect(second.assignments?.B?.name).toBe('Air squats');
-    expect(plan.occurrences[plan.sections[4].endIndex].durationMs).toBe(120_000);
+    expect(plan.occurrences[plan.sections[4].endIndex].durationMs).toBe(140_000);
     expect(plan.occurrences[plan.sections[4].endIndex].phase).toBe('blockRest');
   });
 

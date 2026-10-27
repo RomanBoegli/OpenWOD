@@ -35,4 +35,5 @@ export interface ExportDocument {
 }
 /** What a backup holds (summariseExport) and what a restore wrote. `workouts` counts the active ones, `archived` the rest. */
 export interface ExportSummary { workouts: number; archived: number; sessions: number; corrections: number; masterRevision: number; exportedAt: string }
-export interface RestoreReport extends ExportSummary { pruned?: number }
+/** `pruned` counts the oldest sessions beyond a session limit, `deleted` the sessions a tombstone kept out (DAT-14). */
+export interface RestoreReport extends ExportSummary { pruned?: number; deleted?: number }

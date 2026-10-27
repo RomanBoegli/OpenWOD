@@ -8,11 +8,11 @@ test.describe('editor', () => {
     await expect(save).toBeDisabled();
     await expect(page.getByRole('alert')).toContainText('Give the workout a title.');
     await page.getByLabel('Title', { exact: true }).fill('Garage pair');
-    await page.getByLabel('Section 1 slot 1 athlete A', { exact: true }).fill('Row');
-    await page.getByLabel('Section 1 slot 1 athlete B', { exact: true }).fill('Swings');
-    await page.getByRole('button', { name: 'Add slot' }).click();
-    await page.getByLabel('Section 1 slot 2 athlete A', { exact: true }).fill('Burpees');
-    await page.getByLabel('Section 1 slot 2 athlete B', { exact: true }).fill('Squats');
+    await page.getByLabel('Section 1 movement 1 athlete A', { exact: true }).fill('Row');
+    await page.getByLabel('Section 1 movement 1 athlete B', { exact: true }).fill('Swings');
+    await page.getByRole('button', { name: 'Add movement' }).click();
+    await page.getByLabel('Section 1 movement 2 athlete A', { exact: true }).fill('Burpees');
+    await page.getByLabel('Section 1 movement 2 athlete B', { exact: true }).fill('Squats');
     await page.locator('#s0-slot1-duration').fill('0:30');
     await page.getByLabel('Rounds').fill('2');
     await page.getByLabel('Rest between rounds').fill('1:00');

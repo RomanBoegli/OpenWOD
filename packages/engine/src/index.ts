@@ -30,6 +30,8 @@ export interface ClockValues {
   slotMs: number;
   capRemainingMs?: number;
   turnRemainingMs?: number;
+  /** While the clock waits at a boundary (see boundaryHoldMs), how long it still waits before it runs again. */
+  holdMs?: number;
 }
 export type Control = 'play' | 'pause' | 'resume' | 'ready' | 'stop' | 'next' | 'previous' | 'nextSection' | 'previousSection' | 'nudge' | 'done' | 'done:A' | 'done:B' | 'finish' | 'switch' | 'skipTurn' | 'count:round' | 'count:rep' | 'undoCount';
 export interface Acks { A: boolean; B: boolean; team: boolean }
@@ -105,6 +107,11 @@ const FINISHABLE: SectionFormat[] = ['amrap', 'forTime', 'youGoIGo', 'strength']
 export class WorkoutEngine {
   readonly events: EngineEvent[] = [];
   revision = 0;
+  /**
+   * How long the clock stands still after a timed boundary (prep, slot, interval, turn), so a long boundary sound ends
+   * before the next slot counts. The wait is not active time, and any command ends it early. 0 keeps the plan's timing.
+   */
+  boundaryHoldMs = 0;
   private status: Status = 'ready';
   private pausedFrom: 'running' | 'preparing' = 'running';
   private index = 0;
@@ -130,6 +137,14 @@ export class WorkoutEngine {
 
   private get occurrence() { return this.plan.occurrences[this.index]; }
   private get section() { return this.plan.sections[this.occurrence.sectionIndex]; }
+  /**
+   * Where the rest after the current section starts (BLD-14). It follows the cap, a Finish or the last Done, so the cap
+   * does not run in it and the score is taken when it starts. Timed circuits keep their block rest in the fixed timeline.
+   */
+  private get restAfterIndex() { const section = this.section; return section.format === 'timedCircuit' ? undefined : section.restAfter?.index; }
+  private get inRestAfter() { const index = this.restAfterIndex; return index !== undefined && this.index >= index; }
+  /** The cap that runs now: none during the rest after the section. */
+  private get runningCapMs() { return this.inRestAfter ? undefined : this.section.capMs; }
   private get isBlock() { return Boolean(this.occurrence.tasks); }
   get occurrenceId() {
     if (this.status === 'ready') return 'ready';
@@ -153,6 +168,7 @@ export class WorkoutEngine {
 
   readClocks(at = this.now()): ClockValues {
     const delta = this.moving ? Math.max(0, at - this.anchor) : 0;
+    const holdMs = this.moving ? Math.max(0, this.anchor - at) : 0;
     const running = this.status === 'running';
     const activeMs = this.activeMs + (running ? delta : 0);
     const sectionMs = this.sectionMs + (running ? delta : 0);
@@ -164,7 +180,8 @@ export class WorkoutEngine {
       return { durationMs, remainingMs, fraction: durationMs ? remainingMs / durationMs : 0, slotMs, activeMs, sectionMs };
     }
     const section = this.section;
-    const capRemainingMs = section.capMs !== undefined ? Math.max(0, section.capMs - sectionMs) : undefined;
+    const runningCapMs = this.runningCapMs;
+    const capRemainingMs = runningCapMs !== undefined ? Math.max(0, runningCapMs - sectionMs) : undefined;
     const turnMs = section.youGoIGo?.turnMs;
     const turnRemainingMs = turnMs && this.isBlock ? Math.max(0, turnMs - phase) : undefined;
     const scope = this.scopeOf(this.occurrence, section);
@@ -180,6 +197,7 @@ export class WorkoutEngine {
     const values: ClockValues = { durationMs, remainingMs, fraction: durationMs ? remainingMs / durationMs : 0, slotMs, activeMs, sectionMs };
     if (capRemainingMs !== undefined) values.capRemainingMs = capRemainingMs;
     if (turnRemainingMs !== undefined) values.turnRemainingMs = turnRemainingMs;
+    if (holdMs > 0) values.holdMs = holdMs;
     return values;
   }
 
@@ -189,7 +207,8 @@ export class WorkoutEngine {
     if (this.preparing) return { at: this.anchor + this.plan.workout.prepMs - this.phaseMs, kind: 'prep' };
     const section = this.section;
     const candidates: Due[] = [];
-    if (section.capMs !== undefined) candidates.push({ at: this.anchor + section.capMs - this.sectionMs, kind: 'cap' });
+    const capMs = this.runningCapMs;
+    if (capMs !== undefined) candidates.push({ at: this.anchor + capMs - this.sectionMs, kind: 'cap' });
     if (this.occurrence.timing !== 'manual') candidates.push({ at: this.anchor + this.occurrence.durationMs - this.phaseMs, kind: 'slot' });
     const turnMs = section.youGoIGo?.turnMs;
     if (turnMs && this.isBlock) candidates.push({ at: this.anchor + turnMs - this.phaseMs, kind: 'turn' });
@@ -249,6 +268,7 @@ export class WorkoutEngine {
     this.index++;
     this.phaseMs = 0;
     this.resetOccurrenceState();
+    if (this.occurrence.sectionIndex === previous.sectionIndex && this.index === this.restAfterIndex) this.results[previousSection.id] = result;
     if (this.occurrence.sectionIndex !== previous.sectionIndex) {
       this.results[previousSection.id] = result;
       this.sectionMs = 0;
@@ -265,7 +285,9 @@ export class WorkoutEngine {
     const section = this.section;
     this.results[section.id] = this.resultFor(section, outcome);
     this.emit('sectionEnded', { outcome, sectionMs: this.sectionMs });
-    this.index = section.endIndex;
+    // The rest after the section still runs (BLD-14).
+    const restIndex = this.restAfterIndex;
+    this.index = restIndex !== undefined && this.index < restIndex ? restIndex - 1 : section.endIndex;
     this.advance(false);
   }
   private handoff(reason: 'switch' | 'skip' | 'deadline') {
@@ -297,6 +319,8 @@ export class WorkoutEngine {
         if (this.occurrence.timing === 'interval' && !this.acknowledged) this.unacknowledged.push(this.occurrence.id);
         this.advance();
       } else this.handoff('deadline');
+      // The anchor moves into the future, so the clock reads the slot's start until the hold has passed.
+      if (this.boundaryHoldMs > 0 && due.kind !== 'cap' && this.moving) this.anchor = due.at + this.boundaryHoldMs;
     }
   }
 
@@ -322,7 +346,8 @@ export class WorkoutEngine {
         if (this.occurrence.timing !== 'manual') spans.push([this.phaseMs, this.occurrence.durationMs]);
         const turnMs = this.section.youGoIGo?.turnMs;
         if (turnMs && this.isBlock) spans.push([this.phaseMs, turnMs]);
-        if (this.section.capMs !== undefined) spans.push([this.sectionMs, this.section.capMs]);
+        const capMs = this.runningCapMs;
+        if (capMs !== undefined) spans.push([this.sectionMs, capMs]);
       }
       let delta = Math.round(command.delta ?? 0);
       for (const [current, limit] of spans) delta = Math.max(-current, Math.min(limit - current, delta));
@@ -368,6 +393,10 @@ export class WorkoutEngine {
       if (command.type === 'next' && !inSection) return false;
       if (this.moving) this.freeze(at);
       // Previous at a section's first occurrence restarts that occurrence (ENG-05); navigation never leaves the section.
+      const restIndex = this.restAfterIndex;
+      const section = this.section;
+      if (restIndex !== undefined && inSection && nextIndex === restIndex && this.index < restIndex) this.results[section.id] ??= this.resultFor(section, 'completed');
+      if (restIndex !== undefined && inSection && nextIndex < restIndex && this.index >= restIndex) delete this.results[section.id];
       this.index = inSection ? nextIndex : this.index;
       this.phaseMs = 0;
       this.anchor = at;
@@ -385,9 +414,11 @@ export class WorkoutEngine {
       const wasAwaiting = this.status === 'awaitingReady';
       let target: CompiledSection;
       if (forward) {
-        // The section left behind is scored as skipped, with whatever it had counted so far.
-        this.results[section.id] = this.resultFor(section, 'skipped');
-        this.emit('sectionEnded', { outcome: 'skipped', sectionMs: this.sectionMs });
+        // The section left behind is scored as skipped, with whatever it had counted so far. In the rest after it, it is already scored.
+        if (!this.inRestAfter) {
+          this.results[section.id] = this.resultFor(section, 'skipped');
+          this.emit('sectionEnded', { outcome: 'skipped', sectionMs: this.sectionMs });
+        }
         target = this.plan.sections[this.occurrence.sectionIndex + 1];
       } else {
         // Back to the start of the previous section (or of the first one); its earlier score is dropped so it can be played again.
@@ -426,11 +457,11 @@ export class WorkoutEngine {
       if (this.occurrence.timing === 'manual' && this.acknowledged) this.advance();
       return true;
     }
-    if (command.type === 'finish' && running && FINISHABLE.includes(this.section.format)) {
+    if (command.type === 'finish' && running && FINISHABLE.includes(this.section.format) && !this.inRestAfter) {
       this.freeze(at);
       const section = this.section;
       if (section.format === 'forTime' || section.format === 'strength') {
-        const last = this.index === section.endIndex;
+        const last = this.index === (this.restAfterIndex ?? section.endIndex + 1) - 1;
         if (last && !this.isBlock && this.occurrence.timing === 'manual' && !this.acknowledged) {
           // Finishing on the final task counts as its Done.
           this.acks.team = this.sectionMs;
@@ -511,7 +542,7 @@ export class WorkoutEngine {
         if (this.acks.B === undefined) controls.push('done:B');
       }
     }
-    if (FINISHABLE.includes(this.section.format)) controls.push('finish');
+    if (FINISHABLE.includes(this.section.format) && !this.inRestAfter) controls.push('finish');
     if (this.canSwitch) controls.push('switch', 'skipTurn');
     if (this.canCount) {
       controls.push('count:round');
@@ -544,7 +575,7 @@ export class WorkoutEngine {
     if (this.canCount) projection.counter = { rounds: this.counter.rounds, reps: this.counter.reps, canUndo: this.counter.history.length > 0 };
     if (this.turn) projection.turn = { ...this.turn, roundsTarget: section.youGoIGo?.rounds };
     if (occurrence.interval) projection.interval = occurrence.interval;
-    if (section.capMs !== undefined) projection.capMs = section.capMs;
+    if (this.runningCapMs !== undefined) projection.capMs = this.runningCapMs;
     return projection;
   }
 
@@ -613,7 +644,8 @@ export class WorkoutEngine {
     if (this.pausedFrom === 'preparing') remaining.push(this.plan.workout.prepMs - this.phaseMs);
     else {
       const section = this.section;
-      if (section.capMs !== undefined) remaining.push(section.capMs - this.sectionMs);
+      const capMs = this.runningCapMs;
+      if (capMs !== undefined) remaining.push(capMs - this.sectionMs);
       if (this.occurrence.timing !== 'manual') remaining.push(this.occurrence.durationMs - this.phaseMs);
       const turnMs = section.youGoIGo?.turnMs;
       if (turnMs && this.isBlock) remaining.push(turnMs - this.phaseMs);
@@ -656,21 +688,40 @@ export function displayTime(ms: number, rounding: 'ceil' | 'floor' = 'ceil'): st
 
 export interface WarningMarks { amberMs: number; redMs: number }
 export const DEFAULT_WARNING_MARKS: WarningMarks = { amberMs: 10_000, redMs: 3000 };
-/** Amber and red marks, capped to a quarter and a tenth of the slot so short intervals do not spend their whole length in warning (UI-13). */
 /**
- * How deep the background pulse is, 0..1: the slot is three segments (work until the first marker, first marker
- * until the second, second marker until the end), and within each the intensity climbs from nothing to full shortly
- * before the segment ends (at 90 % of it), so every colour arrives soft and leaves at full strength.
+ * How deep the background wash is, 0..1: one ramp over the whole slot, from nothing at its start to full at its end.
+ * It only ever rises within a slot, so the colour marks change the hue (washMorph) but never the strength.
  */
-export function washDrain(remainingMs: number, durationMs: number, marks: WarningMarks = DEFAULT_WARNING_MARKS): number {
+export function washDrain(remainingMs: number, durationMs: number): number {
   if (!(durationMs > 0)) return 0;
+  return 1 - Math.max(0, Math.min(remainingMs, durationMs)) / durationMs;
+}
+
+/** How long a colour mark takes to morph into its colour, starting at the mark (UI-13). */
+export const WASH_MORPH_MS = 1000;
+
+/**
+ * How far the slot colour has morphed towards each mark colour, 0..1 each: amber from the first mark, red from the
+ * second, each eased over WASH_MORPH_MS from the instant its mark is reached. The morph is capped to half the time to
+ * the next mark (or the end), so a short slot still lands on the full colour well before the next one starts.
+ * The marks are the same capped ones as warningLevel, so the morph starts exactly when the warning flips.
+ */
+export function washMorph(remainingMs: number, durationMs: number, marks: WarningMarks = DEFAULT_WARNING_MARKS): { amber: number; red: number } {
+  if (!(durationMs > 0)) return { amber: 0, red: 0 };
   const amber = Math.min(marks.amberMs, durationMs * .25);
   const red = Math.min(marks.redMs, durationMs * .1);
   const remaining = Math.max(0, Math.min(remainingMs, durationMs));
-  const [length, elapsed] = remaining > amber ? [durationMs - amber, durationMs - remaining] : remaining > red ? [amber - red, amber - remaining] : [red, red - remaining];
-  return length > 0 ? Math.min(1, elapsed / (length * .9)) : 1;
+  const toward = (mark: number, next: number) => {
+    const span = Math.min(WASH_MORPH_MS, (mark - next) / 2);
+    if (remaining > mark) return 0;
+    if (!(span > 0)) return 1;
+    const t = Math.min(1, (mark - remaining) / span);
+    return t * t * (3 - 2 * t);
+  };
+  return { amber: toward(amber, Math.min(red, amber)), red: toward(red, 0) };
 }
 
+/** Amber and red marks, capped to a quarter and a tenth of the slot so short intervals do not spend their whole length in warning (UI-13). */
 export function warningLevel(remainingMs: number, durationMs: number, marks: WarningMarks = DEFAULT_WARNING_MARKS): 'normal' | 'amber' | 'red' {
   if (remainingMs <= Math.min(marks.redMs, durationMs * .1)) return 'red';
   if (remainingMs <= Math.min(marks.amberMs, durationMs * .25)) return 'amber';

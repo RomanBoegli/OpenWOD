@@ -2,7 +2,7 @@ import type { Workout } from '../../../../packages/domain/src/schema';
 import type { EngineSnapshot, Status } from '../../../../packages/engine/src';
 import type { SessionRecord } from '../../../../packages/engine/src/records';
 import { idbGetAll, idbPut, transaction } from './idb';
-import { outboxEvents, type OutboxItem } from './outbox';
+import { outboxEvents, sessionItemId, type OutboxItem } from './outbox';
 
 /**
  * Durable session state on this device (ENG-11/12, DAT-02): a full checkpoint after every accepted command and
@@ -71,7 +71,7 @@ export async function finishSession(sessionId: string, record?: SessionRecord): 
   await transaction(['checkpoints', 'progress', 'outbox'], 'readwrite', get => {
     get('checkpoints').delete(sessionId);
     get('progress').delete(sessionId);
-    if (record) get('outbox').put({ id: `session:${record.id}`, kind: 'session', body: record, createdAt: new Date().toISOString(), attempts: 0, nextAttemptAt: 0, state: 'pending' } satisfies OutboxItem);
+    if (record) get('outbox').put({ id: sessionItemId(record.id), kind: 'session', body: record, createdAt: new Date().toISOString(), attempts: 0, nextAttemptAt: 0, state: 'pending' } satisfies OutboxItem);
   });
   if (record) outboxEvents.dispatchEvent(new Event('change'));
 }

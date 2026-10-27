@@ -42,6 +42,11 @@ export interface CompiledSection {
   durationKind: DurationKind;
   capMs?: number;
   transitionAfter: 'manualReady' | 'automatic';
+  /**
+   * The rest after the section (BLD-14): a rest node that ends the section body, compiled as the section's last occurrence.
+   * Outside timed circuits it runs after the cap, a Finish or the last Done, and is never part of the score.
+   */
+  restAfter?: { index: number; durationMs: number };
   emom?: { intervalMs: number; intervals: number };
   amrap?: { counter: 'roundsAndReps' | 'rounds' | 'none' };
   youGoIGo?: { rounds?: number; turnMs?: number };
@@ -71,7 +76,11 @@ export function compileWorkout(input: unknown): ExecutionPlan {
       inspect(node.body, depth + 1, section);
     } else if (node.type === 'sequence') {
       if (listOnly && depth > 0) fail(node.id, `${label(section.format)} sections take one flat list of tasks.`);
-      node.children.forEach(child => inspect(child, listOnly ? depth + 1 : depth, section));
+      node.children.forEach((child, index) => {
+        // A list may end in one rest, the rest after the section (BLD-14).
+        if (listOnly && depth === 0 && child.type === 'rest' && index === node.children.length - 1 && index > 0 && !node.betweenChildrenRestMs && !node.trailingRestMs) claim(child.id);
+        else inspect(child, listOnly ? depth + 1 : depth, section);
+      });
     } else if (node.type === 'timed' || node.type === 'task') {
       if (Boolean(node.assignments.B) !== pair) fail(node.id, 'Every work slot must match the workout’s athlete count.');
       for (const lane of [node.assignments.A, node.assignments.B]) for (const load of lane?.load ? 'value' in lane.load ? [lane.load] : Object.values(lane.load) : []) if (load.unit === 'percent' && load.women !== undefined) fail(node.id, 'A percentage of 1RM is each athlete’s own; it takes no women’s value.');
@@ -183,6 +192,10 @@ export function compileWorkout(input: unknown): ExecutionPlan {
       append(section.body.id, 'work', 0, [], undefined, false, { timing: 'manual', tasks });
       kind = capMs ? 'capped' : 'open';
     }
+    if (section.format === 'emom' || section.format === 'amrap' || section.format === 'youGoIGo') {
+      const last = section.body.type === 'sequence' ? section.body.children.at(-1) : undefined;
+      if (last?.type === 'rest') append(last.id, last.kind ?? 'blockRest', last.durationMs, []);
+    }
     if (!occurrences.slice(startIndex).some(item => item.phase === 'work')) fail(section.id, 'Each section needs at least one work slot.');
     if (kind === 'capped' && capMs) {
       if (elapsed + capMs > MAX_MS) fail(section.id, 'Workout duration exceeds 24 hours.');
@@ -193,6 +206,10 @@ export function compileWorkout(input: unknown): ExecutionPlan {
     else if (kind === 'capped' && durationKind === 'exact') durationKind = 'capped';
     const compiled: CompiledSection = { id: section.id, title: section.title, format: section.format, startIndex, endIndex: occurrences.length - 1, durationMs: sectionElapsed, durationKind: kind, transitionAfter: section.transitionAfter };
     if (startMs !== undefined) compiled.startMs = startMs;
+    const body = section.body;
+    const ending = body.type === 'sequence' && !body.trailingRestMs ? body.children.at(-1) : undefined;
+    const lastOccurrence = occurrences.at(-1);
+    if (ending?.type === 'rest' && lastOccurrence && occurrences.length - 1 > startIndex && lastOccurrence.anchor === ending.id) compiled.restAfter = { index: occurrences.length - 1, durationMs: ending.durationMs };
     if (capMs) compiled.capMs = capMs;
     if (section.format === 'emom') compiled.emom = { intervalMs: section.intervalMs!, intervals: section.intervals! };
     if (section.format === 'amrap') compiled.amrap = { counter: section.counter ?? 'roundsAndReps' };

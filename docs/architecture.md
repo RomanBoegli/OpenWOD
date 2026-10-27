@@ -112,6 +112,7 @@ The household server (`apps/server`) is the authoritative store (DAT-01): SQLite
 Migrations are versioned and run in transactions, a newer schema refuses to start, and an existing file is backed up with the SQLite backup API before any migration.
 Writes require the expected revision (`If-Match`) and answer a conflict with the current document.
 Session uploads are idempotent by id.
+A deleted session leaves a tombstone of its id in `deleted_sessions` (migration 3), so a later upload of it is acknowledged and not stored, and `DELETE /api/v1/sessions/:id` is idempotent (DAT-14).
 Validation reuses the domain parser and compiler, so invalid content never reaches the database.
 The rules themselves (revisions, archive, idempotent sessions, corrections, device and pack imports, export and restore) live once in `packages/household` as `class Household` over a small synchronous port, `HouseholdTables`.
 The server implements the port with prepared SQLite statements inside one transaction per call, and a shared conformance suite (`tests/unit/helpers/household-suite.ts`) runs against both implementations.
@@ -121,7 +122,7 @@ In test builds a header selects a per-test in-memory database, which lets the br
 On the device (`apps/web/src/data/`), IndexedDB holds five stores in the server shape: checkpoints and progress records of running sessions, the outbox of writes that have not reached the server, a cache of the household data for an instant and offline start, and metadata.
 `useLibraryData` owns the household state for the app: cache first, then the server, with writes going to the server directly and into the outbox on a network failure.
 The outbox flushes single-flight with backoff on reconnect, when the tab becomes visible and on a timer, and a master-data conflict is resolved by merging ours over the server's.
-Everything not yet uploaded is labelled in the header, on the card, in history and in settings (DAT-09).
+Everything not yet uploaded is labelled in the header, on the card, in the logbook and in settings (DAT-09).
 The settings are the household's too (DAT-12): `useSharedPreferences` keeps a copy in the browser for an instant start and follows one settings document on the server, read with `GET /api/v1/settings` on start, focus and reconnect and replaced with `PUT` after a change.
 The last change wins, a change made offline is marked and sent on the next chance, and each device validates the server's copy field by field with `normalisePreferences`.
 An empty server takes the first device's settings unless they are the defaults, and the static shape keeps its settings in the browser.
@@ -140,7 +141,7 @@ The same sources build two shapes, chosen by the Vite mode at build time.
 The server shape (`vite build`, base `/`, `dist/web`) talks to the household API over HTTP.
 The static shape (`vite build --mode static`, base `./`, `dist/static`, `__OPENWOD_STATIC__` set) has no server and keeps the library in the browser.
 `apps/web/src/data/backend.ts` declares one `Backend` interface and picks its implementation once at module load: `remote.ts` for the server, `local-backend.ts` for the browser.
-The local backend runs the same `Household` core over IndexedDB version 2, which adds the stores `workouts`, `master` and `sessions` (indexed by finish time and by workout) beside the five above.
+The local backend runs the same `Household` core over IndexedDB version 3: version 2 added the stores `workouts`, `master` and `sessions` (indexed by finish time and by workout) beside the five above, and version 3 adds `deletedSessions`, the tombstones of deleted sessions (DAT-14).
 Each call is one IndexedDB transaction that loads what the core needs, runs the core synchronously and writes the result, so an import or a restore is all-or-nothing.
 It throws the client's own `ApiError`, never a network error, so the outbox and `useLibraryData` work unchanged: a conflict is a conflict, a rejected write is rejected, everything else succeeds at once.
 The static shape keeps the newest 2000 sessions and prunes older ones on every write and on restore.

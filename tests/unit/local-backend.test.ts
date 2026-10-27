@@ -26,6 +26,8 @@ const asHousehold = (backend: LocalBackend): HouseholdApi => ({
   listSessions: query => backend.listSessions(query),
   getSession: id => backend.getSession(id).catch(missing),
   correctSession: (id, results, note, expectedRevision) => backend.correctSession(id, results, note, expectedRevision ?? 0),
+  // The backend answers like the server's 204; whether a row was there is read before.
+  deleteSession: async id => { const had = await backend.getSession(id).then(() => true, missing).then(Boolean); await backend.deleteSession(id); return had ? 'deleted' : 'absent'; },
   importDevice: payload => backend.importDevice(payload),
   importPack: payload => backend.importPack(payload),
   exportAll: () => backend.exportAll(),
@@ -126,7 +128,35 @@ describe('local backend: IndexedDB specifics', () => {
     expect(report.created).toEqual([{ from: 'fran', to: 'fran-2' }]);
   });
 
-  it('upgrades a version-1 database to version 2 and keeps its rows', async () => {
+  it('upgrades a version-2 database to version 3 with the tombstone store and keeps its sessions (DAT-14)', async () => {
+    const stored = { ...playedSession('kept', bundledWorkout('fran')), revision: 1, receivedAt: '2026-10-26T10:30:00.000Z', corrections: [] };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(IDB_NAME, 2);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        for (const [name, keyPath] of [['checkpoints', 'sessionId'], ['progress', 'sessionId'], ['outbox', 'id'], ['cache', 'key'], ['meta', 'key'], ['workouts', 'id'], ['master', 'id']] as const) db.createObjectStore(name, { keyPath });
+        const sessions = db.createObjectStore('sessions', { keyPath: 'id' });
+        sessions.createIndex('byFinished', 'finishedAt');
+        sessions.createIndex('byWorkout', ['workoutId', 'finishedAt']);
+        sessions.put(stored);
+      };
+      request.onsuccess = () => { request.result.close(); resolve(); };
+      request.onerror = () => reject(request.error);
+    });
+    const backend = createLocalBackend();
+    expect((await backend.listSessions()).map(item => item.id)).toEqual(['kept']);
+    await backend.deleteSession('kept');
+    expect(await backend.putSession(playedSession('kept', bundledWorkout('fran')))).toEqual({ id: 'kept', stored: 'existing' });
+    expect(await backend.listSessions()).toEqual([]);
+    expect(await backend.counts()).toMatchObject({ sessions: 0 });
+    await closeIdb();
+    const db = await openDatabase(indexedDB);
+    expect(db.version).toBe(3);
+    expect(await new Promise(resolve => { const request = db.transaction('deletedSessions').objectStore('deletedSessions').getAll(); request.onsuccess = () => resolve(request.result); })).toEqual([{ id: 'kept', deletedAt: expect.stringMatching(/^\d{4}-/) }]);
+    db.close();
+  });
+
+  it('upgrades a version-1 database to the current version and keeps its rows', async () => {
     await new Promise<void>((resolve, reject) => {
       const request = indexedDB.open(IDB_NAME, 1);
       request.onupgradeneeded = () => {
@@ -150,7 +180,7 @@ describe('local backend: IndexedDB specifics', () => {
     await closeIdb();
     const db = await openDatabase(indexedDB);
     expect(db.version).toBe(IDB_VERSION);
-    expect([...db.objectStoreNames].sort()).toEqual(['cache', 'checkpoints', 'master', 'meta', 'outbox', 'progress', 'sessions', 'workouts']);
+    expect([...db.objectStoreNames].sort()).toEqual(['cache', 'checkpoints', 'deletedSessions', 'master', 'meta', 'outbox', 'progress', 'sessions', 'workouts']);
     expect([...db.transaction('sessions').objectStore('sessions').indexNames].sort()).toEqual(['byFinished', 'byWorkout']);
     db.close();
   });

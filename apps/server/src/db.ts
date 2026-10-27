@@ -74,6 +74,17 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: 'deleted sessions',
+    // Additive: the tombstones of deleted session ids (DAT-14), so a later upload of one is acknowledged and not stored.
+    up: `
+      CREATE TABLE deleted_sessions (
+        id TEXT PRIMARY KEY,
+        deleted_at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 export const latestSchemaVersion = () => MIGRATIONS[MIGRATIONS.length - 1].version;
 

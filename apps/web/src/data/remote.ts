@@ -30,6 +30,7 @@ export const remote = {
   getSession: (id: string) => request<SessionRecord & { receivedAt: string }>('GET', `/sessions/${encodeURIComponent(id)}`),
   putSession: (record: SessionRecord) => request<{ id: string; stored: 'created' | 'existing' }>('PUT', `/sessions/${encodeURIComponent(record.id)}`, { body: record, timeoutMs: 20_000 }),
   correctSession: (id: string, results: SectionResult[], note: string | undefined, ifMatch: number) => request<{ revision: number }>('PATCH', `/sessions/${encodeURIComponent(id)}/results`, { body: { results, ...(note ? { note } : {}) }, ifMatch }),
+  deleteSession: (id: string) => request<void>('DELETE', `/sessions/${encodeURIComponent(id)}`),
   importDevice: (payload: { deviceId: string; workouts: Workout[]; masterData: MasterData; sessions: unknown[] }) => request<DeviceImportReport>('POST', '/import/device', { body: payload, timeoutMs: 30_000 }),
   importPack: (payload: { workouts: Workout[]; collections: PackCollection[]; decisions: Record<string, PackDecision> }) => request<PackImportReport>('POST', '/import/pack', { body: payload, timeoutMs: 30_000 }),
   exportAll: () => request<ExportDocument>('GET', '/export', { timeoutMs: 60_000 }),

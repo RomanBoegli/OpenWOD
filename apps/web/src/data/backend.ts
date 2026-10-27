@@ -33,6 +33,8 @@ export interface Backend {
   getSession(id: string): Promise<SessionRecord & { receivedAt: string }>;
   putSession(record: SessionRecord): Promise<{ id: string; stored: 'created' | 'existing' }>;
   correctSession(id: string, results: SectionResult[], note: string | undefined, ifMatch: number): Promise<{ revision: number }>;
+  /** Deletes a session and its corrections for good; repeating it, or naming an id not stored yet, is fine (DAT-14). */
+  deleteSession(id: string): Promise<void>;
   importDevice(payload: DeviceImportPayload): Promise<DeviceImportReport>;
   importPack(payload: PackImportPayload): Promise<PackImportReport>;
   /** Everything as one restorable JSON document (DAT-12). */

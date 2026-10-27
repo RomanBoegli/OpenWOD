@@ -35,7 +35,7 @@
 .viewSwitch button { display: flex; gap: 7px; align-items: center; min-height: 42px; border: 0; border-radius: 7px; background: none; color: var(--ink-3); padding: 10px 13px; font-size: 12px; }
 .viewSwitch button[aria-pressed=true] { background: var(--surface-5); color: var(--ink); box-shadow: 0 1px 4px #0002; }
 /* The phase wash, shared by the player and the settings miniature: an overlay in the phase colour, masked to a glow, whose
-   opacity climbs from --wash-min to --wash-gain as --drained goes 0 → 1 (UI-15: one custom property per frame). */
+   opacity climbs from --wash-min to --wash-gain as --drained goes 0 → 1 over the whole slot (UI-15: custom properties per frame). */
 .wash { --phase-color: var(--phase-work); --drained: 0; --wash-min: .05; --wash-gain: .3; position: relative; overflow: hidden; }
 .wash::before { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: var(--phase-color); opacity: calc(var(--wash-min) + (var(--wash-gain) - var(--wash-min)) * var(--drained)); -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 45%, #000 20%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 45%, #000 20%, transparent 100%); transition: background-color var(--t-slow) var(--ease), opacity 200ms linear; }
 .wash[data-wash=false]::before, .wash[data-phase=ready]::before { opacity: 0; }
@@ -46,8 +46,12 @@
 .wash[data-phase=rest], .wash[data-phase=prep] { --phase-color: var(--phase-rest); }
 .wash[data-phase=paused] { --phase-color: var(--phase-paused); }
 .wash[data-phase=complete] { --phase-color: var(--phase-work); }
-.wash[data-phase=work][data-warning=amber] { --phase-color: var(--phase-amber); }
-.wash[data-phase=work][data-warning=red] { --phase-color: var(--phase-red); }
+/* Work morphs into the mark colours by --to-amber and --to-red (0 → 1 each, from the engine clock, UI-13), leaving the opacity to --drained. */
+.wash[data-phase=work] { --to-amber: 0; --to-red: 0; --phase-color: color-mix(in srgb, color-mix(in srgb, var(--phase-work), var(--phase-amber) calc(var(--to-amber) * 100%)), var(--phase-red) calc(var(--to-red) * 100%)); }
+@media (prefers-reduced-motion: reduce) {
+  .wash[data-phase=work][data-warning=amber] { --phase-color: var(--phase-amber); }
+  .wash[data-phase=work][data-warning=red] { --phase-color: var(--phase-red); }
+}
 /* The padding grows with the timer ring (--perimeter-width, default 6 px) so a fat ring never sits under the content. */
 .player { composes: wash; --pad-top: 27px; --pad-x: 34px; --pad-bottom: 22px; --ring-extra: max(0px, calc(var(--perimeter-width, 6px) - 6px)); position: relative; overflow: hidden; padding: calc(var(--pad-top) + var(--ring-extra)) calc(var(--pad-x) + var(--ring-extra)) calc(var(--pad-bottom) + var(--ring-extra) / 2); background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border-radius: 25px; }
 .player > .perimeter { z-index: 2; }
@@ -202,10 +206,13 @@
 .app[data-performing=true] .header, .app[data-performing=true] .footer { display: none; }
 .app[data-performing=true] .main { padding: 0; }
 .screen[data-performing=true] .workoutHeading, .screen[data-performing=true] .bottomBar { display: none; }
-.screen[data-performing=true] .player { position: fixed; inset: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); display: flex; flex-direction: column; padding: 18px 30px; overflow-y: auto; }
+.screen[data-performing=true] .player { position: fixed; inset: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); display: flex; flex-direction: column; padding: calc(18px + var(--ring-extra)) calc(30px + var(--ring-extra)); overflow-y: auto; }
 .screen[data-performing=true] .playerTop { min-height: 40px; flex-shrink: 0; }
 .screen[data-performing=true] .playerTop .iconButton { margin: -8px -6px -8px 8px; }
-.screen[data-performing=true] .clockBlock { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 12px 0 20px; }
+/* The clock block takes a fixed share of the frame, and Up next and the controls sit at the bottom: a taller or shorter
+   station card only changes the gap above Up next, so the clock never moves from one slot to the next. */
+.screen[data-performing=true] .clockBlock { flex: 0 0 auto; min-height: 36svh; display: flex; flex-direction: column; justify-content: center; padding: 12px 0 20px; }
+.screen[data-performing=true][data-view=focus] .nextStrip, .screen[data-performing=true][data-view=focus] .nextStrip[data-empty=true] + .controls { margin-top: auto; }
 .screen[data-performing=true] .timer { font-size: clamp(112px, 19vh, 180px); }
 .screen[data-performing=true] .lane { min-height: 155px; padding: 18px 22px; }
 .screen[data-performing=true] .lane h2 { margin-top: 17px; }
@@ -216,7 +223,7 @@
 .screen[data-performing=true] .controls { flex-shrink: 0; }
 .screen[data-performing=true] .sessionLine { flex-shrink: 0; }
 .screen[data-performing=true][data-view=context] .lanes, .screen[data-performing=true][data-view=context] .laneHeading { display: none; }
-.screen[data-performing=true][data-view=context] .clockBlock { padding-bottom: 5px; flex: 0 0 auto; }
+.screen[data-performing=true][data-view=context] .clockBlock { padding-bottom: 5px; min-height: 0; }
 .screen[data-performing=true][data-view=context] .timer { font-size: 112px; }
 .screen[data-performing=true][data-view=context] .contextSection { flex: 1 1 0; min-height: 170px; display: flex; flex-direction: column; padding: 12px; margin: 0 0 16px; }
 .screen[data-performing=true][data-view=context] .contextHeading { margin-bottom: 6px; }
@@ -226,12 +233,13 @@
 .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 28px; font-weight: 600; }
 @media (max-width: 620px) {
   /* Performing on a phone: a session fits the screen without scrolling, so everything sits tighter and nothing is said twice. */
-  .screen[data-performing=true] .player { padding: 10px 14px 12px; }
+  /* A wider timer ring (Settings → Training view) widens the padding with it, so the ring never covers the content. */
+  .screen[data-performing=true] .player { padding: calc(12px + var(--ring-extra)) calc(18px + var(--ring-extra)) calc(12px + var(--ring-extra)); }
   .screen[data-performing=true] .playerTop { min-height: 36px; }
   /* The overall line already names the section and the round, so the header keeps the title and the view switch. */
   .screen[data-performing=true] .player[data-progress=detail] .position, .screen[data-performing=true] .player[data-progress=percent] .position { display: none; }
   .screen[data-performing=true] .overall { margin-top: 4px; gap: 3px; }
-  .screen[data-performing=true] .clockBlock { padding: 4px 0 6px; }
+  .screen[data-performing=true] .clockBlock { min-height: 0; padding: 4px 0 6px; }
   .screen[data-performing=true] .timer { font-size: clamp(72px, 11vh, 112px); line-height: 1; margin: 4px 0 5px; }
   .screen[data-performing=true] .laneHeading { margin-bottom: 6px; }
   .screen[data-performing=true] .lanes { gap: 8px; }
@@ -264,11 +272,11 @@
 
 /* Performing on a wide but short screen (an iPad or a laptop in landscape): sizes follow the height, so the transport controls stay inside the frame. */
 @media (min-width: 621px) and (max-height: 960px) {
-  .screen[data-performing=true] .player { padding: 12px 24px 14px; }
+  .screen[data-performing=true] .player { padding: calc(12px + var(--ring-extra)) calc(24px + var(--ring-extra)) calc(14px + var(--ring-extra)); }
   .screen[data-performing=true] .playerTop { min-height: 36px; }
   .screen[data-performing=true] .playerTop .iconButton { min-width: 38px; min-height: 38px; padding: 6px; margin: 0 0 0 8px; }
   .screen[data-performing=true] .overall { margin-top: 6px; }
-  .screen[data-performing=true] .clockBlock { flex: 1 1 auto; padding: 2px 0 8px; }
+  .screen[data-performing=true] .clockBlock { min-height: 25svh; padding: 2px 0 8px; }
   .screen[data-performing=true] .timer { font-size: clamp(84px, 15vh, 156px); line-height: 1; }
   .screen[data-performing=true] .laneHeading { margin-bottom: 8px; }
   .screen[data-performing=true] .lane { min-height: 0; padding: 12px 18px; }

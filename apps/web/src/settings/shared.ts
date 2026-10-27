@@ -8,6 +8,7 @@ import type { BackendCounts } from '../data/backend';
 import type { DataMode } from '../data/mode';
 import type { Connection, LegacyData } from '../data/use-library-data';
 import type { ExportDocument, RestoreReport } from '../../../../packages/household/src/types';
+import type { LogbookProps } from '../History';
 
 export interface SettingsProps {
   section: SettingsSection;
@@ -21,6 +22,8 @@ export interface SettingsProps {
   packs: { id: string; label: string }[];
   audio: WorkoutAudio;
   household: HouseholdStatus;
+  /** The sessions and their actions for the Logbook section (UI-22). */
+  logbook: Omit<LogbookProps, 'mode' | 'entries'>;
 }
 
 export interface HouseholdStatus {

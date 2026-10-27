@@ -1,3 +1,4 @@
+import { displayTime, type SectionResult } from '../../../packages/engine/src';
 import type { SessionOutcome, SessionRecord } from '../../../packages/engine/src/records';
 export type { SessionRecord, SessionOutcome } from '../../../packages/engine/src/records';
 
@@ -48,4 +49,21 @@ export function agoText(iso: string, now = Date.now()): string {
   if (months < 12) return `${months} ${months === 1 ? 'month' : 'months'} ago`;
   const years = Math.floor(days / 365);
   return `${years} ${years === 1 ? 'year' : 'years'} ago`;
+}
+
+/**
+ * The scores of a session in one line, without what the row already says: no section outcomes (the outcome chip
+ * carries the session's) and no section time when a single section's time is the active time shown beside it.
+ */
+export function sessionScore(session: { activeMs: number; results: SectionResult[] }): string {
+  const active = displayTime(session.activeMs, 'floor');
+  return session.results.flatMap(result => {
+    const parts: string[] = [];
+    if (result.counter) parts.push(`${result.counter.rounds} ${result.counter.rounds === 1 ? 'round' : 'rounds'}${result.counter.reps ? ` + ${result.counter.reps} reps` : ''}`);
+    if (result.teamRounds !== undefined) parts.push(`${result.teamRounds} team ${result.teamRounds === 1 ? 'round' : 'rounds'}, ${result.turns} turns`);
+    const time = displayTime(result.sectionMs, 'floor');
+    if ((result.format === 'forTime' || result.format === 'strength') && !(session.results.length === 1 && time === active)) parts.push(time);
+    if (result.unacknowledged.length) parts.push(`${result.unacknowledged.length} unreported`);
+    return parts;
+  }).join(' · ');
 }

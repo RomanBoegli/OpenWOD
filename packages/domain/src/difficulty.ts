@@ -89,8 +89,10 @@ export function rateDifficulty(plan: ExecutionPlan, calibration: DifficultyCalib
   const manualShare = new Map<number, number>();
   for (const section of plan.sections) {
     if (section.capMs === undefined || section.durationKind !== 'capped') continue;
-    const manualTasks = plan.occurrences.slice(section.startIndex, section.endIndex + 1).filter(item => item.timing === 'manual' && !item.tasks).length;
-    const timedMs = plan.occurrences.slice(section.startIndex, section.endIndex + 1).reduce((sum, item) => sum + item.durationMs, 0);
+    // The rest after the section runs outside the cap (BLD-14), so it does not shorten the time left for the tasks.
+    const capped = plan.occurrences.slice(section.startIndex, section.restAfter?.index ?? section.endIndex + 1);
+    const manualTasks = capped.filter(item => item.timing === 'manual' && !item.tasks).length;
+    const timedMs = capped.reduce((sum, item) => sum + item.durationMs, 0);
     if (manualTasks) manualShare.set(plan.sections.indexOf(section), Math.max(0, section.capMs - timedMs) / manualTasks);
   }
   const nominal = (occurrence: Occurrence): number => {

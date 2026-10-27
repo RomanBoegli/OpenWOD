@@ -1,18 +1,22 @@
-.history { display: grid; gap: 18px; }
-.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.row { display: grid; gap: 8px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); }
-.row[data-pending] { border-style: dashed; }
-.rowTop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
-.when { font-size: 12px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-3); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.row h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
-.row h2 a { text-decoration: none; }
-.row h2 a:hover { text-decoration: underline; text-underline-offset: 4px; }
-.scores { margin: 0; color: var(--ink-2); font-size: 13.5px; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.actions a, .actions button { min-height: 40px; padding: 6px 16px; font-size: 13px; }
-.empty { padding: 40px 20px; text-align: center; color: var(--ink-3); }
-.empty h2 { margin: 0 0 6px; color: var(--ink); }
+.list { list-style: none; margin: 0; padding: 0; display: grid; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row[data-pending] { border-top-style: dashed; }
+.main { display: grid; gap: 2px; min-width: 0; }
+.titleLine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.title { font-size: 15px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.title a { text-decoration: none; }
+.title a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.titleLine > span[data-kind] { min-height: 20px; padding: 2px 7px; font-size: 10px; }
+.meta { margin: 0; color: var(--ink-3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.actions { display: flex; gap: 4px; }
+.actions > a, .actions > button { min-width: 34px; min-height: 34px; padding: 6px; border-radius: 8px; background: transparent; border-color: transparent; color: var(--ink-3); }
+.actions > a:hover, .actions > button:hover { background: var(--hover); color: var(--ink); border-color: var(--line-2); }
+@media (pointer: coarse) { .actions > a, .actions > button { min-width: 44px; min-height: 44px; } }
+@media (max-width: 520px) { .row { gap: 4px 6px; } .actions { gap: 0; } .meta { font-size: 12px; } }
+.empty { padding: 28px 12px; text-align: center; color: var(--ink-3); }
+.empty h3 { margin: 0 0 6px; color: var(--ink); font-size: 18px; }
+.empty p { margin: 0; }
 .form { display: grid; gap: 12px; min-width: min(420px, 80vw); }
 .section { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 8px; }
 .section legend { font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); padding: 0 4px; }

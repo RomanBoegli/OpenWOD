@@ -161,6 +161,17 @@ Validation includes missing IDs/references, duplicate node IDs, negative/nonfini
 
 **BLD-12** Paired repeat blocks SHALL support an explicit assignment policy: fixed assignments or alternate the two task columns after each complete iteration. Alternation SHALL change prescriptions within stable A/B lanes, not athlete identity or lane order. The preview, spoken cues, checkpoints, and exported workout SHALL preserve the policy and resolve the correct assignments for each iteration. The first implementation MAY compile the policy into explicit per-round assignments; the shared model SHALL preserve its authored meaning. Nested repeats SHALL identify which repeat level triggers alternation.
 
+**BLD-14** Between two sections the editor SHALL show one slim transition tile with one choice of what follows the earlier section.
+"Wait for Ready" is the default, "Rest, then continue" adds a timed rest that defaults to 01:00, and "Continue straight away" starts the next section at once.
+The choice SHALL work for every format, and the final section SHALL have no tile.
+The rest is a rest node with kind `blockRest` that ends the section body, the flat task list of an AMRAP, EMOM or you-go-I-go included, with `transitionAfter: automatic`, so the file format and the schema versions stay unchanged.
+Outside timed circuits the rest runs after the cap, a Finish or the last Done, the cap does not run during it, and the section is scored when it starts.
+The player counts it down like any rest and announces the next section's work.
+A section that has both a rest and a Ready gate, as older timed circuits can, keeps both, and its tile offers "Rest, then wait for Ready".
+The section card lists slot settings first (repeat each slot, transition between slots) and round settings below (rounds, rest between rounds, A/B swap).
+A transition after the last slot of each round, from older workouts, stays stored and is shown only while it is set.
+The overview shows the same tile between section cards, and the difficulty rating counts the rest without taking it from a cap.
+
 # 6 Workout model and execution contract
 
 ## 6.1 Three layers
@@ -291,7 +302,7 @@ Expected timed duration: each round is 4 × 40 + 3 × 10 = 190 seconds. Five rou
 
 [docs/source/example-wod.md](docs/source/example-wod.md) is a real authoring and display reference and the second canonical timing fixture. It contains a five-minute warm-up, four paired four-row blocks of ten minutes each, and a five-minute cool-down; the title states the sum, 50 minutes, excluding prep and Ready waits. Work is prescribed as 40 seconds with 20-second transitions; the bodyweight/dumbbell task columns exchange athlete assignments after each round. Column headings describe task groups, not permanent athlete identities.
 
-The resolved timing is explicit in the document: each block is two rounds of four slots at 40s/20s including the transition after the last slot (4:00 per round, the last transition doubling as the column switch), followed by a 2-minute block rest that every block, including Block 4, keeps, giving 2 × 4:00 + 2:00 = 10:00 per block and 40:00 for the WOD. Warm-up and cool-down are 1-minute solo-style timed slots performed together without transitions. The builder SHALL show the authored trailing rests explicitly (BLD-04); the columns swap through BLD-12 alternation after each complete round. The general rule stands for any future prose conversion: a capped partial round SHALL NOT be described as a complete round or an equal A/B role rotation, and missing timing semantics are resolved by the author, never guessed.
+The resolved timing is explicit in the document: each block is two rounds of four slots at 40s with 20s transitions between them, a 20s rest between the two rounds that doubles as the column switch, and a 2:20 rest after the block that every block, including Block 4, keeps (the 20s after the last slot plus the 2-minute block rest of the source), giving 3:40 + 0:20 + 3:40 + 2:20 = 10:00 per block and 40:00 for the WOD. Warm-up and cool-down are 1-minute solo-style timed slots performed together without transitions. The builder SHALL show the authored trailing rests explicitly (BLD-04); the columns swap through BLD-12 alternation after each complete round. The general rule stands for any future prose conversion: a capped partial round SHALL NOT be described as a complete round or an equal A/B role rotation, and missing timing semantics are resolved by the author, never guessed.
 
 | Section | Expected timed duration |
 | - | - |
@@ -392,6 +403,10 @@ Use this document to test paired table/context layout, long movement names, mult
 **UI-12** For known-duration phases, remaining fraction SHALL be clamped to remainingMs/durationMs. The border starts full and drains clockwise to empty. It resets only when its represented phase changes and freezes on pause. Work uses green, then amber and red according to UI-13; rest uses a distinct phase colour (blue by default, chosen per theme in the settings) and an explicit REST label.
 
 **UI-13** Warning thresholds SHALL be capped to the interval length so short intervals do not spend their entire duration in warning. Default amber threshold is min(10 seconds, 25% of duration); red is min(3 seconds, 10% of duration). Colour changes SHALL not flash.
+The full-screen wash of a timed slot SHALL deepen monotonically from the start of the slot to its end, in one ramp from the floor to the chosen pulse strength, and SHALL never drop back at a colour mark.
+At each mark the colour SHALL morph into the next one while the strength stays where it is.
+The morph starts at the mark and lasts one second, or half the time to the next mark or the end when that is shorter, and it follows the engine clock, so it freezes on pause.
+With reduced motion the wash stays at its floor and the colours change at the marks without a morph.
 
 **UI-14** For EMOM the perimeter represents the interval; for AMRAP it represents the block cap; for capped For Time it represents time remaining to the cap. Uncapped count-up/manual work SHALL show a neutral border with elapsed time, not a fabricated completion percentage. The UI SHALL label the represented time context.
 
@@ -406,14 +421,18 @@ Use this document to test paired table/context layout, long movement names, mult
 **UI-19** An address the app does not know SHALL show a "Page not found" page, and a workout link whose workout is not in the library SHALL show a "Workout not found" page naming the ID, both with a way back to the library and a confused-Travolta loop. A workout link SHALL not be called missing before the library has loaded. The library SHALL show the same loop above "Nothing matches yet". The loop SHALL keep its transparency, load only where it is shown, and hold a still frame when the system asks for reduced motion.
 
 **UI-20** During a session on a screen wider than a phone but at most 960 px tall, such as a tablet or a laptop in landscape, the clock, the stations or the AMRAP block, the actions, Up next and the transport controls SHALL fit the frame without scrolling, in the focus and the context view. Sizes SHALL follow the height, and the corner view switch SHALL stay inside the frame.
+In the focus view the big clock SHALL stay in the same place from one slot to the next, whatever the height of the station card.
 
 **UI-21** The header SHALL show the running version beside the wordmark, so a device shows at a glance which release it has loaded, except on a phone, where the footer shows it.
+
+**UI-22** Settings SHALL have a Logbook section at `#/settings/logbook` listing every session played, newest first, with paging: the workout title linked to the workout while it is in the library, the date, the active time and the score, the outcome once and only when it is not Completed, the Interrupted, Modified and Corrected flags, and small icon actions to Repeat (the snapshot when the workout is gone), Correct score (DAT-05) and Delete (DAT-14). The header's clock icon SHALL open it, `#/history` SHALL lead to it, and the per-workout past sessions SHALL reflect deletions.
 A workout's page SHALL put the title across the page, the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove), and the chips in one row below.
 
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
 One tone, the truck horn, SHALL play a bundled recording scheduled on the same audio clock as the synthesised beeps, a short blast for each countdown second and a longer one for the boundary, and SHALL fall back to the classic beep until the recording has loaded or if it cannot be decoded.
+With the truck horn the clock SHALL hold at each timed boundary for the length of the horn's blast, outside active time, so the next slot starts as the blast ends.
 
 **AUD-02** Audio SHALL consume semantic engine events: prep, work start, rest start, upcoming assignment, countdown, round start, cap reached, paused, resumed, and completed. Components SHALL not independently trigger their own timers or announcements.
 
@@ -458,6 +477,8 @@ One tone, the truck horn, SHALL play a bundled recording scheduled on the same a
 **DAT-12** In the server shape the settings SHALL belong to the household: one revisioned settings document on the server that every device follows, where the last change wins, picked up on start, on focus, on reconnect and on reload. Each device SHALL keep a copy for an instant and offline start, mark a change it could not upload and send it later, and validate the server's copy field by field. The first device with settings of its own SHALL seed an empty server. In the static shape the settings SHALL stay in the browser.
 
 **DAT-13** A workout that ships with the app SHALL offer the same actions as a saved one: Edit, Duplicate, Export and Remove.
+
+**DAT-14** A user SHALL be able to delete a session for good, with its score corrections, in either shape and after a confirmation. The household SHALL keep a tombstone of every deleted session id, so a later upload of that id (an outbox retry, another device) is acknowledged as already stored and never stored again (DAT-03). A session still waiting for upload on this device SHALL leave the outbox with it. Deleting SHALL be idempotent and SHALL also tombstone an id not stored yet, so an upload still on its way never lands. The export SHALL not carry the tombstones, and a restore SHALL keep the target's tombstones and leave out the sessions they name, counting them.
 Editing it saves a saved workout under the same id, which takes the bundled one's place in the library and keeps its session history.
 Removing it hides it, with any edits, through a list of removed workout ids in master data, and Settings → Collections lists the removed ones with a Restore button.
 
@@ -663,7 +684,7 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-26 | Import a file twice and import another file with colliding local IDs. Preview identifies known provenance, offers Skip/Import another copy, remaps copied IDs/references, and leaves existing workouts and session snapshots unchanged. A title match alone never overwrites content. | SHR-04/05, DAT-06/09 |
 | AT-27 | Export/import a program pack with two workouts sharing an exercise reference. All required movement definitions and program references resolve on a fresh installation; attribution/provenance survive re-export. Editing a derivative gives it a distinct sharing identity while recording its source. | SHR-02/05/06, LIB-02/03 |
 | AT-28 | Import malformed, oversized, unknown-version or unsupported-capability sharing files. Preview reports actionable failures and no records are written. Validate published examples against schemas and round-trip supported older fixtures through migrations. | SHR-04/06, BLD-10, NFR-10 |
-| AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 4:00 plus 2:00 rest, WOD 40:00, session 50:00 excluding prep and Ready waits, trailing rests shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
+| AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 3:40 with a 0:20 rest between the rounds plus a 2:20 rest after it, WOD 40:00, session 50:00 excluding prep and Ready waits, every rest shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
 
 # 15 Implementation plan and release gates
 
@@ -814,6 +835,28 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 
 ## Version 1.16 — 27 October 2026
 
+- **Schema change: SQLite migration 3 and IndexedDB version 3.** Sessions can be deleted (DAT-14).
+  Migration 3 (`deleted sessions`) adds the table `deleted_sessions (id, deleted_at)` and changes nothing else, and the server writes `pre-migration-v2-to-v3-<timestamp>.sqlite` under `/data/backups/` before it runs.
+  IndexedDB version 3 adds the store `deletedSessions` (key `id`) and keeps every other store and row, so the upgrade from 1 or 2 is additive.
+  An image before this one refuses a migrated database, so a rollback needs the pre-migration backup.
+  `DELETE /api/v1/sessions/:id` deletes a session with its corrections and answers 204, also for a repeat or an id not stored yet, and either way it leaves a tombstone.
+  A later `PUT` of a tombstoned id answers 200 with `stored: 'existing'` and stores nothing, and so does a device import.
+  The export format stays version 1 without the tombstones, while a restore keeps the target's tombstones, leaves out the sessions they name and reports them as `deleted`.
+  Deleting a session drops it from this device's outbox and read cache, and while the server is away the delete waits in the outbox as `deleteSession`.
+- The History page became the Logbook under Settings (UI-22).
+  The header's clock icon opens `#/settings/logbook`, `#/history` leads there, and `#/history/<id>/play` still replays a session's snapshot.
+  Each session is one compact row: the title with an outcome chip only when it is not Completed, then the date, the active time and the score, with icon buttons for Repeat, Correct score and Delete.
+  The score line no longer repeats the outcome or the time already shown, in the Logbook and in a workout's past sessions.
+  On a narrow screen the settings sections scroll the current one into view.
+- Each section except the last is followed by a transition tile: Wait for Ready, Rest then continue (01:00 by default) or Continue straight away, for every format (BLD-14).
+  The rest is stored as the `blockRest` node that already ends timed-circuit sections, now also allowed at the end of an AMRAP, EMOM or you-go-I-go task list, so no schema or file version changes.
+  Outside timed circuits it follows the cap, a Finish or the last Done instead of being cut by them, and the score is taken when it starts.
+  The section card puts slot settings above round settings, and "Rest after section" moved into the tile.
+  The editor has no field for a rest after the last movement of each round any more.
+  Opening a workout that has one moves it at the same length: between rounds into the rest between rounds, after the last round into the rest between sections, and after the workout's last movement it is dropped.
+  The bundled full-body partner and HYROX doubles workouts were rewritten that way: the full-body partner keeps 50:00 with a 0:20 rest between rounds and 2:20 after each block, and HYROX doubles loses only its final 15s and runs 13:45.
+  The editor's time fields are mm:ss fields that step with the wheel and the arrow keys, and Duplicate buttons use the copy icon.
+  The editor and its messages say "movement" for every format, never "slot", while the code and the file format keep `slot`.
 - Bundled workouts are edited, duplicated and removed like saved ones (DAT-13).
   The first edit saves a saved workout under the bundled id, at the bundled revision plus one, with its own sharing identity derived from the bundled one.
   Removing a bundled workout adds its id to `hiddenWorkouts` in master data, an optional field so a device on an older build can still write the document.
@@ -822,8 +865,29 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - A workout's page puts the title across, the description beside a compact action box, and the chips in one row that scrolls sideways on a phone (UI-21).
   The duration line before the chips is gone, since the facts below show the same time.
 - Beeps can be a truck horn, a bundled recording (AUD-01).
+  At the end of a countdown the horn plays its full-level part, 1.4 s, while the next slot's clock already runs.
+- A boundary beep that has already sounded now rings out with its word when the next slot starts.
+  Before, the change of slot stopped every scheduled sound, which cut the boundary beep after a few milliseconds and could drop the Go or Rest word after it.
+  A skip, a pause or the end of the workout still stops everything at once.
+- With the truck horn the clock holds still at each timed boundary for the horn's 1.4 s blast, so the next slot starts counting as the blast ends and the Go word lands on its first second (AUD-01).
+  The engine moves its clock anchor into the future by `boundaryHoldMs`, which reports `holdMs` in the clock values, keeps the wait out of active time, and ends early on any command.
+  Every other tone keeps the plan's exact timing, and a workout with the horn runs 1.4 s longer per timed boundary.
+- When a boundary into a rest is still saying Rest, the next movements are announced after it, without a second Rest.
+  Device speech that has to wait for recorded words now waits on a timer instead of talking over them.
+- In the editor the L, M and H badges sit above their words, so a narrow load table no longer squeezes them.
+- During a session the frame's padding grows with the timer ring, so a ring wider than the default no longer covers the edge of the content.
+  On a phone the movement name has a line of its own under the athlete and the target, and breaks between words only.
+- A task pressed through by hand that starts on a boundary already saying Go no longer says Go a second time, and its names follow the boundary's Go.
+- In the focus view the big clock holds its place from slot to slot (UI-20).
+  The clock block takes a fixed share of the frame (36 % of the height, 25 % on a short screen, its own height on a phone), and Up next and the controls sit at the bottom.
+  Before, the clock block took the space left over and centred the clock in it, so a station card of three lines moved the clock against one of a single line.
+  A static browser test plays twelve slots of the full-body partner workout at four sizes and fails if the clock moves.
 - iPad screenshots of a session showed the desktop sizes, while the 1.3.1 tablet layout measured without overflow at 1180 by 796, so that device had most likely not loaded 1.3.1 yet.
   The version in the header now makes this visible.
+- The timer wash climbs once over the whole slot instead of restarting at each colour mark (UI-13).
+  `washDrain` in the engine is now the elapsed share of the slot, and the new `washMorph` gives how far the colour has turned towards amber and red.
+  Each mark morphs the colour over one second from the mark, capped to half the time to the next mark or the end, with a smoothstep ease.
+  The player and the settings preview set `--to-amber` and `--to-red` per frame, and the wash mixes the work colour into the mark colours with `color-mix`, so the ring and the phase label morph with it.
 
 ## Version 1.15 — 27 October 2026
 

@@ -15,13 +15,13 @@ import { IDB_VERSION, openIdb, settle, StorageUnavailableError, type HouseholdSt
 
 /**
  * The household in this browser (static shape): the same semantics as the server (packages/household/src/core.ts)
- * over three IndexedDB stores. Every call is one IndexedDB transaction: the rows the operation needs are read
+ * over four IndexedDB stores (the fourth holds the tombstones of deleted sessions, DAT-14). Every call is one IndexedDB transaction: the rows the operation needs are read
  * first, then the core runs synchronously and its writes go into the same transaction, so an import or a restore
  * is all or nothing and a failure leaves nothing written. Errors come out as the client ApiError the server would
  * have sent, never as a NetworkError.
  */
 export const STATIC_SESSION_LIMIT = 2000;
-const STORES: HouseholdStoreName[] = ['workouts', 'master', 'sessions'];
+const STORES: HouseholdStoreName[] = ['workouts', 'master', 'sessions', 'deletedSessions'];
 const MASTER_KEY = 1;
 
 /** What an operation reads before the core runs: whole stores for workouts and master data, and as much of the sessions as it needs. */
@@ -29,6 +29,8 @@ interface Preload {
   workouts?: boolean;
   master?: boolean;
   sessions?: 'keys' | 'all' | { id: string } | { list: { limit: number; before?: string; workoutId?: string } };
+  /** The ids of deleted sessions, for the operations that may meet one (an upload, an import, a restore, a delete). */
+  deleted?: boolean;
 }
 
 type SessionKey = { id: string; finishedAt: string };
@@ -84,6 +86,7 @@ class IdbTables implements HouseholdTables {
   private loadedIds = new Set<string>();
   private listed?: SessionListItem[];
   private allLoaded = false;
+  private deleted?: Set<string>;
 
   private constructor(private readonly tx: IDBTransaction) {}
 
@@ -98,6 +101,7 @@ class IdbTables implements HouseholdTables {
     else if (sessions === 'all') reads.push(settle(store('sessions').getAll() as IDBRequest<StoredSession[]>).then(rows => { tables.allLoaded = true; tables.sessionIds = new Set(rows.map(row => row.id)); for (const row of rows) tables.sessions.set(row.id, row); }));
     else if (sessions && 'id' in sessions) reads.push(settle(store('sessions').get(sessions.id) as IDBRequest<StoredSession | undefined>).then(row => { tables.loadedIds.add(sessions.id); if (row) tables.sessions.set(row.id, row); }));
     else if (sessions) reads.push(listRange(store('sessions'), sessions.list).then(rows => { tables.listed = rows.map(toListItem); }));
+    if (preload.deleted) reads.push(settle(store('deletedSessions').getAllKeys()).then(keys => { tables.deleted = new Set(keys.map(String)); }));
     await Promise.all(reads);
     return tables;
   }
@@ -146,8 +150,22 @@ class IdbTables implements HouseholdTables {
     if (!this.allLoaded) throw unread('all sessions');
     return [...this.sessions.values()].sort(newestFirst).map(row => structuredClone(row));
   }
+  deleteSession(id: string) {
+    this.sessions.delete(id);
+    this.sessionIds?.delete(id);
+    this.loadedIds.add(id);
+    this.store('sessions').delete(id);
+  }
+  isDeletedSession(id: string) { return this.need(this.deleted, 'deleted session ids').has(id); }
+  putDeletedSession(row: { id: string; deletedAt: string }) {
+    const deleted = this.need(this.deleted, 'deleted session ids');
+    if (deleted.has(row.id)) return;
+    deleted.add(row.id);
+    this.store('deletedSessions').put({ ...row });
+  }
+  /** Everything but the tombstones, which outlive a restore (DAT-14). */
   clear() {
-    for (const name of STORES) this.store(name).clear();
+    for (const name of STORES) if (name !== 'deletedSessions') this.store(name).clear();
     this.workouts = new Map();
     this.master = undefined;
     this.masterLoaded = true;
@@ -268,15 +286,16 @@ export function createLocalBackend({ sessionLimit = STATIC_SESSION_LIMIT, now = 
         if (!record.workout) throw new HouseholdError(400, 'VALIDATION_FAILED', 'A session must carry the workout as played.', '/workout');
         return workoutDocument(record.workout);
       });
-      return run('readwrite', { sessions: 'keys' }, household => ({ id: record.id, stored: household.putSession({ ...record, workout }) }));
+      return run('readwrite', { sessions: 'keys', deleted: true }, household => ({ id: record.id, stored: household.putSession({ ...record, workout }) }));
     },
+    deleteSession: (id: string) => run('readwrite', { sessions: 'keys', deleted: true }, household => { household.deleteSession(id); }),
     correctSession: async (id: string, results: SectionResult[], note: string | undefined, ifMatch: number) => {
       local(() => check('correction', { results, ...(note ? { note } : {}) }, 'correction'));
       return run('readwrite', { sessions: { id } }, household => household.correctSession(id, results, note, ifMatch));
     },
     importDevice: async (payload: DeviceImportPayload) => {
       const { workouts, sessions, masterData } = local(() => ({ workouts: payload.workouts.map(workoutDocument), sessions: deviceSessions(payload), masterData: sanitiseMasterData(payload.masterData) }));
-      return run('readwrite', { ...all, sessions: 'keys' }, household => household.importDevice({ deviceId: payload.deviceId, workouts, masterData, sessions }));
+      return run('readwrite', { ...all, sessions: 'keys', deleted: true }, household => household.importDevice({ deviceId: payload.deviceId, workouts, masterData, sessions }));
     },
     importPack: async (payload: PackImportPayload) => {
       const workouts = local(() => payload.workouts.map(workoutDocument));
@@ -285,7 +304,7 @@ export function createLocalBackend({ sessionLimit = STATIC_SESSION_LIMIT, now = 
     exportAll: () => run('readonly', { ...all, sessions: 'all' }, household => household.exportAll(IDB_VERSION)),
     restore: async (value: unknown) => {
       const document = local(() => parseExportDocument(value));
-      return run('readwrite', {}, household => household.restore(document, { sessionLimit }));
+      return run('readwrite', { deleted: true }, household => household.restore(document, { sessionLimit }));
     },
     counts: (): Promise<BackendCounts> => run('readonly', { workouts: true, sessions: 'keys' }, (household, tables) => {
       const workouts = household.listWorkouts(true);

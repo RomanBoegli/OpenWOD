@@ -1,0 +1,11 @@
+/*
+ * The slim connector between two section cards: what happens after a section (BLD-14), in the editor and the overview.
+ * It is only as wide as its content, centred between the cards, and every control shares one row height.
+ */
+.tile { --tile-row: 34px; justify-self: center; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; width: fit-content; max-width: 100%; margin: -8px 0; padding: 4px 12px; border: 1px dashed var(--line-2); border-radius: 10px; background: var(--surface-1); color: var(--ink-2); font-size: 13px; line-height: 1; }
+.tile > span { display: inline-flex; align-items: center; min-height: var(--tile-row); }
+.tile > span:first-child { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+/* Inline labels: the word, then its control, on one centre line. These override the editor's stacked field. */
+.tile label { display: inline-flex; align-items: center; gap: 8px; margin: 0; min-height: var(--tile-row); white-space: nowrap; }
+.tile label select, .tile label input { width: auto; height: var(--tile-row); min-height: var(--tile-row); padding: 0 10px; }
+.tile label input { width: 5.5em; text-align: center; }

@@ -9,7 +9,7 @@ import { EXPORT_FORMAT, EXPORT_VERSION, parseExportDocument } from '../../../pac
 import type { ExportDocument, RestoreReport } from '../../../packages/household/src/types';
 import { playedSession } from './session';
 
-type Methods = 'listWorkouts' | 'getWorkout' | 'putWorkout' | 'archiveWorkout' | 'getMasterData' | 'putMasterData' | 'putSession' | 'listSessions' | 'getSession' | 'correctSession' | 'importDevice' | 'importPack';
+type Methods = 'listWorkouts' | 'getWorkout' | 'putWorkout' | 'archiveWorkout' | 'getMasterData' | 'putMasterData' | 'putSession' | 'listSessions' | 'getSession' | 'correctSession' | 'deleteSession' | 'importDevice' | 'importPack';
 type Async<T> = { [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never };
 /** The household as any backend offers it: the core's methods, asynchronous, plus the export and a validating restore. */
 export type HouseholdApi = Async<Pick<Household, Methods>> & { exportAll(): Promise<ExportDocument>; restore(document: unknown): Promise<RestoreReport> };
@@ -106,6 +106,57 @@ export function describeHouseholdSemantics(name: string, open: OpenHousehold) {
       expect((await household.listSessions({ before: '2026-10-26T12:00:00.000Z' })).map(item => item.id)).toEqual(['s2', 's1']);
       expect((await household.listSessions({ limit: 0 })).map(item => item.id)).toEqual(['s3']);
       expect((await household.listSessions())[0]).toMatchObject({ revision: 1, receivedAt: expect.stringMatching(/^\d{4}-/) });
+    }));
+  });
+
+  describe(`${name}: deleted sessions (DAT-14)`, () => {
+    it('deletes a session with its corrections and keeps the others', () => using(open, async household => {
+      await seed(household);
+      expect((await household.getSession('s1'))?.corrections).toHaveLength(1);
+      expect(await household.deleteSession('s1')).toBe('deleted');
+      expect(await household.getSession('s1')).toBeUndefined();
+      expect((await household.listSessions()).map(item => item.id)).toEqual(['s2']);
+      expect((await household.listSessions({ workoutId: 'fran' }))).toEqual([]);
+      const exported = await household.exportAll();
+      expect(exported.sessions.map(item => item.id)).toEqual(['s2']);
+      expect(exported.sessions.flatMap(item => item.corrections)).toEqual([]);
+      await expect(household.correctSession('s1', [], undefined, 2)).rejects.toMatchObject({ status: 404 });
+      // Deleting again, or an id never stored, is harmless.
+      expect(await household.deleteSession('s1')).toBe('absent');
+      expect(await household.deleteSession('never')).toBe('absent');
+    }));
+
+    it('acknowledges a later upload of a deleted id without storing it, from a retry, another device or an import', () => using(open, async household => {
+      const session = playedSession('s1', bundledWorkout('fran'));
+      expect(await household.putSession(session)).toBe('created');
+      await household.deleteSession('s1');
+      expect(await household.putSession(session)).toBe('existing');
+      expect(await household.putSession({ ...session, deviceId: 'device-2' })).toBe('existing');
+      expect(await household.getSession('s1')).toBeUndefined();
+      // An upload still on its way when the id was deleted never lands either.
+      await household.deleteSession('in-flight');
+      expect(await household.putSession(playedSession('in-flight', bundledWorkout('cindy')))).toBe('existing');
+      const report = await household.importDevice({ deviceId: 'device-3', workouts: [], masterData: emptyMasterData(), sessions: [{ ...session, workout: undefined, events: [] }] });
+      expect(report.sessions).toEqual({ created: 0, skipped: 1, orphaned: 0 });
+      expect(await household.listSessions()).toEqual([]);
+      // Other ids are unaffected.
+      expect(await household.putSession(playedSession('s2', bundledWorkout('fran')))).toBe('created');
+    }));
+
+    it('keeps a session deleted after a backup was made out of its restore, and counts it', () => using(open, async household => {
+      await seed(household);
+      const exported = clean(await household.exportAll());
+      await household.deleteSession('s1');
+      const report = await household.restore(exported);
+      expect(report).toMatchObject({ sessions: 1, corrections: 0, deleted: 1 });
+      expect(await household.getSession('s1')).toBeUndefined();
+      expect((await household.listSessions()).map(item => item.id)).toEqual(['s2']);
+      expect(await household.putSession(playedSession('s1', bundledWorkout('fran')))).toBe('existing');
+      // A household that never deleted it restores it whole.
+      await using(open, async target => {
+        expect(await target.restore(exported)).not.toHaveProperty('deleted');
+        expect((await target.getSession('s1'))?.corrections).toHaveLength(1);
+      });
     }));
   });
 

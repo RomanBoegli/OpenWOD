@@ -65,7 +65,7 @@ test.describe('movements and search', () => {
   test('the editor picks movements from the catalogue, derives their equipment, and adds unknown movements', async ({ page }) => {
     await page.goto('/#/new');
     await page.getByLabel('Title', { exact: true }).fill('Picker check');
-    const lane = page.getByRole('combobox', { name: 'Section 1 slot 1 athlete A', exact: true });
+    const lane = page.getByRole('combobox', { name: 'Section 1 movement 1 athlete A', exact: true });
     await lane.pressSequentially('thru');
     const options = page.getByRole('listbox', { name: 'Movements matching thru' });
     await expect(options.getByRole('option').first()).toContainText('Thrusters');
@@ -73,7 +73,7 @@ test.describe('movements and search', () => {
     await expect(lane).toHaveValue('Thrusters');
     await expect(page.getByRole('main')).toContainText('Thrusters · Barbell');
     await expect(page.getByRole('group', { name: 'Equipment needed' })).toContainText('Barbell');
-    const partner = page.getByRole('combobox', { name: 'Section 1 slot 1 athlete B', exact: true });
+    const partner = page.getByRole('combobox', { name: 'Section 1 movement 1 athlete B', exact: true });
     await partner.pressSequentially('Pogo hops');
     await partner.press('Escape');
     const unknown = page.getByRole('status', { name: 'Movements not in your catalogue' });

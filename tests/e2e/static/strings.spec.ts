@@ -4,7 +4,7 @@ import { expect, test } from '../fixtures';
 const SERVER_WORDING = /household server|\bservers?\b|upload/i;
 
 test.describe('static wording', () => {
-  for (const [name, path, heading] of [['library', '/', /./], ['Settings → General', '/#/settings/general', /./], ['History', '/#/history', 'What you have done']] as const) {
+  for (const [name, path, heading] of [['library', '/', /./], ['Settings → General', '/#/settings/general', /./], ['Logbook', '/#/settings/logbook', 'Make it yours']] as const) {
     test(`${name} never mentions a server or an upload`, async ({ page }) => {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);

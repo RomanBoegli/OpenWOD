@@ -46,10 +46,10 @@ describe('editor builder model', () => {
     expect(workoutToBuilder(partnerSprints)?.sections[0]).toMatchObject({ format: 'youGoIGo', capMs: 720_000, teamRounds: 0 });
   });
 
-  it('keeps the full-body block structure: alternating rounds, trailing transition and block rest', () => {
+  it('keeps the full-body block structure: alternating rounds, the rest between rounds and the rest after the section', () => {
     const draft = workoutToBuilder(fullBodyPartner)!;
     const block = draft.sections[1];
-    expect(block).toMatchObject({ rounds: 2, alternate: true, betweenSlotsRestMs: 20_000, trailingRestMs: 20_000, blockRestMs: 120_000, betweenRoundsRestMs: 0 });
+    expect(block).toMatchObject({ rounds: 2, alternate: true, betweenSlotsRestMs: 20_000, trailingRestMs: 0, blockRestMs: 140_000, betweenRoundsRestMs: 20_000 });
     expect(block.slots).toHaveLength(4);
     expect(draft.sections[0]).toMatchObject({ rounds: 1, blockRestMs: 0, betweenSlotsRestMs: 0 });
   });

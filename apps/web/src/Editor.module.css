@@ -71,8 +71,9 @@
 .loadTable { grid-column: 1 / -1; display: grid; grid-template-columns: 52px repeat(3, minmax(56px, 1fr)); gap: 4px 6px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-1); }
 .loadTable[data-single] { grid-template-columns: 52px minmax(80px, 1fr); }
 .rowLabel { font-size: 11px; font-weight: 600; color: var(--ink-2); }
-.levelHead { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); }
-.levelHead span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 10px; font-weight: 800; color: #fff; }
+/* The badge sits above its word, so a narrow column (a tablet, a phone) never squeezes one into the other. */
+.levelHead { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; font-size: 9px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-3); text-align: center; }
+.levelHead span { display: grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px; font-size: 10px; font-weight: 800; color: #fff; }
 .levelHead[data-level=light] span { background: var(--level-light); }
 .levelHead[data-level=medium] span { background: var(--level-medium); }
 .levelHead[data-level=heavy] span { background: var(--level-heavy); border: 1px solid var(--level-heavy-border); }

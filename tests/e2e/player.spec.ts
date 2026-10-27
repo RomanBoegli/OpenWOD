@@ -183,13 +183,15 @@ test.describe('overview', () => {
   test('lays out every section and round for study, then starts the player', async ({ page }) => {
     await page.goto('/#/wod/full-body-partner');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
-    const sections = page.getByRole('list', { name: 'Sections' }).getByRole('listitem');
+    // Between the section cards, a tile tells what follows each section (BLD-14).
+    const sections = page.getByRole('list', { name: 'Sections' }).getByRole('listitem').filter({ hasText: /Section \d of 6/i });
     await expect(sections).toHaveCount(6);
+    await expect(page.getByRole('list', { name: 'Sections' }).getByRole('listitem', { name: /^Between section/ })).toHaveCount(5);
+    await expect(page.getByRole('listitem', { name: 'Between section 2 and 3' })).toContainText('Rest 02:20, then wait for Ready');
     const block = sections.nth(1);
     await expect(block).toContainText('Legs & strength');
     await expect(block).toContainText('Round 1 of 2');
     await expect(block).toContainText('Round 2 of 2');
-    await expect(block).toContainText('2m block rest');
     const firstRows = block.getByRole('table').first().getByRole('row');
     await expect(firstRows.nth(1)).toContainText('Air squats');
     await expect(firstRows.nth(1)).toContainText('Dumbbell thrusters');

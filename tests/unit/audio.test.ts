@@ -9,11 +9,12 @@ const partnerEmom16 = bundledWorkout('partner-emom-16');
 const partnerSprints = bundledWorkout('you-go-i-go-sprints');
 const runSledRun = bundledWorkout('run-sled-run');
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 interface Source { at?: number; stopAt?: number; cancelled: boolean; kind: 'beep' | 'clip'; clip?: string; frequency?: number; wave?: string }
 
-function setup({ clips = false, horn = false, workout = partnerCircuit as Workout } = {}) {
+function setup({ clips = false, horn = false, workout = partnerCircuit as Workout, started = 10_000 } = {}) {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const sources: Source[] = [];
   const spoken: string[] = [];
   class FakeContext {
@@ -46,7 +47,7 @@ function setup({ clips = false, horn = false, workout = partnerCircuit as Workou
   let now = 0;
   const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' });
-  now = 10_000; engine.tick();
+  now = started; engine.tick();
   let n = 0;
   const command = (type: Parameters<WorkoutEngine['command']>[0]['type'], extra: Partial<Parameters<WorkoutEngine['command']>[0]> = {}) => engine.command({ id: `c${++n}`, occurrenceId: engine.occurrenceId, type, ...extra });
   return { audio: new WorkoutAudio(), sources, spoken, context, engine, command, advance(ms: number) { now += ms; engine.tick(); } };
@@ -93,6 +94,7 @@ it('beeps on every countdown second and boundary, lets the recorded word follow 
   sources.length = 0;
   audio.update(engine.project(), engine.readClocks());
   expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'rest']);
+  vi.runOnlyPendingTimers(); // Device speech waits for the recorded words before it.
   expect(spoken).toEqual(['A, Kettlebell swings. B, Row.']);
   expect(CUE_NAMES).toHaveLength(17);
   expect(audio.packs.map(pack => pack.id)).toEqual(['british', 'american']);
@@ -138,6 +140,7 @@ it('plays the Switch clip on a handoff, confirms a Done with a short beep, and a
   emom.command('done');
   emom.audio.update(emom.engine.project(), emom.engine.readClocks());
   expect(emom.sources.filter(source => source.kind === 'beep')).toHaveLength(1);
+  vi.runOnlyPendingTimers(); // Device speech waits for the recorded words before it.
   expect(emom.spoken).toEqual(['Next. A, Burpees. B, Row.']);
 
   const manual = setup({ workout: runSledRun });
@@ -147,6 +150,7 @@ it('plays the Switch clip on a handoff, confirms a Done with a short beep, and a
   manual.advance(300_000);
   manual.command('done');
   manual.audio.update(manual.engine.project(), manual.engine.readClocks());
+  vi.runOnlyPendingTimers();
   expect(manual.spoken).toEqual(['Go.', 'Sled push.']);
   expect(manual.sources.map(source => source.kind)).toEqual(['beep']); // The acknowledgement beep; nothing is scheduled for open-ended work.
 });
@@ -169,6 +173,7 @@ it('announces who does what from recorded name clips when the pack has them, and
   sources.length = 0; spoken.length = 0;
   audio.update(engine.project(), engine.readClocks());
   expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toContain('rest');
+  vi.runOnlyPendingTimers(); // Device speech waits for the recorded words before it.
   expect(spoken).toHaveLength(1);
 });
 
@@ -191,14 +196,50 @@ it('shapes every beep by the chosen tone', async () => {
   expect(sources.map(source => source.wave)).toEqual(Array(5).fill('sawtooth'));
 });
 
-it('plays the recorded truck horn on the audio clock: a short blast per count, about a second for the Go, all of it at the end', async () => {
+it('plays the recorded truck horn on the audio clock: a short blast per count, the full-level part for the Go, all of it at the end', async () => {
   const { audio, sources, engine } = setup({ horn: true });
   audio.tone = 'horn';
   await audio.unlock(); await audio.loadHorn(); sources.length = 0;
   audio.update(engine.project(), engine.readClocks());
   expect(sources.map(source => [source.kind, source.clip, source.at])).toEqual([['clip', 'horn', 137], ['clip', 'horn', 138], ['clip', 'horn', 139], ['clip', 'horn', 140]]);
-  expect(sources.map(source => Math.round((source.stopAt! - source.at!) * 100) / 100)).toEqual([.31, .31, .31, 1.01]);
-  expect([hornSpan(.08, 2.2), hornSpan(.06, 2.2), hornSpan(.18, 2.2), hornSpan(.35, 2.2), hornSpan(.35, .5)]).toEqual([.3, .3, 1, 2.2, .5]);
+  expect(sources.map(source => Math.round((source.stopAt! - source.at!) * 100) / 100)).toEqual([.31, .31, .31, 1.41]);
+  expect([hornSpan(.08, 2.2), hornSpan(.06, 2.2), hornSpan(.18, 2.2), hornSpan(.35, 2.2), hornSpan(.35, .5)]).toEqual([.3, .3, 1.4, 2.2, .5]);
+});
+
+it('lets a boundary that has sounded ring out with its word, has the rest names follow it, and still stops one a skip never reached', async () => {
+  const { audio, sources, spoken, context, engine, advance, command } = setup({ clips: true, horn: true });
+  audio.tone = 'horn';
+  await audio.unlock(); await audio.preload(); await audio.loadHorn(); sources.length = 0; spoken.length = 0;
+  audio.update(engine.project(), engine.readClocks()); // Work slot 1 ends at 140 with the horn, then the Rest word.
+  const boundary = sources.filter(source => source.at! >= 140);
+  expect(boundary.map(source => source.clip)).toEqual(['horn', 'rest']);
+  context.currentTime = 140.02; advance(40_000);
+  audio.update(engine.project(), engine.readClocks());
+  expect(boundary.every(source => !source.cancelled)).toBe(true);
+  // The rest slot's names wait for the ringing Rest word and do not say Rest again.
+  expect(sources.filter(source => source.clip === 'rest')).toEqual([boundary[1]]);
+  expect(spoken).toEqual([]);
+  vi.advanceTimersByTime((1.42 + 2.2 + .1 - .02) * 1000 - 50);
+  expect(spoken).toEqual([]);
+  vi.advanceTimersByTime(100);
+  expect(spoken).toEqual(['A, Kettlebell swings. B, Row.']);
+  const next = sources.filter(source => source.clip === 'horn').at(-1)!; // The transition's own boundary, 10 s ahead.
+  expect(next.at).toBeCloseTo(150.02);
+  command('next');
+  audio.update(engine.project(), engine.readClocks());
+  expect(next.cancelled).toBe(true);
+});
+
+it('says Go once when the prep countdown ends on a task pressed through by hand, and the names follow it', async () => {
+  const { audio, sources, spoken, context, engine, advance } = setup({ clips: true, workout: bundledWorkout('fran'), started: 0 });
+  await audio.unlock(); await audio.preload(); sources.length = 0; spoken.length = 0;
+  audio.update(engine.project(), engine.readClocks()); // Preparing: the countdown and the Go at its end are scheduled.
+  const prepMs = bundledWorkout('fran').prepMs;
+  context.currentTime = 100 + prepMs / 1000 + .02; advance(prepMs);
+  audio.update(engine.project(), engine.readClocks());
+  expect(sources.filter(source => source.clip === 'go' && source.at! < 120)).toHaveLength(1); // Later ones belong to the cap.
+  vi.runOnlyPendingTimers();
+  expect(spoken).toHaveLength(1); // The thrusters, read after the recorded Go.
 });
 
 it('falls back to the classic beep while the horn is missing', async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
-import { WorkoutEngine, displayTime, overallProgress, warningLevel, washDrain, type CommandType } from '../../packages/engine/src';
+import { WorkoutEngine, displayTime, overallProgress, warningLevel, washDrain, washMorph, WASH_MORPH_MS, type CommandType } from '../../packages/engine/src';
 const fullBodyPartner = bundledWorkout('full-body-partner');
 const partnerCircuit = bundledWorkout('partner-circuit');
 
@@ -13,6 +13,26 @@ function fixture(workout = partnerCircuit) {
 }
 
 describe('deterministic workout engine', () => {
+  it('holds the clock at each timed boundary for boundaryHoldMs, outside active time, and a command ends the hold', () => {
+    const { engine, at, command } = fixture();
+    engine.boundaryHoldMs = 1400;
+    command('play'); at(10_000);
+    expect(engine.project().current.assignments?.A.name).toBe('Row');
+    expect(engine.readClocks()).toMatchObject({ remainingMs: 40_000, activeMs: 0, holdMs: 1400 });
+    at(11_400);
+    expect(engine.readClocks().holdMs).toBeUndefined();
+    at(51_399);
+    expect(engine.project().current.phase).toBe('work');
+    expect(engine.readClocks()).toMatchObject({ remainingMs: 1, activeMs: 39_999 });
+    at(51_400);
+    expect(engine.project().current.phase).toBe('transition');
+    expect(engine.readClocks()).toMatchObject({ remainingMs: 10_000, holdMs: 1400 });
+    at(52_000); command('pause'); command('resume');
+    expect(engine.readClocks().holdMs).toBeUndefined();
+    at(53_000);
+    expect(engine.readClocks().remainingMs).toBe(9000);
+  });
+
   it('AT-01/03: excludes prep, changes lanes in place, and completes without a final Ready gate', () => {
     const { engine, at, command } = fixture();
     command('play'); at(9999);
@@ -161,14 +181,44 @@ describe('deterministic workout engine', () => {
     expect(warningLevel(14_000, 120_000, { amberMs: 15_000, redMs: 5000 })).toBe('amber');
     expect(warningLevel(4000, 120_000, { amberMs: 15_000, redMs: 5000 })).toBe('red');
     expect(warningLevel(4000, 20_000, { amberMs: 15_000, redMs: 5000 })).toBe('amber'); // the quarter and tenth caps still apply
-    // The pulse climbs within each segment and is full just before its end: 60 s slot, markers at 10 s and 3 s.
+    // The wash climbs once over the whole slot and never drops back at a mark: 60 s slot, markers at 10 s and 3 s.
     expect(washDrain(60_000, 60_000)).toBe(0);
-    expect(washDrain(35_000, 60_000)).toBeCloseTo(25 / 45, 3);
-    expect(washDrain(11_000, 60_000)).toBe(1);
-    expect(washDrain(9999, 60_000)).toBeCloseTo(0, 2);
-    expect(washDrain(3100, 60_000)).toBe(1);
-    expect(washDrain(1500, 60_000)).toBeCloseTo(1.5 / 2.7, 3);
+    expect(washDrain(30_000, 60_000)).toBeCloseTo(.5, 6);
     expect(washDrain(0, 60_000)).toBe(1);
+    expect(washDrain(-50, 60_000)).toBe(1);
+    expect(washDrain(1000, 0)).toBe(0);
+    let last = -1;
+    for (let remaining = 60_000; remaining >= 0; remaining -= 50) {
+      const drain = washDrain(remaining, 60_000);
+      expect(drain).toBeGreaterThanOrEqual(last);
+      last = drain;
+    }
+  });
+
+  it('UI-13: morphs the colour into each mark over a second from the mark, capped for short slots', () => {
+    expect(WASH_MORPH_MS).toBe(1000);
+    expect(washMorph(10_001, 60_000)).toEqual({ amber: 0, red: 0 });
+    expect(washMorph(10_000, 60_000)).toEqual({ amber: 0, red: 0 });
+    expect(washMorph(9500, 60_000).amber).toBeCloseTo(.5, 6); // smoothstep midpoint
+    expect(washMorph(9000, 60_000)).toEqual({ amber: 1, red: 0 });
+    expect(washMorph(3001, 60_000)).toEqual({ amber: 1, red: 0 });
+    expect(washMorph(2750, 60_000).red).toBeGreaterThan(0);
+    expect(washMorph(2000, 60_000)).toEqual({ amber: 1, red: 1 });
+    expect(washMorph(0, 60_000)).toEqual({ amber: 1, red: 1 });
+    // A 10 s slot caps the marks to 2.5 s and 1 s; amber morphs in 0.75 s (half the gap to red), red in 0.5 s.
+    expect(washMorph(1750, 10_000).amber).toBe(1);
+    expect(washMorph(2125, 10_000).amber).toBeCloseTo(.5, 6);
+    expect(washMorph(750, 10_000).red).toBeCloseTo(.5, 6);
+    expect(washMorph(500, 10_000).red).toBe(1);
+    // Custom marks follow the settings.
+    expect(washMorph(14_000, 120_000, { amberMs: 15_000, redMs: 5000 })).toEqual({ amber: 1, red: 0 });
+    let last = { amber: 0, red: 0 };
+    for (let remaining = 60_000; remaining >= 0; remaining -= 25) {
+      const morph = washMorph(remaining, 60_000);
+      expect(morph.amber).toBeGreaterThanOrEqual(last.amber);
+      expect(morph.red).toBeGreaterThanOrEqual(last.red);
+      last = morph;
+    }
   });
 });
 

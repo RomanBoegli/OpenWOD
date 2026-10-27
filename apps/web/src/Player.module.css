@@ -59,11 +59,12 @@
   .taskCell strong { font-size: 22px; }
   .taskCell span { font-size: 15px; }
   .unit li { font-size: 20px; }
-  /* Performing on a phone: the amount and the movement share one line, the rest of the lane follows underneath. */
+  /* Performing on a phone: the athlete and the amount share the first line, the movement name has the next one. */
   :global([data-performing=true]) .lane { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
   :global([data-performing=true]) .lane > * { flex: 0 0 100%; }
   :global([data-performing=true]) .lane > .target { flex: 0 0 auto; margin: 4px 0 0; }
-  :global([data-performing=true]) .lane > h2 { flex: 1 1 0; min-width: 0; }
+  /* The movement name has a line of its own under the athlete and the target, and breaks between words, never inside one. */
+  :global([data-performing=true]) .lane > h2 { flex: 0 0 100%; min-width: 0; overflow-wrap: break-word; }
   :global([data-performing=true]) .lane > .laneState { flex: 0 0 auto; margin-top: 4px; padding: 5px 9px; font-size: 11px; }
   :global([data-performing=true]) .target strong { font-size: 34px; letter-spacing: -1.5px; }
   :global([data-performing=true]) .target small { font-size: 12px; }

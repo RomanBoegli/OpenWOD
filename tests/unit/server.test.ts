@@ -72,7 +72,7 @@ describe('server', () => {
     const server = await createServer({ webRoot: '/does-not-exist', store });
     const put = (path: string, payload: object, ifMatch?: number) => server.inject({ method: 'PUT', url: path, payload, headers: ifMatch === undefined ? {} : { 'if-match': `"${ifMatch}"` } });
     try {
-      expect((await server.inject('/api/v1/health/ready')).json()).toMatchObject({ persistence: true, schemaVersion: 2 });
+      expect((await server.inject('/api/v1/health/ready')).json()).toMatchObject({ persistence: true, schemaVersion: 3 });
       // Workouts
       expect((await put('/api/v1/workouts/a', { document: own('a') })).statusCode).toBe(201);
       expect((await put('/api/v1/workouts/a', { document: own('a', 2) })).statusCode).toBe(409);
@@ -111,7 +111,7 @@ describe('server', () => {
       // Export and backup
       const exported = await server.inject('/api/v1/export');
       expect(exported.headers['content-disposition']).toContain('openwod-export-');
-      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 2 });
+      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 3 });
       const backup = await server.inject('/api/v1/backup');
       expect(backup.statusCode).toBe(200);
       expect(backup.headers['content-type']).toContain('application/vnd.sqlite3');
@@ -120,6 +120,16 @@ describe('server', () => {
       const copy = new DatabaseSync(file);
       expect((copy.prepare('SELECT COUNT(*) AS n FROM sessions').get() as { n: number }).n).toBe(1);
       copy.close();
+      // Delete (DAT-14): 204, idempotent, and a later upload of the id is acknowledged without storing it.
+      expect((await server.inject({ method: 'DELETE', url: '/api/v1/sessions/s1' })).statusCode).toBe(204);
+      expect((await server.inject('/api/v1/sessions/s1')).statusCode).toBe(404);
+      expect((await server.inject('/api/v1/sessions')).json().sessions).toEqual([]);
+      expect((await server.inject({ method: 'DELETE', url: '/api/v1/sessions/s1' })).statusCode).toBe(204);
+      const retry = await put('/api/v1/sessions/s1', session);
+      expect(retry.statusCode).toBe(200);
+      expect(retry.json()).toEqual({ id: 's1', stored: 'existing' });
+      expect((await server.inject('/api/v1/sessions')).json().sessions).toEqual([]);
+      expect((await server.inject({ method: 'DELETE', url: `/api/v1/sessions/${'x'.repeat(121)}` })).statusCode).toBeGreaterThanOrEqual(400);
     } finally { await server.close(); store.close(); }
   });
 
