@@ -702,7 +702,7 @@ Recorded 26 October 2026 after version 1.8. "Done" means implemented with automa
 | 3 Complete P0 formats | Done (versions 1.4 to 1.7) | None. |
 | 4 Release hardening | Tag `v1.0.0` pushed, its workflow failed in validation before any image was built, `v1.1.0` prepared (version 1.10) | User-side: a manual workflow run as the dry run, the tag, the Portainer walkthrough with the digest, the device checklist, the digest and hardware lines of the release notes. |
 | 5 Static shape and Pages | Done (version 1.12, section 15.5) | User-side: Pages source "GitHub Actions", the `github-pages` environment for `v*` tags, the `v1.2.0` tag, a look at the live site and the zip. |
-| 6 Follow-up improvements | Open, version 1.2.1 released with household settings (DAT-12) and the phone layout before the start (UI-17), version 1.3.0 prepared with the search bar at every width (UI-18) and the not-found page (UI-19) | Prioritised from real training sessions. User-side: the `v1.3.0` tag. |
+| 6 Follow-up improvements | Open, version 1.2.1 released with household settings (DAT-12) and the phone layout before the start (UI-17), version 1.3.0 released with the search bar at every width (UI-18) and the not-found page (UI-19), version 1.3.1 prepared with the session layout on tablets (UI-20) | Prioritised from real training sessions. User-side: the `v1.3.1` tag. |
 
 ## 15.4 Waves
 
@@ -811,7 +811,7 @@ Reference review date: 26 October 2026. Recheck platform support and deployment 
 - In the context view on such a screen the AMRAP block steps aside like the stations do, since the game plan lists the same movements.
 - The view switch in the corner is a 38 px button inside the frame there, as on a phone.
 - A browser test plays a strength workout, an AMRAP and a for-time piece at 1024 by 680 and 1180 by 750 in landscape and 768 by 950 and 820 by 1110 in portrait, and fails if either view scrolls.
-- Not released yet: the next version after 1.3.0.
+- Version 1.3.1 prepared, with the database schema at version 2 and the browser library at IndexedDB version 2, both unchanged.
 
 ## Version 1.14 — 27 October 2026
 

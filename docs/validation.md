@@ -210,3 +210,16 @@ Version 1.3.0: one search bar at every width (UI-18), the not-found page and the
 | Screenshots | WebKit at 1280 and 390 px, in both themes: the bar closed and open with "Sort" inside the box, the sort box on its own row on a phone, the transparent loop above "Nothing matches yet" on the light background, the not-found page on the dark one, "Made." coloured in the header, and "Source" in the footer. |
 
 Not recorded in this round: a screenshot with reduced motion switched on, the loop on a physical iPhone, and the release workflow on GitHub runners.
+
+## The session on a tablet, 27 October 2026
+
+Version 1.3.1: a session fits the frame on a tablet in landscape and in portrait (UI-20).
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 202 passed in 26 files, unchanged. |
+| Browser scenarios | 210 passed: Firefox 52, WebKit 52, static Firefox 53, static WebKit 53. New: back squat, Cindy and Fran started at 1024 by 680 and 1180 by 750 in landscape and 768 by 950 and 820 by 1110 in portrait, with Pause fully in view and neither the focus nor the context view scrolling (UI-20). The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
+| Measurements | In WebKit, back squat, the partner circuit, Cindy, Fran and the full-body partner workout fit both views at 1024 by 680, 1180 by 750, 1280 by 720 and 1366 by 950 in landscape and 744 by 1060, 768 by 950, 810 by 1010, 820 by 1110, 834 by 1120 and 1024 by 1290 in portrait. Before the change a strength workout measured 907 px of content in a 734 px frame at 1180 by 750. |
+| Screenshots | WebKit, light theme: back squat at 1180 by 750 and 1024 by 680, Cindy in both views and Fran at 1024 by 680 in landscape, the partner circuit at 820 by 1110 and Fran at 768 by 950 in portrait. |
+
+Not recorded in this round: a session on a physical iPad, the dark theme at tablet sizes, and an AMRAP longer than three movements on a tablet in landscape.
