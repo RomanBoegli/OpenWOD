@@ -98,7 +98,7 @@ Images are published to `ghcr.io/romanboegli/openwod` for every release.
 
 ```sh
 curl -O https://raw.githubusercontent.com/RomanBoegli/OpenWOD/main/compose.yaml
-APP_IMAGE=ghcr.io/romanboegli/openwod:v1.3.1 HTTP_PORT=8080 docker compose up -d
+APP_IMAGE=ghcr.io/romanboegli/openwod:v1.4.0 HTTP_PORT=8080 docker compose up -d
 ```
 
 Open `http://<host>:8080`.

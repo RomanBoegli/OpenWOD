@@ -427,7 +427,8 @@ In the focus view the big clock SHALL stay in the same place from one slot to th
 **UI-21** The header SHALL show the running version beside the wordmark, so a device shows at a glance which release it has loaded, except on a phone, where the footer shows it.
 
 **UI-22** Settings SHALL have a Logbook section at `#/settings/logbook` listing every session played, newest first, with paging: the workout title linked to the workout while it is in the library, the date, the active time and the score, the outcome once and only when it is not Completed, the Interrupted, Modified and Corrected flags, and small icon actions to Repeat (the snapshot when the workout is gone), Correct score (DAT-05) and Delete (DAT-14). The header's clock icon SHALL open it, `#/history` SHALL lead to it, and the per-workout past sessions SHALL reflect deletions.
-A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove).
+
+**UI-23** A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove).
 Chips on a workout card and a workout's page SHALL state what holds for the whole workout: athletes, collection, difficulty and, once done, when it was last done.
 A format belongs to a block, so it SHALL show as a chip on each block of the workout's page and never among the workout's chips, and the library's format filter SHALL read "Block format".
 A library card SHALL show, in this order, those chips, the title, the description cut to two lines, the duration, blocks and movements, the equipment, and Start and Details.
@@ -706,12 +707,13 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.2.1: household settings on the server (DAT-12) and the phone layout before the start (UI-17).
 - 1.3.0: one search bar at every width (UI-18) and the not-found pages (UI-19).
 - 1.3.1: the session layout on tablets and short screens (UI-20).
+- 1.4.0, prepared: the changes below, with the SQLite migration 3 and IndexedDB version 3. Notes in `docs/releases/v1.4.0.md`.
 
-**Not yet released** (in the tree since `v1.3.1`):
+**In 1.4.0** (since `v1.3.1`):
 
 - Bundled workouts can be edited, duplicated and removed like saved ones, with Restore under Settings → Collections (DAT-13).
 - The header shows the running version beside the wordmark (UI-21).
-- A workout's page and the library cards show the workout's chips above the title, and formats moved to the blocks (UI-22).
+- A workout's page and the library cards show the workout's chips above the title, and formats moved to the blocks (UI-23).
 - The truck horn tone (AUD-01), with the clock holding at each timed boundary for its 1.4 s blast.
 - The transition tile between blocks: Wait for Ready, Rest then continue, or Continue straight away, for every format (BLD-14).
 - The interface says block and movement everywhere, and the editor's time fields are mm:ss fields that step with the wheel and the arrow keys.
@@ -734,7 +736,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for 1.4.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for 1.5.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 
@@ -753,7 +755,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-06, MOD-06, NFR-15, SHR-07, UI-23 and AT-30.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-06, MOD-06, NFR-15, SHR-07, UI-24 and AT-30.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 
