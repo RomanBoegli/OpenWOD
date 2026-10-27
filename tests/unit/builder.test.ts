@@ -7,7 +7,7 @@ const cindy = bundledWorkout('cindy');
 const fightGoneBad = bundledWorkout('fight-gone-bad');
 const fran = bundledWorkout('fran');
 const fullBodyPartner = bundledWorkout('full-body-partner');
-const hyroxDoublesCircuit = bundledWorkout('hyrox-doubles-circuit');
+const pullAndPressLadder = bundledWorkout('pull-and-press-ladder');
 const hyroxEngineEmom = bundledWorkout('hyrox-engine-emom-24');
 const hyroxPaceIntervals = bundledWorkout('hyrox-pace-intervals');
 const mixedSession = bundledWorkout('mixed-session');
@@ -37,7 +37,7 @@ describe('editor builder model', () => {
   });
 
   it('reports workouts outside the editable shape instead of approximating them', () => {
-    expect(workoutToBuilder(hyroxDoublesCircuit)).toBeNull(); // A timed run before an alternating repeat.
+    expect(workoutToBuilder(pullAndPressLadder)).toBeNull(); // Rests between the rungs of one capped for-time list.
     expect(workoutToBuilder(tabataThis)?.sections[0]).toMatchObject({ slotRepeats: 8, slotRepeatRestMs: 10_000, betweenSlotsRestMs: 60_000 });
     expect(workoutToBuilder(fran)?.sections[0]).toMatchObject({ format: 'forTime', capMs: 600_000 });
     expect(workoutToBuilder(fran)?.sections[0].slots[0].A.load).toEqual({ light: { value: 20, women: 15, unit: 'kg' }, medium: { value: 30, women: 20, unit: 'kg' }, heavy: { value: 43, women: 29, unit: 'kg' } });
@@ -49,7 +49,7 @@ describe('editor builder model', () => {
   it('keeps the full-body block structure: alternating rounds, the rest between rounds and the rest after the section', () => {
     const draft = workoutToBuilder(fullBodyPartner)!;
     const block = draft.sections[1];
-    expect(block).toMatchObject({ rounds: 2, alternate: true, betweenSlotsRestMs: 20_000, trailingRestMs: 0, blockRestMs: 140_000, betweenRoundsRestMs: 20_000 });
+    expect(block).toMatchObject({ rounds: 2, alternate: true, betweenSlotsRestMs: 20_000, trailingRestMs: 0, blockRestMs: 120_000, betweenRoundsRestMs: 20_000 });
     expect(block.slots).toHaveLength(4);
     expect(draft.sections[0]).toMatchObject({ rounds: 1, blockRestMs: 0, betweenSlotsRestMs: 0 });
   });

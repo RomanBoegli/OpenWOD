@@ -30,16 +30,16 @@ describe('canonical workout compiler', () => {
     expect(secondRound.assignments?.A.name).toBe('Row');
   });
 
-  it('AT-29: compiles the supplied workout into 50 minutes with explicit rests between rounds and sections and alternating columns', () => {
+  it('AT-29: compiles the supplied workout into 48:40 with explicit rests between rounds and sections and alternating columns', () => {
     const plan = compileWorkout(fullBodyPartner);
-    expect(plan.durationMs).toBe(3_000_000);
-    expect(plan.sections.map(section => section.durationMs)).toEqual([300_000, 600_000, 600_000, 600_000, 600_000, 300_000]);
+    expect(plan.durationMs).toBe(2_920_000);
+    expect(plan.sections.map(section => section.durationMs)).toEqual([300_000, 580_000, 580_000, 580_000, 580_000, 300_000]);
     const first = plan.occurrences.find(item => item.anchor === 'block-1-slot-1' && item.rounds[0].iteration === 1)!;
     const second = plan.occurrences.find(item => item.anchor === first.anchor && item.rounds[0].iteration === 2)!;
     expect(first.assignments?.A.name).toBe('Air squats');
     expect(second.assignments?.A.name).toBe('Dumbbell thrusters');
     expect(second.assignments?.B?.name).toBe('Air squats');
-    expect(plan.occurrences[plan.sections[4].endIndex].durationMs).toBe(140_000);
+    expect(plan.occurrences[plan.sections[4].endIndex].durationMs).toBe(120_000);
     expect(plan.occurrences[plan.sections[4].endIndex].phase).toBe('blockRest');
   });
 
@@ -77,7 +77,7 @@ describe('canonical workout compiler', () => {
     expect(file).not.toContain('Ms:');
     expect(file).not.toContain('voiceURI');
     expect(parseWorkoutFile(file)).toEqual(fullBodyPartner);
-    expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(3_000_000);
+    expect(compileWorkout(parseWorkoutFile(file)).durationMs).toBe(2_920_000);
     expect(() => parseWorkoutFile(file.replace('formatVersion: 3', 'formatVersion: 99'))).toThrow(/newer than this app/);
     expect(() => parseWorkoutFile(file.replace('format: openwod.workout', 'format: other'))).toThrow(/not an OpenWOD workout/);
     expect(() => parseWorkoutFile('<script>alert(1)</script>')).toThrow(/not an OpenWOD workout|valid YAML/);

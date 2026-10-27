@@ -14,9 +14,8 @@ function finalTransitions(workout: Workout) {
 
 describe('the rest after the last movement of each round', () => {
   it('moves into the rest between rounds and the rest between sections, at the same length', () => {
-    const draft = workoutToBuilder(bundledWorkout('full-body-partner'))!;
-    const legs = draft.sections[1];
-    expect(legs).toMatchObject({ rounds: 2, trailingRestMs: 0, betweenRoundsRestMs: 20_000, blockRestMs: 140_000 });
+    const draft = workoutToBuilder({ ...bundledWorkout('partner-circuit'), sections: [{ ...bundledWorkout('partner-circuit').sections[0], transitionAfter: 'automatic', body: { id: 'body', type: 'sequence', children: [{ id: 'rounds', type: 'repeat', count: 2, body: { id: 'stations', type: 'sequence', trailingRestMs: 20_000, children: [{ id: 'one', type: 'timed', durationMs: 40_000, assignments: { A: { name: 'Burpees' }, B: { name: 'Row' } } }] } }, { id: 'rest', type: 'rest', kind: 'blockRest', durationMs: 120_000 }] } }, bundledWorkout('partner-circuit').sections[0]] })!;
+    expect(draft.sections[0]).toMatchObject({ rounds: 2, trailingRestMs: 0, betweenRoundsRestMs: 20_000, blockRestMs: 140_000 });
   });
 
   it('keeps the timing of every bundled workout the editor can open, except a pause after the very last movement', () => {

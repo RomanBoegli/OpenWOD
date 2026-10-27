@@ -30,7 +30,7 @@ describe('workout outline', () => {
     expect(sections[0].rounds[0].label).toBe('');
     expect(sections[0].rounds[0].rows).toHaveLength(5);
     const block = sections[1];
-    expect(block.durationMs).toBe(600_000);
+    expect(block.durationMs).toBe(580_000);
     expect(block.rounds.map(round => round.label)).toEqual(['Round 1 of 2', 'Round 2 of 2']);
     expect(block.rounds[0].rows[0].A?.name).toBe('Air squats');
     expect(block.rounds[1].rows[0].A?.name).toBe('Dumbbell thrusters');
@@ -40,7 +40,7 @@ describe('workout outline', () => {
     expect(block.rounds[1].rows.at(-1)?.restAfter).toEqual([]);
     // The block rest is the rest after the section (BLD-14), told once beside the transition.
     expect(block.rounds[1].restAfter).toEqual([]);
-    expect(block.restAfterMs).toBe(140_000);
+    expect(block.restAfterMs).toBe(120_000);
   });
 
   it('labels nested repeats with sets and rounds', () => {

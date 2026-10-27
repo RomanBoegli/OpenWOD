@@ -214,7 +214,7 @@ export const seedMovements: Movement[] = [
   { id: 'run-together', name: 'Run together', aliases: ['Partner run', 'Team run'], family: 'run', category: 'monostructural' },
   { id: 'shuttle-run', name: 'Shuttle runs', aliases: ['Shuttle sprints', 'Shuttles', 'Shuttle run'], family: 'run', category: 'monostructural' },
   { id: 'sprint', name: 'Sprints', aliases: ['Sprint', 'Run sprints'], family: 'run', category: 'monostructural' },
-  { id: 'ski', name: 'SkiErg', spokenName: 'Ski erg', aliases: ['Ski', 'Ski erg', 'Ski (cal)', 'Skiing', 'SkiErg (cal)'], equipment: ['SkiErg'], category: 'monostructural' },
+  { id: 'ski', name: 'SkiErg', spokenName: 'Ski air', aliases: ['Ski', 'Ski erg', 'Ski (cal)', 'Skiing', 'SkiErg (cal)'], equipment: ['SkiErg'], category: 'monostructural' },
   { id: 'bike', name: 'Bike', aliases: ['Bike (cal)', 'Cycling', 'Bike erg', 'BikeErg', 'Biking'], equipment: ['Bike'], category: 'monostructural' },
   { id: 'assault-bike', name: 'Assault bike', aliases: ['Air bike', 'Assault bike (cal)', 'Fan bike'], family: 'bike', equipment: ['Bike'], category: 'monostructural' },
   { id: 'echo-bike', name: 'Echo bike', aliases: ['Echo bike (cal)'], family: 'bike', equipment: ['Bike'], category: 'monostructural' },

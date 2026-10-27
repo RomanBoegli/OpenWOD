@@ -29,7 +29,7 @@ It is part of `npm run check`.
 
 1. Copy a similar file into the right folder and rename it to `<id>.wod.yaml`.
    Set `workout.id` to the same id (lower-case, hyphens) and `revision: 1`.
-2. Give every node a unique `id`, keep `transitionAfter: manualReady`, set `attribution.author`, and list the `equipment` the movements need using the catalogue's names (Barbell, Rowing machine, Bike, SkiErg, Plyo box, Medicine ball, Slam ball, Jump rope, Pull-up bar, Rings, Kettlebell, Dumbbells, Bench, Sled, Sandbag, Climbing rope, Wall, AbMat, Weight plate, Parallettes) plus `Running route`, `Treadmill or running route`, `Exercise mat` or `Squat rack` where that is what the session needs.
+2. Give every node a unique `id`, end each section with `transitionAfter: manualReady` (Wait for Ready) unless the workout prescribes a timed rest before the next section (a `blockRest` node at the end of the body with `transitionAfter: automatic`) or a straight continuation (`automatic` without a rest), set `attribution.author`, and list the `equipment` the movements need using the catalogue's names (Barbell, Rowing machine, Bike, SkiErg, Plyo box, Medicine ball, Slam ball, Jump rope, Pull-up bar, Rings, Kettlebell, Dumbbells, Bench, Sled, Sandbag, Climbing rope, Wall, AbMat, Weight plate, Parallettes) plus `Running route`, `Treadmill or running route`, `Exercise mat` or `Squat rack` where that is what the session needs.
 3. Use movement names or aliases from `movements.ts`.
    Add a record there first if the movement is new (the voice packs render one clip per record).
 4. Put standards (ball target, box height, race distances) in the description or the movement `notes`, coaching cues in `notes`, and loads as levels (below).

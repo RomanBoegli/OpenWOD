@@ -62,7 +62,7 @@ test.describe('editor', () => {
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/copy-of-partner-circuit$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner circuit');
-    await page.goto('/#/wod/hyrox-doubles-circuit/edit');
+    await page.goto('/#/wod/pull-and-press-ladder/edit');
     await expect(page.getByRole('status')).toContainText('cannot change yet');
   });
 

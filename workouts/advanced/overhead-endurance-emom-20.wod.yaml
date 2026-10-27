@@ -5,7 +5,7 @@ workout:
   id: overhead-endurance-emom-20
   revision: 1
   title: Overhead endurance EMOM 20
-  description: "Four stations, five rounds: thirty seconds of strict handstand push-ups, ten dumbbell overhead walking lunge steps, thirty seconds of kipping handstand push-ups, twenty wall balls to the standard 10 ft (9 ft) target. Pick a handstand push-up variation you can keep moving for the full thirty seconds."
+  description: "Four movements, five rounds: thirty seconds of strict handstand push-ups, ten dumbbell overhead walking lunge steps, thirty seconds of kipping handstand push-ups, twenty wall balls to the standard 10 ft (9 ft) target. Pick a handstand push-up variation you can keep moving for the full thirty seconds."
   attribution:
     author: Coach programming, shared in a members chat
     notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.

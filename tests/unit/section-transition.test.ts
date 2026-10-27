@@ -63,7 +63,7 @@ describe('the rest after a section (BLD-14)', () => {
       for (const compiled of plan.sections) if (compiled.restAfter) expect(compiled.format, workout.id).toBe('timedCircuit');
     }
     const fullBody = compileWorkout(bundledWorkout('full-body-partner'));
-    expect(fullBody.sections[1]).toMatchObject({ transitionAfter: 'manualReady', restAfter: { durationMs: 140_000 } });
+    expect(fullBody.sections[1]).toMatchObject({ transitionAfter: 'automatic', restAfter: { durationMs: 120_000 } });
     // A rest in the middle of a for-time list stays inside the cap.
     expect(compileWorkout(bundledWorkout('pull-and-press-ladder')).sections[0].restAfter).toBeUndefined();
   });

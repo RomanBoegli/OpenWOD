@@ -5,7 +5,7 @@ workout:
   id: full-body-partner
   revision: 1
   title: Full body partner workout
-  description: "Bodyweight meets dumbbells. Every loaded station in the B column uses dumbbells: one pair for the squats, hinges, cleans and carries and a lighter pair for the presses, curls, extensions and chops. Switch task columns each round, then take two minutes to recover before the next block."
+  description: "Bodyweight meets dumbbells. Every loaded movement in the B column uses dumbbells: one pair for the squats, hinges, cleans and carries and a lighter pair for the presses, curls, extensions and chops. A and B swap each round, then take two minutes to recover before the next section."
   attribution:
     author: OpenWOD
     notes: Encoded from docs/source/example-wod.md with its timing made explicit (section 6.5 of AGENT.md).
@@ -66,7 +66,7 @@ workout:
     - id: block-1
       title: Legs & strength
       format: timedCircuit
-      transitionAfter: manualReady
+      transitionAfter: automatic
       body:
         id: block-1-body
         type: sequence
@@ -157,12 +157,12 @@ workout:
                       name: Alternating lunges
           - id: block-1-rest
             type: rest
-            duration: 2m20s
+            duration: 2m
             kind: blockRest
     - id: block-2
       title: Upper body & arms
       format: timedCircuit
-      transitionAfter: manualReady
+      transitionAfter: automatic
       body:
         id: block-2-body
         type: sequence
@@ -267,12 +267,12 @@ workout:
                           unit: kg
           - id: block-2-rest
             type: rest
-            duration: 2m20s
+            duration: 2m
             kind: blockRest
     - id: block-3
       title: Abs & core
       format: timedCircuit
-      transitionAfter: manualReady
+      transitionAfter: automatic
       body:
         id: block-3-body
         type: sequence
@@ -363,12 +363,12 @@ workout:
                           unit: kg
           - id: block-3-rest
             type: rest
-            duration: 2m20s
+            duration: 2m
             kind: blockRest
     - id: block-4
       title: HYROX finisher
       format: timedCircuit
-      transitionAfter: manualReady
+      transitionAfter: automatic
       body:
         id: block-4-body
         type: sequence
@@ -459,7 +459,7 @@ workout:
                           unit: kg
           - id: block-4-rest
             type: rest
-            duration: 2m20s
+            duration: 2m
             kind: blockRest
     - id: cool-down
       title: Cool-down

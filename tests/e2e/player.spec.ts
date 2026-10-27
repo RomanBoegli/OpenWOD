@@ -187,7 +187,7 @@ test.describe('overview', () => {
     const sections = page.getByRole('list', { name: 'Sections' }).getByRole('listitem').filter({ hasText: /Section \d of 6/i });
     await expect(sections).toHaveCount(6);
     await expect(page.getByRole('list', { name: 'Sections' }).getByRole('listitem', { name: /^Between section/ })).toHaveCount(5);
-    await expect(page.getByRole('listitem', { name: 'Between section 2 and 3' })).toContainText('Rest 02:20, then wait for Ready');
+    await expect(page.getByRole('listitem', { name: 'Between section 2 and 3' })).toContainText('Rest 02:00, then continues');
     const block = sections.nth(1);
     await expect(block).toContainText('Legs & strength');
     await expect(block).toContainText('Round 1 of 2');

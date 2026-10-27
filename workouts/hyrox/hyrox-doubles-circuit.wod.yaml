@@ -5,7 +5,7 @@ workout:
   id: hyrox-doubles-circuit
   revision: 1
   title: HYROX doubles circuit
-  description: "Run together, then split the stations the way a doubles team does: 45 seconds on, 15 to swap, and the columns trade after each round so both of you touch every station. Heavy is the doubles open standard: sled push 152 kg (women 102 kg, incl. sled), sled pull 103 kg (78 kg), farmers carry 2 × 24 kg (2 × 16 kg), sandbag lunges 20 kg (10 kg), wall balls 6 kg (4 kg) to a 3 m (2.7 m) target; mixed teams use the men's loads."
+  description: "Run together, then split the stations the way a doubles team does: 45 seconds on, 15 to swap, and A and B swap after each round so both of you touch every station. Heavy is the doubles open standard: sled push 152 kg (women 102 kg, incl. sled), sled pull 103 kg (78 kg), farmers carry 2 × 24 kg (2 × 16 kg), sandbag lunges 20 kg (10 kg), wall balls 6 kg (4 kg) to a 3 m (2.7 m) target; mixed teams use the men's loads."
   attribution:
     author: OpenWOD
     sourceUrl: https://maintain.hyrox.com/rulebooks/HYROX_RulebookDoubles_EN.pdf
@@ -22,12 +22,12 @@ workout:
   participants: 2
   prep: 10s
   sections:
-    - id: doubles-1
-      title: Block 1
+    - id: run-1
+      title: Run 1
       format: timedCircuit
-      transitionAfter: manualReady
+      transitionAfter: automatic
       body:
-        id: doubles-1-body
+        id: doubles-1-run-body
         type: sequence
         children:
           - id: doubles-1-run
@@ -38,70 +38,71 @@ workout:
                 name: Run together
               B:
                 name: Run together
-          - id: doubles-1-rounds
-            type: repeat
-            count: 2
-            assignmentPolicy: alternate
-            betweenIterationsRest: 15s
-            body:
-              id: doubles-1-stations
-              type: sequence
-              betweenChildrenRest: 15s
-              children:
-                - id: doubles-1-skierg
-                  type: timed
-                  duration: 45s
-                  assignments:
-                    A:
-                      name: SkiErg
-                    B:
-                      notes: Total incl. sled; heavy is the open standard
-                      name: Sled push
-                      load:
-                        light:
-                          value: 70
-                          women: 50
-                          unit: kg
-                        medium:
-                          value: 105
-                          women: 70
-                          unit: kg
-                        heavy:
-                          value: 152
-                          women: 102
-                          unit: kg
-                - id: doubles-1-sled-pull
-                  type: timed
-                  duration: 45s
-                  assignments:
-                    A:
-                      notes: Total incl. sled; heavy is the open standard
-                      name: Sled pull
-                      load:
-                        light:
-                          value: 50
-                          women: 35
-                          unit: kg
-                        medium:
-                          value: 70
-                          women: 55
-                          unit: kg
-                        heavy:
-                          value: 103
-                          women: 78
-                          unit: kg
-                    B:
-                      name: Burpee broad jumps
-          - id: doubles-1-rest
-            type: rest
-            duration: 15s
-            kind: blockRest
-    - id: doubles-2
-      title: Block 2
+    - id: doubles-1
+      title: Stations 1
       format: timedCircuit
       transitionAfter: manualReady
       body:
-        id: doubles-2-body
+        id: doubles-1-rounds
+        type: repeat
+        count: 2
+        assignmentPolicy: alternate
+        betweenIterationsRest: 15s
+        body:
+          id: doubles-1-stations
+          type: sequence
+          betweenChildrenRest: 15s
+          children:
+            - id: doubles-1-skierg
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  name: SkiErg
+                B:
+                  notes: Total incl. sled; heavy is the open standard
+                  name: Sled push
+                  load:
+                    light:
+                      value: 70
+                      women: 50
+                      unit: kg
+                    medium:
+                      value: 105
+                      women: 70
+                      unit: kg
+                    heavy:
+                      value: 152
+                      women: 102
+                      unit: kg
+            - id: doubles-1-sled-pull
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: Total incl. sled; heavy is the open standard
+                  name: Sled pull
+                  load:
+                    light:
+                      value: 50
+                      women: 35
+                      unit: kg
+                    medium:
+                      value: 70
+                      women: 55
+                      unit: kg
+                    heavy:
+                      value: 103
+                      women: 78
+                      unit: kg
+                B:
+                  name: Burpee broad jumps
+    - id: run-2
+      title: Run 2
+      format: timedCircuit
+      transitionAfter: automatic
+      body:
+        id: doubles-2-run-body
         type: sequence
         children:
           - id: doubles-2-run
@@ -112,71 +113,76 @@ workout:
                 name: Run together
               B:
                 name: Run together
-          - id: doubles-2-rounds
-            type: repeat
-            count: 2
-            assignmentPolicy: alternate
-            betweenIterationsRest: 15s
-            body:
-              id: doubles-2-stations
-              type: sequence
-              betweenChildrenRest: 15s
-              children:
-                - id: doubles-2-row
-                  type: timed
-                  duration: 45s
-                  assignments:
-                    A:
-                      name: Row
-                    B:
-                      notes: Per hand; heavy is the open standard
-                      name: Farmers carry
-                      load:
-                        light:
-                          value: 12
-                          women: 8
-                          unit: kg
-                        medium:
-                          value: 16
-                          women: 12
-                          unit: kg
-                        heavy:
-                          value: 24
-                          women: 16
-                          unit: kg
-                - id: doubles-2-sandbag-lunges
-                  type: timed
-                  duration: 45s
-                  assignments:
-                    A:
-                      notes: Heavy is the open standard; women's medium is already the 10 kg race bag
-                      name: Sandbag lunges
-                      load:
-                        light:
-                          value: 10
-                          women: 5
-                          unit: kg
-                        medium:
-                          value: 15
-                          women: 10
-                          unit: kg
-                        heavy:
-                          value: 20
-                          women: 10
-                          unit: kg
-                    B:
-                      notes: 3 m (2.7 m) target
-                      name: Wall balls
-                      load:
-                        light:
-                          value: 3
-                          women: 2
-                          unit: kg
-                        medium:
-                          value: 4
-                          women: 3
-                          unit: kg
-                        heavy:
-                          value: 6
-                          women: 4
-                          unit: kg
+    - id: doubles-2
+      title: Stations 2
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: doubles-2-rounds
+        type: repeat
+        count: 2
+        assignmentPolicy: alternate
+        betweenIterationsRest: 15s
+        body:
+          id: doubles-2-stations
+          type: sequence
+          betweenChildrenRest: 15s
+          children:
+            - id: doubles-2-row
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  name: Row
+                B:
+                  notes: Per hand; heavy is the open standard
+                  name: Farmers carry
+                  load:
+                    light:
+                      value: 12
+                      women: 8
+                      unit: kg
+                    medium:
+                      value: 16
+                      women: 12
+                      unit: kg
+                    heavy:
+                      value: 24
+                      women: 16
+                      unit: kg
+            - id: doubles-2-sandbag-lunges
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: Heavy is the open standard; women's medium is already the 10 kg race bag
+                  name: Sandbag lunges
+                  load:
+                    light:
+                      value: 10
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 15
+                      women: 10
+                      unit: kg
+                    heavy:
+                      value: 20
+                      women: 10
+                      unit: kg
+                B:
+                  notes: 3 m (2.7 m) target
+                  name: Wall balls
+                  load:
+                    light:
+                      value: 3
+                      women: 2
+                      unit: kg
+                    medium:
+                      value: 4
+                      women: 3
+                      unit: kg
+                    heavy:
+                      value: 6
+                      women: 4
+                      unit: kg

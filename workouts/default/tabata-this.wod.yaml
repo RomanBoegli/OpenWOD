@@ -5,7 +5,7 @@ workout:
   id: tabata-this
   revision: 1
   title: Tabata This
-  description: "Five movements, each as a Tabata: eight rounds of 20 seconds on and 10 seconds off, with a minute to walk to the next station. Your score per movement is your weakest interval, so pace the first one like the eighth."
+  description: "Five movements, each as a Tabata: eight rounds of 20 seconds on and 10 seconds off, with a minute to walk to the next movement. Your score per movement is your weakest interval, so pace the first one like the eighth."
   attribution:
     author: CrossFit
     sourceUrl: https://www.crossfit.com/benchmark/tabata-this
