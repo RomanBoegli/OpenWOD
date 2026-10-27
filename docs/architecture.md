@@ -143,7 +143,7 @@ It throws the client's own `ApiError`, never a network error, so the outbox and 
 The static shape keeps the newest 2000 sessions and prunes older ones on every write and on restore.
 A pre-1.0 device library migrates into the browser's library on the first start with one notice, where the server shape offers it for upload.
 The interface says "this browser" where the server shape says "the server", has no connection pill, and labels the library under Settings → General → This browser with the storage used, whether the browser keeps it, the counts, the JSON backup and its restore.
-Relative URLs and hash routes let one build run at `https://romanboegli.github.io/OpenWOD/`, from a zip in any web root and under `vite preview`: cue clips and the LICENSE link go through `import.meta.env.BASE_URL`, the manifest and icons are relative.
+Relative URLs and hash routes let one build run at `https://romanboegli.ch/OpenWOD/`, from a zip in any web root and under `vite preview`: cue clips and the LICENSE link go through `import.meta.env.BASE_URL`, the manifest and icons are relative.
 
 ## Screens, routes and theme
 

@@ -968,7 +968,7 @@ Standing constraints: no runtime cloud service; imports never start a session; r
    | `static` | true | false | `./` | `dist/static` | no |
    | `static-test` | true | true | `./` | – | no |
 
-   Relative `base: './'` so one artifact works at `https://romanboegli.github.io/OpenWOD/`, from a zip in any web root, and under `vite preview`. Hash routing keeps the pathname constant. The PWA manifest (`start_url: "./"`) and icons already use relative paths.
+   Relative `base: './'` so one artifact works at `https://romanboegli.ch/OpenWOD/`, from a zip in any web root, and under `vite preview`. Hash routing keeps the pathname constant. The PWA manifest (`start_url: "./"`) and icons already use relative paths.
 2. **`Backend` interface, two implementations.** `apps/web/src/data/backend.ts` declares the method set of today's `remote` plus `exportAll`/`restore`/`counts?`. `remote.ts` is the HTTP backend (`satisfies Backend`), new `local-backend.ts` the IndexedDB one. `apps/web/src/data/mode.ts` exports `DATA_MODE: 'server' | 'static'`; `backend.ts` picks at module load. `LocalBackend` throws the client `ApiError` (never `NetworkError`), so the outbox and hook keep working unchanged: a local 409 is a conflict, a validation failure is rejected, everything else succeeds immediately.
 3. **One household core, not two copies.** Extract the semantics of `apps/server/src/store.ts` (putWorkout revision rules, archive, master revision, idempotent putSession, listSessions, correctSession, importDevice, importPack, exportAll, new restore) into `packages/household/src/core.ts`: `class Household` over a small synchronous port `HouseholdTables` (get/list/put workout, get/put master, has/get/put/list/all sessions, clear). SQLite implements the port with prepared statements inside `Store.transaction`; the local backend implements it with Maps preloaded inside one IndexedDB transaction. A shared conformance test suite pins both. Package `packages/household` depends on domain and engine (because `SessionRecord` lives in engine); nothing depends on it except server and web.
 4. **IndexedDB v2.** New stores `workouts` (keyPath `id`), `master` (one row `id: 1`), `sessions` (keyPath `id`, indexes `byFinished` on `finishedAt`, `byWorkout` on `['workoutId','finishedAt']`), corrections embedded in the session record. Existing stores untouched. Inside `transaction()` only `settle()` of the same transaction is awaited; all core logic runs synchronously between the reads and the puts, so imports and restore are atomic.
@@ -1056,7 +1056,7 @@ A → B → C → D → E → F. A is gated by the unchanged server suites, B by
 1. Repository Settings → Pages → Source "GitHub Actions".
 2. Push `main` (or dispatch `cues.yml`) to warm the voice cache.
 3. Commit, tag `v1.2.0`, push; watch the Check, then validate → image → manifest and static → release/pages.
-4. Open `https://romanboegli.github.io/OpenWOD/`: footer says 1.2.0, Settings → Sound lists five voices, a saved workout survives a reload.
+4. Open `https://romanboegli.ch/OpenWOD/`: footer says 1.2.0, Settings → Sound lists five voices, a saved workout survives a reload.
 5. Download the zip from the release and serve it from a plain web root once.
 
 # Plan: the workout generator (version 1.3.0, after the static shape)

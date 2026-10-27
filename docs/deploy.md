@@ -8,7 +8,7 @@ The stack is called `openwod` and so is its single container.
 ## Static site (GitHub Pages or any web server)
 
 The static site is the same app without a server.
-Every release is published at [https://romanboegli.github.io/OpenWOD/](https://romanboegli.github.io/OpenWOD/), with the five recorded voices.
+Every release is published at [https://romanboegli.ch/OpenWOD/](https://romanboegli.ch/OpenWOD/), with the five recorded voices.
 Open it and play: there is nothing to install and no account.
 
 The library lives in the browser's own storage (IndexedDB), so it is per browser and per browser profile.

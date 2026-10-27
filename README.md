@@ -50,26 +50,17 @@ Pick a session from the library, press Start, and put the phone down.
 
 ### Features
 
-- [x] Six formats on one deterministic clock: timed circuit, AMRAP, EMOM, for time, you go / I go, strength
-- [x] Solo or pair sessions with stable A and B lanes, alternating stations and team rounds
-- [x] Readable from two metres: big targets, a draining timer ring with amber and red marks, a background pulse
-- [x] Light, medium and heavy loads per movement, women's amounts, kilograms or pounds
-- [x] Beeps on the audio clock and five offline voices that call Go, Rest, the countdown, who is up and every movement
-- [x] 53 bundled workouts as hand-written YAML: benchmarks with their published Rx, advanced pieces from class programming, HYROX, partner circuits
-- [x] Library filters that stack: athletes, format, collection, duration, difficulty, equipment, only my equipment
-- [x] A projected difficulty per workout, calibrated to your taste in settings
-- [x] An editor for every format with autosaved drafts, duplicate-and-edit, and equipment derived from the movements
-- [x] A movement catalogue of 193 records grouped by family, with search, merge and rename
-- [x] Collections, a session log on every card, import and export of single `.wod.yaml` files
-- [x] No account, no cloud, no tracking, in light and dark themes with an accent and background of your choice
-- [x] A household server: one SQLite database shared by every device, with a cache and an outbox on each device for the time the server is away
-- [x] Recovery after a reload or a killed browser, and one tab in control of a session
-- [x] History with Repeat and score corrections, backups through the SQLite backup API, versioned migrations
-- [x] Workout packs with sharing provenance: reimports recognised, newer revisions can replace
-- [x] Installs on a phone's home screen as a web app, with the training view laid out to fit the screen
-- [x] Runs as a static site (GitHub Pages) or as one container with a household server
-- [x] A JSON backup that restores into either shape, replacing the library after a confirmation
-- [ ] Login (the server stays on a trusted network until then)
+- [x] Proper **CrossFit and HYROX timers** with voice cues and beeps for work, rest and the countdown
+- [x] Train **alone or with a partner**, with the timer telling each of you who is up
+- [x] **53 ready-made workouts**, from Fran and Murph to HYROX sessions and partner circuits, each with a **difficulty rating**
+- [x] **Scaled loads** for every weighted movement: light, medium and heavy, with women's weights alongside
+- [x] **Find a workout** that fits the time you have, the gear you own and how hard you want to go
+- [x] **Write your own workouts** or share them with friends as a single file
+- [x] See **what you trained** and when, and repeat a session with one tap
+- [x] **Make it yours**: pick one of five offline voices, show weights in kg or lb, tune the difficulty scale to your fitness, and choose your theme and accent colour
+- [x] Open it in the browser or add it to your **phone's home screen**, no install needed
+- [x] Optionally **self-host** it, so every device at home shares the same library
+- [x] **No account, no cloud, no tracking**
 
 > [!NOTE]
 > On the static site everything you build, import or log stays in that browser.
@@ -83,7 +74,7 @@ The container adds a household server, so every device in the home shares one li
 
 ### Static site
 
-The current release is published at **[romanboegli.github.io/OpenWOD](https://romanboegli.github.io/OpenWOD/)**.
+The current release is published at **[romanboegli.ch/OpenWOD](https://romanboegli.ch/OpenWOD/)**.
 Open it, pick a workout and press Start.
 On a phone or tablet it installs as an app, see [On a phone or tablet](#on-a-phone-or-tablet).
 
@@ -139,7 +130,7 @@ Download a backup first if you want to keep the library, since every step below 
 
 | Setup | Remove the app | Remove its data |
 | --- | --- | --- |
-| Static site | Delete the home-screen icon, or the unpacked files on your web server. | Clear the site's data in the browser settings for `romanboegli.github.io` or your own address. |
+| Static site | Delete the home-screen icon, or the unpacked files on your web server. | Clear the site's data in the browser settings for `romanboegli.ch` or your own address. |
 | Docker Compose | `docker compose down` in the folder holding `compose.yaml`, then `docker image rm ghcr.io/romanboegli/openwod:<tag>`. | `docker compose down -v`, which also deletes the `openwod_openwod-data` volume. |
 | Portainer | Remove the `openwod` stack. | Delete the volume `openwod_openwod-data` under Volumes. |
 

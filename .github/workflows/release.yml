@@ -336,10 +336,11 @@ jobs:
       - name: Wait for the new site
         id: live
         env:
-          OWNER: ${{ github.repository_owner }}
+          # The Pages URL, which follows a custom domain on the owner's site (romanboegli.ch).
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           ENTRY: ${{ needs.static.outputs.entry }}
         run: |
-          url="https://${OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          url="${PAGE_URL%/}/"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           deadline=$((SECONDS + 300))
           until curl --fail --silent --location --max-time 10 "$url?deploy=$GITHUB_RUN_ID-$SECONDS" | grep -q "$ENTRY"; do

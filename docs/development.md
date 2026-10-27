@@ -126,7 +126,7 @@ Once per repository, before the first tag that publishes the static site:
 6. The first time: open the package on GitHub (Packages → the repository's image) and set its visibility, or add registry credentials to the Portainer stack.
    A fresh package is private.
 7. Put the digest into the Portainer stack's `APP_IMAGE`, redeploy, and check `/api/v1/health/ready` reports the new version.
-   Open `https://romanboegli.github.io/OpenWOD/` and check the footer version and the five voices under Settings → Sound.
+   Open `https://romanboegli.ch/OpenWOD/` and check the footer version and the five voices under Settings → Sound.
 8. The GitHub Release is already there, created by the workflow, with the notes, the digest line and the zip.
    Releases up to 1.1.2 were created by hand, and a release that exists already makes the job stop rather than overwrite it.
 
