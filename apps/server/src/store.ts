@@ -148,6 +148,23 @@ export class Store {
   getMasterData(): { revision: number; document: MasterData; updatedAt?: string } { return this.transaction(() => this.core.getMasterData()); }
   putMasterData(document: MasterData, expectedRevision: number | undefined): { revision: number; updatedAt: string } { return this.transaction(() => this.core.putMasterData(document, expectedRevision)); }
 
+  /**
+   * The household's settings (theme, sounds, names, units, equipment, difficulty): one document every device follows.
+   * The last write wins, so there is no expected revision. A missing row reads as revision 0 with no document.
+   */
+  getSettings(): { revision: number; document?: Record<string, unknown>; updatedAt?: string } {
+    const row = this.db.prepare('SELECT revision, document, updated_at FROM settings WHERE id = 1').get() as unknown as { revision: number; document: string; updated_at: string } | undefined;
+    return row ? { revision: row.revision, document: JSON.parse(row.document) as Record<string, unknown>, updatedAt: row.updated_at } : { revision: 0 };
+  }
+  putSettings(document: Record<string, unknown>): { revision: number; updatedAt: string } {
+    return this.transaction(() => {
+      const revision = this.getSettings().revision + 1;
+      const updatedAt = this.now().toISOString();
+      this.db.prepare('INSERT INTO settings (id, revision, document, updated_at) VALUES (1, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET revision = excluded.revision, document = excluded.document, updated_at = excluded.updated_at').run(revision, JSON.stringify(document), updatedAt);
+      return { revision, updatedAt };
+    });
+  }
+
   putSession(record: SessionRecord & { workout: Workout }): 'created' | 'existing' { return this.transaction(() => this.core.putSession(record)); }
   listSessions(query: { limit?: number; before?: string; workoutId?: string } = {}): SessionListItem[] { return this.transaction(() => this.core.listSessions(query)); }
   getSession(id: string): StoredSession | undefined { return this.transaction(() => this.core.getSession(id)); }

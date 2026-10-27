@@ -52,12 +52,27 @@ describe('server', () => {
     } finally { await server.close(); }
   });
 
+  it('shares the settings across the household and bounds them', async () => {
+    const { store } = await Store.open(':memory:');
+    const server = await createServer({ webRoot: '/does-not-exist', store });
+    const put = (payload: unknown) => server.inject({ method: 'PUT', url: '/api/v1/settings', payload: payload as object });
+    try {
+      expect((await server.inject('/api/v1/settings')).json()).toEqual({ revision: 0 });
+      expect((await put({ document: { theme: 'dark', names: { A: 'Sam', B: 'Kim' } } })).json()).toMatchObject({ revision: 1 });
+      expect((await server.inject('/api/v1/settings')).json()).toMatchObject({ revision: 1, document: { theme: 'dark', names: { A: 'Sam' } } });
+      expect((await put({ document: [] })).statusCode).toBe(400);
+      expect((await put({ theme: 'dark' })).statusCode).toBe(400);
+      expect((await put({ document: { notes: 'x'.repeat(70_000) } })).statusCode).toBe(413);
+      expect((await server.inject('/api/v1/settings')).json()).toMatchObject({ revision: 1 });
+    } finally { await server.close(); store.close(); }
+  });
+
   it('serves the household API with revision checks, structured errors and idempotent sessions', async () => {
     const { store } = await Store.open(':memory:');
     const server = await createServer({ webRoot: '/does-not-exist', store });
     const put = (path: string, payload: object, ifMatch?: number) => server.inject({ method: 'PUT', url: path, payload, headers: ifMatch === undefined ? {} : { 'if-match': `"${ifMatch}"` } });
     try {
-      expect((await server.inject('/api/v1/health/ready')).json()).toMatchObject({ persistence: true, schemaVersion: 1 });
+      expect((await server.inject('/api/v1/health/ready')).json()).toMatchObject({ persistence: true, schemaVersion: 2 });
       // Workouts
       expect((await put('/api/v1/workouts/a', { document: own('a') })).statusCode).toBe(201);
       expect((await put('/api/v1/workouts/a', { document: own('a', 2) })).statusCode).toBe(409);
@@ -96,7 +111,7 @@ describe('server', () => {
       // Export and backup
       const exported = await server.inject('/api/v1/export');
       expect(exported.headers['content-disposition']).toContain('openwod-export-');
-      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 1 });
+      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 2 });
       const backup = await server.inject('/api/v1/backup');
       expect(backup.statusCode).toBe(200);
       expect(backup.headers['content-type']).toContain('application/vnd.sqlite3');

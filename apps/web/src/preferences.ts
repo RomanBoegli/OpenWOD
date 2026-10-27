@@ -67,7 +67,14 @@ const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(KEY);
-    const stored = raw ? JSON.parse(raw) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']>; restColor?: Partial<Preferences['restColor']>; background?: Partial<BackgroundChoice> } : {};
+    return normalisePreferences(raw ? JSON.parse(raw) : {});
+  } catch { return structuredClone(defaultPreferences); }
+}
+
+/** Validates stored preferences field by field, from this browser or from the household server: anything unknown falls back to its default. */
+export function normalisePreferences(value: unknown): Preferences {
+  try {
+    const stored = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']>; restColor?: Partial<Preferences['restColor']>; background?: Partial<BackgroundChoice> };
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },

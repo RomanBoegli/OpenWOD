@@ -113,4 +113,25 @@ test.describe('household server', () => {
     await expect(workouts.getByRole('listitem').filter({ hasText: 'Kept' })).toBeVisible();
     await expect(workouts.getByRole('listitem').filter({ hasText: 'Added later' })).toHaveCount(0);
   });
+
+  test('a settings change on one device reaches the other devices of the household', async ({ page, browser, api }) => {
+    await page.goto('/#/settings');
+    await page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Dark' }).check();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect.poll(async () => (await api.get<{ document?: { theme?: string } }>('/api/v1/settings')).document?.theme).toBe('dark');
+
+    const other = await browser.newContext({ baseURL: new URL(page.url()).origin });
+    try {
+      await other.addInitScript(value => { window.__openwodScope = value; }, api.scope);
+      const phone = await other.newPage();
+      await phone.goto('/#/settings');
+      await expect(phone.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await phone.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Light' }).check();
+      await expect.poll(async () => (await api.get<{ document?: { theme?: string } }>('/api/v1/settings')).document?.theme).toBe('light');
+    } finally { await other.close(); }
+
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect(page.getByRole('radiogroup', { name: 'Theme' }).getByRole('radio', { name: 'Light' })).toBeChecked();
+  });
 });

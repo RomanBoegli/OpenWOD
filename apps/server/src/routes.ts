@@ -16,6 +16,8 @@ import type { PackDecision, Store } from './store';
 const LARGE_BODY = 4 * 1_048_576;
 const STAMP = Type.String({ minLength: 10, maxLength: 40 });
 
+const SETTINGS_BYTES = 64 * 1024;
+const SettingsBody = Type.Object({ document: Type.Record(Type.String({ maxLength: 60 }), Type.Unknown()) }, { additionalProperties: false });
 const DocumentBody = Type.Object({ document: Type.Unknown() }, { additionalProperties: false });
 const CorrectionBody = Type.Object({ results: Type.Array(SectionResultSchema, { maxItems: 100 }), note: Type.Optional(Type.String({ maxLength: 500 })) }, { additionalProperties: false });
 /** Pre-1.0 device records: no events, flags or snapshot. The server fills them in. */
@@ -40,6 +42,7 @@ const PackImportBody = Type.Object({
 const validators = {
   document: compileSchema<{ document: unknown }>(DocumentBody),
   masterData: compileSchema<MasterData>(MasterDataSchema),
+  settings: compileSchema<{ document: Record<string, unknown> }>(SettingsBody),
   session: compileSchema<SessionRecord>(SessionRecordSchema),
   correction: compileSchema<{ results: SessionRecord['results']; note?: string }>(CorrectionBody),
   deviceImport: compileSchema<{ deviceId: string; workouts: unknown[]; masterData: unknown; sessions: (Partial<SessionRecord> & { id: string; workoutId: string; title: string; startedAt: string; finishedAt: string; outcome: SessionRecord['outcome']; completion: number; activeMs: number; results: SessionRecord['results'] })[] }>(DeviceImportBody),
@@ -107,6 +110,14 @@ export function registerRoutes(app: FastifyInstance, { storeOf, version }: Route
     const { document } = body(validators.document, request.body, 'master data');
     const data = body(validators.masterData, document, 'master data');
     return need(request).putMasterData(sanitiseMasterData(data), expectedRevision(request));
+  });
+
+  /** The household's settings. Each device validates them field by field on read, so the server only bounds their size. */
+  app.get('/api/v1/settings', async request => need(request).getSettings());
+  app.put('/api/v1/settings', async request => {
+    const { document } = body(validators.settings, request.body, 'settings');
+    if (JSON.stringify(document).length > SETTINGS_BYTES) throw new ApiError(413, 'PAYLOAD_TOO_LARGE', 'The settings are larger than 64 KB.');
+    return need(request).putSettings(document);
   });
 
   app.get<{ Querystring: { limit?: string; before?: string; workoutId?: string } }>('/api/v1/sessions', async request => ({

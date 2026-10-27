@@ -45,7 +45,8 @@ test('the production container ships the recorded cue packs', async ({ page, req
   for (const pack of list) {
     const clip = await request.get(`./cues/${pack.id}/go.mp3`);
     expect(clip.ok(), `${pack.id}/go.mp3`).toBe(true);
-    expect(clip.headers()['content-type']).toContain('audio/mpeg');
+    // The container sends audio/mpeg, GitHub Pages audio/mp3: both play, and the decode check below is the real proof.
+    expect(clip.headers()['content-type']).toMatch(/^audio\/(mpeg|mp3)\b/);
   }
   // One clip must decode in the real browser: this is what the player plays at Go.
   await page.goto('./');

@@ -83,7 +83,7 @@ function ServerCard({ household }: { household: HouseholdStatus }) {
   const [message, setMessage] = useState<RestoreMessage>();
   return <section className={styles.card} aria-labelledby="household-title">
     <h2 id="household-title">Household server</h2>
-    <p className={styles.hint}>Workouts, collections, movements and the session log live on the server this app is served from, so every device in the household sees the same library. This device keeps a copy for offline reading and uploads changes when the server is back.</p>
+    <p className={styles.hint}>Workouts, collections, movements, the session log and these settings live on the server this app is served from, so every device in the household sees the same library and the same settings. This device keeps a copy for offline reading and uploads changes when the server is back.</p>
     <dl className={styles.facts}>
       <div><dt>Connection</dt><dd>{household.connection === 'online' ? 'Connected' : household.connection === 'offline' ? 'Offline' : household.connection === 'unreachable' ? 'Server unreachable' : 'Checking…'}</dd></div>
       <div><dt>Server</dt><dd>{household.serverVersion ? `OpenWOD ${household.serverVersion}` : '—'}</dd></div>

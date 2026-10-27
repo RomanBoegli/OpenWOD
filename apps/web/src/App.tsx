@@ -16,13 +16,13 @@ import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } fro
 import { freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
 import { allCollections, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
-import { loadPreferences, savePreferences } from './preferences';
 import { draftHref, HISTORY_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
 import { Icon } from './Icon';
 import { BrandMark } from './BrandMark';
 import { installFeel } from './feel';
 import { useLibraryData, type SaveResult } from './data/use-library-data';
+import { useSharedPreferences } from './data/shared-preferences';
 import { probeSessionLock, takeOverSession } from './data/session-lock';
 import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
@@ -37,7 +37,7 @@ const SHAPE_TIPS = {
 
 export default function App() {
   const { route } = useRoute();
-  const [preferences, setPreferences] = useState(loadPreferences);
+  const [preferences, setPreferences] = useSharedPreferences();
   const [drafts, setDrafts] = useState(loadDrafts);
   const [storageError, setStorageError] = useState('');
   const [performing, setPerforming] = useState(false);
@@ -61,7 +61,6 @@ export default function App() {
   audio.tone = preferences.beepTone;
 
   useTheme(preferences.theme, preferences.accent, preferences.restColor, preferences.background);
-  useEffect(() => savePreferences(preferences), [preferences]);
   useEffect(() => { void audio.listPacks(); }, [audio]);
   useEffect(() => installFeel(), []);
   useEffect(() => { if (route.name !== 'play' && route.name !== 'historyPlay') window.scrollTo(0, 0); }, [route]);

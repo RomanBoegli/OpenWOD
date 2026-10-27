@@ -29,24 +29,24 @@ describeHouseholdSemantics('store', async () => {
 describe('store: migrations', () => {
   it('creates the schema in memory and on disk, refuses a newer schema, and backs up before migrating an existing file', async () => {
     const memory = await Store.open(':memory:');
-    expect(memory.migration).toEqual({ from: 0, to: 1 });
-    expect(memory.store.schemaVersion).toBe(1);
+    expect(memory.migration).toEqual({ from: 0, to: 2 });
+    expect(memory.store.schemaVersion).toBe(2);
     memory.store.close();
 
     const path = join(scratch, 'app.sqlite');
     const first = await Store.open(path, { appVersion: 'test' });
-    expect(first.migration).toEqual({ from: 0, to: 1 });
+    expect(first.migration).toEqual({ from: 0, to: 2 });
     first.store.close();
     const again = await Store.open(path);
-    expect(again.migration).toEqual({ from: 1, to: 1 });
+    expect(again.migration).toEqual({ from: 2, to: 2 });
     again.store.close();
 
-    MIGRATIONS.push({ version: 2, name: 'test only', up: 'CREATE TABLE test_only (x INTEGER)' });
+    MIGRATIONS.push({ version: 3, name: 'test only', up: 'CREATE TABLE test_only (x INTEGER)' });
     try {
       const upgraded = await Store.open(path, { backupDir: join(scratch, 'backups') });
-      expect(upgraded.migration.from).toBe(1);
-      expect(upgraded.migration.to).toBe(2);
-      expect(readdirSync(join(scratch, 'backups')).some(name => name.startsWith('pre-migration-v1-to-v2-'))).toBe(true);
+      expect(upgraded.migration.from).toBe(2);
+      expect(upgraded.migration.to).toBe(3);
+      expect(readdirSync(join(scratch, 'backups')).some(name => name.startsWith('pre-migration-v2-to-v3-'))).toBe(true);
       upgraded.store.close();
     } finally { MIGRATIONS.pop(); }
     await expect(Store.open(path)).rejects.toBeInstanceOf(SchemaNewerError);
@@ -65,6 +65,20 @@ describe('store: SQLite specifics', () => {
   });
 });
 
+describe('store: settings', () => {
+  it('keeps one settings document for the household, where the last write wins, and keeps it through a restore', async () => {
+    const { store } = await Store.open(':memory:');
+    try {
+      expect(store.getSettings()).toEqual({ revision: 0 });
+      expect(store.putSettings({ theme: 'dark' }).revision).toBe(1);
+      expect(store.putSettings({ theme: 'light' }).revision).toBe(2);
+      expect(store.getSettings()).toMatchObject({ revision: 2, document: { theme: 'light' } });
+      await store.restore(store.exportAll());
+      expect(store.getSettings()).toMatchObject({ revision: 2, document: { theme: 'light' } });
+    } finally { store.close(); }
+  });
+});
+
 describe('store: export and backup', () => {
   it('exports everything as one labelled document and writes a consistent backup file', async () => {
     const { store } = await Store.open(':memory:');
@@ -73,7 +87,7 @@ describe('store: export and backup', () => {
       store.putSession(playedSession('s1', bundledWorkout('fran')));
       const exported = store.exportAll();
       expect(exported.format).toBe('openwod.export');
-      expect(exported.schemaVersion).toBe(1);
+      expect(exported.schemaVersion).toBe(2);
       expect(exported.workouts).toHaveLength(1);
       expect(exported.sessions[0].workout).toBeTruthy();
       const file = join(scratch, 'backup.sqlite');
