@@ -231,6 +231,6 @@ Version 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workout
 | Check | Result |
 | --- | --- |
 | Unit tests and repository check | 233 passed in 29 files. Migration 2 to 3 writes `pre-migration-v2-to-v3-<timestamp>.sqlite` and adds the table of deleted sessions, in `tests/unit/store.test.ts`. |
-| Browser scenarios | 230 passed, none flaky: Firefox 53, WebKit 53, static Firefox 62, static WebKit 62. The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
+| Browser scenarios | 230 passed, none flaky: Firefox 53, WebKit 53, static Firefox 62, static WebKit 62. After the version moved under the wordmark (UI-21), the static projects ran again with 126 passed, the new phone header test included. The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
 
 Not recorded in this round: a session on a physical iPad or iPhone, the horn on real speakers, and the release workflow on GitHub runners before the tag.

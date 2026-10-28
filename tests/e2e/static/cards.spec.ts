@@ -26,3 +26,15 @@ test('a card shows athletes, collection, difficulty and when it was last done, a
   await page.getByRole('group', { name: 'Block format' }).getByRole('button', { name: 'EMOM' }).click();
   await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('heading', { name: 'Karen', exact: true })).toHaveCount(0);
 });
+
+// UI-21: the version sits under the wordmark on every screen, a phone's included.
+test('the header shows the running version under the wordmark on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('./#/');
+  const brand = page.getByRole('link', { name: 'OpenWOD library' });
+  await expect(brand.getByText(/^v\d+\.\d+\.\d+$/)).toBeVisible();
+  const word = (await brand.getByText('OpenWOD', { exact: true }).boundingBox())!;
+  const version = (await brand.getByText(/^v\d/).boundingBox())!;
+  expect(version.y).toBeGreaterThanOrEqual(word.y + word.height - 1);
+  expect(Math.abs(version.x + version.width - (word.x + word.width))).toBeLessThan(2);
+});

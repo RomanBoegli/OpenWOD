@@ -424,7 +424,7 @@ With reduced motion the wash stays at its floor and the colours change at the ma
 **UI-20** During a session on a screen wider than a phone but at most 960 px tall, such as a tablet or a laptop in landscape, the clock, the stations or the AMRAP block, the actions, Up next and the transport controls SHALL fit the frame without scrolling, in the focus and the context view. Sizes SHALL follow the height, and the corner view switch SHALL stay inside the frame.
 In the focus view the big clock SHALL stay in the same place from one slot to the next, whatever the height of the station card.
 
-**UI-21** The header SHALL show the running version beside the wordmark, so a device shows at a glance which release it has loaded, except on a phone, where the footer shows it.
+**UI-21** The header SHALL show the running version under the wordmark's lower right corner, on every screen size, so a device shows at a glance which release it has loaded.
 
 **UI-22** Settings SHALL have a Logbook section at `#/settings/logbook` listing every session played, newest first, with paging: the workout title linked to the workout while it is in the library, the date, the active time and the score, the outcome once and only when it is not Completed, the Interrupted, Modified and Corrected flags, and small icon actions to Repeat (the snapshot when the workout is gone), Correct score (DAT-05) and Delete (DAT-14). The header's clock icon SHALL open it, `#/history` SHALL lead to it, and the per-workout past sessions SHALL reflect deletions.
 
@@ -712,7 +712,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 **In 1.4.0** (since `v1.3.1`):
 
 - Bundled workouts can be edited, duplicated and removed like saved ones, with Restore under Settings → Collections (DAT-13).
-- The header shows the running version beside the wordmark (UI-21).
+- The header shows the running version under the wordmark's lower right corner, on every device (UI-21).
 - A workout's page and the library cards show the workout's chips above the title, and formats moved to the blocks (UI-23).
 - The truck horn tone (AUD-01), with the clock holding at each timed boundary for its 1.4 s blast.
 - The transition tile between blocks: Wait for Ready, Rest then continue, or Continue straight away, for every format (BLD-14).

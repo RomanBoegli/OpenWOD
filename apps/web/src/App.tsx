@@ -211,7 +211,7 @@ export default function App() {
 
   return <div className={styles.app} data-performing={performing}>
     <header className={styles.header}>
-      <a href="#/" className={styles.brand} aria-label="OpenWOD library"><BrandMark className={styles.brandMark} /><span className={styles.wordmark}>Open<b>WOD</b></span><span className={styles.brandVersion}>v{appVersion}</span></a>
+      <a href="#/" className={styles.brand} aria-label="OpenWOD library"><BrandMark className={styles.brandMark} /><span className={styles.wordmarkBlock}><span className={styles.wordmark}>Open<b>WOD</b></span><span className={styles.brandVersion}>v{appVersion}</span></span></a>
       {backTarget ? <a href={backTarget.href} className={styles.backLink} aria-label={backTarget.aria}><Icon name="back" size={17} /><span>{backTarget.label}</span></a> : <span className={styles.headerNote}>Not born. <em className={styles.made}>Made.</em></span>}
       <div className={styles.headerActions}>
         {data.mode === 'server' && (data.connection === 'offline' || data.connection === 'unreachable' || pendingCount > 0) && <span className={styles.pill} data-state={data.connection} title={data.connection === 'online' ? 'Changes are waiting to be uploaded' : 'The household server cannot be reached; this device keeps working and uploads later'}>
