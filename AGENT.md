@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.17 · 27 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.18 · 30 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -705,7 +705,7 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 
 # 15 Where things stand
 
-Recorded 27 October 2026, plan version 1.17.
+Recorded 30 October 2026, plan version 1.18.
 All P0 requirements and the 32 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
@@ -718,30 +718,19 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.2.1: household settings on the server (DAT-12) and the phone layout before the start (UI-17).
 - 1.3.0: one search bar at every width (UI-18) and the not-found pages (UI-19).
 - 1.3.1: the session layout on tablets and short screens (UI-20).
-- 1.4.0, prepared: the changes below, with the SQLite migration 3 and IndexedDB version 3. Notes in `docs/releases/v1.4.0.md`.
+- 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version under the wordmark (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13), with the SQLite migration 3 and IndexedDB version 3.
+- 1.5.0, prepared: the changes below, with no database or browser-storage migration. Notes in `docs/releases/v1.5.0.md`.
 
-**In 1.4.0** (since `v1.3.1`):
-
-- Bundled workouts can be edited, duplicated and removed like saved ones, with Restore under Settings → Collections (DAT-13).
-- The header shows the running version under the wordmark's lower right corner, on every device (UI-21).
-- A workout's page and the library cards show the workout's chips above the title, and formats moved to the blocks (UI-23).
-- The truck horn tone (AUD-01), with the clock holding at each timed boundary for its 1.4 s blast.
-- The transition tile between blocks: Wait for Ready, Rest then continue, or Continue straight away, for every format (BLD-14).
-- The interface says block and movement everywhere, and the editor's time fields are mm:ss fields that step with the wheel and the arrow keys.
-- The Logbook under Settings replaces the History page, and sessions can be deleted for good (UI-22, DAT-14).
-- In the focus view the big clock holds its place from slot to slot (UI-20).
-- The timer wash deepens once over the whole slot and morphs its colour at each mark (UI-13).
-- On a phone the movement name gets its own line, and the frame padding follows the ring width.
-- The bundled full-body partner workout now runs 48:40 and HYROX doubles is four blocks running 13:30, both without a rest after the last movement of a round.
-
-**After 1.4.0** (not released yet):
+**In 1.5.0** (since `v1.4.0`):
 
 - The library offers Create with AI: an authoring guide to copy into any AI assistant, the JSON Schema to download, and a box for the assistant's answer that opens the import preview (SHR-07).
 - Saving a single imported workout, from a file or a pasted answer, opens it in the editor. The preview's buttons read Save and edit and Edit before saving, and packs still open the workout's page or report what they imported.
 - The bundled Dumbbell full body 35 and six movement records it needed: dumbbell sumo squats, dumbbell pullovers, lateral raises, dumbbell sit-ups, dead bugs and bodyweight good mornings.
 - Authors are master data under Settings → Authors, with New, Rename, Merge, Delete and Restore. They are part of the library search, get an Author filter and are suggested in the editor (LIB-06). The 22 advanced workouts name "Coach programming" as their author.
 - The import preview is wider, shows each workout's state as a badge, and dialog buttons keep their labels on one line.
-- The training view shows a round donut and the rounds left in both views, a card at each block start, a done card while a block waits for Ready, and new movements slide in. The context view keeps the movement under way centred, which it failed to do on phones (UI-24).
+- The training view gets a round donut beside the clock, opposite the percentage, with a dot per round below it, a progress bar split by block, "MOVEMENT n / m" over the stations, a larger state label, a card at each block start and a done card while a block waits for Ready. A new movement slides in as the previous one slides out, and the context view keeps the movement under way centred behind a Stick to movement switch, which it failed to do on phones (UI-24). The filler line "Your pace. Keep moving." is gone.
+- Master data from an older server or device cache, without the author fields, no longer stops the app with "OpenWOD hit an error": every received document is sanitised first.
+- The library heading's actions take a row of their own before the heading gets squeezed.
 - Names written as an alias are announced as written: the recorded clip of a record plays only for its own name, and the packs record the four alias names the bundled workouts use (AUD-10).
 
 **Schema and storage versions today.**
@@ -757,7 +746,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for 1.5.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 

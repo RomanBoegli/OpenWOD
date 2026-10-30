@@ -234,3 +234,16 @@ Version 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workout
 | Browser scenarios | 230 passed, none flaky: Firefox 53, WebKit 53, static Firefox 62, static WebKit 62. After the version moved under the wordmark (UI-21), the static projects ran again with 126 passed, the new phone header test included. The 336 skips are `screens.spec.ts`, which runs only with `SCREENS=1`. Chromium runs in CI. |
 
 Not recorded in this round: a session on a physical iPad or iPhone, the horn on real speakers, and the release workflow on GitHub runners before the tag.
+
+## Release 1.5.0, 30 October 2026
+
+Version 1.5.0: Create with AI and paste import (SHR-07), authors as master data with search and an Author filter (LIB-06), the round donut, block cards, the block-split progress bar and the movement transition in the training view (UI-24), and cues that say the name as written (AUD-10).
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 253 passed in 31 files, with the schema, bundle and cue-phrase checks. New: the authoring guide and reply extraction, author master data and search, round progress, and the alias name clips. |
+| Browser scenarios | 393 passed, none failed: Chromium 61, Firefox 61, WebKit 61, static Chromium 70, static Firefox 70, static WebKit 70. The 504 skips are `screens.spec.ts`, which runs only with `SCREENS=1`, and the tests of the other shape. The static Logbook delete test failed once in two earlier local Chromium runs and passed here. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.0. |
+| Older master data | A server answer and a device cache without the author fields open the library (`household.spec.ts`), the case that showed "OpenWOD hit an error" during development. |
+
+Not recorded in this round: a session on a physical iPad or iPhone, the four alias name clips rendered by Piper (the Cues workflow renders them on `main`), and the release workflow on GitHub runners before the tag.

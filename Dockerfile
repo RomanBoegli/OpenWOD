@@ -35,7 +35,7 @@ RUN npm run check && npm run build
 COPY --from=cues /cues ./dist/web/cues
 
 FROM ${NODE_IMAGE} AS runtime
-ARG VERSION=1.4.0
+ARG VERSION=1.5.0
 ARG REVISION=unknown
 ARG SOURCE_URL=unknown
 LABEL org.opencontainers.image.title="OpenWOD" \
