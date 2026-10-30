@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: pull-and-press-ladder
   revision: 1
-  title: Pull & press ladder
+  title: Pull & Press Ladder
   description: "Three rungs, twelve-minute cap: 15-12-9 pull-ups, shoulder-to-overhead and hang cleans, then 12-9-6 with chest-to-bar and a heavier bar, then 9-6-3 with bar muscle-ups and the heaviest bar. The minute of rest after each rung is timed for you. Change plates during the rest."
   attribution:
     author: Coach programming
@@ -28,13 +28,13 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 15
           - id: ladder-ft-s2oh-1
             type: task
             assignments:
               A:
-                name: Shoulder-to-overhead
+                name: Shoulder-to-Overhead
                 shortName: S2OH
                 reps: 12
                 load:
@@ -54,7 +54,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Hang cleans
+                name: Hang Cleans
                 reps: 9
                 load:
                   light:
@@ -77,14 +77,14 @@ workout:
             type: task
             assignments:
               A:
-                name: Chest-to-bar pull-ups
-                shortName: C2B pull-ups
+                name: Chest-to-Bar Pull-Ups
+                shortName: C2B Pull-Ups
                 reps: 12
           - id: ladder-ft-s2oh-2
             type: task
             assignments:
               A:
-                name: Shoulder-to-overhead
+                name: Shoulder-to-Overhead
                 shortName: S2OH
                 reps: 9
                 load:
@@ -104,7 +104,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Hang cleans
+                name: Hang Cleans
                 reps: 6
                 load:
                   light:
@@ -127,13 +127,13 @@ workout:
             type: task
             assignments:
               A:
-                name: Bar muscle-ups
+                name: Bar Muscle-Ups
                 reps: 9
           - id: ladder-ft-s2oh-3
             type: task
             assignments:
               A:
-                name: Shoulder-to-overhead
+                name: Shoulder-to-Overhead
                 shortName: S2OH
                 reps: 6
                 load:
@@ -153,7 +153,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Hang cleans
+                name: Hang Cleans
                 reps: 3
                 load:
                   light:

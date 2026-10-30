@@ -12,7 +12,7 @@ describe('ranked search', () => {
   });
 
   it('matches exact words, prefixes, substrings and small typos, and refuses when any token misses', () => {
-    const fields = [{ text: 'Hang power cleans', weight: 3 }, { text: 'Barbell', weight: 1 }];
+    const fields = [{ text: 'Hang Power Cleans', weight: 3 }, { text: 'Barbell', weight: 1 }];
     expect(searchScore('clean', fields)).toBeGreaterThan(0);
     expect(searchScore('cle', fields)).toBeGreaterThan(0);
     expect(searchScore('ower', fields)).toBeGreaterThan(0);
@@ -25,7 +25,7 @@ describe('ranked search', () => {
   });
 
   it('ranks exact title hits above movement hits and keeps ties in input order', () => {
-    const items = [{ title: 'Grace', movements: 'Clean and jerks' }, { title: 'Clean ladder', movements: 'Power cleans' }, { title: 'Cindy', movements: 'Pull-ups Push-ups Air squats' }];
+    const items = [{ title: 'Grace', movements: 'Clean and Jerks' }, { title: 'Clean ladder', movements: 'Power Cleans' }, { title: 'Cindy', movements: 'Pull-ups Push-ups Air squats' }];
     const ranked = rankBySearch(items, 'clean', item => [{ text: item.title, weight: 3 }, { text: item.movements, weight: 2 }]);
     expect(ranked.map(item => item.title)).toEqual(['Clean ladder', 'Grace']);
     expect(rankBySearch(items, '', item => [{ text: item.title, weight: 1 }])).toEqual(items);

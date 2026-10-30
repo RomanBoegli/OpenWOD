@@ -38,8 +38,8 @@ workout:
             assignments:
               A:
                 notes: Load per dumbbell
-                name: Double dumbbell clean and jerks
-                shortName: DB clean & jerks
+                name: Double Dumbbell Clean and Jerks
+                shortName: DB Clean & Jerks
                 reps: 15
                 load:
                   light:
@@ -59,15 +59,15 @@ workout:
             assignments:
               A:
                 notes: 15 pull-ups if scaling
-                name: Bar muscle-ups
+                name: Bar Muscle-Ups
                 reps: 9
           - id: triple-amrap-1-shuttles
             type: task
             assignments:
               A:
                 notes: Same dumbbells, one per hand; max lengths in the time left, count each as a rep
-                name: Dumbbell farmers carry shuttles
-                shortName: Carry shuttles
+                name: Dumbbell Farmers Carry Shuttles
+                shortName: Carry Shuttles
                 distance:
                   value: 7.5
                   unit: m
@@ -106,8 +106,8 @@ workout:
             assignments:
               A:
                 notes: Load per dumbbell
-                name: Double dumbbell clean and jerks
-                shortName: DB clean & jerks
+                name: Double Dumbbell Clean and Jerks
+                shortName: DB Clean & Jerks
                 reps: 15
                 load:
                   light:
@@ -127,15 +127,15 @@ workout:
             assignments:
               A:
                 notes: 15 pull-ups if scaling
-                name: Bar muscle-ups
+                name: Bar Muscle-Ups
                 reps: 9
           - id: triple-amrap-2-shuttles
             type: task
             assignments:
               A:
                 notes: Same dumbbells, one per hand; max lengths in the time left, count each as a rep
-                name: Dumbbell farmers carry shuttles
-                shortName: Carry shuttles
+                name: Dumbbell Farmers Carry Shuttles
+                shortName: Carry Shuttles
                 distance:
                   value: 7.5
                   unit: m
@@ -174,8 +174,8 @@ workout:
             assignments:
               A:
                 notes: Load per dumbbell
-                name: Double dumbbell clean and jerks
-                shortName: DB clean & jerks
+                name: Double Dumbbell Clean and Jerks
+                shortName: DB Clean & Jerks
                 reps: 15
                 load:
                   light:
@@ -195,15 +195,15 @@ workout:
             assignments:
               A:
                 notes: 15 pull-ups if scaling
-                name: Bar muscle-ups
+                name: Bar Muscle-Ups
                 reps: 9
           - id: triple-amrap-3-shuttles
             type: task
             assignments:
               A:
                 notes: Same dumbbells, one per hand; max lengths in the time left, count each as a rep
-                name: Dumbbell farmers carry shuttles
-                shortName: Carry shuttles
+                name: Dumbbell Farmers Carry Shuttles
+                shortName: Carry Shuttles
                 distance:
                   value: 7.5
                   unit: m

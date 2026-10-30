@@ -41,7 +41,7 @@ describe('movement catalogue on a device', () => {
     let data = upsertMovement(emptyMasterData(), { ...effectiveCatalogue(emptyMasterData()).get('wall-ball')!, name: 'Wallballs' });
     let catalogue = effectiveCatalogue(data);
     expect(catalogue.get('wall-ball')?.name).toBe('Wallballs');
-    expect(catalogue.byName('Wall balls')?.id).toBe('wall-ball');
+    expect(catalogue.byName('Wall Balls')?.id).toBe('wall-ball');
     data = removeMovement(data, 'clean');
     catalogue = effectiveCatalogue(data);
     expect(catalogue.get('clean')).toBeUndefined();

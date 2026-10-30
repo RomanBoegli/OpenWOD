@@ -29,17 +29,17 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 5
           - id: cindy-push-ups
             type: task
             assignments:
               A:
-                name: Push-ups
+                name: Push-Ups
                 reps: 10
           - id: cindy-squats
             type: task
             assignments:
               A:
-                name: Air squats
+                name: Air Squats
                 reps: 15

@@ -52,7 +52,7 @@ test.describe('editor', () => {
     await author.press('Enter'); // The best match is highlighted first.
     await expect(author).toHaveValue('CrossFit');
     await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete A', exact: true }).fill('Burpees');
-    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air Squats');
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/author-check$/);
     await expect(page.getByRole('main')).toContainText('By CrossFit');
@@ -76,11 +76,11 @@ test.describe('editor', () => {
     await page.goto('/#/wod/partner-circuit');
     await page.getByRole('link', { name: 'Duplicate' }).click();
     await expect(page).toHaveURL(/#\/wod\/partner-circuit\/copy$/);
-    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Copy of Partner circuit');
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Copy of Partner Circuit');
     await expect(page.getByRole('complementary', { name: 'Summary' })).toContainText('19:50');
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/copy-of-partner-circuit$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner circuit');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner Circuit');
     await page.goto('/#/wod/pull-and-press-ladder/edit');
     await expect(page.getByRole('status')).toContainText('cannot change yet');
   });
@@ -118,7 +118,7 @@ test.describe('editor formats', () => {
     await page.getByRole('radio', { name: 'Solo' }).check();
     await page.getByLabel('Block 1 format').selectOption('amrap');
     await page.getByLabel('Time cap').fill('12:00');
-    await page.getByLabel('Block 1 movement 1', { exact: true }).fill('Kettlebell swings');
+    await page.getByLabel('Block 1 movement 1', { exact: true }).fill('Kettlebell Swings');
     await page.getByLabel('Block 1 movement 1 target kind').selectOption('reps');
     await page.getByLabel('Block 1 movement 1 target amount').fill('15');
     await page.getByLabel('Block 1 movement 1 load unit').selectOption('kg');

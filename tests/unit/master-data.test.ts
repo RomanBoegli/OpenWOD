@@ -21,7 +21,7 @@ describe('master data document', () => {
       collections: [{ id: 'mine', title: 'Mine', workoutIds: ['fran', 7] }, { id: 'benchmarks', title: 'Benchmarks renamed', workoutIds: ['fran'] }, 'junk'],
       movements: [{ id: 'pogo-hop', name: 'Pogo hops', category: 'nonsense' }, { id: 'Bad Id', name: 'x' }],
       hiddenMovements: ['thruster', ''],
-      movementAliases: { 'Wall-ball shots': 'wall-ball' },
+      movementAliases: { 'Wall-Ball Shots': 'wall-ball' },
       committed: ['equipment:kettle bell'],
     });
     expect(data.equipmentAliases).toEqual({ 'kettle bell': 'Kettlebell' });

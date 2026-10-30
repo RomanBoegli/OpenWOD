@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: mixed-session
   revision: 1
-  title: Mixed session
+  title: Mixed Session
   description: Three minutes of timed warm-up, three sets of deadlifts at your own pace with ninety seconds between, then a ten-minute AMRAP of kettlebell swings, box step-ups and sit-ups. You press Ready between the three blocks.
   attribution:
     author: OpenWOD
@@ -28,19 +28,19 @@ workout:
             duration: 1m
             assignments:
               A:
-                name: Jumping jacks
+                name: Jumping Jacks
           - id: mixed-squats
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Air squats
+                name: Air Squats
           - id: mixed-hinges
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Hip hinges
+                name: Hip Hinges
     - id: mixed-strength
       title: Deadlifts
       format: strength
@@ -80,7 +80,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Kettlebell swings
+                name: Kettlebell Swings
                 reps: 15
                 load:
                   light:
@@ -100,11 +100,11 @@ workout:
             assignments:
               A:
                 notes: 24 in (20 in) box
-                name: Box step-ups
+                name: Box Step-Ups
                 reps: 12
           - id: mixed-sit-ups
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 15

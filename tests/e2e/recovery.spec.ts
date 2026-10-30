@@ -55,7 +55,7 @@ test.describe('checkpoints and recovery', () => {
     await flush(page);
     await page.goto('/');
     const banner = page.getByRole('status', { name: 'Interrupted session' });
-    await expect(banner).toContainText('Partner circuit');
+    await expect(banner).toContainText('Partner Circuit');
     await banner.getByRole('link', { name: 'Resume' }).click();
     await ready(page);
     const prompt = page.getByRole('dialog', { name: 'Interrupted session' });

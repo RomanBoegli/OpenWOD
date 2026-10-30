@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: row-burpee-emom-20
   revision: 1
-  title: Row & burpee EMOM 20
+  title: Row & Burpee EMOM 20
   description: "Every minute on the minute for twenty minutes: odd minutes row for calories, even minutes burpees. Finish the work, then rest until the next minute starts. Pick targets you can hold for all ten rounds."
   attribution:
     author: OpenWOD

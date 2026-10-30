@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: ski-skip-muscle-up-rounds
   revision: 1
-  title: Ski, skip, muscle-up × 3
+  title: Ski, Skip, Muscle-Up × 3
   description: "Three rounds for time: 250 metres on the SkiErg, fifty double-unders, five bar muscle-ups. Short and sharp, so ski hard and keep the rope relaxed. Scale the muscle-ups to chest-to-bar or jumping muscle-ups."
   attribution:
     author: Coach programming
@@ -40,11 +40,11 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Double-unders
+                  name: Double-Unders
                   reps: 50
             - id: ssm-muscle-ups
               type: task
               assignments:
                 A:
-                  name: Bar muscle-ups
+                  name: Bar Muscle-Ups
                   reps: 5

@@ -38,8 +38,8 @@ workout:
               assignments:
                 A:
                   notes: 10 ft (9 ft) target
-                  name: Wall balls
-                  shortName: Wall balls
+                  name: Wall Balls
+                  shortName: Wall Balls
                   load:
                     light:
                       value: 4
@@ -58,7 +58,7 @@ workout:
               duration: 1m
               assignments:
                 A:
-                  name: Sumo deadlift high pulls
+                  name: Sumo Deadlift High Pulls
                   shortName: SDHP
                   spokenName: sumo deadlift high pulls
                   load:
@@ -80,13 +80,13 @@ workout:
               assignments:
                 A:
                   notes: 20 in box (step-ups to scale)
-                  name: Box jumps
+                  name: Box Jumps
             - id: fgb-push-press
               type: timed
               duration: 1m
               assignments:
                 A:
-                  name: Push presses
+                  name: Push Presses
                   load:
                     light:
                       value: 15

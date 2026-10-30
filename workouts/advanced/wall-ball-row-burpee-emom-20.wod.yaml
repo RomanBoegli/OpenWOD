@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: wall-ball-row-burpee-emom-20
   revision: 1
-  title: Wall ball, row, burpee EMOM 20
+  title: Wall Ball, Row, Burpee EMOM 20
   description: "Every minute for twenty minutes: a minute of wall balls to the standard 10 ft (9 ft) target, a minute on the rower, a minute of burpee box jump overs, a minute of rest; five rounds. Finish the work, then recover until the next minute starts. Trim the reps if you cannot finish inside 45 seconds."
   attribution:
     author: Coach programming
@@ -32,7 +32,7 @@ workout:
             assignments:
               A:
                 notes: 10 ft (9 ft) target; big, unbroken sets if you can
-                name: Wall balls
+                name: Wall Balls
                 reps: 21
                 load:
                   light:
@@ -59,8 +59,8 @@ workout:
             assignments:
               A:
                 notes: 24 in (20 in) box; steady rhythm, no pauses
-                name: Burpee box jump overs
-                shortName: Burpee box overs
+                name: Burpee Box Jump Overs
+                shortName: Burpee Box Overs
                 reps: 9
           - id: wbrb-rest
             type: task

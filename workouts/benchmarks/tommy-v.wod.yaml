@@ -49,7 +49,7 @@ workout:
             assignments:
               A:
                 notes: 15 ft rope
-                name: Rope climbs
+                name: Rope Climbs
                 reps: 12
           - id: tommy-v-thrusters-15
             type: task
@@ -74,7 +74,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Rope climbs
+                name: Rope Climbs
                 reps: 9
           - id: tommy-v-thrusters-9
             type: task
@@ -99,5 +99,5 @@ workout:
             type: task
             assignments:
               A:
-                name: Rope climbs
+                name: Rope Climbs
                 reps: 6

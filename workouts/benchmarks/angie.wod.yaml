@@ -28,23 +28,23 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 100
           - id: angie-push-ups
             type: task
             assignments:
               A:
-                name: Push-ups
+                name: Push-Ups
                 reps: 100
           - id: angie-sit-ups
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 100
           - id: angie-squats
             type: task
             assignments:
               A:
-                name: Air squats
+                name: Air Squats
                 reps: 100

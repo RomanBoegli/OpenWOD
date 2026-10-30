@@ -42,9 +42,9 @@ describe('deterministic workout engine', () => {
     expect(engine.project().current.assignments?.A.name).toBe('Row');
     at(50_000);
     expect(engine.project().current.phase).toBe('transition');
-    expect(engine.project().nextWork?.assignments?.A.name).toBe('Kettlebell swings');
+    expect(engine.project().nextWork?.assignments?.A.name).toBe('Kettlebell Swings');
     at(60_000);
-    expect(engine.project().current.assignments?.A.name).toBe('Kettlebell swings');
+    expect(engine.project().current.assignments?.A.name).toBe('Kettlebell Swings');
     expect(engine.project().current.assignments?.B?.name).toBe('Row');
     at(1_200_000);
     expect(engine.project().status).toBe('completed');

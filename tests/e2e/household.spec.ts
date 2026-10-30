@@ -49,7 +49,7 @@ test.describe('household server', () => {
     await page.getByLabel('Title', { exact: true }).fill('Household check');
     const lane = page.getByRole('combobox', { name: 'Block 1 movement 1 athlete A', exact: true });
     await lane.fill('Burpees');
-    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air Squats');
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/household-check$/);
     const stored = await api.get<{ workouts: { id: string; revision: number }[] }>('/api/v1/workouts');

@@ -53,11 +53,11 @@ describe('seed movement catalogue', () => {
   });
 
   it('matches loosely on name and groups variants under their head', () => {
-    expect(movementKey('Push presses')).toBe(movementKey('push press'));
-    expect(movementKey('Toes-to-bar')).toBe(movementKey('toes to bar'));
+    expect(movementKey('Push Presses')).toBe(movementKey('push press'));
+    expect(movementKey('Toes-to-Bar')).toBe(movementKey('toes to bar'));
     expect(movementKey('Thruster')).toBe(movementKey('Thrusters'));
     expect(catalogue.byName('C2B')?.id).toBe('chest-to-bar-pull-up');
-    expect(catalogue.byName('Wall-ball shots')?.id).toBe('wall-ball');
+    expect(catalogue.byName('Wall-Ball Shots')?.id).toBe('wall-ball');
     const cleans = catalogue.grouped().find(group => group.head.id === 'clean');
     expect(cleans?.variants.length).toBeGreaterThanOrEqual(4);
     expect(cleans?.variants.map(record => record.id)).toContain('hang-power-clean');

@@ -48,7 +48,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 21
           - id: fran-thrusters-15
             type: task
@@ -73,7 +73,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 15
           - id: fran-thrusters-9
             type: task
@@ -98,5 +98,5 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 9

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: overhead-endurance-emom-20
   revision: 1
-  title: Overhead endurance EMOM 20
+  title: Overhead Endurance EMOM 20
   description: "Four movements, five rounds: thirty seconds of strict handstand push-ups, ten dumbbell overhead walking lunge steps, thirty seconds of kipping handstand push-ups, twenty wall balls to the standard 10 ft (9 ft) target. Pick a handstand push-up variation you can keep moving for the full thirty seconds."
   attribution:
     author: Coach programming
@@ -31,7 +31,7 @@ workout:
             assignments:
               A:
                 notes: 30 s of work; pike push-ups to scale
-                name: Strict handstand push-ups
+                name: Strict Handstand Push-Ups
                 shortName: Strict HSPU
                 time: 30s
           - id: overhead-lunges
@@ -39,8 +39,8 @@ workout:
             assignments:
               A:
                 notes: Per dumbbell, two dumbbells overhead; 45 s cap
-                name: Dumbbell overhead walking lunges
-                shortName: DB overhead lunges
+                name: Dumbbell Overhead Walking Lunges
+                shortName: DB Overhead Lunges
                 reps: 10
                 load:
                   light:
@@ -60,7 +60,7 @@ workout:
             assignments:
               A:
                 notes: 30 s of work
-                name: Kipping handstand push-ups
+                name: Kipping Handstand Push-Ups
                 shortName: Kipping HSPU
                 time: 30s
           - id: overhead-wall-balls
@@ -68,7 +68,7 @@ workout:
             assignments:
               A:
                 notes: 10 ft (9 ft) target; 45 s cap
-                name: Wall balls
+                name: Wall Balls
                 reps: 20
                 load:
                   light:

@@ -11,14 +11,14 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(BUNDLED);
     await page.getByRole('searchbox', { name: 'Search workouts' }).fill('friendly competition');
     await expect(list.getByRole('listitem')).toHaveCount(1);
-    await expect(list).toContainText('Partner circuit');
+    await expect(list).toContainText('Partner Circuit');
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await openFilters(page);
     const chip = (group: string, name: string) => page.getByRole('group', { name: group }).getByRole('button', { name, exact: true });
     await chip('Duration', 'Over 40 min').click();
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long'] }));
-    await expect(list).toContainText('Full body partner workout');
-    await expect(list).toContainText('HYROX pace intervals');
+    await expect(list).toContainText('Full Body Partner Workout');
+    await expect(list).toContainText('HYROX Pace Intervals');
     await chip('Duration', 'Up to 20 min').click(); // Accumulative: both buckets now match.
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long', 'short'] }));
     await page.getByRole('button', { name: 'Clear filters' }).click();
@@ -27,7 +27,7 @@ test.describe('library', () => {
     await chip('Athletes', 'Solo').click(); // Groups narrow each other: the partner workout drops out.
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'], participants: 1 }));
     await expect(list).toContainText('Dumbbell Full Body Crunch');
-    await expect(list).not.toContainText('Full body partner workout');
+    await expect(list).not.toContainText('Full Body Partner Workout');
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await chip('Difficulty', 'Light').click();
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ difficulty: [1] }));
@@ -35,17 +35,17 @@ test.describe('library', () => {
     await chip('Athletes', 'Solo').click();
     await expect(list.getByRole('listitem')).toHaveCount(bundledWorkouts.filter(workout => workout.participants === 1).length);
     await page.getByRole('button', { name: 'Clear filters' }).click();
-    await page.getByRole('link', { name: 'Start Full body partner workout' }).click();
+    await page.getByRole('link', { name: 'Start Full Body Partner Workout' }).click();
     await ready(page);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full Body Partner Workout');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await page.evaluate(() => window.__openwodTest!.advance(310_000));
     await expect(page.getByRole('status')).toHaveText('Next block · ready?');
     await page.getByRole('button', { name: 'Start next block' }).click();
-    await expect(page.getByTestId('movement-A')).toHaveText('Air squats');
+    await expect(page.getByTestId('movement-A')).toHaveText('Air Squats');
     await page.evaluate(() => window.__openwodTest!.advance(240_000));
-    await expect(page.getByTestId('movement-A')).toHaveText('Dumbbell thrusters');
-    await expect(page.getByTestId('movement-B')).toHaveText('Air squats');
+    await expect(page.getByTestId('movement-A')).toHaveText('Dumbbell Thrusters');
+    await expect(page.getByTestId('movement-B')).toHaveText('Air Squats');
   });
 
   test('imports into the editor as an unsaved draft, saves it to a device library that survives reload, then removes it', async ({ page }) => {
@@ -111,7 +111,7 @@ test.describe('library', () => {
     const dialog = page.getByRole('dialog', { name: 'Create a WOD with AI' });
     await dialog.getByText('Show the guide').click();
     await expect(dialog.getByLabel('Authoring guide')).toContainText('format: openwod.workout');
-    await expect(dialog.getByLabel('Authoring guide')).toContainText('Dumbbell sumo squats');
+    await expect(dialog.getByLabel('Authoring guide')).toContainText('Dumbbell Sumo Squats');
     await dialog.getByRole('button', { name: 'Copy guide' }).click();
     await expect(dialog.getByRole('status')).toHaveText(/Copied|blocked copying/);
     await dialog.getByLabel('Assistant’s answer').fill('```yaml\nformat: openwod.workout\nformatVersion: 3\nworkout: {}\n```');

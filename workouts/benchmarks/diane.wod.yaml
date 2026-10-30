@@ -48,7 +48,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 21
           - id: diane-deadlifts-15
@@ -74,7 +74,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 15
           - id: diane-deadlifts-9
@@ -100,6 +100,6 @@ workout:
             type: task
             assignments:
               A:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 9

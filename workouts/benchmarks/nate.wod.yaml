@@ -31,20 +31,20 @@ workout:
             type: task
             assignments:
               A:
-                name: Muscle-ups
+                name: Muscle-Ups
                 reps: 2
           - id: nate-hspu
             type: task
             assignments:
               A:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 4
           - id: nate-swings
             type: task
             assignments:
               A:
-                name: Kettlebell swings
+                name: Kettlebell Swings
                 reps: 8
                 load:
                   light:

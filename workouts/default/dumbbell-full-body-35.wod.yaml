@@ -30,13 +30,13 @@ workout:
                 duration: 45s
                 assignments:
                   A:
-                    name: Jumping jacks
+                    name: Jumping Jacks
               - id: warm-up-arm-circles
                 type: timed
                 duration: 30s
                 assignments:
                   A:
-                    name: Arm circles
+                    name: Arm Circles
               - id: warm-up-inchworms
                 type: timed
                 duration: 45s
@@ -48,19 +48,19 @@ workout:
                 duration: 45s
                 assignments:
                   A:
-                    name: Air squats
+                    name: Air Squats
               - id: warm-up-good-mornings
                 type: timed
                 duration: 45s
                 assignments:
                   A:
-                    name: Bodyweight good mornings
+                    name: Bodyweight Good Mornings
               - id: warm-up-shoulder-taps
                 type: timed
                 duration: 1m
                 assignments:
                   A:
-                    name: Plank shoulder taps
+                    name: Plank Shoulder Taps
           - id: warm-up-rest
             type: rest
             duration: 1m
@@ -85,7 +85,7 @@ workout:
               assignments:
                 A:
                   notes: single (one dumbbell held with both hands)
-                  name: Dumbbell goblet squats
+                  name: Dumbbell Goblet Squats
                   reps: 12
                   load:
                     light:
@@ -105,7 +105,7 @@ workout:
               assignments:
                 A:
                   notes: double (one dumbbell per hand)
-                  name: Dumbbell Romanian deadlifts
+                  name: Dumbbell Romanian Deadlifts
                   reps: 12
                   load:
                     light:
@@ -125,7 +125,7 @@ workout:
               assignments:
                 A:
                   notes: double (one dumbbell per hand)
-                  name: Dumbbell front rack lunges
+                  name: Dumbbell Front Rack Lunges
                   reps: 12
                   load:
                     light:
@@ -160,7 +160,7 @@ workout:
               assignments:
                 A:
                   notes: single (change halfway)
-                  name: Bent-over dumbbell rows
+                  name: Bent-Over Dumbbell Rows
                   reps: 24
                   load:
                     light:
@@ -180,7 +180,7 @@ workout:
               assignments:
                 A:
                   notes: double (one dumbbell per hand)
-                  name: Floor press
+                  name: Floor Press
                   reps: 24
                   load:
                     light:
@@ -200,7 +200,7 @@ workout:
               assignments:
                 A:
                   notes: single (one dumbbell held with both hands)
-                  name: Dumbbell pullovers
+                  name: Dumbbell Pullovers
                   reps: 15
                   load:
                     light:
@@ -235,7 +235,7 @@ workout:
               assignments:
                 A:
                   notes: double (one dumbbell per hand, simultaneously)
-                  name: Dumbbell shoulder press
+                  name: Dumbbell Shoulder Press
                   reps: 15
                   load:
                     light:
@@ -255,7 +255,7 @@ workout:
               assignments:
                 A:
                   notes: double (one dumbbell per hand, simultaneously)
-                  name: Biceps curls
+                  name: Biceps Curls
                   reps: 15
                   load:
                     light:
@@ -275,7 +275,7 @@ workout:
               assignments:
                 A:
                   notes: single (one dumbbell held with both hands)
-                  name: Overhead triceps extensions
+                  name: Overhead Triceps Extensions
                   reps: 15
                   load:
                     light:
@@ -295,7 +295,7 @@ workout:
               assignments:
                 A:
                   notes: double (one dumbbell per hand, simultaneously)
-                  name: Lateral raises
+                  name: Lateral Raises
                   reps: 10
                   load:
                     light:
@@ -330,7 +330,7 @@ workout:
               assignments:
                 A:
                   notes: single (one dumbbell held with both hands)
-                  name: Russian twists
+                  name: Russian Twists
                   reps: 20
                   load:
                     light:
@@ -350,7 +350,7 @@ workout:
               assignments:
                 A:
                   notes: single (one dumbbell held with both hands)
-                  name: Dumbbell overhead sit-ups
+                  name: Dumbbell Overhead Sit-Ups
                   reps: 15
                   load:
                     light:
@@ -370,7 +370,7 @@ workout:
               assignments:
                 A:
                   notes: single (change halfway)
-                  name: Plank rows
+                  name: Plank Rows
                   reps: 20
                   load:
                     light:
@@ -389,5 +389,5 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Dead bugs
+                  name: Dead Bugs
                   reps: 15

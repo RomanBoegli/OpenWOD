@@ -39,19 +39,19 @@ workout:
             assignments:
               A:
                 notes: Partition freely with the push-ups and squats
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 100
           - id: murph-push-ups
             type: task
             assignments:
               A:
-                name: Push-ups
+                name: Push-Ups
                 reps: 200
           - id: murph-squats
             type: task
             assignments:
               A:
-                name: Air squats
+                name: Air Squats
                 reps: 300
           - id: murph-run-2
             type: task

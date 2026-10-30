@@ -37,13 +37,13 @@ workout:
             type: task
             assignments:
               A:
-                name: Toes-to-bar
+                name: Toes-to-Bar
                 reps: 12
           - id: double-amrap-1-front-squats
             type: task
             assignments:
               A:
-                name: Front squats
+                name: Front Squats
                 reps: 9
                 load:
                   light:
@@ -62,7 +62,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Burpees over bar
+                name: Burpees Over Bar
                 reps: 6
     - id: double-amrap-2
       title: AMRAP 10, part 2
@@ -85,13 +85,13 @@ workout:
             type: task
             assignments:
               A:
-                name: Toes-to-bar
+                name: Toes-to-Bar
                 reps: 12
           - id: double-amrap-2-front-squats
             type: task
             assignments:
               A:
-                name: Front squats
+                name: Front Squats
                 reps: 9
                 load:
                   light:
@@ -110,5 +110,5 @@ workout:
             type: task
             assignments:
               A:
-                name: Burpees over bar
+                name: Burpees Over Bar
                 reps: 6

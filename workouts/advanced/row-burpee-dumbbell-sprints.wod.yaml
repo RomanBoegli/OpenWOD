@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: row-burpee-dumbbell-sprints
   revision: 1
-  title: You go, I go sprints 12
+  title: You Go, I Go Sprints 12
   description: "Twelve sprint rounds, six each: fifteen calories on the rower, eight burpee box jump overs and six single-dumbbell clean and jerks, then tap Switch while your partner goes. You get about ninety seconds of rest every turn, so the dumbbell should be heavy and the row should hurt."
   attribution:
     author: Coach programming
@@ -41,21 +41,21 @@ workout:
             assignments:
               A:
                 notes: "Twist: box jump over, then burpee box jump over, one side; 24 in (20 in) box"
-                name: Burpee box jump overs
-                shortName: Burpee box overs
+                name: Burpee Box Jump Overs
+                shortName: Burpee Box Overs
                 reps: 8
               B:
                 notes: "Twist: box jump over, then burpee box jump over, one side; 24 in (20 in) box"
-                name: Burpee box jump overs
-                shortName: Burpee box overs
+                name: Burpee Box Jump Overs
+                shortName: Burpee Box Overs
                 reps: 8
           - id: sprints-12-clean-jerks
             type: task
             assignments:
               A:
                 notes: "Heavy: it should be challenging"
-                name: Single-dumbbell clean and jerks
-                shortName: DB clean & jerks
+                name: Single-Dumbbell Clean and Jerks
+                shortName: DB Clean & Jerks
                 reps: 6
                 load:
                   light:
@@ -72,8 +72,8 @@ workout:
                     unit: kg
               B:
                 notes: "Heavy: it should be challenging"
-                name: Single-dumbbell clean and jerks
-                shortName: DB clean & jerks
+                name: Single-Dumbbell Clean and Jerks
+                shortName: DB Clean & Jerks
                 reps: 6
                 load:
                   light:

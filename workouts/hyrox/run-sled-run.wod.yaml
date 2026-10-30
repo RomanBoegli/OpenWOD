@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: run-sled-run
   revision: 1
-  title: Run, sled, run
+  title: Run, Sled, Run
   description: "One kilometre run, fifty metres of sled push (the race distance, 4 × 12.5 m), one kilometre run. Heavy is the open-division race load, 152 kg for men and 102 kg for women including the sled. Tap Done when a distance is covered; the clock counts up and records each split. No cap: finish what you start."
   attribution:
     author: OpenWOD
@@ -37,7 +37,7 @@ workout:
             assignments:
               A:
                 notes: Total incl. sled; heavy is the open standard
-                name: Sled push
+                name: Sled Push
                 distance:
                   value: 50
                   unit: m

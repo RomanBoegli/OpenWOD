@@ -99,7 +99,7 @@ it('beeps on every countdown second and boundary, lets the recorded word follow 
   audio.update(engine.project(), engine.readClocks());
   expect(sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'rest']);
   vi.runOnlyPendingTimers(); // Device speech waits for the recorded words before it.
-  expect(spoken).toEqual(['A, Kettlebell swings. B, Row.']);
+  expect(spoken).toEqual(['A, Kettlebell Swings. B, Row.']);
   expect(CUE_NAMES).toHaveLength(17);
   expect(audio.packs.map(pack => pack.id)).toEqual(['british', 'american']);
   audio.cuePack = 'american';
@@ -155,13 +155,13 @@ it('plays the Switch clip on a handoff, confirms a Done with a short beep, and a
   manual.command('done');
   manual.audio.update(manual.engine.project(), manual.engine.readClocks());
   vi.runOnlyPendingTimers();
-  expect(manual.spoken).toEqual(['Go.', 'Sled push.']);
+  expect(manual.spoken).toEqual(['Go.', 'Sled Push.']);
   expect(manual.sources.map(source => source.kind)).toEqual(['beep']); // The acknowledgement beep; nothing is scheduled for open-ended work.
 });
 
 it('announces who does what from recorded name clips when the pack has them, and lets the device voice read the rest', async () => {
   const { audio, sources, spoken, engine, advance } = setup({ clips: true });
-  audio.resolveMovement = lane => ({ 'Kettlebell swings': 'kettlebell-swing', Row: 'row' } as Record<string, string>)[lane.name];
+  audio.resolveMovement = lane => ({ 'Kettlebell Swings': 'kettlebell-swing', Row: 'row' } as Record<string, string>)[lane.name];
   await audio.unlock(); await audio.preload();
   await audio.prepareNames(['kettlebell-swing', 'row']);
   audio.update(engine.project(), engine.readClocks());
@@ -226,7 +226,7 @@ it('lets a boundary that has sounded ring out with its word, has the rest names 
   vi.advanceTimersByTime((1.42 + 2.2 + .1 - .02) * 1000 - 50);
   expect(spoken).toEqual([]);
   vi.advanceTimersByTime(100);
-  expect(spoken).toEqual(['A, Kettlebell swings. B, Row.']);
+  expect(spoken).toEqual(['A, Kettlebell Swings. B, Row.']);
   const next = sources.filter(source => source.clip === 'horn').at(-1)!; // The transition's own boundary, 10 s ahead.
   expect(next.at).toBeCloseTo(150.02);
   command('next');
@@ -257,7 +257,7 @@ it('falls back to the classic beep while the horn is missing', async () => {
 it('holds the first cues of a Start until the audio context has resumed, so Get ready and the prep countdown use the clips', async () => {
   const { audio, sources, spoken, context } = setup({ clips: true });
   await audio.unlock(); await audio.preload();
-  audio.resolveMovement = lane => ({ Thrusters: 'thruster', 'Pull-ups': 'pull-up' } as Record<string, string>)[lane.name];
+  audio.resolveMovement = lane => ({ Thrusters: 'thruster', 'Pull-Ups': 'pull-up' } as Record<string, string>)[lane.name];
   await audio.prepareNames(['thruster', 'pull-up']);
   const engine = new WorkoutEngine(compileWorkout(bundledWorkout('fran') as Workout), () => 0, 'prep-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' }); engine.tick();
@@ -281,12 +281,12 @@ it('holds the first cues of a Start until the audio context has resumed, so Get 
 
 it('AUD-10: a name written as an alias is announced as written, never with its record’s clip', () => {
   const { audio } = setup();
-  audio.resolveMovement = lane => ({ 'Plank rows': 'renegade-row', 'Renegade rows': 'renegade-row', 'renegade row': 'renegade-row', 'AbMat sit-ups': 'abmat-sit-up', 'Pogo hops': 'pogo-hop' } as Record<string, string>)[lane.name];
-  expect(audio.nameKey({ name: 'Renegade rows' })).toBe('renegade-row');
+  audio.resolveMovement = lane => ({ 'Plank Rows': 'renegade-row', 'Renegade Rows': 'renegade-row', 'renegade row': 'renegade-row', 'AbMat Sit-Ups': 'abmat-sit-up', 'Pogo hops': 'pogo-hop' } as Record<string, string>)[lane.name];
+  expect(audio.nameKey({ name: 'Renegade Rows' })).toBe('renegade-row');
   expect(audio.nameKey({ name: 'renegade row' })).toBe('renegade-row'); // Spelling is loose, the words are not.
-  expect(audio.nameKey({ name: 'Plank rows' })).toBe('text/plank-row');
-  expect(audio.nameKey({ name: 'Plank rows', spokenName: 'Renegade rows' })).toBe('renegade-row'); // A spoken name decides what is said.
-  expect(audio.nameKey({ name: 'AbMat sit-ups' })).toBe('abmat-sit-up'); // The record's own name, recorded through its spoken name.
+  expect(audio.nameKey({ name: 'Plank Rows' })).toBe('text/plank-row');
+  expect(audio.nameKey({ name: 'Plank Rows', spokenName: 'Renegade Rows' })).toBe('renegade-row'); // A spoken name decides what is said.
+  expect(audio.nameKey({ name: 'AbMat Sit-Ups' })).toBe('abmat-sit-up'); // The record's own name, recorded through its spoken name.
   expect(audio.nameKey({ name: 'Pogo hops' })).toBe('text/pogo-hop'); // Your own record has no recording: the device voice reads it.
   expect(audio.nameKey({ name: 'Row', movement: 'row' })).toBe('row');
 });
@@ -298,5 +298,5 @@ it('AUD-10: the packs record exactly the names bundled workouts write differentl
   const phrases = JSON.parse(readFileSync(new URL('../../packages/domain/src/generated/cue-phrases.json', import.meta.url), 'utf8')) as Record<string, string>;
   const keys = new Set(bundledWorkouts.flatMap(workout => collectPrescriptions(workout)).map(lane => audio.nameKey(lane)).filter(key => key.startsWith('text/')));
   expect([...keys].sort()).toEqual(Object.keys(phrases).map(slug => `text/${slug}`).sort());
-  expect(Object.values(phrases)).toContain('Plank rows');
+  expect(Object.values(phrases)).toContain('Plank Rows');
 });

@@ -13,7 +13,7 @@ test.describe('player', () => {
     await expect(page.getByTestId('primary-timer')).toHaveText('00:40');
     await page.evaluate(() => window.__openwodTest!.advance(40_000));
     await expect(page.getByRole('status')).toHaveText('Transition');
-    await expect(page.getByTestId('movement-A')).toHaveText('Kettlebell swings');
+    await expect(page.getByTestId('movement-A')).toHaveText('Kettlebell Swings');
     await expect(page.getByTestId('movement-B')).toHaveText('Row');
     await page.evaluate(() => window.__openwodTest!.advance(10_000));
     await expect(page.getByRole('status')).toHaveText('Work');
@@ -182,7 +182,7 @@ test.describe('player on a tablet', () => {
 test.describe('overview', () => {
   test('lays out every section and round for study, then starts the player', async ({ page }) => {
     await page.goto('/#/wod/full-body-partner');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full body partner workout');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full Body Partner Workout');
     // Between the section cards, a tile tells what follows each section (BLD-14).
     const sections = page.getByRole('list', { name: 'Blocks' }).getByRole('listitem').filter({ hasText: /Block \d of 6/i });
     await expect(sections).toHaveCount(6);
@@ -193,9 +193,9 @@ test.describe('overview', () => {
     await expect(block).toContainText('Round 1 of 2');
     await expect(block).toContainText('Round 2 of 2');
     const firstRows = block.getByRole('table').first().getByRole('row');
-    await expect(firstRows.nth(1)).toContainText('Air squats');
-    await expect(firstRows.nth(1)).toContainText('Dumbbell thrusters');
-    await expect(block.getByRole('table').nth(1).getByRole('row').nth(1)).toContainText('Dumbbell thrusters');
+    await expect(firstRows.nth(1)).toContainText('Air Squats');
+    await expect(firstRows.nth(1)).toContainText('Dumbbell Thrusters');
+    await expect(block.getByRole('table').nth(1).getByRole('row').nth(1)).toContainText('Dumbbell Thrusters');
     await page.goto('/#/wod/partner-circuit');
     await expect(page.getByRole('list', { name: 'Blocks' }).getByRole('listitem').first()).toContainText('Rounds 1–5 of 5');
     await expect(page.getByText('1m rest between rounds')).toBeVisible();
@@ -273,7 +273,7 @@ test.describe('formats', () => {
     await expect(page.getByText('ELAPSED · CAP BELOW')).toBeVisible();
     await expect(page.getByText('CAP09:55')).toBeVisible();
     for (let step = 0; step < 5; step++) { await page.getByTestId('done').click(); await advance(page, 1_000); }
-    await expect(page.getByTestId('movement-A')).toHaveText('Pull-ups');
+    await expect(page.getByTestId('movement-A')).toHaveText('Pull-Ups');
     await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('9');
     await page.getByTestId('done').click();
     await expect(page.getByRole('status')).toHaveText('Workout complete');
@@ -352,7 +352,7 @@ test.describe('formats', () => {
       const donut = page.getByTestId('round-donut');
       await expect(donut).toHaveAttribute('aria-label', 'Movement 4 of 4, round 1 of 5, 4 rounds left');
       const active = page.getByRole('region', { name: 'Workout context' }).locator('[aria-current=step]');
-      await expect(active).toContainText('Air squats');
+      await expect(active).toContainText('Air Squats');
       // The row sits inside the list's visible box, so it can be read without scrolling.
       await expect.poll(async () => {
         const [row, list] = await Promise.all([active.boundingBox(), active.locator('xpath=..').boundingBox()]);

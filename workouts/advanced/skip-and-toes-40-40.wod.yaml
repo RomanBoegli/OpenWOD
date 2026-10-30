@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: skip-and-toes-40-40
   revision: 1
-  title: Skip & toes 40/40
+  title: Skip & Toes 40/40
   description: Eight intervals of forty seconds on and forty off, alternating double-unders with toes-to-bar that end in a twenty-second core hold. Relaxed kip, tight midline, quality over quantity.
   attribution:
     author: Coach programming
@@ -35,7 +35,7 @@ workout:
               assignments:
                 A:
                   notes: Done early? Hold a hollow position
-                  name: Double-unders
+                  name: Double-Unders
                   reps: 40
             - id: skip-toes-t2b
               type: timed
@@ -43,5 +43,5 @@ workout:
               assignments:
                 A:
                   notes: Then a 20 s hollow hold
-                  name: Toes-to-bar
-                  shortName: T2B + hollow hold
+                  name: Toes-to-Bar
+                  shortName: T2B + Hollow Hold

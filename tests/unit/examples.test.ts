@@ -97,6 +97,6 @@ describe('the workout registry (workouts/**)', () => {
     const first = plan.occurrences.find(item => item.anchor === 'doubles-1-skierg' && item.rounds[0]?.iteration === 1)!;
     const second = plan.occurrences.find(item => item.anchor === 'doubles-1-skierg' && item.rounds[0]?.iteration === 2)!;
     expect(first.assignments?.A.name).toBe('SkiErg');
-    expect(second.assignments?.A.name).toBe('Sled push');
+    expect(second.assignments?.A.name).toBe('Sled Push');
   });
 });

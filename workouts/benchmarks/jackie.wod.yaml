@@ -57,5 +57,5 @@ workout:
             type: task
             assignments:
               A:
-                name: Pull-ups
+                name: Pull-Ups
                 reps: 30

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: pull-carry-burpee-ladder
   revision: 1
-  title: Pull, carry, burpee ladder
+  title: Pull, Carry, Burpee Ladder
   description: "An ascending ladder: one pull-up, one lane of farmers carry and one burpee over the dumbbells, then two of each, then three, and so on for fifteen minutes. The program allows twelve to fifteen minutes; the cap here is fifteen. Score the completed rounds."
   attribution:
     author: Coach programming
@@ -30,14 +30,14 @@ workout:
             assignments:
               A:
                 notes: "Round 1: 1 rep, round 2: 2 reps, and so on"
-                name: Pull-ups
+                name: Pull-Ups
           - id: ladder-carry
             type: task
             assignments:
               A:
                 notes: Per hand; lane lengths climb with the round; no grips
-                name: Dumbbell farmers carry
-                shortName: Farmers carry
+                name: Dumbbell Farmers Carry
+                shortName: Farmers Carry
                 load:
                   light:
                     value: 12
@@ -56,5 +56,5 @@ workout:
             assignments:
               A:
                 notes: Reps climb with the round
-                name: Burpees over dumbbells
-                shortName: Burpees over DB
+                name: Burpees Over Dumbbells
+                shortName: Burpees Over DB

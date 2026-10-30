@@ -46,7 +46,7 @@ describe('manual formats', () => {
     expect(projection.status).toBe('running');
     expect(projection.format).toBe('amrap');
     expect(projection.clockScope).toBe('cap');
-    expect(projection.tasks?.map(item => item.assignments.A.name)).toEqual(['Pull-ups', 'Push-ups', 'Air squats']);
+    expect(projection.tasks?.map(item => item.assignments.A.name)).toEqual(['Pull-Ups', 'Push-Ups', 'Air Squats']);
     expect(engine.readClocks().capRemainingMs).toBe(1_140_000);
     expect(engine.readClocks().remainingMs).toBe(1_140_000);
     expect(engine.events.filter(event => event.type === 'counted')).toHaveLength(0);

@@ -52,7 +52,7 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Hang power cleans
+                  name: Hang Power Cleans
                   reps: 9
                   load:
                     light:
@@ -71,7 +71,7 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Push jerks
+                  name: Push Jerks
                   reps: 6
                   load:
                     light:

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: partner-circuit
   revision: 1
-  title: Partner circuit
+  title: Partner Circuit
   description: Four movements. Five rounds. A little friendly competition. Share the work and keep each other moving.
   attribution:
     author: OpenWOD
@@ -36,7 +36,7 @@ workout:
                 A:
                   name: Row
                 B:
-                  name: Kettlebell swings
+                  name: Kettlebell Swings
                   load:
                     light:
                       value: 12
@@ -55,7 +55,7 @@ workout:
               duration: 40s
               assignments:
                 A:
-                  name: Kettlebell swings
+                  name: Kettlebell Swings
                   load:
                     light:
                       value: 12
@@ -78,12 +78,12 @@ workout:
                 A:
                   name: Burpees
                 B:
-                  name: Air squats
+                  name: Air Squats
             - id: slot-4
               type: timed
               duration: 40s
               assignments:
                 A:
-                  name: Air squats
+                  name: Air Squats
                 B:
                   name: Burpees

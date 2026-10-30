@@ -16,10 +16,10 @@ describe('workout outline', () => {
     expect(group.repetitions).toBe(5);
     expect(group.roundRestMs).toBe(60_000);
     expect(group.rows.map(row => [row.A?.name, row.B?.name, row.workMs, row.restAfter.map(rest => rest.ms)])).toEqual([
-      ['Row', 'Kettlebell swings', 40_000, [10_000]],
-      ['Kettlebell swings', 'Row', 40_000, [10_000]],
-      ['Burpees', 'Air squats', 40_000, [10_000]],
-      ['Air squats', 'Burpees', 40_000, []],
+      ['Row', 'Kettlebell Swings', 40_000, [10_000]],
+      ['Kettlebell Swings', 'Row', 40_000, [10_000]],
+      ['Burpees', 'Air Squats', 40_000, [10_000]],
+      ['Air Squats', 'Burpees', 40_000, []],
     ]);
   });
 
@@ -32,8 +32,8 @@ describe('workout outline', () => {
     const block = sections[1];
     expect(block.durationMs).toBe(580_000);
     expect(block.rounds.map(round => round.label)).toEqual(['Round 1 of 2', 'Round 2 of 2']);
-    expect(block.rounds[0].rows[0].A?.name).toBe('Air squats');
-    expect(block.rounds[1].rows[0].A?.name).toBe('Dumbbell thrusters');
+    expect(block.rounds[0].rows[0].A?.name).toBe('Air Squats');
+    expect(block.rounds[1].rows[0].A?.name).toBe('Dumbbell Thrusters');
     expect(block.rounds[0].rows.at(-1)?.restAfter).toEqual([]);
     expect(block.rounds[0].roundRestMs).toBe(20_000);
     expect(block.rounds[0].restAfter).toEqual([]);

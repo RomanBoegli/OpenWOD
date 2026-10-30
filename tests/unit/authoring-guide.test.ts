@@ -33,8 +33,8 @@ describe('the authoring guide (SHR-07)', () => {
   it('lists the movements and equipment it is given and stays small enough to paste', () => {
     for (const record of seedMovements) expect(guide).toContain(record.name);
     for (const name of equipment) expect(guide).toContain(name);
-    const own = buildAuthoringGuide({ movements: [...seedMovements, { id: 'yoke-carry', name: 'Yoke carries' }], equipment: ['Yoke'] });
-    expect(own).toContain('**Other:** Yoke carries');
+    const own = buildAuthoringGuide({ movements: [...seedMovements, { id: 'yoke-carry', name: 'Yoke Carries' }], equipment: ['Yoke'] });
+    expect(own).toContain('**Other:** Yoke Carries');
     expect(own).toContain('## Equipment names\n\nYoke\n');
     expect(new TextEncoder().encode(guide).length).toBeLessThan(25_000);
   });

@@ -42,7 +42,7 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Kettlebell swings
+                  name: Kettlebell Swings
                   reps: 21
                   load:
                     light:
@@ -61,5 +61,5 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Pull-ups
+                  name: Pull-Ups
                   reps: 12

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: partner-mirror-chipper
   revision: 1
-  title: Partner mirror chipper
+  title: Partner Mirror Chipper
   description: "A chipper for two that climbs down and back up: row, wall balls, slam balls, handstand push-ups, burpees over the rower, then the same steps in reverse. One athlete works at a time; split every step however you like and tap Done when a step is finished."
   attribution:
     author: Coach programming
@@ -43,7 +43,7 @@ workout:
             assignments:
               A:
                 notes: 10 ft (9 ft) target
-                name: Wall balls
+                name: Wall Balls
                 reps: 40
                 load:
                   light:
@@ -60,7 +60,7 @@ workout:
                     unit: kg
               B:
                 notes: 10 ft (9 ft) target
-                name: Wall balls
+                name: Wall Balls
                 reps: 40
                 load:
                   light:
@@ -80,8 +80,8 @@ workout:
             completion: team
             assignments:
               A:
-                name: Slam ball ground-to-overhead
-                shortName: Slam ball G2OH
+                name: Slam Ball Ground-to-Overhead
+                shortName: Slam Ball G2OH
                 reps: 30
                 load:
                   light:
@@ -97,8 +97,8 @@ workout:
                     women: 20
                     unit: kg
               B:
-                name: Slam ball ground-to-overhead
-                shortName: Slam ball G2OH
+                name: Slam Ball Ground-to-Overhead
+                shortName: Slam Ball G2OH
                 reps: 30
                 load:
                   light:
@@ -118,11 +118,11 @@ workout:
             completion: team
             assignments:
               A:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 20
               B:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 20
           - id: mirror-burpees
@@ -130,21 +130,21 @@ workout:
             completion: team
             assignments:
               A:
-                name: Burpees over rower
+                name: Burpees Over Rower
                 reps: 10
               B:
-                name: Burpees over rower
+                name: Burpees Over Rower
                 reps: 10
           - id: mirror-hspu-2
             type: task
             completion: team
             assignments:
               A:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 20
               B:
-                name: Handstand push-ups
+                name: Handstand Push-Ups
                 shortName: HSPU
                 reps: 20
           - id: mirror-slam-balls-2
@@ -152,8 +152,8 @@ workout:
             completion: team
             assignments:
               A:
-                name: Slam ball ground-to-overhead
-                shortName: Slam ball G2OH
+                name: Slam Ball Ground-to-Overhead
+                shortName: Slam Ball G2OH
                 reps: 30
                 load:
                   light:
@@ -169,8 +169,8 @@ workout:
                     women: 20
                     unit: kg
               B:
-                name: Slam ball ground-to-overhead
-                shortName: Slam ball G2OH
+                name: Slam Ball Ground-to-Overhead
+                shortName: Slam Ball G2OH
                 reps: 30
                 load:
                   light:
@@ -191,7 +191,7 @@ workout:
             assignments:
               A:
                 notes: 10 ft (9 ft) target
-                name: Wall balls
+                name: Wall Balls
                 reps: 40
                 load:
                   light:
@@ -208,7 +208,7 @@ workout:
                     unit: kg
               B:
                 notes: 10 ft (9 ft) target
-                name: Wall balls
+                name: Wall Balls
                 reps: 40
                 load:
                   light:

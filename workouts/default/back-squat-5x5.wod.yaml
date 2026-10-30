@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: back-squat-5x5
   revision: 1
-  title: Back squat 5 × 5
+  title: Back Squat 5 × 5
   description: Five sets of five at a weight you could lift for seven. Tap Done after each set; the two-minute rest starts on its own and the next set waits for you.
   attribution:
     author: OpenWOD
@@ -29,7 +29,7 @@ workout:
           type: task
           assignments:
             A:
-              name: Back squat
+              name: Back Squat
               reps: 5
               load:
                 light:

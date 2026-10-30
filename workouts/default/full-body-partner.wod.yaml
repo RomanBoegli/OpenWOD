@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: full-body-partner
   revision: 1
-  title: Full body partner workout
+  title: Full Body Partner Workout
   description: "Bodyweight meets dumbbells. Every loaded movement in the B column uses dumbbells: one pair for the squats, hinges, cleans and carries and a lighter pair for the presses, curls, extensions and chops. A and B swap each round, then take two minutes to recover before the next block."
   attribution:
     author: OpenWOD
@@ -28,33 +28,33 @@ workout:
             duration: 1m
             assignments:
               A:
-                name: Jumping jacks
+                name: Jumping Jacks
               B:
-                name: Jumping jacks
+                name: Jumping Jacks
           - id: warm-up-2
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Air squats
+                name: Air Squats
               B:
-                name: Air squats
+                name: Air Squats
           - id: warm-up-3
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Arm circles & shoulder mobility
+                name: Arm Circles & Shoulder Mobility
               B:
-                name: Arm circles & shoulder mobility
+                name: Arm Circles & Shoulder Mobility
           - id: warm-up-4
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Alternating lunges
+                name: Alternating Lunges
               B:
-                name: Alternating lunges
+                name: Alternating Lunges
           - id: warm-up-5
             type: timed
             duration: 1m
@@ -86,10 +86,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Air squats
+                      name: Air Squats
                     B:
                       notes: Per dumbbell
-                      name: Dumbbell thrusters
+                      name: Dumbbell Thrusters
                       load:
                         light:
                           value: 7.5
@@ -108,10 +108,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Jump squats
+                      name: Jump Squats
                     B:
                       notes: One dumbbell held at the chest
-                      name: Dumbbell goblet squats
+                      name: Dumbbell Goblet Squats
                       load:
                         light:
                           value: 7.5
@@ -130,10 +130,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Mountain climbers
+                      name: Mountain Climbers
                     B:
                       notes: With dumbbells, one per hand
-                      name: Dumbbell Romanian deadlifts
+                      name: Dumbbell Romanian Deadlifts
                       load:
                         light:
                           value: 7.5
@@ -154,7 +154,7 @@ workout:
                     A:
                       name: Burpees
                     B:
-                      name: Alternating lunges
+                      name: Alternating Lunges
           - id: block-1-rest
             type: rest
             duration: 2m
@@ -182,10 +182,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Push-ups
+                      name: Push-Ups
                     B:
                       notes: With dumbbells, one per hand
-                      name: Dumbbell rows
+                      name: Dumbbell Rows
                       load:
                         light:
                           value: 7.5
@@ -204,10 +204,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Plank shoulder taps
+                      name: Plank Shoulder Taps
                     B:
                       notes: With dumbbells, one per hand
-                      name: Dumbbell shoulder press
+                      name: Dumbbell Shoulder Press
                       load:
                         light:
                           value: 5
@@ -226,10 +226,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Triceps dips
+                      name: Triceps Dips
                     B:
                       notes: Per dumbbell
-                      name: Biceps curls
+                      name: Biceps Curls
                       load:
                         light:
                           value: 5
@@ -251,7 +251,7 @@ workout:
                       name: Burpees
                     B:
                       notes: Per dumbbell
-                      name: Overhead triceps extensions
+                      name: Overhead Triceps Extensions
                       load:
                         light:
                           value: 5
@@ -292,18 +292,18 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Sit-ups
+                      name: Sit-Ups
                     B:
-                      name: Russian twists
+                      name: Russian Twists
                 - id: block-3-slot-2
                   type: timed
                   duration: 40s
                   assignments:
                     A:
-                      name: Bicycle crunches
+                      name: Bicycle Crunches
                     B:
                       notes: Per dumbbell
-                      name: Dumbbell deadlifts
+                      name: Dumbbell Deadlifts
                       load:
                         light:
                           value: 7.5
@@ -325,7 +325,7 @@ workout:
                       name: Plank
                     B:
                       notes: One dumbbell per hand, march on the spot
-                      name: Dumbbell farmer march
+                      name: Dumbbell Farmer March
                       load:
                         light:
                           value: 7.5
@@ -344,10 +344,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Mountain climbers
+                      name: Mountain Climbers
                     B:
                       notes: One dumbbell in both hands; switch sides halfway
-                      name: Dumbbell woodchoppers
+                      name: Dumbbell Woodchoppers
                       load:
                         light:
                           value: 5
@@ -388,10 +388,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: High knees
+                      name: High Knees
                     B:
                       notes: Per dumbbell
-                      name: Dumbbell hang cleans
+                      name: Dumbbell Hang Cleans
                       load:
                         light:
                           value: 7.5
@@ -410,10 +410,10 @@ workout:
                   duration: 40s
                   assignments:
                     A:
-                      name: Skater jumps
+                      name: Skater Jumps
                     B:
                       notes: Per dumbbell
-                      name: Dumbbell thrusters
+                      name: Dumbbell Thrusters
                       load:
                         light:
                           value: 7.5
@@ -434,16 +434,16 @@ workout:
                     A:
                       name: Burpees
                     B:
-                      name: Alternating lunges
+                      name: Alternating Lunges
                 - id: block-4-slot-4
                   type: timed
                   duration: 40s
                   assignments:
                     A:
-                      name: Jump squats
+                      name: Jump Squats
                     B:
                       notes: Per dumbbell
-                      name: Biceps curls
+                      name: Biceps Curls
                       load:
                         light:
                           value: 5
@@ -474,38 +474,38 @@ workout:
             duration: 1m
             assignments:
               A:
-                name: Quad stretch
+                name: Quad Stretch
               B:
-                name: Quad stretch
+                name: Quad Stretch
           - id: cool-down-2
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Hamstring stretch
+                name: Hamstring Stretch
               B:
-                name: Hamstring stretch
+                name: Hamstring Stretch
           - id: cool-down-3
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Hip flexor stretch
+                name: Hip Flexor Stretch
               B:
-                name: Hip flexor stretch
+                name: Hip Flexor Stretch
           - id: cool-down-4
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Chest & shoulder stretch
+                name: Chest & Shoulder Stretch
               B:
-                name: Chest & shoulder stretch
+                name: Chest & Shoulder Stretch
           - id: cool-down-5
             type: timed
             duration: 1m
             assignments:
               A:
-                name: Deep breathing
+                name: Deep Breathing
               B:
-                name: Deep breathing
+                name: Deep Breathing

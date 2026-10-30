@@ -8,7 +8,7 @@ test.describe('static library', () => {
     await page.goto('/#/new');
     await page.getByLabel('Title', { exact: true }).fill('Browser check');
     await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete A', exact: true }).fill('Burpees');
-    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air Squats');
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/browser-check$/);
     expect((await browserRows<{ id: string; revision: number }>(page, 'workouts')).map(row => [row.id, row.revision])).toEqual([['browser-check', 1]]);
@@ -28,12 +28,12 @@ test.describe('static library', () => {
     await page.getByLabel('Title', { exact: true }).fill('Rest between');
     await page.getByLabel('Block 1 format').selectOption('amrap');
     await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete A', exact: true }).fill('Burpees');
-    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air Squats');
     await expect(page.getByRole('group', { name: /^Between block/ })).toHaveCount(0);
     await page.getByRole('button', { name: 'Add block' }).click();
     await page.getByLabel('Block title').nth(1).fill('Finisher');
     await page.getByRole('combobox', { name: 'Block 2 movement 1 athlete A', exact: true }).fill('Burpees');
-    await page.getByRole('combobox', { name: 'Block 2 movement 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('combobox', { name: 'Block 2 movement 1 athlete B', exact: true }).fill('Air Squats');
     const tile = page.getByRole('group', { name: 'Between block 1 and 2' });
     await expect(page.getByRole('group', { name: /^Between block/ })).toHaveCount(1);
     await expect(tile.getByLabel('After block 1')).toHaveValue('ready');

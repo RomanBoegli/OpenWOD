@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: mixed-rounds-under-19
   revision: 1
-  title: Mixed rounds under 19
+  title: Mixed Rounds Under 19
   description: "Four rounds for time under a nineteen-minute cap: squats, lunges, sit-ups, a short row, hand-release push-ups and ring rows, with thirty seconds of timed rest after each round. Nothing here is heavy, so the aim is to keep moving at one steady pace."
   attribution:
     author: Coach programming
@@ -35,8 +35,8 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Air squats to a plate
-                  shortName: Squats to plate
+                  name: Air Squats to a Plate
+                  shortName: Squats to Plate
                   reps: 21
             - id: mixed-rounds-lunges
               type: task
@@ -48,7 +48,7 @@ workout:
               type: task
               assignments:
                 A:
-                  name: AbMat sit-ups
+                  name: AbMat Sit-Ups
                   reps: 15
             - id: mixed-rounds-row
               type: task
@@ -60,13 +60,13 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Hand-release push-ups
-                  shortName: HR push-ups
+                  name: Hand-Release Push-Ups
+                  shortName: HR Push-Ups
                   reps: 9
             - id: mixed-rounds-ring-rows
               type: task
               assignments:
                 A:
                   notes: Or barbell rows in the rack
-                  name: Ring rows
+                  name: Ring Rows
                   reps: 9

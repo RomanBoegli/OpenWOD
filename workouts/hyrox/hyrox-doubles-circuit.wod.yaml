@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: hyrox-doubles-circuit
   revision: 1
-  title: HYROX doubles circuit
+  title: HYROX Doubles Circuit
   description: "Run together, then split the stations the way a doubles team does: 45 seconds on, 15 to swap, and A and B swap after each round so both of you touch every station. Heavy is the doubles open standard: sled push 152 kg (women 102 kg, incl. sled), sled pull 103 kg (78 kg), farmers carry 2 × 24 kg (2 × 16 kg), sandbag lunges 20 kg (10 kg), wall balls 6 kg (4 kg) to a 3 m (2.7 m) target; mixed teams use the men's loads."
   attribution:
     author: OpenWOD
@@ -35,9 +35,9 @@ workout:
             duration: 3m
             assignments:
               A:
-                name: Run together
+                name: Run Together
               B:
-                name: Run together
+                name: Run Together
     - id: doubles-1
       title: Stations 1
       format: timedCircuit
@@ -61,7 +61,7 @@ workout:
                   name: SkiErg
                 B:
                   notes: Total incl. sled; heavy is the open standard
-                  name: Sled push
+                  name: Sled Push
                   load:
                     light:
                       value: 70
@@ -81,7 +81,7 @@ workout:
               assignments:
                 A:
                   notes: Total incl. sled; heavy is the open standard
-                  name: Sled pull
+                  name: Sled Pull
                   load:
                     light:
                       value: 50
@@ -96,7 +96,7 @@ workout:
                       women: 78
                       unit: kg
                 B:
-                  name: Burpee broad jumps
+                  name: Burpee Broad Jumps
     - id: run-2
       title: Run 2
       format: timedCircuit
@@ -110,9 +110,9 @@ workout:
             duration: 3m
             assignments:
               A:
-                name: Run together
+                name: Run Together
               B:
-                name: Run together
+                name: Run Together
     - id: doubles-2
       title: Stations 2
       format: timedCircuit
@@ -136,7 +136,7 @@ workout:
                   name: Row
                 B:
                   notes: Per hand; heavy is the open standard
-                  name: Farmers carry
+                  name: Farmers Carry
                   load:
                     light:
                       value: 12
@@ -156,7 +156,7 @@ workout:
               assignments:
                 A:
                   notes: Heavy is the open standard; women's medium is already the 10 kg race bag
-                  name: Sandbag lunges
+                  name: Sandbag Lunges
                   load:
                     light:
                       value: 10
@@ -172,7 +172,7 @@ workout:
                       unit: kg
                 B:
                   notes: 3 m (2.7 m) target
-                  name: Wall balls
+                  name: Wall Balls
                   load:
                     light:
                       value: 3

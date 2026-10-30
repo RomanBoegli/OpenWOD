@@ -47,7 +47,7 @@ workout:
               duration: 20s
               assignments:
                 A:
-                  name: Air squats
+                  name: Air Squats
           - id: tabata-pull-up
             type: repeat
             count: 8
@@ -58,7 +58,7 @@ workout:
               duration: 20s
               assignments:
                 A:
-                  name: Pull-ups
+                  name: Pull-Ups
           - id: tabata-push-up
             type: repeat
             count: 8
@@ -69,7 +69,7 @@ workout:
               duration: 20s
               assignments:
                 A:
-                  name: Push-ups
+                  name: Push-Ups
           - id: tabata-sit-up
             type: repeat
             count: 8
@@ -80,4 +80,4 @@ workout:
               duration: 20s
               assignments:
                 A:
-                  name: Sit-ups
+                  name: Sit-Ups

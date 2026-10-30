@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: squat-power-e2-30
   revision: 1
-  title: Squat power E2:30
+  title: Squat Power E2:30
   description: "Seven sets of back squats on a 2:30 clock, reps falling from six to two while the load climbs from sixty percent to a heavy double. No grinding reps: if you do not know your percentages, work up cleanly to a heavy double. Tap Done after each set; two minutes of rest are timed for you."
   attribution:
     author: Coach programming
@@ -28,7 +28,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Back squat
+                name: Back Squat
                 reps: 6
                 load:
                   light:
@@ -44,7 +44,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Back squat
+                name: Back Squat
                 reps: 5
                 load:
                   light:
@@ -60,7 +60,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Back squat
+                name: Back Squat
                 reps: 4
                 load:
                   light:
@@ -76,7 +76,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Back squat
+                name: Back Squat
                 reps: 3
                 load:
                   light:
@@ -93,7 +93,7 @@ workout:
             assignments:
               A:
                 notes: "Program: 82–85 %"
-                name: Back squat
+                name: Back Squat
                 reps: 3
                 load:
                   light:
@@ -110,7 +110,7 @@ workout:
             assignments:
               A:
                 notes: "Program: 85–88 %"
-                name: Back squat
+                name: Back Squat
                 reps: 2
                 load:
                   light:
@@ -127,5 +127,5 @@ workout:
             assignments:
               A:
                 notes: "RPE 8–9: a heavy double, no grind"
-                name: Back squat
+                name: Back Squat
                 reps: 2

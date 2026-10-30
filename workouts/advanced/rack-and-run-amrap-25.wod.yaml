@@ -38,7 +38,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Burpees over bar
+                name: Burpees Over Bar
                 reps: 5
           - id: rack-run-deadlifts
             type: task
@@ -83,7 +83,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Shoulder-to-overhead
+                name: Shoulder-to-Overhead
                 shortName: S2OH
                 reps: 5
                 load:
@@ -103,7 +103,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Burpees over bar
+                name: Burpees Over Bar
                 reps: 5
           - id: rack-run-rest
             type: task

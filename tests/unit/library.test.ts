@@ -13,15 +13,15 @@ describe('library summaries and filters', () => {
     expect(circuit.activeMs).toBe(1_190_000);
     expect(circuit.totalMs).toBe(1_200_000);
     expect(circuit.participants).toBe(2);
-    expect(circuit.movements).toEqual(['Row', 'Kettlebell swings', 'Burpees', 'Air squats']);
+    expect(circuit.movements).toEqual(['Row', 'Kettlebell Swings', 'Burpees', 'Air Squats']);
     expect(fullBody.sections).toBe(6);
-    expect(fullBody.movements).toContain('Dumbbell thrusters');
+    expect(fullBody.movements).toContain('Dumbbell Thrusters');
     expect(new Set(fullBody.movements).size).toBe(fullBody.movements.length);
   });
 
   it('LIB-04: searches titles, descriptions, movements and equipment with every token required', () => {
     expect(matchesFilter(circuit, { query: 'row' })).toBe(true);
-    expect(matchesFilter(fullBody, { query: 'row' })).toBe(true); // "Bent-over rows"
+    expect(matchesFilter(fullBody, { query: 'row' })).toBe(true); // "Bent-Over Rows"
     expect(matchesFilter(fullBody, { query: 'kettlebell' })).toBe(false);
     expect(matchesFilter(circuit, { query: 'KETTLEBELL   swings' })).toBe(true);
     expect(matchesFilter(circuit, { query: 'kettlebell dumbbell' })).toBe(false);

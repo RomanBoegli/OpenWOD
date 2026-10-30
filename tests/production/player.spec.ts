@@ -21,7 +21,7 @@ test('the production container plays a real interval without test injection', as
   await page.goto('./');
   const file = serialiseWorkoutFile({
     schemaVersion: 2, revision: 1, id, title, participants: 2, prepMs: 0, equipment: [],
-    sections: [{ id: 'section', title: 'Smoke check', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'movement', type: 'timed', durationMs: 1000, assignments: { A: { name: 'Air squats' }, B: { name: 'March in place' } } } }],
+    sections: [{ id: 'section', title: 'Smoke check', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'movement', type: 'timed', durationMs: 1000, assignments: { A: { name: 'Air Squats' }, B: { name: 'March in place' } } } }],
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'production.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(file) });
   // A single workout the editor can show is saved and opened in it.

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: pause-front-squat-6x3
   revision: 1
-  title: Pause front squat 6 × 3
+  title: Pause Front Squat 6 × 3
   description: Six sets of three front squats with a one- to two-second pause in the bottom, starting around sixty-five percent and building only while the position stays strong. Heavy but clean. Tap Done after each set; ninety seconds of rest are timed, and the program allows up to two minutes.
   attribution:
     author: Coach programming
@@ -30,7 +30,7 @@ workout:
           assignments:
             A:
               notes: 1–2 s pause in the bottom; build only if position holds
-              name: Pause front squat
+              name: Pause Front Squat
               reps: 3
               load:
                 light:

@@ -25,7 +25,7 @@ workout:
         type: task
         assignments:
           A:
-            name: Power snatches
+            name: Power Snatches
             reps: 75
             load:
               light:

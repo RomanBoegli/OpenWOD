@@ -41,7 +41,7 @@ workout:
               type: task
               assignments:
                 A:
-                  name: Overhead squats
+                  name: Overhead Squats
                   reps: 15
                   load:
                     light:

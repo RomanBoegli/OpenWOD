@@ -30,7 +30,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Toes-to-bar
+                name: Toes-to-Bar
                 reps: 14
           - id: fourteens-row
             type: task
@@ -62,6 +62,6 @@ workout:
             type: task
             assignments:
               A:
-                name: Lateral burpees over bar
-                shortName: Lateral burpees
+                name: Lateral Burpees Over Bar
+                shortName: Lateral Burpees
                 reps: 14

@@ -36,9 +36,9 @@ describe('canonical workout compiler', () => {
     expect(plan.sections.map(section => section.durationMs)).toEqual([300_000, 580_000, 580_000, 580_000, 580_000, 300_000]);
     const first = plan.occurrences.find(item => item.anchor === 'block-1-slot-1' && item.rounds[0].iteration === 1)!;
     const second = plan.occurrences.find(item => item.anchor === first.anchor && item.rounds[0].iteration === 2)!;
-    expect(first.assignments?.A.name).toBe('Air squats');
-    expect(second.assignments?.A.name).toBe('Dumbbell thrusters');
-    expect(second.assignments?.B?.name).toBe('Air squats');
+    expect(first.assignments?.A.name).toBe('Air Squats');
+    expect(second.assignments?.A.name).toBe('Dumbbell Thrusters');
+    expect(second.assignments?.B?.name).toBe('Air Squats');
     expect(plan.occurrences[plan.sections[4].endIndex].durationMs).toBe(120_000);
     expect(plan.occurrences[plan.sections[4].endIndex].phase).toBe('blockRest');
   });

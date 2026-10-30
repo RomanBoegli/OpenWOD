@@ -13,14 +13,14 @@ const soloTimed = (id: string, names: string[], durationMs: number, restMs = 0):
 
 describe('projected difficulty', () => {
   it('classifies movements by name with a medium default', () => {
-    expect(movementIntensity('Quad stretch')).toBeLessThan(movementIntensity('Air squats'));
-    expect(movementIntensity('Air squats')).toBeLessThan(movementIntensity('Burpees'));
-    expect(movementIntensity('Dumbbell thrusters')).toBe(0.9);
+    expect(movementIntensity('Quad Stretch')).toBeLessThan(movementIntensity('Air Squats'));
+    expect(movementIntensity('Air Squats')).toBeLessThan(movementIntensity('Burpees'));
+    expect(movementIntensity('Dumbbell Thrusters')).toBe(0.9);
     expect(movementIntensity('Something unusual')).toBe(0.5);
   });
 
   it('rates stretching as Light, one short Tabata as Moderate and forty minutes of it as Brutal', () => {
-    const stretch = rateDifficulty(compileWorkout(soloTimed('stretch', ['Quad stretch', 'Hamstring stretch', 'Deep breathing'], 60_000)));
+    const stretch = rateDifficulty(compileWorkout(soloTimed('stretch', ['Quad Stretch', 'Hamstring Stretch', 'Deep Breathing'], 60_000)));
     expect(stretch.label).toBe('Light');
     const tabata = rateDifficulty(compileWorkout(soloTimed('tabata', Array(8).fill('Burpees'), 20_000, 10_000)));
     expect(tabata.label).toBe('Moderate');
@@ -39,7 +39,7 @@ describe('projected difficulty', () => {
   });
 
   it('discounts short pieces and honours the device calibration', () => {
-    const short = compileWorkout(soloTimed('short', ['Dumbbell front rack lunges', 'Dumbbell front rack lunges'], 70_000));
+    const short = compileWorkout(soloTimed('short', ['Dumbbell Front Rack Lunges', 'Dumbbell Front Rack Lunges'], 70_000));
     const rating = rateDifficulty(short);
     expect(rating.label).toBe('Light');
     expect(rating.factors.length).toBeCloseTo(Math.sqrt(140 / 60 / 15), 5);
@@ -59,10 +59,10 @@ describe('projected difficulty', () => {
   });
 
   it('is monotonic in work density, duration and prescribed load', () => {
-    const base = soloTimed('base', ['Push-ups', 'Air squats'], 40_000, 20_000);
-    const denser = soloTimed('denser', ['Push-ups', 'Air squats'], 50_000, 0); // The same 100 seconds with the rest turned into work.
+    const base = soloTimed('base', ['Push-Ups', 'Air Squats'], 40_000, 20_000);
+    const denser = soloTimed('denser', ['Push-Ups', 'Air Squats'], 50_000, 0); // The same 100 seconds with the rest turned into work.
     expect(rateDifficulty(compileWorkout(denser)).score).toBeGreaterThan(rateDifficulty(compileWorkout(base)).score);
-    const longer = soloTimed('longer', Array(30).fill('Push-ups'), 60_000, 20_000);
+    const longer = soloTimed('longer', Array(30).fill('Push-Ups'), 60_000, 20_000);
     expect(rateDifficulty(compileWorkout(longer)).score).toBeGreaterThan(rateDifficulty(compileWorkout(base)).score);
     const loaded = structuredClone(base);
     const sequence = loaded.sections[0].body;

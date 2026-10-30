@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: hyrox-engine-emom-24
   revision: 1
-  title: HYROX engine EMOM 24
+  title: HYROX Engine EMOM 24
   description: "Every minute for 24 minutes: a hard minute of running, a minute on the next station, a minute of wall balls. Eight cycles cover all eight stations. Heavy is the open standard: sled push 152 kg (women 102 kg, incl. sled), sled pull 103 kg (78 kg), farmers carry 2 × 24 kg (2 × 16 kg), sandbag lunges 20 kg (10 kg), wall balls 6 kg (4 kg) to a 3 m (2.7 m) target. Keep moving for the full minute; the next one starts whether you are ready or not."
   attribution:
     author: OpenWOD
@@ -49,7 +49,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -76,7 +76,7 @@ workout:
             assignments:
               A:
                 notes: Total incl. sled; heavy is the open standard
-                name: Sled push
+                name: Sled Push
                 load:
                   light:
                     value: 70
@@ -96,7 +96,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -123,7 +123,7 @@ workout:
             assignments:
               A:
                 notes: Total incl. sled; heavy is the open standard
-                name: Sled pull
+                name: Sled Pull
                 load:
                   light:
                     value: 50
@@ -143,7 +143,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -169,14 +169,14 @@ workout:
             duration: 1m
             assignments:
               A:
-                name: Burpee broad jumps
+                name: Burpee Broad Jumps
           - id: engine-wall-balls-4
             type: timed
             duration: 1m
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -209,7 +209,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -236,7 +236,7 @@ workout:
             assignments:
               A:
                 notes: Per hand; heavy is the open standard
-                name: Farmers carry
+                name: Farmers Carry
                 load:
                   light:
                     value: 12
@@ -256,7 +256,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -283,7 +283,7 @@ workout:
             assignments:
               A:
                 notes: Heavy is the open standard (the 10 kg race bag for women); medium is a training step below it
-                name: Sandbag lunges
+                name: Sandbag Lunges
                 load:
                   light:
                     value: 10
@@ -303,7 +303,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -330,7 +330,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3
@@ -350,7 +350,7 @@ workout:
             assignments:
               A:
                 notes: 3 m (2.7 m) target; steady reps
-                name: Wall balls
+                name: Wall Balls
                 load:
                   light:
                     value: 3

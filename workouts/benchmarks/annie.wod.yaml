@@ -28,59 +28,59 @@ workout:
             type: task
             assignments:
               A:
-                name: Double-unders
+                name: Double-Unders
                 reps: 50
           - id: annie-sit-ups-50
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 50
           - id: annie-double-unders-40
             type: task
             assignments:
               A:
-                name: Double-unders
+                name: Double-Unders
                 reps: 40
           - id: annie-sit-ups-40
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 40
           - id: annie-double-unders-30
             type: task
             assignments:
               A:
-                name: Double-unders
+                name: Double-Unders
                 reps: 30
           - id: annie-sit-ups-30
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 30
           - id: annie-double-unders-20
             type: task
             assignments:
               A:
-                name: Double-unders
+                name: Double-Unders
                 reps: 20
           - id: annie-sit-ups-20
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 20
           - id: annie-double-unders-10
             type: task
             assignments:
               A:
-                name: Double-unders
+                name: Double-Unders
                 reps: 10
           - id: annie-sit-ups-10
             type: task
             assignments:
               A:
-                name: Sit-ups
+                name: Sit-Ups
                 reps: 10

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: bar-lunge-wall-ball-emom-20
   revision: 1
-  title: Bar, lunge & wall ball EMOM 20
+  title: Bar, Lunge & Wall Ball EMOM 20
   description: "Five movements, four rounds: thirty seconds of toes-to-bar, sixteen metres of single-dumbbell overhead lunges, thirty seconds of chest-to-bar pull-ups, twenty-four wall balls to the standard 10 ft (9 ft) target, then a minute of easy skiing or biking. The recovery minute is part of the plan; use it."
   attribution:
     author: Coach programming
@@ -33,15 +33,15 @@ workout:
             assignments:
               A:
                 notes: 30 s of work
-                name: Toes-to-bar
+                name: Toes-to-Bar
                 time: 30s
           - id: blwb-lunges
             type: task
             assignments:
               A:
                 notes: One dumbbell, 2 × 8 m; switch arms halfway
-                name: Dumbbell overhead walking lunges
-                shortName: DB overhead lunges
+                name: Dumbbell Overhead Walking Lunges
+                shortName: DB Overhead Lunges
                 distance:
                   value: 16
                   unit: m
@@ -63,15 +63,15 @@ workout:
             assignments:
               A:
                 notes: 30 s of work
-                name: Chest-to-bar pull-ups
-                shortName: C2B pull-ups
+                name: Chest-to-Bar Pull-Ups
+                shortName: C2B Pull-Ups
                 time: 30s
           - id: blwb-wall-balls
             type: task
             assignments:
               A:
                 notes: 10 ft (9 ft) target
-                name: Wall balls
+                name: Wall Balls
                 reps: 24
                 load:
                   light:
@@ -91,4 +91,4 @@ workout:
             assignments:
               A:
                 notes: Easy SkiErg or bike
-                name: Active recovery
+                name: Active Recovery

@@ -4,7 +4,7 @@ workout:
   schemaVersion: 2
   id: three-minute-windows
   revision: 1
-  title: Two 3-minute windows
+  title: Two 3-Minute Windows
   description: Two three-minute blocks with two minutes of rest between them. Finish the fixed work fast, then do as many toes-to-bar as you can before the clock runs out; the toes-to-bar count is your score, so tap the rep counter. Scale the handstand walk to wall walks or bear crawls.
   attribution:
     author: Coach programming
@@ -50,13 +50,13 @@ workout:
             assignments:
               A:
                 notes: Step down; 24 in (20 in) box
-                name: Box jump overs
+                name: Box Jump Overs
                 reps: 12
           - id: window-1-hs-walk
             type: task
             assignments:
               A:
-                name: Handstand walk
+                name: Handstand Walk
                 distance:
                   value: 14
                   unit: m
@@ -65,7 +65,7 @@ workout:
             assignments:
               A:
                 notes: "Max reps in the time left: count them as reps"
-                name: Toes-to-bar
+                name: Toes-to-Bar
     - id: window-2
       title: Window 2
       format: amrap
@@ -80,7 +80,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Power cleans
+                name: Power Cleans
                 reps: 8
                 load:
                   light:
@@ -99,7 +99,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Shoulder-to-overhead
+                name: Shoulder-to-Overhead
                 shortName: S2OH
                 reps: 8
                 load:
@@ -119,7 +119,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Handstand walk
+                name: Handstand Walk
                 distance:
                   value: 14
                   unit: m
@@ -128,4 +128,4 @@ workout:
             assignments:
               A:
                 notes: "Max reps in the time left: count them as reps"
-                name: Toes-to-bar
+                name: Toes-to-Bar

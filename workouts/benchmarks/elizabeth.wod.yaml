@@ -48,7 +48,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Ring dips
+                name: Ring Dips
                 reps: 21
           - id: elizabeth-cleans-15
             type: task
@@ -73,7 +73,7 @@ workout:
             type: task
             assignments:
               A:
-                name: Ring dips
+                name: Ring Dips
                 reps: 15
           - id: elizabeth-cleans-9
             type: task
@@ -98,5 +98,5 @@ workout:
             type: task
             assignments:
               A:
-                name: Ring dips
+                name: Ring Dips
                 reps: 9
