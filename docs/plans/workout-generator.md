@@ -1,4 +1,4 @@
-# Plan: the workout generator (version 1.6.0)
+# Plan: the workout generator (version 1.7.0)
 
 The design of the planned workout generator (BLD-13), moved verbatim from AGENT.md, whose section 15 now points here in place of the §15.6 named below.
 

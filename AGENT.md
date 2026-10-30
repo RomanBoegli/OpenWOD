@@ -719,19 +719,14 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.3.0: one search bar at every width (UI-18) and the not-found pages (UI-19).
 - 1.3.1: the session layout on tablets and short screens (UI-20).
 - 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version under the wordmark (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13), with the SQLite migration 3 and IndexedDB version 3.
-- 1.5.0, prepared: the changes below, with no database or browser-storage migration. Notes in `docs/releases/v1.5.0.md`.
+- 1.5.0: Create with AI and paste import (SHR-07), authors as master data with search and an Author filter (LIB-06), the round donut, block cards and block-split progress in the training view (UI-24), and cues that say the name as written (AUD-10), with no migration.
+- 1.6.0, prepared: the changes below, with no database or browser-storage migration. Notes in `docs/releases/v1.6.0.md`.
 
-**In 1.5.0** (since `v1.4.0`):
+**In 1.6.0** (since `v1.5.0`):
 
-- The library offers Create with AI: an authoring guide to copy into any AI assistant, the JSON Schema to download, and a box for the assistant's answer that opens the import preview (SHR-07).
-- Saving a single imported workout, from a file or a pasted answer, opens it in the editor. The preview's buttons read Save and edit and Edit before saving, and packs still open the workout's page or report what they imported.
-- The bundled Dumbbell full body 35 and six movement records it needed: dumbbell sumo squats, dumbbell pullovers, lateral raises, dumbbell sit-ups, dead bugs and bodyweight good mornings.
-- Authors are master data under Settings → Authors, with New, Rename, Merge, Delete and Restore. They are part of the library search, get an Author filter and are suggested in the editor (LIB-06). The 22 advanced workouts name "Coach programming" as their author.
-- The import preview is wider, shows each workout's state as a badge, and dialog buttons keep their labels on one line.
-- The training view gets a round donut beside the clock, opposite the percentage, with a dot per round below it, a progress bar split by block, "MOVEMENT n / m" over the stations, a larger state label, a card at each block start and a done card while a block waits for Ready. A new movement slides in as the previous one slides out, and the context view keeps the movement under way centred behind a Stick to movement switch, which it failed to do on phones (UI-24). The filler line "Your pace. Keep moving." is gone.
-- Master data from an older server or device cache, without the author fields, no longer stops the app with "OpenWOD hit an error": every received document is sanitised first.
-- The library heading's actions take a row of their own before the heading gets squeezed.
-- Names written as an alias are announced as written: the recorded clip of a record plays only for its own name, and the packs record the four alias names the bundled workouts use (AUD-10).
+- The movement catalogue has 259 records instead of 199: common CrossFit and HYROX movements such as clusters, hang squat snatches, clean and snatch pulls, GHD hip and back extensions, strict toes-to-bar, toes-to-rings, strict ring dips, triple-unders, lateral box jumps, bear crawls, battle ropes, tyre flips, yoke carry, wall sits, hip thrusts, flutter kicks and PVC pass-throughs, each with a recorded name in every voice pack.
+- Common shorthand resolves to its movement: PC, PS, HPC, HPS, SC, FS, BS, PP, PJ, SJ, BBJ, Cal row, C2 row, Assault, Echo and Treadmill run.
+- GHD, Battle rope, Tyre and Yoke join the canonical equipment names, and GHD sit-ups now need a GHD.
 
 **Schema and storage versions today.**
 
@@ -746,7 +741,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for 1.7.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 

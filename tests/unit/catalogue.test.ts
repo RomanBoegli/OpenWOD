@@ -6,7 +6,7 @@ import type { WorkoutNode } from '../../packages/domain/src/schema';
 
 const catalogue = new Catalogue(seedMovements);
 
-const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes'];
+const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes', 'GHD', 'Battle rope', 'Tyre', 'Yoke'];
 
 function fixtureNames(): string[] {
   const names = new Set<string>();
@@ -62,6 +62,6 @@ describe('seed movement catalogue', () => {
     expect(cleans?.variants.length).toBeGreaterThanOrEqual(4);
     expect(cleans?.variants.map(record => record.id)).toContain('hang-power-clean');
     expect(seedMovements.length).toBeGreaterThanOrEqual(170);
-    expect(seedMovements.length).toBeLessThanOrEqual(200);
+    expect(seedMovements.length).toBeLessThanOrEqual(300);
   });
 });
