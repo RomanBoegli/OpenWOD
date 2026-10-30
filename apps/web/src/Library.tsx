@@ -23,6 +23,10 @@ import { copySource, freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './lib
 import { Icon } from './Icon';
 import { Travolta } from './Travolta';
 import { ConfirmDialog } from './ConfirmDialog';
+import { AuthoringGuideDialog } from './AuthoringGuideDialog';
+import { equipmentRepertoire } from './equipment';
+import { extractWorkoutYaml } from '../../../packages/domain/src/authoring-guide';
+import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import styles from './Library.module.css';
 import shared from './App.module.css';
 
@@ -38,8 +42,8 @@ interface LibraryProps {
   entries: LibraryEntry[];
   collections: Collection[];
   sessions: SessionView[];
-  /** Applies the decisions of the import preview (SHR-04) and, for a single workout, navigates to it. */
-  onImportPack: (workouts: Workout[], collections: PackCollection[], decisions: Record<string, PackDecision>) => Promise<void>;
+  /** Applies the decisions of the import preview (SHR-04) and, for a single workout, navigates to it: into the editor for a workout file or a pasted answer. */
+  onImportPack: (workouts: Workout[], collections: PackCollection[], decisions: Record<string, PackDecision>, openEditor: boolean) => Promise<void>;
   /** A single editable file can open in the editor as an unsaved draft instead. */
   onImportDraft: (workout: Workout, fileName: string) => void;
   onExportLibrary: () => void;
@@ -59,9 +63,13 @@ interface LibraryProps {
   onDiscardDraft: (id: string) => void;
   preferences: Preferences;
   onPreferencesChange: (update: (value: Preferences) => Preferences) => void;
+  /** The effective movement catalogue, listed in the authoring guide. */
+  catalogue: Catalogue;
 }
 
 type Sort = LibrarySort | 'longestAgo' | 'random';
+/** The name a pasted answer goes by in the preview, the editor and the drafts list. */
+const PASTED_NAME = 'pasted answer';
 const DURATIONS: [DurationBucket, string][] = [['short', 'Up to 20 min'], ['medium', '20 to 40 min'], ['long', 'Over 40 min']];
 /** The timed content without the prep countdown: a tile says what the workout is, the overview adds the prep. */
 export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.activeMs)}`;
@@ -121,7 +129,7 @@ function useMasonry(grid: RefObject<HTMLUListElement | null>) {
   });
 }
 
-export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, drafts, onDiscardDraft, preferences, onPreferencesChange, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
+export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, drafts, onDiscardDraft, preferences, onPreferencesChange, catalogue, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
   const [migrationHidden, setMigrationHidden] = useState(false);
   const grid = useRef<HTMLUListElement>(null);
   useMasonry(grid);
@@ -140,6 +148,10 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
   useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ open: filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed]);
   const [preview, setPreview] = useState<{ file: SharedFile; name: string }>();
   const [importError, setImportError] = useState('');
+  /** The import came from an assistant's answer pasted into the authoring guide, not from a file. */
+  const [pasted, setPasted] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const guideEquipment = useMemo(() => guideOpen ? equipmentRepertoire(catalogue, entries.map(entry => entry.summary)) : [], [guideOpen, catalogue, entries]);
   const [discarding, setDiscarding] = useState<StoredDraft>();
   const importDialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -162,18 +174,26 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
   const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || onlyMine);
   const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
 
-  async function importFile(file?: File) {
-    if (!file) return;
+  /** Opens the import dialog with a preview of the text `read` returns, or with what is wrong with it; `read` may throw. */
+  async function openImport(name: string, read: () => string | Promise<string>) {
     try {
-      if (file.size > MAX_PACK_BYTES) throw new Error('Choose a workout file or pack smaller than 4 MB.');
-      const parsed = parseSharedFile(await file.text());
+      const parsed = parseSharedFile(await read());
       // Compiles every workout: unsupported or unbounded content is rejected before anything is saved.
       for (const workout of parsed.kind === 'pack' ? parsed.pack.workouts : [parsed.workout]) summariseWorkout(workout);
-      setPreview({ file: parsed, name: file.name }); setImportError('');
+      setPreview({ file: parsed, name }); setImportError('');
     } catch (error) { setPreview(undefined); setImportError(error instanceof Error ? error.message : 'This file could not be read.'); }
     importDialog.current?.showModal();
+  }
+  async function importFile(file?: File) {
+    if (!file) return;
+    setPasted(false);
+    await openImport(file.name, () => {
+      if (file.size > MAX_PACK_BYTES) throw new Error('Choose a workout file or pack smaller than 4 MB.');
+      return file.text();
+    });
     if (fileInput.current) fileInput.current.value = '';
   }
+  const previewAnswer = (reply: string) => { setGuideOpen(false); setPasted(true); void openImport(PASTED_NAME, () => extractWorkoutYaml(reply)); };
   const closeImport = () => { importDialog.current?.close(); setPreview(undefined); };
 
   const group = (label: string, children: React.ReactNode) => <div className={styles.filterGroup} role="group" aria-label={label}><span className={styles.filterLabel}>{label}</span><div className={styles.chipRow}>{children}</div></div>;
@@ -187,6 +207,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
       </div>
       <div className={styles.headingActions}>
         <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
+        <button className={shared.quietButton} onClick={() => setGuideOpen(true)} title="Write a workout with the AI assistant you use, then paste it here"><Icon name="spark" size={18} />Create with AI</button>
         <button className={shared.quietButton} onClick={() => fileInput.current?.click()}><Icon name="upload" size={18} />Import WOD</button>
         {entries.some(entry => entry.source === 'saved') && <button className={shared.quietButton} onClick={onExportLibrary} title="Every saved workout and your collections as one .wods.yaml pack"><Icon name="download" size={18} />Export library</button>}
         <input ref={fileInput} hidden type="file" accept=".yaml,.yml,.json,.wod.yaml,.wod.json,application/yaml,application/x-yaml,text/yaml,application/json" onChange={event => void importFile(event.target.files?.[0])} />
@@ -257,10 +278,15 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     </ul>}
 
     <dialog ref={importDialog} className={shared.dialog} aria-labelledby="import-title"><div className={shared.dialogHeading}><h2 id="import-title">Preview your WOD</h2><button className={shared.iconButton} aria-label="Close import preview" onClick={() => importDialog.current?.close()}><Icon name="close" /></button></div>
-      {importError ? <p role="alert" className={shared.importError}>{importError}</p> : preview && <ImportPreview key={preview.name + preview.file.kind} file={preview.file} fileName={preview.name} entries={entries} difficulty={preferences.difficulty}
+      {importError ? <>
+        <p role="alert" className={shared.importError}>{importError}</p>
+        {pasted && <><p>Copy this message back to your assistant: it names the place in the file that breaks a rule, so the assistant can fix it.</p><div className={shared.dialogActions}><button className={shared.quietButton} onClick={() => { importDialog.current?.close(); setGuideOpen(true); }}>Back to the answer</button></div></>}
+      </> : preview && <ImportPreview key={preview.name + preview.file.kind} file={preview.file} fileName={preview.name} entries={entries} difficulty={preferences.difficulty}
         onOpenInEditor={preview.file.kind === 'workout' && workoutToBuilder(preview.file.workout) ? workout => { closeImport(); onImportDraft(workout, preview.name); } : undefined}
-        onConfirm={async (workouts, packCollections, decisions) => { await onImportPack(workouts, packCollections, decisions); closeImport(); }} onClose={closeImport} />}
+        onConfirm={async (workouts, packCollections, decisions) => { await onImportPack(workouts, packCollections, decisions, preview.file.kind === 'workout'); closeImport(); }} onClose={closeImport} />}
     </dialog>
+
+    <AuthoringGuideDialog open={guideOpen} catalogue={catalogue} equipment={guideEquipment} onClose={() => setGuideOpen(false)} onPreview={previewAnswer} />
 
     <ConfirmDialog open={Boolean(discarding)} title={`Discard “${discarding?.draft.title.trim() || 'Untitled workout'}”?`} confirmLabel="Discard draft" cancelLabel="Keep it" onClose={() => setDiscarding(undefined)} onConfirm={() => { if (discarding) onDiscardDraft(discarding.id); setDiscarding(undefined); }}><p>The draft is removed from this device. Saved workouts are not affected.</p></ConfirmDialog>
   </div>;

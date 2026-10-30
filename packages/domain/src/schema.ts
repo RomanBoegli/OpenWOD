@@ -89,6 +89,15 @@ export type WorkoutSection = Static<typeof SectionSchema>;
 export type SectionFormat = WorkoutSection['format'];
 export const SECTION_FORMATS: SectionFormat[] = ['timedCircuit', 'amrap', 'emom', 'forTime', 'youGoIGo', 'strength'];
 export const FORMAT_LABELS: Record<SectionFormat, string> = { timedCircuit: 'Timed circuit', amrap: 'AMRAP', emom: 'EMOM', forTime: 'For time', youGoIGo: 'You go, I go', strength: 'Strength' };
+/** One sentence per format, shown in the editor and in the authoring guide. */
+export const FORMAT_HELP: Record<SectionFormat, string> = {
+  timedCircuit: 'Movements with fixed seconds and explicit rests. The clock drives everything.',
+  amrap: 'One block of movements, repeated as many times as the cap allows. Athletes count rounds on the screen.',
+  emom: 'Work starts on every interval boundary. Done shows rest until the next one; the boundary never waits.',
+  forTime: 'Ordered movements, each ended by Done. The clock counts up, with an optional cap.',
+  youGoIGo: 'One athlete works through the unit while the other rests, then Switch. An A turn plus a B turn is one team round.',
+  strength: 'Sets at your own pace, each ended by Done, with a timed rest between sets. Loads can be levelled or a percentage of 1RM.',
+};
 
 export const SCHEMA_VERSION = 2;
 

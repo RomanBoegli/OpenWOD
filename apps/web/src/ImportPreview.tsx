@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FORMAT_LABELS } from '../../../packages/domain/src/schema';
 import type { Workout } from '../../../packages/domain/src/schema';
 import { summariseWorkout } from '../../../packages/domain/src/library';
+import { workoutToBuilder } from '../../../packages/domain/src/builder';
 import type { DifficultyCalibration } from '../../../packages/domain/src/difficulty';
 import type { PackCollection, SharedFile } from '../../../packages/domain/src/pack';
 import type { PackDecision } from './data/remote';
@@ -51,6 +52,8 @@ export function ImportPreview({ file, fileName, entries, difficulty, onOpenInEdi
   const summaries = useMemo(() => new Map(workouts.map(workout => [workout.id, summariseWorkout(workout, { difficulty })])), [workouts, difficulty]);
   const importing = rows.filter(row => row.decision.action !== 'skip').length;
   const single = file.kind === 'workout';
+  /** A single workout the editor can represent opens in it once saved. */
+  const editable = useMemo(() => file.kind === 'workout' && workoutToBuilder(file.workout) !== null, [file]);
   const setDecision = (id: string, decision: PackDecision) => setRows(current => current.map(row => row.workout.id === id ? { ...row, decision } : row));
   const confirm = async () => {
     setBusy(true); setError('');
@@ -86,8 +89,8 @@ export function ImportPreview({ file, fileName, entries, difficulty, onOpenInEdi
     {error && <p role="alert" className={shared.importError}>{error}</p>}
     <div className={shared.dialogActions}>
       <button type="button" className={shared.quietButton} onClick={onClose}>Cancel</button>
-      {single && onOpenInEditor && <button type="button" className={shared.quietButton} onClick={() => onOpenInEditor(workouts[0])}><Icon name="edit" size={15} />Open in editor</button>}
-      <button type="button" className={shared.primaryButton} disabled={busy || importing === 0} onClick={() => void confirm()}>{busy ? 'Importing…' : single ? 'Save to library' : `Import ${importing} ${importing === 1 ? 'workout' : 'workouts'}`}<Icon name="arrow" /></button>
+      {single && onOpenInEditor && <button type="button" className={shared.quietButton} onClick={() => onOpenInEditor(workouts[0])}><Icon name="edit" size={15} />Edit before saving</button>}
+      <button type="button" className={shared.primaryButton} disabled={busy || importing === 0} onClick={() => void confirm()}>{busy ? 'Importing…' : single ? editable ? 'Save and edit' : 'Save to library' : `Import ${importing} ${importing === 1 ? 'workout' : 'workouts'}`}<Icon name="arrow" /></button>
     </div>
   </div>;
 }

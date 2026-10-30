@@ -16,8 +16,8 @@ test.describe('static settings', () => {
 
     await page.goto('/');
     await page.locator('input[type=file]').setInputFiles(ownFile('Community circuit', 'community-circuit'));
-    await page.getByRole('button', { name: 'Save to library' }).click();
-    await expect(page).toHaveURL(/#\/wod\/community-circuit$/);
+    await page.getByRole('button', { name: 'Save and edit' }).click();
+    await expect(page).toHaveURL(/#\/wod\/community-circuit\/edit$/);
     await page.goto('/#/settings/general');
     await expect(fact(card, 'Saved workouts')).toHaveText('1');
     await expect(card).toContainText('(1 workout and 0 sessions now)');

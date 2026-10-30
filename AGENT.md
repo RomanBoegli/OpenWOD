@@ -504,6 +504,8 @@ SQLite remains the live datastore. JSON files are portable exchange documents; s
 
 **SHR-06** The repository SHALL publish the versioned exchange/domain JSON Schemas (which validate the parsed YAML document), readable format documentation, and valid single-workout/pack examples. YAML export SHALL use one canonical serialisation, with a fixed human-friendly key order, two-space indentation, no anchors or aliases, and no document markers, for reading and stable diffs, without volatile export timestamps; the same canonical form serves the optional snapshot hashing of section 6.2. Import SHALL accept older supported versions through explicit migrations, reject unknown newer versions, and identify unsupported workout capabilities in partial releases. Round-trip and cross-installation fixtures SHALL verify semantic equivalence of prescriptions, timing, attribution, and program references after ID remapping, by comparing a normalised representation of workout meaning with local IDs and local revision mapped out; import intentionally changes IDs, so byte equality of canonical YAML is not the test. Import SHALL reject YAML anchors/aliases and duplicate keys. Parsing and expansion SHALL enforce BLD-10/NFR-10 limits before writes; source URLs SHALL be treated as metadata and SHALL NOT be fetched automatically.
 
+**SHR-07** The library SHALL offer an authoring guide for AI assistants: one Markdown text, built in the browser from the format rules the running app enforces, its effective movement catalogue and equipment names, and complete example files that import as they stand. The guide SHALL be offered to copy and to download, next to the published workout-file JSON Schema. A pasted reply SHALL go through the same parsing, compilation and preview as an imported file, with the workout file picked out of surrounding prose and code fences, and a failed paste SHALL lead back to the reply. The app SHALL NOT contact any AI service itself (NFR-11).
+
 Example filename: `partner-circuit.wod.yaml`. Its workout payload is the complete fixture in section 6.4 in the human-duration form, wrapped with `format: "openwod.workout"` and `formatVersion: 3`; `workout.schemaVersion` versions the workout model independently of the exchange envelope. Program packs embed referenced workouts rather than depending on another installation's library. The public schemas SHALL specify required fields, optional metadata, ID remapping, and migration behaviour before the first sharing release.
 
 # 11 Architecture and interface boundaries
@@ -558,7 +560,7 @@ flowchart TD
 | Start/register session | Accept client-generated session ID and immutable snapshot; retry-safe. |
 | Append session events | Ordered per-session sequence and unique IDs; duplicate-safe. |
 | Finish/update result | Idempotent finalisation; corrections distinguished from first finish. |
-| Export/import | Single-workout and pack exchange under SHR-01–06; separate administrative application-data export; versioned schemas, preview/validation and transactional application. |
+| Export/import | Single-workout and pack exchange under SHR-01–07; separate administrative application-data export; versioned schemas, preview/validation and transactional application. |
 | Health/live | Process responsiveness. |
 | Health/ready | Database available, migrations complete, service ready. |
 
@@ -691,11 +693,12 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-27 | Export/import a program pack with two workouts sharing an exercise reference. All required movement definitions and program references resolve on a fresh installation; attribution/provenance survive re-export. Editing a derivative gives it a distinct sharing identity while recording its source. | SHR-02/05/06, LIB-02/03 |
 | AT-28 | Import malformed, oversized, unknown-version or unsupported-capability sharing files. Preview reports actionable failures and no records are written. Validate published examples against schemas and round-trip supported older fixtures through migrations. | SHR-04/06, BLD-10, NFR-10 |
 | AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 3:40 with a 0:20 rest between the rounds plus a 2:00 rest after it, WOD 38:40, session 48:40 excluding prep and Ready waits, every rest shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
+| AT-30 | Open the authoring guide in both shapes. It lists every section format with its settings, the movement and equipment names of this installation, and examples that import unchanged. Paste an invalid reply: the import error appears with a way back to the reply and nothing is written. Paste a valid reply wrapped in prose and a code fence: the preview shows the workout and Save and edit opens it in the editor. | SHR-04/07, NFR-11 |
 
 # 15 Where things stand
 
 Recorded 27 October 2026, plan version 1.17.
-All P0 requirements and the 29 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+All P0 requirements and the 30 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -722,6 +725,12 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The timer wash deepens once over the whole slot and morphs its colour at each mark (UI-13).
 - On a phone the movement name gets its own line, and the frame padding follows the ring width.
 - The bundled full-body partner workout now runs 48:40 and HYROX doubles is four blocks running 13:30, both without a rest after the last movement of a round.
+
+**After 1.4.0** (not released yet):
+
+- The library offers Create with AI: an authoring guide to copy into any AI assistant, the JSON Schema to download, and a box for the assistant's answer that opens the import preview (SHR-07).
+- Saving a single imported workout, from a file or a pasted answer, opens it in the editor. The preview's buttons read Save and edit and Edit before saving, and packs still open the workout's page or report what they imported.
+- The bundled Dumbbell full body 35 and six movement records it needed: dumbbell sumo squats, dumbbell pullovers, lateral raises, dumbbell sit-ups, dead bugs and bodyweight good mornings.
 
 **Schema and storage versions today.**
 
@@ -755,7 +764,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-06, MOD-06, NFR-15, SHR-07, UI-24 and AT-30.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-06, MOD-06, NFR-15, SHR-08, UI-24 and AT-31.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

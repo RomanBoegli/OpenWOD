@@ -122,6 +122,11 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(sort(value), null, 2) + '\n';
 }
 
+/** A schema as published under schemas/: draft-07, canonical JSON. The app offers the file schema for download too. */
+export function publishedSchema(schema: object): string {
+  return canonicalJson({ $schema: 'http://json-schema.org/draft-07/schema#', ...schema });
+}
+
 export function toWorkoutFile(workout: Workout): Record<string, unknown> {
   return { format: FILE_FORMAT, formatVersion: FILE_VERSION, workout: toFileDurations(structuredClone(workout)) };
 }

@@ -17,7 +17,7 @@ import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } fro
 import { copyDraftId, copySource, freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
 import { allCollections, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
-import { draftHref, LOGBOOK_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
+import { draftHref, editHref, LOGBOOK_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
 import { Icon } from './Icon';
 import { BrandMark } from './BrandMark';
@@ -76,12 +76,12 @@ export default function App() {
   const bundledEntries = useMemo(() => bundledWorkouts.filter(workout => !hiddenWorkouts.has(workout.id) && !saved.some(item => item.id === workout.id)).map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions, hiddenWorkouts, saved]);
   const savedEntries = useMemo(() => saved.filter(item => !hiddenWorkouts.has(item.id)).map(item => ({ ...toEntry(item.document, 'saved', summaryOptions(item.id)), pending: data.pendingIds.has(item.id), origin: item.origin, ...(BUNDLED_IDS.has(item.id) ? { bundled: true } : {}) })), [saved, summaryOptions, data.pendingIds, hiddenWorkouts]);
   const entries = useMemo<LibraryEntry[]>(() => [...bundledEntries, ...savedEntries], [bundledEntries, savedEntries]);
-  /** Applies an import preview's decisions on the server; a single imported workout opens its overview. */
-  const importPack = useCallback(async (workouts: Workout[], packCollections: PackCollection[], decisions: Record<string, PackDecision>) => {
+  /** Applies an import preview's decisions; a single imported workout opens its overview, or the editor for a workout file the editor can represent. */
+  const importPack = useCallback(async (workouts: Workout[], packCollections: PackCollection[], decisions: Record<string, PackDecision>, openEditor = false) => {
     const report = await data.importPack(workouts, packCollections, decisions);
     const summary = [report.created.length ? `${report.created.length} imported` : '', report.replaced.length ? `${report.replaced.length} replaced` : '', report.skipped ? `${report.skipped} skipped` : '', report.collections ? `${report.collections} ${report.collections === 1 ? 'collection' : 'collections'} created` : ''].filter(Boolean).join(', ');
     setStorageError('');
-    if (workouts.length === 1 && (report.created[0] || report.replaced[0])) { window.location.hash = workoutHref(report.created[0]?.to ?? report.replaced[0]); return; }
+    if (workouts.length === 1 && (report.created[0] || report.replaced[0])) { const id = report.created[0]?.to ?? report.replaced[0]; window.location.hash = openEditor && workoutToBuilder(workouts[0]) ? editHref(id) : workoutHref(id); return; }
     setImportReport(summary ? `Import done: ${summary}.` : 'Nothing was imported.');
   }, [data]);
   const [importReport, setImportReport] = useState('');
@@ -237,7 +237,7 @@ export default function App() {
         : route.name === 'notFound' ? <NotFound />
         : route.name !== 'library' && !data.loaded ? <p className={styles.headerNote}>Loading the library…</p>
         : route.name !== 'library' ? <NotFound missingId={'id' in route ? route.id : undefined} />
-        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
+        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} catalogue={catalogue} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
       <ConfirmDialog open={Boolean(exportRequest)} title={`Export “${exportRequest?.title ?? ''}” as a pack?`} confirmLabel={`Export ${exportRequest?.workouts.length ?? 0} ${exportRequest?.workouts.length === 1 ? 'workout' : 'workouts'}`} cancelLabel="Cancel" onClose={() => setExportRequest(undefined)} onConfirm={() => void confirmPackExport()}>
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>

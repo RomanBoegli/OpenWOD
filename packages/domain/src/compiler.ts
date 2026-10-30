@@ -1,4 +1,4 @@
-import { parseWorkout, WorkoutValidationError, type Prescription, type SectionFormat, type Workout, type WorkoutNode, type WorkoutSection } from './index';
+import { FORMAT_LABELS, parseWorkout, WorkoutValidationError, type Prescription, type SectionFormat, type Workout, type WorkoutNode, type WorkoutSection } from './index';
 
 export interface RoundContext { nodeId: string; iteration: number; count: number }
 export type Phase = 'work' | 'transition' | 'roundRest' | 'blockRest';
@@ -53,9 +53,12 @@ export interface CompiledSection {
 }
 export interface ExecutionPlan { workout: Workout; occurrences: Occurrence[]; sections: CompiledSection[]; durationMs: number; durationKind: DurationKind }
 
-const MAX_OCCURRENCES = 10_000;
-const MAX_MS = 86_400_000;
-const MAX_BLOCK_TASKS = 50;
+export const MAX_OCCURRENCES = 10_000;
+export const MAX_MS = 86_400_000;
+export const MAX_BLOCK_TASKS = 50;
+export const MAX_REPEAT_DEPTH = 2;
+/** The settings each format may carry; the authoring guide prints the same table. */
+export const FORMAT_SETTINGS: Record<SectionFormat, (keyof WorkoutSection)[]> = { timedCircuit: [], amrap: ['capMs', 'counter'], emom: ['intervalMs', 'intervals'], forTime: ['capMs'], youGoIGo: ['capMs', 'rounds', 'turnMs'], strength: [] };
 
 export function compileWorkout(input: unknown): ExecutionPlan {
   const workout = parseWorkout(input);
@@ -71,7 +74,7 @@ export function compileWorkout(input: unknown): ExecutionPlan {
     const listOnly = section.format === 'amrap' || section.format === 'emom' || section.format === 'youGoIGo';
     if (node.type === 'repeat') {
       if (listOnly) fail(node.id, `${label(section.format)} blocks list manual tasks; repeats are not supported inside them.`);
-      if (depth >= 2) fail(node.id, 'Use at most two nested repeat levels.');
+      if (depth >= MAX_REPEAT_DEPTH) fail(node.id, 'Use at most two nested repeat levels.');
       if (node.assignmentPolicy === 'alternate' && !pair) fail(node.id, 'Alternating assignments requires two athletes.');
       inspect(node.body, depth + 1, section);
     } else if (node.type === 'sequence') {
@@ -96,8 +99,7 @@ export function compileWorkout(input: unknown): ExecutionPlan {
   for (const section of workout.sections) {
     claim(section.id);
     if ((section.format === 'amrap' || section.format === 'emom' || section.format === 'youGoIGo') && section.body.type !== 'task' && section.body.type !== 'sequence') fail(section.id, `${label(section.format)} blocks take one task or a list of tasks.`);
-    const allowed: Record<SectionFormat, (keyof WorkoutSection)[]> = { timedCircuit: [], amrap: ['capMs', 'counter'], emom: ['intervalMs', 'intervals'], forTime: ['capMs'], youGoIGo: ['capMs', 'rounds', 'turnMs'], strength: [] };
-    for (const key of ['capMs', 'intervalMs', 'intervals', 'counter', 'rounds', 'turnMs'] as const) if (section[key] !== undefined && !allowed[section.format].includes(key)) fail(section.id, `${label(section.format)} blocks do not use ${key.replace(/Ms$/, '')}.`);
+    for (const key of ['capMs', 'intervalMs', 'intervals', 'counter', 'rounds', 'turnMs'] as const) if (section[key] !== undefined && !FORMAT_SETTINGS[section.format].includes(key)) fail(section.id, `${label(section.format)} blocks do not use ${key.replace(/Ms$/, '')}.`);
     if (section.format === 'amrap' && !section.capMs) fail(section.id, 'AMRAP blocks need a cap.');
     if (section.format === 'emom' && (!section.intervalMs || !section.intervals)) fail(section.id, 'EMOM blocks need an interval length and a number of intervals.');
     if (section.format === 'youGoIGo') {
@@ -219,4 +221,4 @@ export function compileWorkout(input: unknown): ExecutionPlan {
   return { workout, occurrences, sections, durationMs: elapsed, durationKind };
 }
 
-const label = (format: SectionFormat) => ({ timedCircuit: 'Timed circuit', amrap: 'AMRAP', emom: 'EMOM', forTime: 'For time', youGoIGo: 'You go, I go', strength: 'Strength' })[format];
+const label = (format: SectionFormat) => FORMAT_LABELS[format];

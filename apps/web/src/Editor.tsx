@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { builderToWorkout, emptySection, emptySlot, LIST_FORMATS, MANUAL_FORMATS, validateDraft, type BuilderDraft, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
 import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src/compiler';
 import { rateDifficulty, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
-import { FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat, type Workout } from '../../../packages/domain/src/schema';
+import { FORMAT_HELP, FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat, type Workout } from '../../../packages/domain/src/schema';
 import type { SaveResult } from './data/use-library-data';
 import { workoutHref } from './router';
 import { displayTime } from '../../../packages/engine/src';
@@ -81,15 +81,6 @@ interface EditorProps {
   onSave: (draft: BuilderDraft, overwriteRevision?: number) => Promise<SaveResult>;
   onDiscard: () => void;
 }
-
-const FORMAT_HELP: Record<SectionFormat, string> = {
-  timedCircuit: 'Movements with fixed seconds and explicit rests. The clock drives everything.',
-  amrap: 'One block of movements, repeated as many times as the cap allows. Athletes count rounds on the screen.',
-  emom: 'Work starts on every interval boundary. Done shows rest until the next one; the boundary never waits.',
-  forTime: 'Ordered movements, each ended by Done. The clock counts up, with an optional cap.',
-  youGoIGo: 'One athlete works through the unit while the other rests, then Switch. An A turn plus a B turn is one team round.',
-  strength: 'Sets at your own pace, each ended by Done, with a timed rest between sets. Loads can be levelled or a percentage of 1RM.',
-};
 
 const lanesOf = (draft: BuilderDraft) => draft.sections.flatMap(section => section.slots.flatMap(slot => [slot.A, slot.B])).filter((lane): lane is Prescription => Boolean(lane?.name.trim()));
 const derivedEquipment = (lanes: Prescription[], catalogue: Catalogue) => [...lanes.flatMap(lane => catalogue.equipmentOf(lane)), ...inferEquipment(lanes.filter(lane => !catalogue.resolve(lane)).map(lane => lane.name))];

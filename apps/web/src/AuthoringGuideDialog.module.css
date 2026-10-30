@@ -1,0 +1,10 @@
+.step { display: grid; gap: 10px; padding: 18px 0; border-top: 1px solid var(--line); }
+.step h3 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+.step p { margin: 0; }
+.stepNumber { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); border: 1px solid var(--accent-border); font-size: 13px; font-weight: 700; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.status { font-size: 12px; color: var(--ink-3); }
+.details summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.guide { margin: 10px 0 0; max-height: 40vh; overflow: auto; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); color: var(--ink); font: 12px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.answer textarea { width: 100%; min-width: 0; min-height: 160px; resize: vertical; padding: 11px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font: 12px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+.step .answer { margin-bottom: 0; }

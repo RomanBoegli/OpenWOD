@@ -52,10 +52,11 @@ Pick a session from the library, press Start, and put the phone down.
 
 - [x] Proper **CrossFit and HYROX timers** with voice cues and beeps for work, rest and the countdown
 - [x] Train **alone or with a partner**, with the timer telling each of you who is up
-- [x] **53 ready-made workouts**, from Fran and Murph to HYROX sessions and partner circuits, each with a **difficulty rating**
+- [x] **54 ready-made workouts**, from Fran and Murph to HYROX sessions and partner circuits, each with a **difficulty rating**
 - [x] **Scaled loads** for every weighted movement: light, medium and heavy, with women's weights alongside
 - [x] **Find a workout** that fits the time you have, the gear you own and how hard you want to go
 - [x] **Write your own workouts** or share them with friends as a single file
+- [x] **Let your AI assistant write one**: copy the guide into ChatGPT, Claude or any other assistant, describe the workout and paste its answer back
 - [x] See **what you trained** and when, and repeat a session with one tap
 - [x] **Make it yours**: pick one of five offline voices, show weights in kg or lb, tune the difficulty scale to your fitness, and choose your theme and accent colour
 - [x] Open it in the browser or add it to your **phone's home screen**, no install needed
@@ -190,6 +191,7 @@ workout:
 ```
 
 Workouts are imported and exported in the library, one file at a time or as a `.wods.yaml` pack with collections.
+Create with AI in the library hands you a guide to this format for any AI assistant, and takes the assistant's answer back into the import preview.
 A sharing identity in each file lets an installation recognise a reimport and offer a newer revision as a replacement.
 The complete format is specified in [docs/formats.md](docs/formats.md) and published as JSON Schemas under [schemas/](schemas/).
 The bundled workouts, their sources and the load convention are documented in [workouts/README.md](workouts/README.md).

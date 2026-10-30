@@ -121,6 +121,16 @@ Ids inside a pack are local to the file and are remapped on import.
 Up to 200 workouts and 4 MB per pack.
 The import preview shows every workout with its attribution and a state from its provenance (new, already in the library, newer revision), and applies the decisions in one transaction.
 
+## Writing a workout with an AI assistant
+
+Create with AI on the library page gives you a guide to paste into any AI assistant.
+The browser builds it from the rules this app enforces, your movement catalogue and your equipment names, and it ends with two example files that import as they stand.
+Describe the workout you want after the guide, then paste the assistant's whole answer back into the same dialog.
+OpenWOD picks the workout file out of the prose and code fences around it and opens the usual import preview, so nothing is saved before you confirm.
+If the file breaks a rule, the preview shows the error lines, which the assistant can fix when you paste them back.
+The dialog also downloads the guide as Markdown and the file schema (`workout-file.v3.schema.json`) for tools that take a JSON Schema.
+OpenWOD never contacts the assistant itself.
+
 ## Examples and schemas
 
 `workouts/` holds every bundled workout as a file, one folder per collection, and is the best set of examples. `schemas/workout.v2.schema.json`, `schemas/workout-file.v3.schema.json` and `schemas/workout-pack.v1.schema.json` validate the model, the parsed file and the parsed pack.

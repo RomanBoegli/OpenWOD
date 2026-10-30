@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type IconName = 'github' | 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'sectionNext' | 'sectionPrevious' | 'rewind' | 'fastForward' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'edit' | 'copy' | 'dice' | 'filter';
+export type IconName = 'github' | 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'sectionNext' | 'sectionPrevious' | 'rewind' | 'fastForward' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'spark' | 'edit' | 'copy' | 'dice' | 'filter';
 
 const paths: Record<IconName, ReactNode> = {
   play: <path d="m9 5 11 7-11 7z" />,
@@ -41,6 +41,7 @@ const paths: Record<IconName, ReactNode> = {
   flag: <path d="M5 21V4h12l-2 4 2 4H5" />,
   skip: <path d="m5 5 9 7-9 7zM17 5v14" />,
   alert: <><path d="M12 3 2 20h20zM12 10v4" /><circle cx="12" cy="17" r=".6" /></>,
+  spark: <path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" />,
 };
 
 /** `label` sets a short figure inside the glyph, as in the skip arrows of a video player. */

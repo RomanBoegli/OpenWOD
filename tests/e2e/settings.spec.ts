@@ -92,7 +92,7 @@ test.describe('movements and search', () => {
     const file = { name: 'odd.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile({ ...partnerCircuit, id: 'odd-circuit', title: 'Odd circuit', sections: partnerCircuit.sections.map((section, index) => index === 0 ? JSON.parse(JSON.stringify(section).replace('"name":"Row"', '"name":"Pogo hops"')) : section) })) };
     await page.goto('/');
     await page.locator('input[type=file]').setInputFiles(file);
-    await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Open in editor' }).click();
+    await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Edit before saving' }).click();
     await expect(page).toHaveURL(/#\/draft\/import-odd-circuit$/);
     const unknown = page.getByRole('status', { name: 'Movements not in your catalogue' });
     await expect(unknown).toContainText('Pogo hops');

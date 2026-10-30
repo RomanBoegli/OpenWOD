@@ -23,9 +23,11 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long', 'short'] }));
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await chip('Equipment', 'Exercise mat').click();
-    await expect(list.getByRole('listitem')).toHaveCount(1);
-    await chip('Athletes', 'Solo').click();
-    await expect(page.getByText('Nothing matches yet')).toBeVisible();
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'] }));
+    await chip('Athletes', 'Solo').click(); // Groups narrow each other: the partner workout drops out.
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'], participants: 1 }));
+    await expect(list).toContainText('Dumbbell full body 35');
+    await expect(list).not.toContainText('Full body partner workout');
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await chip('Difficulty', 'Light').click();
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ difficulty: [1] }));
@@ -48,7 +50,7 @@ test.describe('library', () => {
 
   test('imports into the editor as an unsaved draft, saves it to a device library that survives reload, then removes it', async ({ page }) => {
     await page.locator('input[type=file]').setInputFiles(communityFile());
-    await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Open in editor' }).click();
+    await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Edit before saving' }).click();
     await expect(page).toHaveURL(/#\/draft\/import-community-circuit$/);
     await expect(page.getByRole('main')).toContainText('Read from community.wod.yaml');
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Community circuit');
@@ -86,6 +88,28 @@ test.describe('library', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found');
     await page.getByRole('main').getByRole('link', { name: 'Back to the library' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pick your next session');
+  });
+
+  test('writes a workout with an AI assistant: the guide to copy, a pasted answer to preview and save (SHR-07)', async ({ page }) => {
+    await page.getByRole('button', { name: 'Create with AI' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create a WOD with AI' });
+    await dialog.getByText('Show the guide').click();
+    await expect(dialog.getByLabel('Authoring guide')).toContainText('format: openwod.workout');
+    await expect(dialog.getByLabel('Authoring guide')).toContainText('Dumbbell sumo squats');
+    await dialog.getByRole('button', { name: 'Copy guide' }).click();
+    await expect(dialog.getByRole('status')).toHaveText(/Copied|blocked copying/);
+    await dialog.getByLabel('Assistant’s answer').fill('```yaml\nformat: openwod.workout\nformatVersion: 3\nworkout: {}\n```');
+    await dialog.getByRole('button', { name: 'Preview' }).click();
+    const preview = page.getByRole('dialog', { name: 'Preview your WOD' });
+    await expect(preview.getByRole('alert')).toContainText('/workout: must have required property');
+    await preview.getByRole('button', { name: 'Back to the answer' }).click();
+    const file = serialiseWorkoutFile({ ...partnerCircuit, id: 'assistant-circuit', title: 'Assistant circuit', sharing: undefined });
+    await dialog.getByLabel('Assistant’s answer').fill(`Assumed twenty seconds of rest between stations.\n\n\`\`\`yaml\n${file}\`\`\``);
+    await dialog.getByRole('button', { name: 'Preview' }).click();
+    await expect(preview).toContainText('Assistant circuit');
+    await preview.getByRole('button', { name: 'Save and edit' }).click();
+    await expect(page).toHaveURL(/#\/wod\/assistant-circuit\/edit$/);
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Assistant circuit');
   });
 
   test('rejects invalid, newer and pre-release files without touching the library', async ({ page }) => {

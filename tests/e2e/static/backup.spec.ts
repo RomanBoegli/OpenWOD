@@ -6,8 +6,8 @@ test.describe('static backup', () => {
   test('Download backup writes the library as JSON, and a fresh browser restores it after a confirmation', async ({ page, browser }, testInfo) => {
     await page.goto('/');
     await page.locator('input[type=file]').setInputFiles(ownFile('Community circuit', 'community-circuit'));
-    await page.getByRole('button', { name: 'Save to library' }).click();
-    await expect(page).toHaveURL(/#\/wod\/community-circuit$/);
+    await page.getByRole('button', { name: 'Save and edit' }).click();
+    await expect(page).toHaveURL(/#\/wod\/community-circuit\/edit$/);
     await page.goto('/#/settings/general');
     const card = page.getByRole('region', { name: 'This browser' });
     const download = page.waitForEvent('download');
