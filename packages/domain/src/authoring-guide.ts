@@ -81,7 +81,7 @@ ${yaml(`format: ${FILE_FORMAT}\nformatVersion: ${FILE_VERSION}\nworkout:\n  sche
 | \`schemaVersion\` | yes | Always \`${SCHEMA_VERSION}\`. |
 | \`id\` | yes | Lower-case words joined by hyphens, such as \`upper-body-emom-20\`. Letters, digits and \`_ . : -\`, at most 120 characters. |
 | \`revision\` | yes | \`1\`. |
-| \`title\` | yes | Short, it is shown big. At most 160 characters. |
+| \`title\` | yes | Short, it is shown big, in Title Case when it is in English. At most 160 characters. |
 | \`description\` | no | What the session is, standards and scaling. At most 2000 characters. |
 | \`attribution\` | no | \`author\`, \`sourceUrl\` (starting with https://), \`licence\`, \`notes\`. Set \`author\` and \`sourceUrl\` when the workout comes from a known source. |
 | \`equipment\` | yes | What the workout needs, from the equipment names below, or \`[]\` for bodyweight only. At most 30. |
@@ -172,7 +172,7 @@ With \`participants: 2\`:
 
 ## Movement names
 
-Use these names exactly where one fits, plural as written. A movement that is not listed is allowed: give it a clear plural English name and the app marks it as new.
+Use these names exactly where one fits, plural as written. A movement that is not listed is allowed: give it a clear plural English name in Title Case and the app marks it as new.
 
 ${movementNames(movements)}
 

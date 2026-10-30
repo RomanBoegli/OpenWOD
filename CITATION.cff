@@ -8,7 +8,7 @@ authors:
 repository-code: https://github.com/RomanBoegli/OpenWOD
 url: https://github.com/RomanBoegli/OpenWOD
 license: GPL-3.0
-version: 1.5.1
+version: 1.5.2
 date-released: "2026-10-30"
 keywords:
   - workout timer

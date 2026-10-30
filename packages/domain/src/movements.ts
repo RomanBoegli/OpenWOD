@@ -159,7 +159,7 @@ export const seedMovements: Movement[] = [
   // Dips (umbrella head)
   { id: 'dip', name: 'Dips', category: 'gymnastics' },
   { id: 'ring-dip', name: 'Ring Dips', family: 'dip', equipment: ['Rings'], category: 'gymnastics' },
-  { id: 'triceps-dip', name: 'Triceps Dips', aliases: ['Bench Dips', 'Box Dips'], family: 'dip', equipment: ['Bench'], category: 'strength' },
+  { id: 'triceps-dip', name: 'Triceps Dips', aliases: ['Bench Dips', 'Box Dips', 'Chair Dips'], family: 'dip', category: 'strength', notes: 'On a bench, box, chair or sofa edge' },
   { id: 'strict-ring-dip', name: 'Strict Ring Dips', family: 'dip', equipment: ['Rings'], category: 'gymnastics' },
   { id: 'ring-support-hold', name: 'Ring Support Hold', aliases: ['Ring Support'], family: 'dip', equipment: ['Rings'], category: 'gymnastics' },
 

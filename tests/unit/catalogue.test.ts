@@ -8,6 +8,18 @@ const catalogue = new Catalogue(seedMovements);
 
 const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes', 'GHD', 'Battle rope', 'Tyre', 'Yoke'];
 
+// Title Case: every word capitalised except short articles, conjunctions and prepositions inside a name, inside hyphenated
+// compounds too ("Toes-to-Bar"). Acronyms and brands (DB, AbMat) pass as written, numbers and units after them or in brackets ("(cal)") too.
+const MINOR = new Set(['a', 'an', 'the', 'and', 'or', 'nor', 'but', 'to', 'of', 'on', 'in', 'at', 'by', 'per', 'vs', 'via', 'as', 'for']);
+function isTitleCase(text: string): boolean {
+  const words = text.split(' ');
+  return words.every((word, index) => word.split('-').every((part, i) => {
+    const bare = part.replace(/^[^A-Za-z0-9]+/, '').replace(/[^A-Za-z0-9]+$/, '');
+    const inside = !(index === 0 && i === 0) && !(index === words.length - 1 && i === word.split('-').length - 1);
+    return !bare || /^[A-Z0-9]/.test(bare) || (inside && MINOR.has(bare)) || part.startsWith('(') || (i === 0 && /\d$/.test(words[index - 1] ?? ''));
+  }));
+}
+
 function fixtureNames(): string[] {
   const names = new Set<string>();
   const walk = (node: WorkoutNode) => {
@@ -30,6 +42,43 @@ describe('seed movement catalogue', () => {
     for (const record of seedMovements) for (const alias of record.aliases ?? []) {
       const owner = byNameKey.get(movementKey(alias));
       expect(owner === undefined || owner === record.id, `alias "${alias}" of ${record.id} equals the name of ${owner}`).toBe(true);
+    }
+  });
+
+  it('keeps aliases useful: none repeats a name of its record, none belongs to two records, and every short name resolves', () => {
+    const owners = new Map<string, string>();
+    for (const record of seedMovements) {
+      const keys = [movementKey(record.name)];
+      for (const alias of record.aliases ?? []) {
+        const key = movementKey(alias);
+        expect(keys, `alias "${alias}" of ${record.id} only repeats another of its names`).not.toContain(key);
+        keys.push(key);
+        const owner = owners.get(key);
+        expect(owner === undefined || owner === record.id, `alias "${alias}" belongs to ${owner} and ${record.id}`).toBe(true);
+        owners.set(key, record.id);
+      }
+      if (record.shortName) expect(catalogue.byName(record.shortName)?.id, `short name "${record.shortName}" of ${record.id}`).toBe(record.id);
+    }
+  });
+
+  it('writes movement names and workout titles in Title Case', () => {
+    const offending = (text: string) => !isTitleCase(text);
+    const names = seedMovements.flatMap(record => [record.name, record.shortName ?? '', ...(record.aliases ?? [])]).filter(Boolean);
+    expect(names.filter(offending)).toEqual([]);
+    expect(fixtureNames().filter(offending)).toEqual([]);
+    expect(bundledWorkouts.map(workout => workout.title).filter(offending)).toEqual([]);
+  });
+
+  it('lists in every bundled workout the equipment its movements need', () => {
+    for (const workout of bundledWorkouts) {
+      const needed = new Set<string>();
+      const walk = (node: WorkoutNode) => {
+        if (node.type === 'timed' || node.type === 'task') { for (const prescription of [node.assignments.A, node.assignments.B]) if (prescription) for (const item of catalogue.byName(prescription.name)?.equipment ?? []) needed.add(item); }
+        else if (node.type === 'sequence') node.children.forEach(walk);
+        else if (node.type === 'repeat') walk(node.body);
+      };
+      for (const section of workout.sections) walk(section.body);
+      expect([...needed].filter(item => !workout.equipment.includes(item)), workout.id).toEqual([]);
     }
   });
 

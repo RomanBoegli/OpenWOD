@@ -720,21 +720,16 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.3.1: the session layout on tablets and short screens (UI-20).
 - 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version under the wordmark (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13), with the SQLite migration 3 and IndexedDB version 3.
 - 1.5.0: the tag exists but its workflow stopped in the production smoke test before an image was pushed, because the test still pressed Save to library. 1.5.1 publishes its changes.
-- 1.5.1, prepared: the changes below, with no database or browser-storage migration. Notes in `docs/releases/v1.5.1.md`.
+- 1.5.1: everything of 1.5.0, that is Create with AI (SHR-07), authors as master data (LIB-06), the round donut and block cards (UI-24) and cues that say the written name (AUD-10), plus 66 more movements and the usual shorthand, with no database or browser-storage migration.
+- 1.5.2, prepared: the changes below, with no database or browser-storage migration. Notes in `docs/releases/v1.5.2.md`.
 
-**In 1.5.1** (since `v1.4.0`, through the unpublished 1.5.0):
+**In 1.5.2** (since `v1.5.1`):
 
-- The library offers Create with AI: an authoring guide to copy into any AI assistant, the JSON Schema to download, and a box for the assistant's answer that opens the import preview (SHR-07).
-- Saving a single imported workout, from a file or a pasted answer, opens it in the editor. The preview's buttons read Save and edit and Edit before saving, and packs still open the workout's page or report what they imported.
-- Authors are master data under Settings → Authors, with New, Rename, Merge, Delete and Restore. They are part of the library search, get an Author filter and are suggested in the editor (LIB-06). The 22 advanced workouts name "Coach programming" as their author.
-- The import preview is wider, shows each workout's state as a badge, and dialog buttons keep their labels on one line.
-- The training view gets a round donut beside the clock, opposite the percentage, with a dot per round below it, a progress bar split by block, "MOVEMENT n / m" over the stations, a larger state label, a card at each block start and a done card while a block waits for Ready. A new movement slides in as the previous one slides out, and the context view keeps the movement under way centred behind a Stick to movement switch, which it failed to do on phones (UI-24). The filler line "Your pace. Keep moving." is gone.
-- Master data from an older server or device cache, without the author fields, no longer stops the app with "OpenWOD hit an error": every received document is sanitised first.
-- The library heading's actions take a row of their own before the heading gets squeezed.
-- Names written as an alias are announced as written: the recorded clip of a record plays only for its own name, and the packs record the four alias names the bundled workouts use (AUD-10).
-- The bundled Dumbbell full body 35, and a movement catalogue of 259 records instead of 193: common CrossFit and HYROX movements such as clusters, hang squat snatches, clean and snatch pulls, GHD hip and back extensions, strict toes-to-bar, toes-to-rings, strict ring dips, triple-unders, lateral box jumps, bear crawls, battle ropes, tyre flips, yoke carry, wall sits, hip thrusts, flutter kicks and PVC pass-throughs, each with a recorded name in every voice pack.
-- Common shorthand resolves to its movement: PC, PS, HPC, HPS, SC, FS, BS, PP, PJ, SJ, BBJ, Cal row, C2 row, Assault, Echo and Treadmill run.
-- GHD, Battle rope, Tyre and Yoke join the canonical equipment names, and GHD sit-ups now need a GHD.
+- Workout titles and movement names are in Title Case, in the 54 bundled workouts and the catalogue's names, short names and aliases. Block titles, notes and descriptions stay in sentence case, and the authoring guide asks for Title Case too.
+- The catalogue drops 99 aliases that only repeated a name in another case, plural or punctuation, lists every short name as an alias so it resolves, and has 260 records with Dumbbell Overhead Sit-Ups. A test keeps aliases, short names and the bundled workouts' equipment consistent.
+- Dumbbell Full Body 35 becomes Dumbbell Full Body Crunch: a warm-up that runs into a 1:00 rest, 7:00 caps throughout, rests between movements and rounds, front rack lunges instead of sumo squats, overhead sit-ups, and notes on how each dumbbell is held.
+- Triceps Dips need no equipment: a bench, box, chair or sofa edge will do, and Chair Dips resolve to them.
+- The server lets browsers keep the favicon and the home-screen icons (`no-cache` instead of `no-store`), so Firefox shows the icon on a bookmark of the household page.
 
 **Schema and storage versions today.**
 
@@ -763,6 +758,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Local browser tests run with `--project=firefox --project=webkit`, since headless Chromium fails locally while CI uses Chromium. Temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 - Timing is verified under the injected clock and by the production smoke, and the real-duration 60-minute run is no release gate.
 - Bundled workouts stay at revision 1. They wait for Ready unless they prescribe a rest or a straight continuation, and never have both a rest and a Ready gate (`workouts/README.md`).
+- Workout titles and movement names are in Title Case, block titles, notes and descriptions in sentence case.
 - The interface says "block" and "movement", while the code, the API and the files keep `section` and `slot`.
 - Collections and programs (LIB-03) are one concept named Collections, with one collection per workout.
 - Movement records carry no loads, and loads live on the prescriptions.
