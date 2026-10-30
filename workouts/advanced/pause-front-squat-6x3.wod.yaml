@@ -7,8 +7,8 @@ workout:
   title: Pause front squat 6 × 3
   description: Six sets of three front squats with a one- to two-second pause in the bottom, starting around sixty-five percent and building only while the position stays strong. Heavy but clean. Tap Done after each set; ninety seconds of rest are timed, and the program allows up to two minutes.
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Barbell
     - Squat rack

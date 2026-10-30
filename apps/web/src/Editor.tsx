@@ -13,6 +13,7 @@ import { MovementPicker } from './MovementPicker';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
+import { NamePicker } from './NamePicker';
 import { Chip } from './Chip';
 import { LEVEL_LABELS, LEVEL_LETTERS } from './LevelChip';
 import styles from './Editor.module.css';
@@ -74,6 +75,9 @@ interface EditorProps {
   /** The device's difficulty calibration for the live summary. */
   difficulty: DifficultyCalibration;
   onAddMovement: (record: Movement) => void;
+  /** Authors to suggest (master data), and the spelling an author takes after merges. */
+  authors: string[];
+  authorSpelling: (name: string) => string;
   savedAt?: string;
   onAutosave: (draft: BuilderDraft) => void;
   /** The saved workout's id when replacing, for the conflict dialog's link to the newer version. */
@@ -85,11 +89,12 @@ interface EditorProps {
 const lanesOf = (draft: BuilderDraft) => draft.sections.flatMap(section => section.slots.flatMap(slot => [slot.A, slot.B])).filter((lane): lane is Prescription => Boolean(lane?.name.trim()));
 const derivedEquipment = (lanes: Prescription[], catalogue: Catalogue) => [...lanes.flatMap(lane => catalogue.equipmentOf(lane)), ...inferEquipment(lanes.filter(lane => !catalogue.resolve(lane)).map(lane => lane.name))];
 
-export function Editor({ mode, workoutId, initial, importedFrom, catalogue, difficulty: calibration, onAddMovement, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
+export function Editor({ mode, workoutId, initial, importedFrom, catalogue, difficulty: calibration, onAddMovement, authors, authorSpelling, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState<{ revision: number; document?: Workout }>();
   const save = async (overwrite?: number) => { setSaving(true); try { const result = await onSave(effective, overwrite); if (typeof result === 'object') setConflict(result.conflict); else setConflict(undefined); } finally { setSaving(false); } };
-  const [draft, setDraft] = useState(initial);
+  // A merged author opens in its kept spelling, so saving the workout stores that one.
+  const [draft, setDraft] = useState(() => initial.attribution?.author ? { ...initial, attribution: { ...initial.attribution, author: authorSpelling(initial.attribution.author) } } : initial);
   const [dirty, setDirty] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const first = useRef(true);
@@ -202,14 +207,14 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
       <div className={styles.form}>
         <section className={styles.card} aria-label="Workout details">
           <label className={styles.field}>Title<input value={draft.title} maxLength={160} onChange={event => update({ title: event.target.value })} aria-invalid={issueFor('title') ? true : undefined} /></label>
+          <label className={styles.field}>Author<NamePicker label="Author" value={draft.attribution?.author ?? ''} options={authors} placeholder="Who wrote or published it" onChange={author => update({ attribution: { ...draft.attribution, author } })} /></label>
           <label className={styles.field}>Description<textarea rows={2} maxLength={2000} value={draft.description} onChange={event => update({ description: event.target.value })} /></label>
           <div className={styles.row}>
             <fieldset className={styles.choice}><legend>Athletes</legend><div className={styles.choiceBox}>{([1, 2] as const).map(count => <label key={count} data-checked={draft.participants === count}><input type="radio" name="participants" checked={draft.participants === count} onChange={() => setParticipants(count)} /><Icon name={count === 2 ? 'users' : 'user'} size={15} />{count === 2 ? 'Pair' : 'Solo'}</label>)}</div></fieldset>
             <DurationField label="Prep countdown" value={draft.prepMs} onChange={prepMs => update({ prepMs })} />
           </div>
-          <details className={styles.details}><summary>Source and attribution</summary>
+          <details className={styles.details}><summary>Source and licence</summary>
             <div className={styles.row}>
-              <label className={styles.field}>Author<input value={draft.attribution?.author ?? ''} maxLength={160} onChange={event => update({ attribution: { ...draft.attribution, author: event.target.value } })} /></label>
               <label className={styles.field}>Source URL<input type="url" value={draft.attribution?.sourceUrl ?? ''} maxLength={500} placeholder="https://" onChange={event => update({ attribution: { ...draft.attribution, sourceUrl: event.target.value } })} /></label>
               <label className={styles.field}>Licence<input value={draft.attribution?.licence ?? ''} maxLength={300} onChange={event => update({ attribution: { ...draft.attribution, licence: event.target.value } })} /></label>
             </div>

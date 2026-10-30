@@ -7,8 +7,8 @@ workout:
   title: Triple AMRAP 4
   description: "Three four-minute sprints: row, double dumbbell clean and jerks, bar muscle-ups, then as many farmers carry shuttles as you can in the time left. Ninety seconds of rest between the sprints, then tap Ready. Go hard; the rest is coming."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Rowing machine
     - Dumbbells

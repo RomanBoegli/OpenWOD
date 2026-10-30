@@ -25,6 +25,8 @@ export interface WorkoutSummary {
   difficulty: Difficulty;
   /** Ids of the collections this workout belongs to (set by the app, not the model). */
   collections: string[];
+  /** The author in its canonical spelling; absent when the workout names none or the author was deleted. */
+  author?: string;
 }
 
 export type DurationBucket = 'short' | 'medium' | 'long';
@@ -42,6 +44,8 @@ export interface LibraryFilter {
   format?: SectionFormat[];
   /** Any of these collection ids. */
   collections?: string[];
+  /** Any of these authors (compared loosely, see authorKey). */
+  authors?: string[];
 }
 
 const SHORT_MAX_MS = 20 * 60_000;
@@ -88,6 +92,8 @@ const EQUIPMENT_RULES: [RegExp, string][] = [
 export const normalise = (text: string) => text.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').trim();
 /** Loose identity for equipment names: case, accents and a trailing plural s are ignored ("Kettlebells" ≈ "kettlebell"). */
 export const equipmentKey = (name: string) => normalise(name).replace(/\s+/g, ' ').replace(/s$/, '');
+/** Loose identity for author names: case, accents, punctuation and spacing are ignored ("Cross-Fit" ≈ "crossfit "). */
+export const authorKey = (name: string) => normalise(name).replace(/[^a-z0-9]+/g, ' ').trim();
 
 /**
  * Equipment implied by movement names. A barbell is only inferred when nothing says the lift is done with a
@@ -111,6 +117,8 @@ export function inferEquipment(movements: string[], declared: string[] = []): st
 export interface SummaryOptions {
   /** Maps an equipment name to its canonical spelling (master data merges). */
   canonicalEquipment?: (name: string) => string;
+  /** Maps an author to its canonical spelling (master data merges), or to nothing for a deleted author. */
+  canonicalAuthor?: (name: string) => string | undefined;
   collections?: string[];
   /** When given, equipment comes from the movement records of recognised movements; keywords only cover the rest. */
   catalogue?: Catalogue;
@@ -130,19 +138,23 @@ export function summariseWorkout(workout: Workout, options: SummaryOptions = {})
   for (const item of [...workout.equipment, ...inferred].map(canonical)) if (!equipmentNeeded.some(known => equipmentKey(known) === equipmentKey(item) || normalise(known).includes(normalise(item)))) equipmentNeeded.push(item);
   const formats: SectionFormat[] = [];
   for (const section of workout.sections) if (!formats.includes(section.format)) formats.push(section.format);
+  const named = workout.attribution?.author?.trim();
+  const author = named ? (options.canonicalAuthor ? options.canonicalAuthor(named) : named) : undefined;
   return {
     id: workout.id, title: workout.title, description: workout.description ?? '', participants: workout.participants,
     equipment: [...workout.equipment], equipmentNeeded, movements, formats, sections: workout.sections.length,
     activeMs: plan.durationMs, totalMs: plan.durationMs + workout.prepMs, durationKind: plan.durationKind, difficulty: rateDifficulty(plan, options.difficulty),
     collections: options.collections ?? [],
+    ...(author ? { author } : {}),
   };
 }
 
-/** The weighted fields the library search ranks: title first, then movements and equipment, then the description. */
+/** The weighted fields the library search ranks: title first, then movements, equipment and the author, then the description. */
 export const searchFields = (summary: WorkoutSummary): SearchField[] => [
   { text: summary.title, weight: 3 },
   { text: summary.movements.join(' '), weight: 2 },
   { text: summary.equipmentNeeded.join(' '), weight: 1.5 },
+  { text: summary.author ?? '', weight: 1.5 },
   { text: summary.description, weight: 1 },
 ];
 
@@ -158,6 +170,7 @@ export function matchesFilter(summary: WorkoutSummary, filter: LibraryFilter): b
   if (filter.difficulty?.length && !filter.difficulty.includes(summary.difficulty.level)) return false;
   if (filter.format?.length && !filter.format.some(format => summary.formats.includes(format))) return false;
   if (filter.collections?.length && !filter.collections.some(id => summary.collections.includes(id))) return false;
+  if (filter.authors?.length && !(summary.author && filter.authors.some(name => authorKey(name) === authorKey(summary.author!)))) return false;
   return searchScore(filter.query ?? '', searchFields(summary)) > 0;
 }
 
@@ -170,6 +183,13 @@ export function sortSummaries<T extends WorkoutSummary>(summaries: T[], sort: Li
     hardest: (a, b) => b.difficulty.score - a.difficulty.score || a.title.localeCompare(b.title, 'en'),
   };
   return [...summaries].sort(compare[sort]);
+}
+
+/** All authors across the library, deduplicated loosely and alphabetised. */
+export function authorOptions(summaries: WorkoutSummary[]): string[] {
+  const seen = new Map<string, string>();
+  for (const summary of summaries) if (summary.author && !seen.has(authorKey(summary.author))) seen.set(authorKey(summary.author), summary.author);
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
 }
 
 /** All needed equipment names across the library, deduplicated loosely and alphabetised. */

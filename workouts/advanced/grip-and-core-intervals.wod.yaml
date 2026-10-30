@@ -7,8 +7,8 @@ workout:
   title: Grip & core intervals
   description: Ten intervals of 45 seconds on and 20 seconds off, alternating a plate pinch hold with a kettlebell suitcase carry. Hold the plates or hang from the bar for the whole interval; on the carry, stand tall and switch hands halfway.
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Weight plate
     - Kettlebell

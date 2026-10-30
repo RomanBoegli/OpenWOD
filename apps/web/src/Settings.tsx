@@ -7,6 +7,7 @@ import { GeneralSettings } from './settings/GeneralSettings';
 import { TrainingSettings } from './settings/TrainingSettings';
 import { EquipmentSettings } from './settings/EquipmentSettings';
 import { MovementSettings } from './settings/MovementSettings';
+import { AuthorSettings } from './settings/AuthorSettings';
 import { CollectionSettings } from './settings/CollectionSettings';
 import { Logbook } from './History';
 
@@ -15,11 +16,12 @@ const SECTION_LABELS: Record<SettingsSection, { title: string; blurb: string }> 
   player: { title: 'Training view', blurb: 'Units, the look of the timer, and the sound.' },
   equipment: { title: 'Equipment', blurb: 'What you own, and one spelling per item across the library.' },
   movements: { title: 'Movements', blurb: 'Every movement the library knows, with its variants and equipment.' },
+  authors: { title: 'Authors', blurb: 'Who wrote your workouts, with one spelling per author across the library.' },
   collections: { title: 'Collections', blurb: 'Named lists of workouts, shown as chips and as a filter.' },
   logbook: { title: 'Logbook', blurb: 'Every session played, with its scores.' },
 };
 
-/** Everything about this device and its master data, in sections: general, training view (with sound), equipment, movements, collections, and the logbook of sessions. */
+/** Everything about this device and its master data, in sections: general, training view (with sound), equipment, movements, authors, collections, and the logbook of sessions. */
 export function Settings(props: SettingsProps) {
   const { section } = props;
   // On a narrow screen the sections scroll sideways; the current one (the Logbook, last) is brought into view.
@@ -36,6 +38,7 @@ export function Settings(props: SettingsProps) {
         {section === 'player' && <TrainingSettings {...props} />}
         {section === 'equipment' && <EquipmentSettings {...props} />}
         {section === 'movements' && <MovementSettings {...props} />}
+        {section === 'authors' && <AuthorSettings {...props} />}
         {section === 'collections' && <CollectionSettings {...props} />}
         {section === 'logbook' && <Logbook mode={props.household.mode} entries={props.entries} {...props.logbook} />}
       </div>

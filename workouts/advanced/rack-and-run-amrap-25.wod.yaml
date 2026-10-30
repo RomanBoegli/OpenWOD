@@ -7,8 +7,8 @@ workout:
   title: Rack & Run AMRAP 25
   description: "Twenty-five minutes: row, then five of everything on one barbell, then a minute of rest before the next round. The rest is part of the round, so take it by your own watch and go again. Pick a bar you can clean unbroken when tired."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Rowing machine
     - Barbell

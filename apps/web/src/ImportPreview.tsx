@@ -67,11 +67,10 @@ export function ImportPreview({ file, fileName, entries, difficulty, onOpenInEdi
         const attribution = row.workout.attribution;
         return <li key={row.workout.id} className={styles.row} data-state={row.state}>
           <div className={styles.rowMain}>
-            <h3>{row.workout.title}</h3>
+            <div className={styles.rowHeading}><h3>{row.workout.title}</h3><span className={styles.state}>{STATE_TEXT[row.state]}{row.match && row.state !== 'already' ? ` (“${row.match.summary.title}”)` : ''}{row.state === 'already' && row.match ? ` as “${row.match.summary.title}”` : ''}</span></div>
             <p className={styles.facts}>{durationLabel(summary)} · {row.workout.participants === 2 ? '2 athletes' : 'Solo'} · {summary.formats.map(item => FORMAT_LABELS[item]).join(', ')} · {summary.movements.length} movements · projected {summary.difficulty.label.toLowerCase()}</p>
             {summary.equipmentNeeded.length > 0 && <p className={styles.facts}>{summary.equipmentNeeded.join(' + ')}</p>}
             {attribution && <p className={styles.attribution}>{[attribution.author ? `By ${attribution.author}` : '', attribution.sourceUrl ?? '', attribution.licence ?? '', attribution.notes ?? ''].filter(Boolean).join(' · ')}</p>}
-            <p className={styles.state}>{STATE_TEXT[row.state]}{row.match && row.state !== 'already' ? ` (“${row.match.summary.title}”)` : ''}{row.state === 'already' && row.match ? ` as “${row.match.summary.title}”` : ''}</p>
           </div>
           <label className={styles.decision}>Action<select value={row.decision.action} aria-label={`Action for ${row.workout.title}`} onChange={event => {
             const action = event.target.value as PackDecision['action'];

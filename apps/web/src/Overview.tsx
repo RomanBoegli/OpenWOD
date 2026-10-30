@@ -63,7 +63,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
       <div className={styles.lead}>
         <div className={styles.leadText}>
           {workout.description && <p className={shared.description}>{workout.description}</p>}
-          {attribution && <p className={styles.attribution}>{attribution.author && <span>By {attribution.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
+          {attribution && <p className={styles.attribution}>{summary.author && <span>By {summary.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
         </div>
         <div className={styles.actions}>
           <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>

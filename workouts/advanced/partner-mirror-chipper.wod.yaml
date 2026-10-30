@@ -7,8 +7,8 @@ workout:
   title: Partner mirror chipper
   description: "A chipper for two that climbs down and back up: row, wall balls, slam balls, handstand push-ups, burpees over the rower, then the same steps in reverse. One athlete works at a time; split every step however you like and tap Done when a step is finished."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Rowing machine
     - Medicine ball

@@ -7,8 +7,8 @@ workout:
   title: Pull & press ladder
   description: "Three rungs, twelve-minute cap: 15-12-9 pull-ups, shoulder-to-overhead and hang cleans, then 12-9-6 with chest-to-bar and a heavier bar, then 9-6-3 with bar muscle-ups and the heaviest bar. The minute of rest after each rung is timed for you. Change plates during the rest."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Pull-up bar
     - Barbell

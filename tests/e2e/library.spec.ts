@@ -83,6 +83,22 @@ test.describe('library', () => {
     await expect(page.getByRole('main')).toContainText('No workout with the ID “partner-circuit-2”');
   });
 
+  test('LIB-06: finds workouts by author, typos included, and filters them with the Author chips', async ({ page }) => {
+    const list = page.getByRole('list', { name: 'Workouts' });
+    const chip = (group: string, name: string) => page.getByRole('group', { name: group }).getByRole('button', { name, exact: true });
+    await page.getByRole('searchbox', { name: 'Search workouts' }).fill('crosfit');
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ query: 'crosfit' }));
+    await expect(list).toContainText('Fran');
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await openFilters(page);
+    await chip('Author', 'Coach programming').click();
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ authors: ['Coach programming'] }));
+    await chip('Athletes', 'Pair').click();
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ authors: ['Coach programming'], participants: 2 }));
+    await chip('Author', 'OpenWOD').click(); // Any of the chosen authors.
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ authors: ['Coach programming', 'OpenWOD'], participants: 2 }));
+  });
+
   test('an unknown address shows the not-found page with a way back', async ({ page }) => {
     await page.goto('/#/nowhere');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found');

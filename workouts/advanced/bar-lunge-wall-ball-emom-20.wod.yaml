@@ -7,8 +7,8 @@ workout:
   title: Bar, lunge & wall ball EMOM 20
   description: "Five movements, four rounds: thirty seconds of toes-to-bar, sixteen metres of single-dumbbell overhead lunges, thirty seconds of chest-to-bar pull-ups, twenty-four wall balls to the standard 10 ft (9 ft) target, then a minute of easy skiing or biking. The recovery minute is part of the plan; use it."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Pull-up bar
     - Dumbbells

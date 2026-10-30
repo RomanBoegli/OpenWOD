@@ -1,6 +1,6 @@
 import { Type, type Static } from '@sinclair/typebox';
 import type { Movement } from './catalogue';
-import { equipmentKey } from './library';
+import { authorKey, equipmentKey } from './library';
 import { bundledCollections } from './bundled';
 
 /**
@@ -25,6 +25,12 @@ export interface MasterData {
   hiddenWorkouts: string[];
   /** Extra spellings → record id, from merges and renames ("Wall-ball shots" → wall-ball). */
   movementAliases: Record<string, string>;
+  /** Author key (see authorKey) → canonical display name, from merges and renames. */
+  authorAliases: Record<string, string>;
+  /** Authors added by hand, so one can be picked before any workout names it. */
+  authors: string[];
+  /** Keys of deleted authors: workouts that name one show no author; the files keep it. */
+  hiddenAuthors: string[];
   /** Merges you committed: they keep working but no longer appear in the history with an Undo. */
   committed: string[];
 }
@@ -32,6 +38,7 @@ export interface MasterData {
 export const COLLECTION_LIMIT = 50;
 export const COLLECTION_SIZE = 500;
 export const MOVEMENT_LIMIT = 600;
+export const AUTHOR_LIMIT = 500;
 export const MOVEMENT_CATEGORIES = ['weightlifting', 'gymnastics', 'monostructural', 'strength', 'conditioning', 'mobility'] as const;
 
 const name = (max: number) => Type.String({ minLength: 1, maxLength: max });
@@ -59,6 +66,10 @@ export const MasterDataSchema = Type.Object({
   // Optional, so a device still on an older build can write the document without it.
   hiddenWorkouts: Type.Optional(Type.Array(name(120), { maxItems: COLLECTION_SIZE })),
   movementAliases: Type.Record(Type.String({ maxLength: 160 }), Type.String({ maxLength: 80 })),
+  // Optional for the same reason, and so backups written before authors were master data still restore.
+  authorAliases: Type.Optional(Type.Record(Type.String({ maxLength: 160 }), Type.String({ maxLength: 160 }))),
+  authors: Type.Optional(Type.Array(name(160), { maxItems: AUTHOR_LIMIT })),
+  hiddenAuthors: Type.Optional(Type.Array(name(160), { maxItems: AUTHOR_LIMIT })),
   committed: Type.Array(name(200), { maxItems: 2000 }),
 }, { $id: 'MasterData', additionalProperties: false });
 export type MasterDataDocument = Static<typeof MasterDataSchema>;
@@ -66,7 +77,7 @@ export type MasterDataDocument = Static<typeof MasterDataSchema>;
 /** Collections that ship with the app: one per registry folder with a collection.yaml. They are not editable; your own collections sit beside them. */
 export const builtInCollections: Collection[] = bundledCollections.map(collection => ({ ...collection, builtIn: true }));
 
-export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], collectionEdits: {}, movements: [], hiddenMovements: [], hiddenWorkouts: [], movementAliases: {}, committed: [] });
+export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collections: [], collectionEdits: {}, movements: [], hiddenMovements: [], hiddenWorkouts: [], movementAliases: {}, authorAliases: {}, authors: [], hiddenAuthors: [], committed: [] });
 
 const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
@@ -116,10 +127,12 @@ export function sanitiseMasterData(value: unknown): MasterData {
     const hiddenWorkouts = strings(stored.hiddenWorkouts, COLLECTION_SIZE, 120);
     const movementAliases: Record<string, string> = {};
     if (stored.movementAliases && typeof stored.movementAliases === 'object') for (const [key, id] of Object.entries(stored.movementAliases)) if (text(key, 160) && text(id, 80)) movementAliases[text(key, 160)] = text(id, 80);
+    const authorAliases: Record<string, string> = {};
+    if (stored.authorAliases && typeof stored.authorAliases === 'object') for (const [key, author] of Object.entries(stored.authorAliases)) if (authorKey(text(key, 160)) && text(author, 160)) authorAliases[authorKey(text(key, 160))] = text(author, 160);
     const collectionEdits: Record<string, CollectionEdit> = {};
     if (stored.collectionEdits && typeof stored.collectionEdits === 'object') for (const [id, edit] of Object.entries(stored.collectionEdits as Record<string, Partial<CollectionEdit>>)) if (builtInCollections.some(item => item.id === id) && edit && typeof edit === 'object') collectionEdits[id] = { ...(text(edit.title, 120) ? { title: text(edit.title, 120) } : {}), ...(typeof edit.description === 'string' ? { description: text(edit.description, 500) } : {}), added: strings(edit.added, COLLECTION_SIZE, 120), removed: strings(edit.removed, COLLECTION_SIZE, 120) };
     for (const copy of collections.filter(item => builtInCollections.some(bundled => bundled.id === item.id))) collectionEdits[copy.id] = editFor(builtInCollections.find(bundled => bundled.id === copy.id)!, copy);
-    return { equipmentAliases: aliases, collections: collections.filter(item => !builtInCollections.some(bundled => bundled.id === item.id)), collectionEdits, movements, hiddenMovements, hiddenWorkouts, movementAliases, committed: strings(stored.committed, 2000, 200) };
+    return { equipmentAliases: aliases, collections: collections.filter(item => !builtInCollections.some(bundled => bundled.id === item.id)), collectionEdits, movements, hiddenMovements, hiddenWorkouts, movementAliases, authorAliases, authors: strings(stored.authors, AUTHOR_LIMIT, 160), hiddenAuthors: strings(stored.hiddenAuthors, AUTHOR_LIMIT, 160).map(authorKey).filter(Boolean), committed: strings(stored.committed, 2000, 200) };
   } catch { return emptyMasterData(); }
 }
 
@@ -142,9 +155,12 @@ export function mergeMasterData(base: MasterData, incoming: MasterData): MasterD
     hiddenMovements: [...new Set([...base.hiddenMovements, ...incoming.hiddenMovements])].slice(0, MOVEMENT_LIMIT),
     hiddenWorkouts: [...new Set([...base.hiddenWorkouts, ...incoming.hiddenWorkouts])].slice(0, COLLECTION_SIZE),
     movementAliases: { ...incoming.movementAliases, ...base.movementAliases },
+    authorAliases: { ...incoming.authorAliases, ...base.authorAliases },
+    authors: [...new Map([...incoming.authors, ...base.authors].map(author => [authorKey(author), author])).values()].slice(0, AUTHOR_LIMIT),
+    hiddenAuthors: [...new Set([...base.hiddenAuthors, ...incoming.hiddenAuthors])].slice(0, AUTHOR_LIMIT),
     committed: [...new Set([...base.committed, ...incoming.committed])].slice(0, 2000),
   };
 }
 
 export const isEmptyMasterData = (data: MasterData): boolean =>
-  !Object.keys(data.equipmentAliases).length && !data.collections.length && !Object.keys(data.collectionEdits).length && !data.movements.length && !data.hiddenMovements.length && !data.hiddenWorkouts.length && !Object.keys(data.movementAliases).length && !data.committed.length;
+  !Object.keys(data.equipmentAliases).length && !data.collections.length && !Object.keys(data.collectionEdits).length && !data.movements.length && !data.hiddenMovements.length && !data.hiddenWorkouts.length && !Object.keys(data.movementAliases).length && !Object.keys(data.authorAliases).length && !data.authors.length && !data.hiddenAuthors.length && !data.committed.length;

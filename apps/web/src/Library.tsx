@@ -3,7 +3,7 @@ import { type Workout } from '../../../packages/domain/src';
 import { MAX_PACK_BYTES, parseSharedFile, type PackCollection, type SharedFile } from '../../../packages/domain/src/pack';
 import type { PackDecision } from './data/remote';
 import { ImportPreview } from './ImportPreview';
-import { equipmentOptions, matchesFilter, searchFields, sortSummaries, summariseWorkout, type DurationBucket, type LibraryFilter, type LibrarySort, type SummaryOptions, type WorkoutSummary } from '../../../packages/domain/src/library';
+import { authorOptions, equipmentOptions, matchesFilter, searchFields, sortSummaries, summariseWorkout, type DurationBucket, type LibraryFilter, type LibrarySort, type SummaryOptions, type WorkoutSummary } from '../../../packages/domain/src/library';
 import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
 import type { Preferences } from './preferences';
@@ -88,9 +88,9 @@ function shuffled<T>(items: T[], seed: number): T[] {
 }
 
 /** Filters, sort and whether the filter panel is open survive navigation within the browser session; every read is validated. */
-interface StoredFilters { open: boolean; query: string; participants: '' | 1 | 2; equipment: string[]; duration: DurationBucket[]; difficulty: DifficultyLevel[]; format: SectionFormat[]; collectionIds: string[]; sort: Sort; randomSeed: number }
+interface StoredFilters { open: boolean; query: string; participants: '' | 1 | 2; equipment: string[]; duration: DurationBucket[]; difficulty: DifficultyLevel[]; format: SectionFormat[]; collectionIds: string[]; authors: string[]; sort: Sort; randomSeed: number }
 const FILTER_KEY = 'openwod.libraryFilters';
-const emptyFilters = (): StoredFilters => ({ open: false, query: '', participants: '', equipment: [], duration: [], difficulty: [], format: [], collectionIds: [], sort: 'title', randomSeed: 0 });
+const emptyFilters = (): StoredFilters => ({ open: false, query: '', participants: '', equipment: [], duration: [], difficulty: [], format: [], collectionIds: [], authors: [], sort: 'title', randomSeed: 0 });
 function loadFilters(): StoredFilters {
   try {
     const stored = JSON.parse(sessionStorage.getItem(FILTER_KEY) ?? 'null') as Partial<StoredFilters> | null;
@@ -104,6 +104,7 @@ function loadFilters(): StoredFilters {
       difficulty: Array.isArray(stored.difficulty) ? stored.difficulty.filter((item): item is DifficultyLevel => [1, 2, 3, 4].includes(item as number)) : [],
       format: strings(stored.format).filter((item): item is SectionFormat => (SECTION_FORMATS as readonly string[]).includes(item)),
       collectionIds: strings(stored.collectionIds),
+      authors: strings(stored.authors),
       sort: typeof stored.sort === 'string' && ['title', 'shortest', 'longest', 'easiest', 'hardest', 'longestAgo', 'random'].includes(stored.sort) ? stored.sort as Sort : 'title',
       randomSeed: Number.isInteger(stored.randomSeed) && stored.randomSeed! >= 0 && stored.randomSeed! <= 0xffff_ffff ? stored.randomSeed! : 0,
     };
@@ -143,9 +144,10 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
   const [difficulty, setDifficulty] = useState<DifficultyLevel[]>(stored.difficulty);
   const [format, setFormat] = useState<SectionFormat[]>(stored.format);
   const [collectionIds, setCollectionIds] = useState<string[]>(stored.collectionIds);
+  const [authors, setAuthors] = useState<string[]>(stored.authors);
   const [sort, setSort] = useState<Sort>(stored.sort);
   const [randomSeed, setRandomSeed] = useState(stored.randomSeed);
-  useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ open: filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, sort, randomSeed]);
+  useEffect(() => { try { sessionStorage.setItem(FILTER_KEY, JSON.stringify({ open: filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, authors, sort, randomSeed } satisfies StoredFilters)); } catch { /* Session storage is a convenience only. */ } }, [filtersOpen, query, participants, equipment, duration, difficulty, format, collectionIds, authors, sort, randomSeed]);
   const [preview, setPreview] = useState<{ file: SharedFile; name: string }>();
   const [importError, setImportError] = useState('');
   /** The import came from an assistant's answer pasted into the authoring guide, not from a file. */
@@ -159,7 +161,8 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
   const setOnlyMine = (value: boolean) => onPreferencesChange(current => ({ ...current, onlyMyEquipment: value }));
 
   const equipmentList = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
-  const filter: LibraryFilter = { query, participants: participants || undefined, equipment, duration, difficulty, format, collections: collectionIds, onlyEquipment: onlyMine ? preferences.myEquipment : undefined };
+  const authorList = useMemo(() => authorOptions(entries.map(entry => entry.summary)), [entries]);
+  const filter: LibraryFilter = { query, participants: participants || undefined, equipment, duration, difficulty, format, collections: collectionIds, authors, onlyEquipment: onlyMine ? preferences.myEquipment : undefined };
   const visible = useMemo(() => {
     const matching = entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry }));
     // Never done first (alphabetically), then the longest-ago session first.
@@ -168,11 +171,11 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     // With a query the best match comes first; the chosen sort breaks ties.
     const ranked = rankBySearch(sorted, query, item => searchFields(item)).map(item => item.entry);
     return sort === 'random' ? shuffled(ranked, randomSeed) : ranked;
-  }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, onlyMine, preferences.myEquipment, sort, sessions, randomSeed]);
+  }, [entries, query, participants, equipment, duration, difficulty, format, collectionIds, authors, onlyMine, preferences.myEquipment, sort, sessions, randomSeed]);
   const randomise = () => { setRandomSeed(Math.floor(Math.random() * 0x1_0000_0000)); setSort('random'); };
-  const activeFilters = (participants ? 1 : 0) + equipment.length + duration.length + difficulty.length + format.length + collectionIds.length + (onlyMine ? 1 : 0);
-  const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || onlyMine);
-  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setOnlyMine(false); };
+  const activeFilters = (participants ? 1 : 0) + equipment.length + duration.length + difficulty.length + format.length + collectionIds.length + authors.length + (onlyMine ? 1 : 0);
+  const filtering = Boolean(query || participants || equipment.length || duration.length || difficulty.length || format.length || collectionIds.length || authors.length || onlyMine);
+  const clearFilters = () => { setQuery(''); setParticipants(''); setEquipment([]); setDuration([]); setDifficulty([]); setFormat([]); setCollectionIds([]); setAuthors([]); setOnlyMine(false); };
 
   /** Opens the import dialog with a preview of the text `read` returns, or with what is wrong with it; `read` may throw. */
   async function openImport(name: string, read: () => string | Promise<string>) {
@@ -228,7 +231,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
 
     <div className={styles.filters} role="search" aria-label="Filter workouts" data-open={filtersOpen}>
       <div className={styles.filterTop}>
-        <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment (typos welcome)" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
+        <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment, authors (typos welcome)" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
         {/* The sort sits in the bar only while the panel is open; its label lives inside the box, like the search hint. */}
         <label className={styles.sort}><span aria-hidden="true">Sort</span><select aria-label="Sort" value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
         {/* Sorting and the filter groups fold away behind this button, so the workouts start right under the search. */}
@@ -236,9 +239,10 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
         <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
       </div>
       <div id="library-filters" className={styles.filterGroups}>
-      {/* Workout-level filters first (athletes, collection, difficulty, duration), then block formats, then equipment. */}
+      {/* Workout-level filters first (athletes, collection, author, difficulty, duration), then block formats, then equipment. */}
       {group('Athletes', <>{([[1, 'Solo'], [2, 'Pair']] as const).map(([value, label]) => <Chip key={value} kind={value === 2 ? 'pair' : 'solo'} icon={value === 2 ? 'users' : 'user'} pressed={participants === value} onClick={() => setParticipants(current => current === value ? '' : value)}>{label}</Chip>)}</>)}
       {group('Collection', collections.map(collection => <Chip key={collection.id} kind="collection" pressed={collectionIds.includes(collection.id)} onClick={() => setCollectionIds(current => toggle(current, collection.id))}>{collection.title}</Chip>))}
+      {authorList.length > 0 && group('Author', authorList.map(item => <Chip key={item} kind="neutral" pressed={authors.includes(item)} onClick={() => setAuthors(current => toggle(current, item))}>{item}</Chip>))}
       {group('Difficulty', ([1, 2, 3, 4] as const).map(level => <DifficultyFilterChip key={level} level={level} label={DIFFICULTY_LABELS[level]} pressed={difficulty.includes(level)} onClick={() => setDifficulty(current => toggle(current, level))} />))}
       {group('Duration', DURATIONS.map(([value, label]) => <Chip key={value} kind="neutral" pressed={duration.includes(value)} onClick={() => setDuration(current => toggle(current, value))}>{label}</Chip>))}
       {group('Block format', SECTION_FORMATS.map(item => <Chip key={item} kind="format" pressed={format.includes(item)} onClick={() => setFormat(current => toggle(current, item))}>{FORMAT_LABELS[item]}</Chip>))}
@@ -277,7 +281,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
       })}
     </ul>}
 
-    <dialog ref={importDialog} className={shared.dialog} aria-labelledby="import-title"><div className={shared.dialogHeading}><h2 id="import-title">Preview your WOD</h2><button className={shared.iconButton} aria-label="Close import preview" onClick={() => importDialog.current?.close()}><Icon name="close" /></button></div>
+    <dialog ref={importDialog} className={`${shared.dialog} ${shared.dialogWide}`} aria-labelledby="import-title"><div className={shared.dialogHeading}><h2 id="import-title">Preview your WOD</h2><button className={shared.iconButton} aria-label="Close import preview" onClick={() => importDialog.current?.close()}><Icon name="close" /></button></div>
       {importError ? <>
         <p role="alert" className={shared.importError}>{importError}</p>
         {pasted && <><p>Copy this message back to your assistant: it names the place in the file that breaks a rule, so the assistant can fix it.</p><div className={shared.dialogActions}><button className={shared.quietButton} onClick={() => { importDialog.current?.close(); setGuideOpen(true); }}>Back to the answer</button></div></>}

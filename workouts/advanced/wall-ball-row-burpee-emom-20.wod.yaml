@@ -7,8 +7,8 @@ workout:
   title: Wall ball, row, burpee EMOM 20
   description: "Every minute for twenty minutes: a minute of wall balls to the standard 10 ft (9 ft) target, a minute on the rower, a minute of burpee box jump overs, a minute of rest; five rounds. Finish the work, then recover until the next minute starts. Trim the reps if you cannot finish inside 45 seconds."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Medicine ball
     - Wall

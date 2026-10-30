@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workout } from '../../../packages/domain/src';
 import { bundledWorkouts } from '../../../packages/domain/src/bundled';
+import { authorOptions } from '../../../packages/domain/src/library';
 import { WorkoutAudio } from './audio';
 import { Library, toEntry, type LibraryEntry } from './Library';
 import { exportPackFile, exportWorkoutFile } from './Player';
@@ -15,7 +16,7 @@ import { Settings } from './Settings';
 import { SnapshotPlayer } from './History';
 import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } from '../../../packages/domain/src/builder';
 import { copyDraftId, copySource, freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
-import { allCollections, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
+import { allCollections, authorRepertoire, authorSpelling, canonicalAuthor, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
 import { draftHref, editHref, LOGBOOK_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
@@ -70,12 +71,13 @@ export default function App() {
   const collections = useMemo(() => allCollections(masterData), [masterData]);
   const catalogue = useMemo(() => effectiveCatalogue(masterData), [masterData]);
   audio.resolveMovement = lane => catalogue.resolve(lane)?.id;
-  const summaryOptions = useCallback((id: string) => ({ canonicalEquipment: canonicalEquipment(masterData.equipmentAliases), catalogue, collections: collections.filter(collection => collection.workoutIds.includes(id)).map(collection => collection.id), difficulty: preferences.difficulty }), [masterData.equipmentAliases, catalogue, collections, preferences.difficulty]);
+  const summaryOptions = useCallback((id: string) => ({ canonicalEquipment: canonicalEquipment(masterData.equipmentAliases), canonicalAuthor: canonicalAuthor(masterData), catalogue, collections: collections.filter(collection => collection.workoutIds.includes(id)).map(collection => collection.id), difficulty: preferences.difficulty }), [masterData, catalogue, collections, preferences.difficulty]);
   // A bundled workout you edited is a saved workout with its id and takes its place; one you removed is listed in master data.
   const hiddenWorkouts = useMemo(() => new Set(masterData.hiddenWorkouts), [masterData.hiddenWorkouts]);
   const bundledEntries = useMemo(() => bundledWorkouts.filter(workout => !hiddenWorkouts.has(workout.id) && !saved.some(item => item.id === workout.id)).map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions, hiddenWorkouts, saved]);
   const savedEntries = useMemo(() => saved.filter(item => !hiddenWorkouts.has(item.id)).map(item => ({ ...toEntry(item.document, 'saved', summaryOptions(item.id)), pending: data.pendingIds.has(item.id), origin: item.origin, ...(BUNDLED_IDS.has(item.id) ? { bundled: true } : {}) })), [saved, summaryOptions, data.pendingIds, hiddenWorkouts]);
   const entries = useMemo<LibraryEntry[]>(() => [...bundledEntries, ...savedEntries], [bundledEntries, savedEntries]);
+  const authors = useMemo(() => authorRepertoire(masterData, authorOptions(entries.map(entry => entry.summary))), [masterData, entries]);
   /** Applies an import preview's decisions; a single imported workout opens its overview, or the editor for a workout file the editor can represent. */
   const importPack = useCallback(async (workouts: Workout[], packCollections: PackCollection[], decisions: Record<string, PackDecision>, openEditor = false) => {
     const report = await data.importPack(workouts, packCollections, decisions);
@@ -230,7 +232,7 @@ export default function App() {
         : route.name === 'play' && (recovery || current) ? <Player key={route.id} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} logbook={{ sessions, onCorrect: data.correctSession, onDelete: data.deleteSession, onLoadMore: data.loadMoreSessions, fetchSession: data.fetchSession }} />
-        : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
+        : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} authors={authors} authorSpelling={authorSpelling(masterData)} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
         : (route.name === 'edit' || route.name === 'copy') && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
         : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} onExport={workout => { void exportOne(workout); }} />

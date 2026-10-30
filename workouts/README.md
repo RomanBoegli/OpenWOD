@@ -89,3 +89,6 @@ Men's amounts that already existed were kept and only the women's amounts added 
 | `partner-circuit` | Kettlebell swings get 12/16/24 kg (8/12/16 kg). Timing untouched. | Heavy 24 (16) kg = Helen Rx (CrossFit.com standard). Lighter levels suggestion. |
 
 Untouched (already complete): `cindy`, `diane`, `dt`, `elizabeth`, `fran`, `grace`, `helen`, `isabel`, `jackie`, `karen`, `nancy`, `nate`, `randy`, `tommy-v`, `pause-front-squat-6x3`, `row-burpee-clean-jerk-e2mom-40`, `row-intervals-8x90`, `ski-skip-muscle-up-rounds`, `skip-and-toes-40-40`, `squat-power-e2-30`, `back-squat-5x5`, `partner-emom-16`, `row-burpee-emom-20`, `tabata-this`, `you-go-i-go-sprints`.
+
+Authors became master data later (LIB-06), so an author is now a name the library lists, searches and filters by.
+The 22 `advanced/` workouts therefore name "Coach programming" as their author, and the note that the program was shared in a members chat moved into their attribution notes.

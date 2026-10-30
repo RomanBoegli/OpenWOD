@@ -7,8 +7,8 @@ workout:
   title: Ski, skip, muscle-up × 3
   description: "Three rounds for time: 250 metres on the SkiErg, fifty double-unders, five bar muscle-ups. Short and sharp, so ski hard and keep the rope relaxed. Scale the muscle-ups to chest-to-bar or jumping muscle-ups."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - SkiErg
     - Jump rope

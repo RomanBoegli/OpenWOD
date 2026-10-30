@@ -7,8 +7,8 @@ workout:
   title: Row, burpee, clean & jerk E2MOM 40
   description: "Every two minutes for forty minutes: eighteen calories on the rower, four burpees over the rower and one clean and jerk at about seventy percent. Twenty rounds is long, so settle into a row pace that leaves time for a clean lift and a breath."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Rowing machine
     - Barbell

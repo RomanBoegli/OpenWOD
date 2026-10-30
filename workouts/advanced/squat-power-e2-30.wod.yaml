@@ -7,8 +7,8 @@ workout:
   title: Squat power E2:30
   description: "Seven sets of back squats on a 2:30 clock, reps falling from six to two while the load climbs from sixty percent to a heavy double. No grinding reps: if you do not know your percentages, work up cleanly to a heavy double. Tap Done after each set; two minutes of rest are timed for you."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Barbell
     - Squat rack

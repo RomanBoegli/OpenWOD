@@ -134,6 +134,8 @@ The interface calls a section a block, while the code and the file format keep `
 
 **LIB-05** Starting a session SHALL create an immutable snapshot of the selected workout revision and athlete overrides. Subsequent edits affect future sessions only.
 
+**LIB-06** Authors SHALL be master data like equipment and movements: Settings lists the authors library workouts name, with how many workouts each, and SHALL offer New, Rename, Merge and Delete, with Undo for merges and Restore for deletions. Renames and merges map every spelling to the one kept, and a deleted author is no longer shown. The library SHALL apply this in the workout pages, the search (typo-tolerant, like titles and movements), an Author filter and the editor, whose author field SHALL suggest known authors as the user types and nudge a near-duplicate spelling. Workout files SHALL keep their own text (LIB-02), and saving an edited workout stores the kept spelling.
+
 ## 5.2 Builder
 
 **BLD-01** The builder SHALL support add, edit, duplicate, delete, and reorder for sections, activities, and repeat blocks. Touch and keyboard buttons SHALL provide an alternative to drag-and-drop.
@@ -694,11 +696,12 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-28 | Import malformed, oversized, unknown-version or unsupported-capability sharing files. Preview reports actionable failures and no records are written. Validate published examples against schemas and round-trip supported older fixtures through migrations. | SHR-04/06, BLD-10, NFR-10 |
 | AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 3:40 with a 0:20 rest between the rounds plus a 2:00 rest after it, WOD 38:40, session 48:40 excluding prep and Ready waits, every rest shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
 | AT-30 | Open the authoring guide in both shapes. It lists every section format with its settings, the movement and equipment names of this installation, and examples that import unchanged. Paste an invalid reply: the import error appears with a way back to the reply and nothing is written. Paste a valid reply wrapped in prose and a code fence: the preview shows the workout and Save and edit opens it in the editor. | SHR-04/07, NFR-11 |
+| AT-31 | Rename an author, merge two others, undo one merge, delete an author and restore it. The library pages, search and Author filter follow each change, the files are unchanged, and the editor suggests the kept spelling while typing and nudges a near-duplicate. | LIB-02/04/06 |
 
 # 15 Where things stand
 
 Recorded 27 October 2026, plan version 1.17.
-All P0 requirements and the 30 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+All P0 requirements and the 31 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -731,6 +734,8 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The library offers Create with AI: an authoring guide to copy into any AI assistant, the JSON Schema to download, and a box for the assistant's answer that opens the import preview (SHR-07).
 - Saving a single imported workout, from a file or a pasted answer, opens it in the editor. The preview's buttons read Save and edit and Edit before saving, and packs still open the workout's page or report what they imported.
 - The bundled Dumbbell full body 35 and six movement records it needed: dumbbell sumo squats, dumbbell pullovers, lateral raises, dumbbell sit-ups, dead bugs and bodyweight good mornings.
+- Authors are master data under Settings → Authors, with New, Rename, Merge, Delete and Restore. They are part of the library search, get an Author filter and are suggested in the editor (LIB-06). The 22 advanced workouts name "Coach programming" as their author.
+- The import preview is wider, shows each workout's state as a badge, and dialog buttons keep their labels on one line.
 
 **Schema and storage versions today.**
 
@@ -764,7 +769,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-06, MOD-06, NFR-15, SHR-08, UI-24 and AT-31.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-07, MOD-06, NFR-15, SHR-08, UI-24 and AT-32.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

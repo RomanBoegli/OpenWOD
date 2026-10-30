@@ -1,13 +1,10 @@
-import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { normalise } from '../../../packages/domain/src/library';
-import { editDistance, rankBySearch } from '../../../packages/domain/src/search';
+import { useId, useRef, useState, type KeyboardEvent } from 'react';
+import { nameKey as key, nearName, suggest, useListBelow } from './suggestions';
 import { Icon } from './Icon';
 import styles from './TagPicker.module.css';
 
 interface TagPickerProps { label: string; value: string[]; options: string[]; placeholder?: string; maxLength?: number; onChange: (next: string[]) => void }
 type Choice = { kind: 'pick' | 'new'; text: string };
-
-const key = (text: string) => normalise(text).replace(/[^a-z0-9]+/g, ' ').trim();
 
 /**
  * A list of names picked from a repertoire: type to get ranked suggestions, Enter or a comma takes the highlighted one,
@@ -20,24 +17,15 @@ export function TagPicker({ label, value, options, placeholder, maxLength = 80, 
   const [active, setActive] = useState(0);
   const listId = useId();
   const field = useRef<HTMLDivElement>(null);
-  const [anchor, setAnchor] = useState<CSSProperties>();
   const chosen = new Set(value.map(key));
   const free = options.filter(option => !chosen.has(key(option)));
-  const matches = query.trim() ? rankBySearch(free, query, option => [{ text: option, weight: 1 }], 7) : free.slice(0, 7);
+  const matches = suggest(free, query);
   const exact = options.find(option => key(option) === key(query));
   const choices: Choice[] = [...matches.map(text => ({ kind: 'pick' as const, text })), ...(query.trim() && !exact && !chosen.has(key(query)) ? [{ kind: 'new' as const, text: query.trim() }] : [])];
-  // A new name within a typo of a known one gets a nudge, so the repertoire does not fill with near-duplicate spellings.
-  const near = query.trim().length >= 4 ? options.find(option => editDistance(key(option), key(query), 2) <= 2) : undefined;
+  const near = nearName(options, query);
   const current = Math.min(active, Math.max(choices.length - 1, 0));
   const showing = open && choices.length > 0;
-  // The list is fixed to the viewport (not absolute inside a dialog), so an open list never adds scroll height to its container.
-  useLayoutEffect(() => {
-    if (!showing || !field.current) { setAnchor(undefined); return; }
-    const place = () => { const box = field.current!.getBoundingClientRect(); setAnchor({ position: 'fixed', top: box.bottom + 4, left: box.left, minWidth: Math.min(box.width, 360) }); };
-    place();
-    window.addEventListener('scroll', place, true); window.addEventListener('resize', place);
-    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); };
-  }, [showing, value.length]);
+  const anchor = useListBelow(field, showing, value.length);
 
   const commit = (choice: Choice | undefined) => {
     if (!choice) return;

@@ -22,6 +22,36 @@ test.describe('settings and log', () => {
     await expect(titles.last()).toHaveText('Karen');
   });
 
+  test('LIB-06: authors are master data: rename, merge, undo, delete and restore change what the library shows', async ({ page }) => {
+    await page.goto('/#/settings/authors'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
+    const list = page.getByRole('list', { name: 'Authors in the library' });
+    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await page.getByRole('button', { name: 'Rename CrossFit' }).click();
+    const rename = page.getByRole('dialog', { name: 'Rename CrossFit' });
+    await rename.getByRole('textbox', { name: 'Name' }).fill('CrossFit HQ');
+    await rename.getByRole('button', { name: 'Rename' }).click();
+    await expect(page.getByRole('list', { name: 'Merged author names' })).toContainText('crossfit → CrossFit HQ');
+    await page.getByRole('checkbox', { name: 'Select Coach programming' }).check();
+    await page.getByRole('checkbox', { name: 'Select OpenWOD' }).check();
+    await page.getByRole('combobox', { name: 'Keep as' }).fill('Coaches');
+    await page.getByRole('button', { name: 'Merge 2' }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(2);
+    await expect(list.getByRole('listitem').filter({ hasText: 'Coaches' })).toContainText(String(bundledCount({ authors: ['Coach programming', 'OpenWOD'] })));
+    await page.getByRole('list', { name: 'Merged author names' }).getByRole('listitem').filter({ hasText: 'openwod →' }).getByRole('button', { name: 'Undo' }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(3);
+    await page.goto('/#/wod/fran');
+    await expect(page.getByRole('main')).toContainText('By CrossFit HQ');
+    await page.goto('/#/settings/authors');
+    await page.getByRole('button', { name: 'Delete CrossFit HQ' }).click();
+    await page.getByRole('dialog', { name: 'Delete CrossFit HQ?' }).getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByRole('list', { name: 'Deleted authors' })).toContainText(`CrossFit HQ · ${bundledCount({ authors: ['CrossFit'] })} workouts without an author`);
+    await page.goto('/#/wod/fran');
+    await expect(page.getByRole('main')).not.toContainText('By CrossFit');
+    await page.goto('/#/settings/authors');
+    await page.getByRole('button', { name: 'Restore CrossFit HQ' }).click();
+    await expect(list).toContainText('CrossFit HQ');
+  });
+
   test('merges equipment names and creates, edits and removes a collection through the settings dialogs', async ({ page }) => {
     await page.goto('/#/settings/equipment'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
     await page.getByRole('checkbox', { name: 'Select Medicine ball' }).check();

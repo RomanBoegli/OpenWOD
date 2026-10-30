@@ -39,6 +39,25 @@ test.describe('editor', () => {
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Garage pair');
   });
 
+  test('LIB-06: the author field suggests the library’s authors as you type, and nudges a near-duplicate spelling', async ({ page }) => {
+    await page.goto('/#/new');
+    await page.getByLabel('Title', { exact: true }).fill('Author check');
+    const author = page.getByRole('combobox', { name: 'Author', exact: true });
+    const suggestions = page.getByRole('listbox', { name: 'Author suggestions' });
+    await author.fill('cros');
+    await suggestions.getByRole('option', { name: 'CrossFit' }).click();
+    await expect(author).toHaveValue('CrossFit');
+    await author.fill('Crosfit');
+    await expect(suggestions.getByRole('option', { name: /New: “Crosfit”/ })).toContainText('not “CrossFit”?');
+    await author.press('Enter'); // The best match is highlighted first.
+    await expect(author).toHaveValue('CrossFit');
+    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete A', exact: true }).fill('Burpees');
+    await page.getByRole('combobox', { name: 'Block 1 movement 1 athlete B', exact: true }).fill('Air squats');
+    await page.getByRole('button', { name: 'Save to library' }).click();
+    await expect(page).toHaveURL(/#\/wod\/author-check$/);
+    await expect(page.getByRole('main')).toContainText('By CrossFit');
+  });
+
   test('autosaves a draft across reload, lists it in the library, and discards it on request', async ({ page }) => {
     await page.goto('/#/new');
     await page.getByLabel('Title', { exact: true }).fill('Half done');

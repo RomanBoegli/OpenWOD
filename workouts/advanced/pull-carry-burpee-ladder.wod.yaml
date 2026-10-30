@@ -7,8 +7,8 @@ workout:
   title: Pull, carry, burpee ladder
   description: "An ascending ladder: one pull-up, one lane of farmers carry and one burpee over the dumbbells, then two of each, then three, and so on for fifteen minutes. The program allows twelve to fifteen minutes; the cap here is fifteen. Score the completed rounds."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Pull-up bar
     - Dumbbells

@@ -7,8 +7,8 @@ workout:
   title: Row intervals 8 × 1:30
   description: Eight rowing intervals of ninety seconds with a minute off between them. Pick a hard pace you can repeat eight times and hold it from the first stroke to the last; the score is how little the splits drift.
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Rowing machine
   participants: 1

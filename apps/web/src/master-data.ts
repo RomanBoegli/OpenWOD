@@ -1,5 +1,5 @@
 import { Catalogue, movementKey, type Movement } from '../../../packages/domain/src/catalogue';
-import { equipmentKey } from '../../../packages/domain/src/library';
+import { authorKey, equipmentKey } from '../../../packages/domain/src/library';
 import { seedMovements } from '../../../packages/domain/src/movements';
 
 /**
@@ -54,6 +54,66 @@ export function unmergeEquipment(data: MasterData, key: string): MasterData {
   const aliases = { ...data.equipmentAliases };
   delete aliases[key];
   return { ...data, equipmentAliases: aliases, committed: data.committed.filter(entry => entry !== `equipment:${key}`) };
+}
+
+// ---- Authors ----------------------------------------------------------------------------------------------------
+
+/** The spelling an author takes after merges and renames. */
+export const authorSpelling = (data: MasterData) => (name: string): string => data.authorAliases[authorKey(name)] ?? name.trim();
+
+/** The author as the library shows it: the spelling after merges, or nothing for a deleted one. Workout files keep their own text. */
+export const canonicalAuthor = (data: MasterData) => (name: string): string | undefined => {
+  const canonical = authorSpelling(data)(name);
+  return canonical && !data.hiddenAuthors.includes(authorKey(canonical)) ? canonical : undefined;
+};
+
+/** Authors to pick from: those the library names (already canonical) and those added by hand, minus deleted ones. */
+export function authorRepertoire(data: MasterData, libraryAuthors: string[]): string[] {
+  const seen = new Map<string, string>();
+  for (const name of [...libraryAuthors, ...data.authors.map(author => canonicalAuthor(data)(author) ?? '')]) if (name.trim() && !seen.has(authorKey(name))) seen.set(authorKey(name), name.trim());
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+}
+
+/** Merge every spelling in `names` into `target`, re-pointing earlier merges into any of them. Like mergeEquipment. */
+export function mergeAuthors(data: MasterData, names: string[], target: string): MasterData {
+  const canonical = target.trim();
+  if (!canonical) return data;
+  const keys = new Set(names.map(authorKey).filter(Boolean));
+  const aliases = { ...data.authorAliases };
+  for (const key of keys) aliases[key] = canonical;
+  for (const [key, value] of Object.entries(aliases)) if (keys.has(authorKey(value))) aliases[key] = canonical;
+  // A hand-added spelling that was merged away becomes the target, once.
+  const renamed = data.authors.map(author => keys.has(authorKey(author)) ? canonical : author);
+  return { ...data, authorAliases: aliases, authors: [...new Map(renamed.map(author => [authorKey(author), author])).values()] };
+}
+
+export function unmergeAuthor(data: MasterData, key: string): MasterData {
+  const aliases = { ...data.authorAliases };
+  delete aliases[key];
+  return { ...data, authorAliases: aliases, committed: data.committed.filter(entry => entry !== `author:${key}`) };
+}
+
+/** Adds an author by hand; a deleted one with the same spelling comes back. */
+export function addAuthor(data: MasterData, name: string): MasterData {
+  const author = name.trim();
+  if (!author) return data;
+  const restored = restoreAuthor(data, author);
+  return restored.authors.some(item => authorKey(item) === authorKey(author)) ? restored : { ...restored, authors: [...restored.authors, author] };
+}
+
+/**
+ * Deletes an author: it leaves the lists, suggestions, search and pages. One that workouts name (`used`) is hidden,
+ * so they show no author and Restore can bring it back; one only added by hand is simply forgotten.
+ */
+export function removeAuthor(data: MasterData, name: string, used: boolean): MasterData {
+  const key = authorKey(name);
+  const authors = data.authors.filter(author => authorKey(author) !== key);
+  return { ...data, authors, hiddenAuthors: !used || data.hiddenAuthors.includes(key) ? data.hiddenAuthors : [...data.hiddenAuthors, key] };
+}
+
+export function restoreAuthor(data: MasterData, name: string): MasterData {
+  const key = authorKey(name);
+  return data.hiddenAuthors.includes(key) ? { ...data, hiddenAuthors: data.hiddenAuthors.filter(item => item !== key) } : data;
 }
 
 // ---- Movement catalogue ---------------------------------------------------------------------------------------

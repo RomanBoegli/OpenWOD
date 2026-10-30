@@ -7,8 +7,8 @@ workout:
   title: Summer-body EMOM 12
   description: "Three movements, four rounds: biceps curls, push-ups and sit-ups, each on its own minute. The program calls it an EMOM 20, but three movements times four rounds is twelve minutes, so the clock runs twelve. Reps drop 14-12-10-8 across the rounds while the curl weight goes up."
   attribution:
-    author: Coach programming, shared in a members chat
-    notes: Curated from a CrossFit class program; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+    author: Coach programming
+    notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
     - Dumbbells
   participants: 1
