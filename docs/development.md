@@ -108,6 +108,9 @@ Once per repository, before the first tag that publishes the static site:
 2. Write `docs/releases/vX.Y.Z.md` from the previous one: what changed, where to get it, supported browsers, known limitations, the schema version, and upgrading.
    It becomes the body of the GitHub Release as it is, so leave the digest as a placeholder: the release job appends the image digest line by itself.
 3. Run `npm run check`, `npm run build`, `npm run build:static`, the browser suite in Firefox and WebKit for both shapes, `scripts/rehearse-restore.sh`, and go through `docs/device-checklist.md` on a real device.
+   Also run the production smoke against the static build, the one test the release runs that the browser suite does not: `npm run preview:static` in one terminal, then `OPENWOD_PRODUCTION_URL=http://127.0.0.1:4173 OPENWOD_PRODUCTION_MODE=static npm run test:production`.
+   It drives the real import, so a change to the import preview's buttons breaks it (the `v1.5.0` tag stopped there).
+   Locally the cue-pack test passes only when all five packs are rendered.
 4. Commit everything as `Release vX.Y.Z`, tag it annotated, and push both:
 
    ```sh

@@ -24,8 +24,9 @@ test('the production container plays a real interval without test injection', as
     sections: [{ id: 'section', title: 'Smoke check', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'movement', type: 'timed', durationMs: 1000, assignments: { A: { name: 'Air squats' }, B: { name: 'March in place' } } } }],
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'production.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(file) });
-  await page.getByRole('button', { name: 'Save to library' }).click();
-  await expect(page).toHaveURL(new RegExp(`#/wod/${id}(-\\d+)?$`));
+  // A single workout the editor can show is saved and opened in it.
+  await page.getByRole('button', { name: 'Save and edit' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/wod/${id}(-\\d+)?/edit$`));
   await page.goto('./');
   await page.getByRole('link', { name: `Start ${title}` }).first().click();
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();

@@ -247,3 +247,21 @@ Version 1.5.0: Create with AI and paste import (SHR-07), authors as master data 
 | Older master data | A server answer and a device cache without the author fields open the library (`household.spec.ts`), the case that showed "OpenWOD hit an error" during development. |
 
 Not recorded in this round: a session on a physical iPad or iPhone, the four alias name clips rendered by Piper (the Cues workflow renders them on `main`), and the release workflow on GitHub runners before the tag.
+
+## Release 1.5.1, 30 October 2026
+
+Version 1.5.1: everything of the unpublished 1.5.0 (SHR-07, LIB-06, UI-24, AUD-10) and a movement catalogue of 259 records, with shorthand aliases and GHD, Battle rope, Tyre and Yoke as equipment names.
+
+The `v1.5.0` tag's workflow stopped in the production smoke test in all three engines, in both the image and the static job, so no image was pushed and neither the release nor Pages ran.
+`tests/production/player.spec.ts` still pressed Save to library, which a single imported workout now offers as Save and edit, opening the editor.
+The test now presses Save and edit and expects the editor's address, and `docs/development.md` adds the production smoke against the static build to the steps before a tag, since the browser suite does not cover it.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 253 passed in 31 files. The catalogue test allows up to 300 records and knows the four new equipment names. |
+| Browser scenarios | 392 passed, 1 failed: Chromium 61, Firefox 61, WebKit 61, static Chromium 69, static Firefox 70, static WebKit 70. The failure is the static Logbook delete test in local headless Chromium, which failed in three of the four full runs of this session and once in three repeated runs. CI retries a failed test once. |
+| Production smoke, static | The timing test, the one that stopped `v1.5.0`, passes in Chromium, Firefox and WebKit against `vite preview` of the static build. The cue-pack test needs all five packs, and only one is rendered on this machine. |
+| Production smoke, server | Not run locally: the server needs Node 24 for the SQLite backup API, Node 23 is installed here, and Docker was not running. The same import flow passes in the server-mode browser scenarios. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.1. |
+
+Not recorded in this round: a session on a physical iPad or iPhone, the sixty new name clips rendered by Piper (the Cues workflow renders them on `main`), and the release workflow on GitHub runners before the tag.
