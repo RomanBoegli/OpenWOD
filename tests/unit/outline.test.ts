@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
-import { outlineWorkout } from '../../packages/domain/src/outline';
+import { outlineWorkout, roundProgress } from '../../packages/domain/src/outline';
 const fullBodyPartner = bundledWorkout('full-body-partner');
 const partnerCircuit = bundledWorkout('partner-circuit');
 
@@ -55,5 +55,29 @@ describe('workout outline', () => {
     expect(section.rounds[0].roundRestMs).toBe(60_000);
     expect(section.rounds[0].restAfter).toEqual([{ kind: 'roundRest', ms: 120_000 }]);
     expect(section.rounds[1].restAfter).toEqual([]);
+  });
+});
+
+describe('round progress (UI-24)', () => {
+  const positions = (id: string) => {
+    const plan = compileWorkout(bundledWorkout(id));
+    const progress = roundProgress(plan);
+    return plan.occurrences.filter(item => item.phase === 'work').map(item => progress.get(item.id));
+  };
+
+  it('places each movement in its round and counts the rounds of the innermost repeat', () => {
+    const circuit = positions('partner-circuit');
+    expect(circuit.slice(0, 5)).toEqual([1, 2, 3, 4, 1].map((position, index) => ({ position, size: 4, round: index < 4 ? 1 : 2, rounds: 5 })));
+    expect(circuit.at(-1)).toEqual({ position: 4, size: 4, round: 5, rounds: 5 });
+    // A block outside any repeat is one round; the next block starts its own count.
+    const fullBody = positions('full-body-partner');
+    expect(fullBody[4]).toEqual({ position: 5, size: 5, round: 1, rounds: 1 });
+    expect(fullBody[5]).toEqual({ position: 1, size: 4, round: 1, rounds: 2 });
+  });
+
+  it('follows the EMOM cycle, keeps a chipper as one round, and leaves AMRAP blocks to the athletes', () => {
+    expect(positions('partner-emom-16').slice(0, 3)).toEqual([{ position: 1, size: 2, round: 1, rounds: 8 }, { position: 2, size: 2, round: 1, rounds: 8 }, { position: 1, size: 2, round: 2, rounds: 8 }]);
+    expect(positions('fran').map(item => item?.position)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(positions('cindy')).toEqual([undefined]);
   });
 });

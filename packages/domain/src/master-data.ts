@@ -142,6 +142,8 @@ export function sanitiseMasterData(value: unknown): MasterData {
  * a newer revision.
  */
 export function mergeMasterData(base: MasterData, incoming: MasterData): MasterData {
+  // Either side may come from a build without the author fields (they are optional in the schema).
+  const authors = (data: MasterData) => data.authors ?? [], hiddenAuthors = (data: MasterData) => data.hiddenAuthors ?? [];
   const collections = [...base.collections];
   for (const collection of incoming.collections) if (!collections.some(item => item.id === collection.id)) collections.push(collection);
   const collectionEdits = { ...incoming.collectionEdits, ...base.collectionEdits };
@@ -156,11 +158,11 @@ export function mergeMasterData(base: MasterData, incoming: MasterData): MasterD
     hiddenWorkouts: [...new Set([...base.hiddenWorkouts, ...incoming.hiddenWorkouts])].slice(0, COLLECTION_SIZE),
     movementAliases: { ...incoming.movementAliases, ...base.movementAliases },
     authorAliases: { ...incoming.authorAliases, ...base.authorAliases },
-    authors: [...new Map([...incoming.authors, ...base.authors].map(author => [authorKey(author), author])).values()].slice(0, AUTHOR_LIMIT),
-    hiddenAuthors: [...new Set([...base.hiddenAuthors, ...incoming.hiddenAuthors])].slice(0, AUTHOR_LIMIT),
+    authors: [...new Map([...authors(incoming), ...authors(base)].map(author => [authorKey(author), author])).values()].slice(0, AUTHOR_LIMIT),
+    hiddenAuthors: [...new Set([...hiddenAuthors(base), ...hiddenAuthors(incoming)])].slice(0, AUTHOR_LIMIT),
     committed: [...new Set([...base.committed, ...incoming.committed])].slice(0, 2000),
   };
 }
 
 export const isEmptyMasterData = (data: MasterData): boolean =>
-  !Object.keys(data.equipmentAliases).length && !data.collections.length && !Object.keys(data.collectionEdits).length && !data.movements.length && !data.hiddenMovements.length && !data.hiddenWorkouts.length && !Object.keys(data.movementAliases).length && !Object.keys(data.authorAliases).length && !data.authors.length && !data.hiddenAuthors.length && !data.committed.length;
+  !Object.keys(data.equipmentAliases).length && !data.collections.length && !Object.keys(data.collectionEdits).length && !data.movements.length && !data.hiddenMovements.length && !data.hiddenWorkouts.length && !Object.keys(data.movementAliases).length && !Object.keys(data.authorAliases ?? {}).length && !data.authors?.length && !data.hiddenAuthors?.length && !data.committed.length;

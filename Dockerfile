@@ -23,6 +23,7 @@ RUN if [ "$CUES" = "1" ]; then \
     fi
 COPY scripts/generate-cues.ts scripts/render-cues.py ./scripts/
 COPY packages/domain/src/movements.ts ./packages/domain/src/movements.ts
+COPY packages/domain/src/generated/cue-phrases.json ./packages/domain/src/generated/cue-phrases.json
 RUN if [ "$CUES" = "1" ]; then \
       CUES_OUT=/cues PIPER_VOICES=/tmp/piper-voices PIPER_PYTHON=python3 tsx scripts/generate-cues.ts && rm -rf /tmp/piper-voices; \
     else mkdir -p /cues; fi

@@ -1,5 +1,7 @@
 import type { ClockValues, Projection } from '../../../packages/engine/src';
 import hornUrl from './assets/truck-horn.m4a';
+import { movementKey, movementSlug } from '../../../packages/domain/src/catalogue';
+import { seedMovements } from '../../../packages/domain/src/movements';
 
 export type SoundMode = 'voice' | 'beeps' | 'silent';
 /**
@@ -25,6 +27,8 @@ export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' |
 export interface CuePack { id: string; label: string; voice?: string; names?: number }
 export const CUE_NAMES: CueName[] = ['get-ready', 'go', 'rest', 'switch', 'three', 'two', 'one', 'paused', 'resume', 'complete', 'a', 'b', 'next', 'last-interval', 'a-waiting', 'b-waiting', 'ended'];
 type Lane = { name: string; spokenName?: string; movement?: string };
+/** The written names each bundled record's clip stands for: its name and its spoken name (the packs say `spokenName ?? name`). */
+const RECORDED = new Map(seedMovements.map(record => [record.id, [record.name, record.spokenName].filter((text): text is string => Boolean(text)).map(movementKey)]));
 type Assignment = { A: Lane; B?: Lane };
 const COUNTDOWN: Record<1 | 2 | 3, CueName> = { 1: 'one', 2: 'two', 3: 'three' };
 
@@ -77,7 +81,7 @@ export class WorkoutAudio {
   cuePack = '';
   packs: CuePack[] = [];
   private loadedPack = '';
-  /** Recorded movement names of the loaded pack, by movement id (see prepareNames). */
+  /** Recorded movement names of the loaded pack, by clip key: a movement id, or text/<slug> for a written name (see nameKey). */
   private names = new Map<string, AudioBuffer>();
   private namesPack = '';
   /** Maps a prescription to its movement record id so its recorded name can be found; set by the app from the catalogue. */
@@ -142,8 +146,19 @@ export class WorkoutAudio {
     return this.preloading;
   }
 
-  /** Fetches and decodes the recorded names a session will announce. Names the pack lacks (your own movements) fall back to device speech. */
-  async prepareNames(ids: string[]): Promise<void> {
+  /**
+   * The recorded clip a lane is announced with (AUD-10): its movement record's clip when the written name is what that
+   * clip says, otherwise a clip of the written name itself ("Plank rows" is not read as "Renegade rows"). The packs carry
+   * such text clips for the names bundled workouts write; any other name falls back to the device voice.
+   */
+  nameKey(lane: Lane): string {
+    const text = lane.spokenName ?? lane.name;
+    const id = [this.resolveMovement?.(lane), lane.movement].find(candidate => candidate && RECORDED.get(candidate)?.includes(movementKey(text)));
+    return id ?? `text/${movementSlug(text)}`;
+  }
+
+  /** Fetches and decodes the recorded names a session will announce, by clip key (see nameKey). Names the pack lacks fall back to device speech. */
+  async prepareNames(keys: string[]): Promise<void> {
     if (typeof fetch !== 'function' || this.cueSource !== 'clips') return;
     await this.listPacks();
     const pack = this.packs.find(item => item.id === this.cuePack) ?? this.packs[0];
@@ -151,10 +166,10 @@ export class WorkoutAudio {
     let context: AudioContext;
     try { context = this.ensureContext(); } catch { return; }
     if (this.namesPack !== pack.id) { this.names.clear(); this.namesPack = pack.id; }
-    await Promise.all([...new Set(ids)].filter(id => !this.names.has(id)).map(async id => {
+    await Promise.all([...new Set(keys)].filter(key => !this.names.has(key)).map(async key => {
       try {
-        const response = await fetch(`${this.clipBase}${pack.id}/names/${id}.mp3`);
-        if (response.ok) this.names.set(id, await context.decodeAudioData(await response.arrayBuffer()));
+        const response = await fetch(`${this.clipBase}${pack.id}/names/${key}.mp3`);
+        if (response.ok) this.names.set(key, await context.decodeAudioData(await response.arrayBuffer()));
       } catch { /* No clip: the device voice reads this name. */ }
     }));
   }
@@ -338,8 +353,7 @@ export class WorkoutAudio {
       const sequence: AudioBuffer[] = [];
       const lanes: [CueName | undefined, Lane][] = assignment.B ? [['a', assignment.A], ['b', assignment.B]] : [[undefined, assignment.A]];
       const complete = lanes.every(([athlete, lane]) => {
-        const id = this.resolveMovement?.(lane) ?? lane.movement;
-        const buffer = (id ? this.names.get(id) : undefined) ?? (lane.movement ? this.names.get(lane.movement) : undefined);
+        const buffer = this.names.get(this.nameKey(lane));
         if (!buffer) return false;
         if (athlete) sequence.push(this.clips.get(athlete)!);
         sequence.push(buffer);
@@ -358,7 +372,7 @@ export class WorkoutAudio {
     await this.preload();
     const sample: Assignment = { A: { name: 'Row', movement: 'row' }, B: { name: 'Kettlebell swings', movement: 'kettlebell-swing' } };
     // The same resolution as a session, so a hidden or replaced movement is prepared under the id that will be announced.
-    await this.prepareNames([sample.A, sample.B!].flatMap(lane => [this.resolveMovement?.(lane) ?? lane.movement!, lane.movement!]));
+    await this.prepareNames([sample.A, sample.B!].map(lane => this.nameKey(lane)));
     if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
     if (this.context && this.mode !== 'silent') this.beep(this.context.currentTime + .1, .15, 880);
     const result = this.announce(sample, 'Ready to train.', ['get-ready'], (this.context?.currentTime ?? 0) + .4);

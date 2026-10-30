@@ -8,6 +8,7 @@ on:
       - scripts/generate-cues.ts
       - scripts/render-cues.py
       - packages/domain/src/movements.ts
+      - packages/domain/src/generated/cue-phrases.json
   workflow_dispatch:
 permissions:
   contents: read
@@ -30,7 +31,7 @@ jobs:
           path: |
             apps/web/public/cues
             .cache/piper-voices
-          key: cues-v1-${{ hashFiles('scripts/generate-cues.ts', 'scripts/render-cues.py', 'packages/domain/src/movements.ts') }}
+          key: cues-v1-${{ hashFiles('scripts/generate-cues.ts', 'scripts/render-cues.py', 'packages/domain/src/movements.ts', 'packages/domain/src/generated/cue-phrases.json') }}
           restore-keys: cues-v1-
       - uses: actions/setup-python@v7
         if: steps.cues.outputs.cache-hit != 'true'

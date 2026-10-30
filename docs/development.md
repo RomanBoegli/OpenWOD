@@ -55,16 +55,17 @@ A change there is a change in behaviour and must be deliberate.
 ## Recorded voices
 
 `npm run cues:generate` renders five English voice packs with [Piper](https://github.com/OHF-Voice/piper1-gpl) into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`. `CUE_PACKS=british` renders one): the fixed cues (Go, Rest, countdown, A, B, Next, Last interval, …) as `<cue>.mp3` and every bundled movement's spoken name under `names/<movement-id>.mp3`, about 200 clips and 2 MB per pack.
+Names the bundled workouts write differently from their record ("Plank rows" for Renegade rows) are recorded as written under `names/text/<slug>.mp3`. `npm run workouts:bundle` lists them in `packages/domain/src/generated/cue-phrases.json`, and the app plays a record's clip only for the record's own name (AUD-10).
 The list of packs and cue texts lives in `scripts/generate-cues.ts`. `scripts/render-cues.py` does the synthesis with the Piper Python API so a voice model loads once per pack.
 Every clip is trimmed and brought to the same level (-18 dBFS RMS, peaks under -1 dBFS) in two ffmpeg passes, because single-pass loudness normalisation cannot measure clips this short.
 Piper samples noise on every synthesis, so a clip can once in a while come out silent and is then synthesised again, up to three times, before the render fails naming that clip.
 A pack rendered by an older version of the scripts is rendered again, not resumed.
-The Docker build renders the same set (`CUES=1`, the default) in a stage that starts from the bare Node image with only the two cue scripts, the movement catalogue and a pinned `tsx`, so the layer stays cached across app edits, version bumps and dependency updates.
+The Docker build renders the same set (`CUES=1`, the default) in a stage that starts from the bare Node image with only the two cue scripts, the movement catalogue, the phrase list and a pinned `tsx`, so the layer stays cached across app edits, version bumps and dependency updates.
 A cached rebuild shows `CACHED` beside the render step.
 The rendered files are not committed.
 Without them the app uses beeps and the device's best English voice.
-For the static site CI renders the same packs with the same two scripts on the runner (`PIPER_PYTHON=python3`, Piper from pip) and caches them under a key built from the two cue scripts and `packages/domain/src/movements.ts`.
-A cache saved by a tag is not visible to the next tag, so the **Cues** workflow (`.github/workflows/cues.yml`) renders and saves them on `main` whenever one of those three files changes, or when it is dispatched by hand.
+For the static site CI renders the same packs with the same two scripts on the runner (`PIPER_PYTHON=python3`, Piper from pip) and caches them under a key built from the two cue scripts, `packages/domain/src/movements.ts` and the phrase list.
+A cache saved by a tag is not visible to the next tag, so the **Cues** workflow (`.github/workflows/cues.yml`) renders and saves them on `main` whenever one of those four files changes, or when it is dispatched by hand.
 `OPENWOD_REQUIRE_CUES=1 npm run build:static` fails unless all five packs are in the build.
 
 ## Conventions

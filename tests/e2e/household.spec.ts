@@ -6,6 +6,44 @@ import { advance, PLAYER, ready } from './helpers';
 const own = (id: string, title: string, revision = 1): Workout => ({ ...bundledWorkout('fran'), id, revision, title, sharing: undefined });
 
 test.describe('household server', () => {
+  test('LIB-06: master data from an older build, without the author fields, still opens the library', async ({ page }) => {
+    await page.goto('/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
+    // The device cache and the server answer as a build before authors were master data left and sends them.
+    const strip = (document: Record<string, unknown>) => { const { authorAliases: _aliases, authors: _authors, hiddenAuthors: _hidden, ...older } = document; return older; };
+    await expect.poll(() => page.evaluate(() => new Promise<boolean>(resolve => {
+      const open = indexedDB.open('openwod');
+      open.onsuccess = () => { const read = open.result.transaction('cache').objectStore('cache').get('household'); read.onsuccess = () => { open.result.close(); resolve(Boolean(read.result)); }; read.onerror = () => resolve(false); };
+      open.onerror = () => resolve(false);
+    }))).toBe(true);
+    await page.evaluate(() => new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('openwod');
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const store = open.result.transaction('cache', 'readwrite').objectStore('cache');
+        const read = store.get('household');
+        read.onsuccess = () => {
+          const cache = read.result;
+          const { authorAliases: _aliases, authors: _authors, hiddenAuthors: _hidden, ...older } = cache.master.document;
+          store.put({ ...cache, master: { ...cache.master, document: older } }).onsuccess = () => { open.result.close(); resolve(); };
+        };
+        read.onerror = () => reject(read.error);
+      };
+    }));
+    await page.route('**/api/v1/master-data', async route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      const body = await response.json() as { revision: number; document: Record<string, unknown> };
+      await route.fulfill({ response, json: { ...body, document: strip(body.document) } });
+    });
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: 'Pick your next session' })).toBeVisible();
+    await expect(page.getByText('OpenWOD hit an error')).toHaveCount(0);
+    await page.getByRole('searchbox', { name: 'Search workouts' }).fill('crosfit');
+    await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Fran');
+    await page.goto('/#/settings/authors');
+    await expect(page.getByRole('list', { name: 'Authors in the library' }).getByRole('listitem')).toHaveCount(3);
+  });
+
   test('a saved workout reaches the server, shows on a fresh page, and an archive removes it', async ({ page, api }) => {
     await page.goto('/#/new');
     await page.getByLabel('Title', { exact: true }).fill('Household check');

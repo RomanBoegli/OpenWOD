@@ -5,16 +5,19 @@
 // Every file must parse as a current workout file, carry the id its name says, and name only movements the
 // catalogue knows (the voice packs render one clip per catalogue record, so unknown names would fall back to the
 // device voice). A folder with a collection.yaml is a bundled collection; folders without one only group files.
+// It also lists the names workouts write differently from their record ("Plank rows" for Renegade rows) in
+// generated/cue-phrases.json, so the voice packs record them as written (AUD-10).
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import YAML from 'yaml';
-import { Catalogue } from '../packages/domain/src/catalogue';
+import { Catalogue, movementKey, movementSlug } from '../packages/domain/src/catalogue';
 import { parseWorkoutFile, WorkoutValidationError, type Workout } from '../packages/domain/src';
 import { collectPrescriptions } from '../packages/domain/src/library';
 import { seedMovements } from '../packages/domain/src/movements';
 
 const ROOT = 'workouts';
 const OUT = 'packages/domain/src/generated/bundled.ts';
+const PHRASES = 'packages/domain/src/generated/cue-phrases.json';
 const check = process.argv.includes('--check');
 const catalogue = new Catalogue(seedMovements);
 const problems: string[] = [];
@@ -23,6 +26,8 @@ interface BundledCollection { id: string; title: string; description: string; wo
 const collections: BundledCollection[] = [];
 const workouts: Workout[] = [];
 const seen = new Map<string, string>();
+/** Clip key (movementSlug of the written text) → the text, for every written name its record's clip would not say. */
+const phrases = new Map<string, string>();
 
 for (const folder of (await readdir(ROOT, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort()) {
   const files = (await readdir(join(ROOT, folder))).sort();
@@ -39,6 +44,11 @@ for (const folder of (await readdir(ROOT, { withFileTypes: true })).filter(entry
     seen.set(workout.id, path);
     const unknown = [...new Set(collectPrescriptions(workout).filter(item => !catalogue.resolve(item)).map(item => item.name))];
     if (unknown.length) problems.push(`${path}: movements not in the catalogue (packages/domain/src/movements.ts): ${unknown.join(', ')}.`);
+    for (const item of collectPrescriptions(workout)) {
+      const record = catalogue.resolve(item);
+      const text = (item.spokenName ?? item.name).trim();
+      if (record && ![record.name, record.spokenName].some(own => own && movementKey(own) === movementKey(text))) phrases.set(movementSlug(text), text);
+    }
     // A bundled workout carries a deterministic sharing identity so an export from any installation is recognised on reimport (SHR-05).
     workouts.push({ ...workout, sharing: { id: `openwod.bundled:${workout.id}`, sourceRevision: workout.revision } });
     ids.push(workout.id);
@@ -65,10 +75,14 @@ const content = [
   ``,
 ].join('\n');
 
+const phraseContent = JSON.stringify(Object.fromEntries([...phrases].sort(([a], [b]) => a.localeCompare(b, 'en'))), null, 2) + '\n';
+
 if (check) {
   if (await readFile(OUT, 'utf8').catch(() => '') !== content) { console.error(`${OUT} is out of date. Run npm run workouts:bundle.`); process.exit(1); }
+  if (await readFile(PHRASES, 'utf8').catch(() => '') !== phraseContent) { console.error(`${PHRASES} is out of date. Run npm run workouts:bundle.`); process.exit(1); }
   console.log(`${workouts.length} bundled workouts in ${collections.length} collections are up to date.`);
 } else {
   await writeFile(OUT, content);
+  await writeFile(PHRASES, phraseContent);
   console.log(`Bundled ${workouts.length} workouts in ${collections.length} collections into ${OUT}.`);
 }

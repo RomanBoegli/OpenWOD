@@ -231,7 +231,7 @@ test.describe('workout view settings', () => {
     await expect(page.locator('svg[data-perimeter] path').first()).toHaveCSS('stroke-width', '10px');
     await expect(page.locator('[data-wash]').locator('.overallTrack, [class*=overallTrack]').first()).toHaveCSS('height', '10px'); // As thick as the ring.
     await expect(page.getByRole('button', { name: 'Back 15 seconds' })).toBeVisible();
-    await expect(page.getByLabel('Progress beside the clock')).toHaveText(/· \d+ %/);
+    await expect(page.getByLabel('Progress beside the clock')).toHaveText(/^\d+ %$/);
     const player = page.locator('[data-wash]');
     expect(await player.evaluate(element => element.style.getPropertyValue('--wash-gain'))).toBe('0.6');
     expect(await player.evaluate(element => element.style.getPropertyValue('--phase-amber'))).toBe('#ff00ff');
@@ -247,9 +247,9 @@ test.describe('workout view settings', () => {
     await page.evaluate(() => window.__openwodTest!.advance(30_000));
     await expect.poll(async () => Number(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--drained')))).toBeGreaterThan(0.3);
     const overall = page.getByTestId('overall-progress');
-    await expect(overall).toContainText('BLOCK 1 / 1');
+    await expect(overall.locator('[data-segment]')).toHaveCount(1); // The bar has one segment per block.
     await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-weight', 'light');
     await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-size', 'compact');
-    await expect(overall.locator('span span')).toHaveAttribute('style', /width/);
+    await expect(overall.locator('[data-segment] span')).toHaveAttribute('style', /width/);
   });
 });

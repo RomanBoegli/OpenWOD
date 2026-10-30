@@ -195,7 +195,7 @@ jobs:
           path: |
             apps/web/public/cues
             .cache/piper-voices
-          key: cues-v1-${{ hashFiles('scripts/generate-cues.ts', 'scripts/render-cues.py', 'packages/domain/src/movements.ts') }}
+          key: cues-v1-${{ hashFiles('scripts/generate-cues.ts', 'scripts/render-cues.py', 'packages/domain/src/movements.ts', 'packages/domain/src/generated/cue-phrases.json') }}
           restore-keys: cues-v1-
       # An exact hit holds every pack complete (only a successful run saves the key), so Piper and ffmpeg are only set up to render.
       - uses: actions/setup-python@v7

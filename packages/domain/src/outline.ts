@@ -46,6 +46,37 @@ export interface OutlineSection {
 }
 
 const pathKey = (rounds: RoundContext[]) => rounds.map(round => `${round.nodeId}:${round.iteration}`).join('.');
+
+/** Where a work occurrence stands in its round, for the player's round donut (UI-24). */
+export interface RoundProgress {
+  /** 1-based position among the work of the same round of the same block, and how much work that round holds. */
+  position: number;
+  size: number;
+  /** The innermost repeat's iteration and count; 1 of 1 for work outside any repeat. */
+  round: number;
+  rounds: number;
+}
+
+/**
+ * The round position of every work occurrence, by occurrence id. Work shares a round when it has the same section and
+ * the same full repeat path, so loose work beside a repeat and outer sets count on their own. AMRAP and you-go-I-go
+ * blocks are left out: where the athletes are inside them is theirs to say (UI-06).
+ */
+export function roundProgress(plan: ExecutionPlan): Map<string, RoundProgress> {
+  const groups = new Map<string, Occurrence[]>();
+  for (const item of plan.occurrences) {
+    if (item.phase !== 'work' || item.tasks) continue;
+    const key = `${item.sectionIndex}|${pathKey(item.rounds)}`;
+    const members = groups.get(key);
+    if (members) members.push(item); else groups.set(key, [item]);
+  }
+  const result = new Map<string, RoundProgress>();
+  for (const members of groups.values()) members.forEach((item, index) => {
+    const innermost = item.rounds.at(-1);
+    result.set(item.id, { position: index + 1, size: members.length, round: innermost?.iteration ?? 1, rounds: innermost?.count ?? 1 });
+  });
+  return result;
+}
 const LEVEL_NAMES = ['Set', 'Round'];
 
 function levelName(depth: number, levels: number, format: SectionFormat): string {

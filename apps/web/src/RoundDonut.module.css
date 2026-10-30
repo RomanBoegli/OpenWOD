@@ -1,0 +1,32 @@
+/* Beside the big clock, opposite the % (App.module.css .clockLine): the grid's left column, which may shrink to
+   nothing, so the donut never moves or pushes the clock (UI-20). It scales down with the room left beside the clock
+   and stays out of the way where there is too little, and it is never taller than the clock's own row. */
+/* Baseline-aligned like the %: the ring stands on the digits' floor and its dots hang below it, outside the row's
+   height (the negative margin), so a clock set with a tight line height keeps its row. */
+.progress { --dot: 14px; --dot-gap: 9px; margin-bottom: calc(-1 * (var(--dot) + var(--dot-gap))); grid-column: 1; grid-row: 1; align-self: baseline; min-width: 0; container-type: inline-size; color: var(--ink-3); }
+.stack { display: grid; justify-items: center; gap: var(--dot-gap); width: fit-content; margin: 0 clamp(8px, 1.6vw, 24px) 0 auto; }
+/* Sized from the clock (App.module.css .timer: clamp(112px, 12.5vw, 156px)) to about two thirds of its height, wider than tall. */
+.donut { display: block; width: min(clamp(124px, 13vw, 165px), calc(100cqw - clamp(8px, 1.6vw, 24px))); height: auto; aspect-ratio: 60 / 42; overflow: visible; }
+@container (max-width: 44px) { .stack { display: none; } }
+.segment, .fill { fill: none; stroke-width: 6; }
+.segment { stroke: color-mix(in srgb, var(--ink-3) 24%, transparent); transition: stroke var(--t-slow) var(--ease); }
+.segment[data-state=done] { stroke: var(--phase-color, var(--accent)); }
+.fill { stroke: var(--phase-color, var(--accent)); }
+/* Manual work: the clock does not know when it ends, so the segment breathes instead of filling. */
+.fill[data-timed=false] { animation: donutBreath 1.8s ease-in-out infinite; }
+.count { font-size: 13px; font-weight: 700; fill: var(--ink); text-anchor: middle; dominant-baseline: central; font-variant-numeric: tabular-nums; }
+.dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; max-width: clamp(124px, 13vw, 165px); }
+.dot { width: var(--dot); height: var(--dot); border-radius: 50%; border: 2px solid color-mix(in srgb, var(--ink-3) 40%, transparent); transition: background-color var(--t-slow) var(--ease), border-color var(--t-slow) var(--ease); }
+.dot[data-state=done] { background: var(--phase-color, var(--accent)); border-color: transparent; animation: pop var(--t-slow) var(--ease); }
+.dot[data-state=current] { border-color: var(--phase-color, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--phase-color, var(--accent)) 22%, transparent); }
+.roundText { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; white-space: nowrap; }
+@keyframes donutBreath { 50% { opacity: .4; } }
+@media (max-width: 620px) {
+  .donut { width: min(clamp(72px, 12vh, 110px), calc(100cqw - 8px)); }
+  .progress { --dot: 9px; --dot-gap: 6px; }
+  .dots { gap: 4px; max-width: 64px; }
+  .dot { border-width: 1.5px; }
+  .dot[data-state=current] { box-shadow: 0 0 0 2px color-mix(in srgb, var(--phase-color, var(--accent)) 22%, transparent); }
+}
+/* A short screen sets the clock smaller (clamp(84px, 15vh, 156px), line height 1): the donut follows it. */
+@media (min-width: 621px) and (max-height: 960px) { .donut { width: min(clamp(100px, 15.5vh, 165px), calc(100cqw - 16px)); } }

@@ -53,6 +53,13 @@ button:active:not(:disabled), a[class]:active { transform: scale(.97); }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes pop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+/* A new movement in the training view: the name slides in, the number lands (UI-24). */
+@keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+/* The next stations swing in with a small overshoot, and their border flashes in the phase colour (UI-24). */
+@keyframes laneIn { from { opacity: 0; transform: translateX(96px) scale(.94); filter: blur(6px); } 65% { opacity: 1; transform: translateX(-6px) scale(1.01); filter: blur(0); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes laneGlow { from { box-shadow: 0 0 0 3px var(--phase-color), 0 0 32px color-mix(in srgb, var(--phase-color) 45%, transparent); } to { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; } }
+@keyframes land { from { opacity: 0; transform: scale(.88); } 60% { opacity: 1; transform: scale(1.03); } to { opacity: 1; transform: none; } }
+@keyframes sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
 /* Press ripple (feel.ts): a wave of the element's own text colour spreading from the pointer. */
 @keyframes rippleWave { from { transform: scale(0); opacity: var(--ripple-opacity, .12); } to { transform: scale(1); opacity: 0; } }
 [data-rippling] { overflow: hidden; }

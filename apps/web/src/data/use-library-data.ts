@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { emptyMasterData, isEmptyMasterData, mergeMasterData, type MasterData } from '../../../../packages/domain/src/master-data';
+import { emptyMasterData, isEmptyMasterData, mergeMasterData, sanitiseMasterData, type MasterData } from '../../../../packages/domain/src/master-data';
 import type { PackCollection } from '../../../../packages/domain/src/pack';
 import type { Workout } from '../../../../packages/domain/src/schema';
 import type { SectionResult } from '../../../../packages/engine/src';
@@ -109,7 +109,8 @@ export function useLibraryData(): LibraryData {
 
   const readOutbox = useCallback(async () => { try { setOutbox(await listOutbox()); } catch { /* no storage: nothing is queued */ } }, []);
 
-  const applyCache = useCallback((cache: Cache) => { setSaved(cache.workouts); setMasterData(cache.master.document); setMasterRevision(cache.master.revision); setServerSessions(cache.sessions); }, []);
+  // The cache holds the server's document as it came, possibly from an older build: it is sanitised like any stored copy.
+  const applyCache = useCallback((cache: Cache) => { setSaved(cache.workouts); setMasterData(sanitiseMasterData(cache.master.document)); setMasterRevision(cache.master.revision); setServerSessions(cache.sessions); }, []);
   // The static shape keeps no cache: the household itself is already in this browser.
   const writeCache = useCallback((cache: Omit<Cache, 'fetchedAt'>) => STATIC ? Promise.resolve() : idbPut('cache', { key: 'household', ...cache, fetchedAt: new Date().toISOString() }).catch(() => undefined), []);
 

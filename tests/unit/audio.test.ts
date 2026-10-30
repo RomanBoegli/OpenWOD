@@ -2,7 +2,11 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { CUE_NAMES, hornSpan, pickDefaultVoice, sortVoices, WorkoutAudio } from '../../apps/web/src/audio';
 import { WorkoutEngine } from '../../packages/engine/src';
 import { compileWorkout } from '../../packages/domain/src/compiler';
-import { bundledWorkout } from '../../packages/domain/src/bundled';
+import { bundledWorkout, bundledWorkouts } from '../../packages/domain/src/bundled';
+import { Catalogue } from '../../packages/domain/src/catalogue';
+import { collectPrescriptions } from '../../packages/domain/src/library';
+import { seedMovements } from '../../packages/domain/src/movements';
+import { readFileSync } from 'node:fs';
 import type { Workout } from '../../packages/domain/src';
 const partnerCircuit = bundledWorkout('partner-circuit');
 const partnerEmom16 = bundledWorkout('partner-emom-16');
@@ -273,4 +277,26 @@ it('holds the first cues of a Start until the audio context has resumed, so Get 
   expect(clips.find(source => source.clip === 'get-ready')!.at).toBe(100);
   // The unlock click, then the three countdown beeps and the Go beep of the 10-second prep.
   expect(sources.filter(source => source.kind === 'beep').map(source => source.at)).toEqual([100, 107, 108, 109, 110]);
+});
+
+it('AUD-10: a name written as an alias is announced as written, never with its record’s clip', () => {
+  const { audio } = setup();
+  audio.resolveMovement = lane => ({ 'Plank rows': 'renegade-row', 'Renegade rows': 'renegade-row', 'renegade row': 'renegade-row', 'AbMat sit-ups': 'abmat-sit-up', 'Pogo hops': 'pogo-hop' } as Record<string, string>)[lane.name];
+  expect(audio.nameKey({ name: 'Renegade rows' })).toBe('renegade-row');
+  expect(audio.nameKey({ name: 'renegade row' })).toBe('renegade-row'); // Spelling is loose, the words are not.
+  expect(audio.nameKey({ name: 'Plank rows' })).toBe('text/plank-row');
+  expect(audio.nameKey({ name: 'Plank rows', spokenName: 'Renegade rows' })).toBe('renegade-row'); // A spoken name decides what is said.
+  expect(audio.nameKey({ name: 'AbMat sit-ups' })).toBe('abmat-sit-up'); // The record's own name, recorded through its spoken name.
+  expect(audio.nameKey({ name: 'Pogo hops' })).toBe('text/pogo-hop'); // Your own record has no recording: the device voice reads it.
+  expect(audio.nameKey({ name: 'Row', movement: 'row' })).toBe('row');
+});
+
+it('AUD-10: the packs record exactly the names bundled workouts write differently from their record', () => {
+  const { audio } = setup();
+  const catalogue = new Catalogue(seedMovements);
+  audio.resolveMovement = lane => catalogue.resolve(lane)?.id;
+  const phrases = JSON.parse(readFileSync(new URL('../../packages/domain/src/generated/cue-phrases.json', import.meta.url), 'utf8')) as Record<string, string>;
+  const keys = new Set(bundledWorkouts.flatMap(workout => collectPrescriptions(workout)).map(lane => audio.nameKey(lane)).filter(key => key.startsWith('text/')));
+  expect([...keys].sort()).toEqual(Object.keys(phrases).map(slug => `text/${slug}`).sort());
+  expect(Object.values(phrases)).toContain('Plank rows');
 });

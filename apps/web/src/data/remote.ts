@@ -1,4 +1,4 @@
-import type { MasterData } from '../../../../packages/domain/src/master-data';
+import { sanitiseMasterData, type MasterData } from '../../../../packages/domain/src/master-data';
 import type { PackCollection } from '../../../../packages/domain/src/pack';
 import type { Workout } from '../../../../packages/domain/src/schema';
 import type { SectionResult } from '../../../../packages/engine/src';
@@ -17,7 +17,8 @@ export const remote = {
   getWorkout: (id: string) => request<StoredWorkout>('GET', `/workouts/${encodeURIComponent(id)}`),
   putWorkout: (document: Workout, ifMatch?: number) => request<{ id: string; revision: number; updatedAt: string }>('PUT', `/workouts/${encodeURIComponent(document.id)}`, { body: { document }, ifMatch }),
   archiveWorkout: (id: string, ifMatch?: number) => request<void>('DELETE', `/workouts/${encodeURIComponent(id)}`, { ifMatch }),
-  getMasterData: () => request<{ revision: number; document: MasterData }>('GET', '/master-data'),
+  // Read like any stored document: a server on an older build sends no fields it does not know, and the app relies on every field.
+  getMasterData: () => request<{ revision: number; document: MasterData }>('GET', '/master-data').then(result => ({ ...result, document: sanitiseMasterData(result.document) })),
   putMasterData: (document: MasterData, ifMatch: number) => request<{ revision: number; updatedAt: string }>('PUT', '/master-data', { body: { document }, ifMatch }),
   listSessions: (query: { limit?: number; before?: string; workoutId?: string } = {}) => {
     const params = new URLSearchParams();

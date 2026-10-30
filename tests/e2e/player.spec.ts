@@ -342,6 +342,43 @@ test.describe('formats', () => {
     await expect(page.getByText('MODIFIED')).toBeVisible();
   });
 
+  for (const [width, height] of [[1024, 768], [390, 844]] as const) {
+    test(`UI-24: the round donut counts movements and rounds, and the context view keeps the movement under way in sight at ${width}×${height}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto(PLAYER); await ready(page);
+      await page.getByRole('button', { name: 'Context', exact: true }).click();
+      await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+      await advance(page, 165_000); // Prep, three stations with their transitions: the fourth station of round 1.
+      const donut = page.getByTestId('round-donut');
+      await expect(donut).toHaveAttribute('aria-label', 'Movement 4 of 4, round 1 of 5, 4 rounds left');
+      const active = page.getByRole('region', { name: 'Workout context' }).locator('[aria-current=step]');
+      await expect(active).toContainText('Air squats');
+      // The row sits inside the list's visible box, so it can be read without scrolling.
+      await expect.poll(async () => {
+        const [row, list] = await Promise.all([active.boundingBox(), active.locator('xpath=..').boundingBox()]);
+        return Boolean(row && list && row.y >= list.y - 1 && row.y + row.height <= list.y + list.height + 1);
+      }).toBe(true);
+      await advance(page, 100_000); // The round rest, then the first station of round 2.
+      await expect(donut).toHaveAttribute('aria-label', 'Movement 1 of 4, round 2 of 5, 3 rounds left');
+    });
+  }
+
+  test('UI-24: a card names each block as it starts, and a finished block waits for Ready under its own card', async ({ page }) => {
+    await page.goto('/#/wod/full-body-partner/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    const card = page.getByTestId('block-card');
+    await expect(card).toContainText('BLOCK 1 OF 6');
+    await expect(card).toContainText('Warm-up');
+    await expect(card).toBeHidden({ timeout: 5000 }); // It fades by itself.
+    await advance(page, 5 * 60_000 + 1000);
+    await expect(page.getByRole('button', { name: 'Start next block' })).toBeVisible();
+    await expect(card).toContainText('BLOCK 1 DONE');
+    await page.getByRole('button', { name: 'Start next block' }).click();
+    await expect(card).toContainText('BLOCK 2 OF 6');
+    await expect(card).toContainText('2 rounds');
+  });
+
   test('the prep countdown counts down in a count-up workout and wears the rest colour', async ({ page }) => {
     await page.goto('/#/wod/fran/play'); await ready(page);
     await page.getByRole('button', { name: 'Start workout' }).click();

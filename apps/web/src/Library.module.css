@@ -1,7 +1,10 @@
 .library { min-height: 60vh; }
-.heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 26px; }
+.heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 18px 24px; margin-bottom: 26px; }
+/* The text keeps a readable width; when the actions no longer fit beside it they take a row of their own below. */
+.heading > :first-child { flex: 1 1 560px; min-width: 0; }
 .heading h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 12px 0 6px; }
-.headingActions { display: flex; gap: 10px; flex-shrink: 0; }
+.headingActions { display: flex; flex-wrap: wrap; gap: 10px; flex: 0 1 auto; }
+.headingActions > a, .headingActions > button { white-space: nowrap; }
 .filters { display: grid; gap: 12px; padding: 16px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; }
 /* One bar: search, the sort while the panel is open, Filters and the dice. */
 .filterTop { display: grid; grid-template-columns: minmax(200px, 1fr) auto auto; gap: 8px; align-items: center; }

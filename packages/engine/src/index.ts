@@ -662,6 +662,8 @@ export class WorkoutEngine {
 export interface OverallProgress {
   /** 0..1 across all occurrences, the current one counted by its elapsed share. */
   fraction: number;
+  /** 0..1 within the current section on the same scale, for a progress bar split by section. */
+  sectionFraction: number;
   sectionIndex: number;
   sections: number;
   round?: { current: number; total: number };
@@ -671,14 +673,16 @@ export function overallProgress(plan: ExecutionPlan, projection: Projection, clo
   const total = plan.occurrences.length;
   const round = projection.current.rounds.at(-1);
   const roundInfo = round && round.count > 1 ? { current: round.iteration, total: round.count } : undefined;
-  if (projection.status === 'completed') return { fraction: 1, sectionIndex: plan.sections.length - 1, sections: plan.sections.length, round: roundInfo };
-  if (projection.status === 'ready' || !total) return { fraction: 0, sectionIndex: 0, sections: plan.sections.length, round: roundInfo };
+  if (projection.status === 'completed') return { fraction: 1, sectionFraction: 1, sectionIndex: plan.sections.length - 1, sections: plan.sections.length, round: roundInfo };
+  if (projection.status === 'ready' || !total) return { fraction: 0, sectionFraction: 0, sectionIndex: 0, sections: plan.sections.length, round: roundInfo };
   let within = 0;
   if (projection.clockScope === 'cap' && projection.capMs) within = Math.min(1, clocks.sectionMs / projection.capMs);
   else if (projection.clockScope === 'prep') within = 0;
   else if (clocks.durationMs > 0) within = Math.min(1, Math.max(0, 1 - clocks.remainingMs / clocks.durationMs));
   const index = Math.min(projection.index, total - 1);
-  return { fraction: Math.min(1, (index + within) / total), sectionIndex: projection.current.sectionIndex, sections: plan.sections.length, round: roundInfo };
+  const section = plan.sections[projection.current.sectionIndex];
+  const sectionFraction = section ? Math.min(1, Math.max(0, (index - section.startIndex + within) / (section.endIndex - section.startIndex + 1))) : 0;
+  return { fraction: Math.min(1, (index + within) / total), sectionFraction, sectionIndex: projection.current.sectionIndex, sections: plan.sections.length, round: roundInfo };
 }
 
 export function displayTime(ms: number, rounding: 'ceil' | 'floor' = 'ceil'): string {

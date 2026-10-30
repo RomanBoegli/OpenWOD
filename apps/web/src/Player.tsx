@@ -11,6 +11,7 @@ import type { Preferences } from './preferences';
 import { slugify } from './library-store';
 import { workoutHref } from './router';
 import { Icon } from './Icon';
+import { Switch } from './Switch';
 import { downloadBlob } from './download';
 import { DifficultyChip } from './DifficultyChip';
 import { LoadLevels } from './LevelChip';
@@ -25,6 +26,8 @@ import { PACK_EXTENSION, serialisePackFile, type WorkoutPack } from '../../../pa
 import { elapsedText, type Recovery } from './data/checkpoints';
 import { holdSessionLock } from './data/session-lock';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
+import { roundProgress, type RoundProgress } from '../../../packages/domain/src/outline';
+import { RoundDonut, type RoundView } from './RoundDonut';
 import styles from './App.module.css';
 import own from './Player.module.css';
 
@@ -111,10 +114,18 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const capClock = useRef<HTMLElement>(null);
   const turnClock = useRef<HTMLElement>(null);
   const border = useRef<SVGPathElement>(null);
-  const overallFill = useRef<HTMLSpanElement>(null);
+  /** One fill per block of the overall bar (UI-24), written per frame. */
+  const segmentFills = useRef<(HTMLSpanElement | null)[]>([]);
   const overallText = useRef<HTMLSpanElement>(null);
   const clockPercentRef = useRef<HTMLSpanElement>(null);
   const player = useRef<HTMLDivElement>(null);
+  const donutFill = useRef<SVGPathElement>(null);
+  const lanesRef = useRef<HTMLDivElement>(null);
+  const exitLayer = useRef<HTMLDivElement>(null);
+  const lastLanes = useRef<{ key: string; node: HTMLDivElement; top: number; left: number; width: number }>(undefined);
+  /** The block whose start card shows (UI-24), and the last block one was shown for. */
+  const [intro, setIntro] = useState<number>();
+  const introShown = useRef<number>(undefined);
   const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints } = useWorkout(workout, audio, { recovery });
   const [takenOver, setTakenOver] = useState(false);
   const { status, current, nextWork, section, format, timing, clockScope, controls, acks, tasks, counter, turn, interval } = projection;
@@ -145,6 +156,52 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   }, [plan, current.sectionIndex, roundNumber, tasks]);
   const focusAnchor = isRest ? nextWork?.anchor : current.anchor;
   const currentWorkNumber = contextRows.findIndex(item => item.anchor === focusAnchor) + 1;
+  // The round donut (UI-24) follows the work in view: the movement now, the one a rest leads into, or the round a round rest closes.
+  const progressById = useMemo(() => roundProgress(plan), [plan]);
+  const roundView = ((): RoundView | undefined => {
+    if (terminal || status === 'awaitingReady' || isBlock) return undefined;
+    if (current.phase === 'roundRest') {
+      let finished: RoundProgress | undefined;
+      for (let index = projection.index - 1; index >= 0 && !finished; index--) finished = progressById.get(plan.occurrences[index].id);
+      return finished && { ...finished, done: finished.size, active: false };
+    }
+    const focus = isRest ? nextWork : current;
+    const at = focus && focus.sectionIndex === current.sectionIndex ? progressById.get(focus.id) : undefined;
+    return at && { ...at, done: at.position - 1, active: !isRest && !isPrep && status !== 'ready' };
+  })();
+  const showDonut = Boolean(roundView && (roundView.size > 1 || roundView.rounds > 1));
+  const donut = showDonut && roundView ? <RoundDonut view={roundView} timed={timing !== 'manual'} fill={donutFill} /> : null;
+  // A new movement takes over (UI-24): the stations shown before slide out to the left while the new ones slide in
+  // from the right. React has just removed the old element; it is parked, inert and without test ids, in an overlay at
+  // its old place for the length of the animation. The first effect reads the last commit, the second records this one.
+  const lanesKey = `${(isRest ? nextWork?.id : undefined) ?? current.id}/${turn?.number ?? 0}`;
+  useLayoutEffect(() => {
+    const last = lastLanes.current, layer = exitLayer.current;
+    if (!last || last.key === lanesKey || !layer || !last.width || last.node.isConnected || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const node = last.node;
+    for (const element of [node, ...node.querySelectorAll<HTMLElement>('*')]) { element.removeAttribute('data-testid'); element.removeAttribute('id'); element.style.animation = 'none'; }
+    node.setAttribute('inert', '');
+    Object.assign(node.style, { position: 'absolute', top: `${last.top}px`, left: `${last.left}px`, width: `${last.width}px`, margin: '0' });
+    layer.replaceChildren(node);
+    const exit = node.animate([{ opacity: 1, transform: 'none', filter: 'blur(0)' }, { opacity: 0, transform: 'translateX(-96px) scale(.94)', filter: 'blur(6px)' }], { duration: 260, easing: 'cubic-bezier(.5, 0, .9, .4)', fill: 'forwards' });
+    exit.onfinish = () => node.remove();
+    return () => { exit.cancel(); node.remove(); };
+  }, [lanesKey]);
+  useLayoutEffect(() => {
+    const node = lanesRef.current;
+    lastLanes.current = node ? { key: lanesKey, node, top: node.offsetTop, left: node.offsetLeft, width: node.offsetWidth } : undefined;
+  });
+  // A card names each block as its work begins; it fades on its own and never moves the layout.
+  useEffect(() => {
+    if (status !== 'running' || isPrep || introShown.current === current.sectionIndex) return;
+    introShown.current = current.sectionIndex;
+    if (plan.sections.length > 1) setIntro(current.sectionIndex);
+  }, [status, isPrep, current.sectionIndex, plan.sections.length]);
+  useEffect(() => {
+    if (intro === undefined) return;
+    const hide = setTimeout(() => setIntro(undefined), 1800);
+    return () => clearTimeout(hide);
+  }, [intro]);
 
   useEffect(() => { onPerformingChange(!editable); }, [editable, onPerformingChange]);
 
@@ -163,7 +220,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     return () => { released = true; held.release(); };
   }, [engine, editable, takenOver, flushCheckpoints, send]);
   // Clips and this workout's recorded movement names are decoded before Play so a session never waits on the network.
-  useEffect(() => { void audio.preload(); void audio.prepareNames(collectPrescriptions(workout).map(item => catalogue.resolve(item)?.id).filter((id): id is string => Boolean(id))); }, [audio, workout, catalogue]);
+  useEffect(() => { void audio.preload(); void audio.prepareNames(collectPrescriptions(workout).map(item => audio.nameKey(item))); }, [audio, workout, catalogue]);
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
   // Log the session once when it ends: completed always, an ended session when it covered enough of the plan.
@@ -213,11 +270,16 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const countUp = (format === 'forTime' || format === 'strength') && timing === 'manual' && !isBlock;
   const firstDisplayMs = countUp ? 0 : clockScope === 'cap' ? section.capMs ?? 0 : clockScope === 'elapsed' ? 0 : current.durationMs;
   useEffect(() => subscribeClock((clocks: ClockValues) => {
-    if (overallFill.current || overallText.current || clockPercentRef.current) {
+    if (segmentFills.current.some(Boolean) || overallText.current || clockPercentRef.current) {
       const overall = overallProgress(plan, engine.project(), clocks);
-      if (clockPercentRef.current) { const text = `· ${Math.round(overall.fraction * 100)} %`; if (clockPercentRef.current.textContent !== text) clockPercentRef.current.textContent = text; }
-      if (overallFill.current) overallFill.current.style.width = `${Math.round(overall.fraction * 1000) / 10}%`;
-      if (overallText.current) { const text = [`BLOCK ${overall.sectionIndex + 1} / ${overall.sections}`, overall.round ? `ROUND ${overall.round.current} / ${overall.round.total}` : '', `${Math.round(overall.fraction * 100)} %`].filter(Boolean).join(' · '); if (overallText.current.textContent !== text) overallText.current.textContent = text; }
+      if (clockPercentRef.current) { const text = `${Math.round(overall.fraction * 100)} %`; if (clockPercentRef.current.textContent !== text) clockPercentRef.current.textContent = text; }
+      // The bar is split by block: blocks behind are full, the current one fills with its own share, the rest wait.
+      segmentFills.current.forEach((fill, index) => {
+        if (!fill) return;
+        const width = `${Math.round((index < overall.sectionIndex ? 1 : index > overall.sectionIndex ? 0 : overall.sectionFraction) * 1000) / 10}%`;
+        if (fill.style.width !== width) fill.style.width = width;
+      });
+      if (overallText.current) { const text = `${Math.round(overall.fraction * 100)} % DONE`; if (overallText.current.textContent !== text) overallText.current.textContent = text; }
     }
     if (timer.current) {
       const text = status === 'ready' ? displayTime(workout.prepMs || firstDisplayMs) : terminal ? displayTime(clocks.activeMs) : status === 'awaitingReady' ? displayTime(firstDisplayMs) : (clockScope === 'elapsed' || countUp) && !isPrep ? displayTime(clocks.sectionMs, 'floor') : displayTime(clocks.remainingMs);
@@ -237,6 +299,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     }
     const fraction = status === 'ready' || status === 'awaitingReady' || clockScope === 'elapsed' ? 1 : clocks.fraction;
     if (border.current) border.current.style.strokeDashoffset = String(-(1 - fraction));
+    if (donutFill.current?.dataset.timed === 'true') donutFill.current.style.strokeDasharray = `${(Number(donutFill.current.dataset.length) * (1 - fraction)).toFixed(4)} 1`;
     if (player.current) {
       // One opacity ramp over the whole slot; the marks only morph the colour (--to-amber, --to-red), never the strength.
       const timed = (status === 'running' || status === 'preparing' || status === 'paused') && clockScope !== 'elapsed';
@@ -252,17 +315,23 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     }
   }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp, amberMs, redMs, isRest, isPrep]);
 
+  // The context list keeps the movement under way in its middle; the row's offset is already measured from the list.
+  // The observer also re-centres when the list or the enlarged active row change size, and it fires once on its own.
   useEffect(() => {
-    if (following && view === 'context' && activeRow.current && context.current) {
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      context.current.scrollTo({ top: Math.max(0, activeRow.current.offsetTop - context.current.offsetTop - 80), behavior: reduced ? 'instant' : 'smooth' });
-    }
-  }, [projection.occurrenceId, following, view]);
+    const list = context.current, row = activeRow.current;
+    if (!following || view !== 'context' || !list || !row) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const observer = new ResizeObserver(() => list.scrollTo({ top: Math.max(0, row.offsetTop - (list.clientHeight - row.offsetHeight) / 2), behavior: reduced ? 'instant' : 'smooth' }));
+    observer.observe(list); observer.observe(row);
+    return () => observer.disconnect();
+  }, [projection.occurrenceId, highlight, following, view]);
 
   const restLabel = current.phase === 'roundRest' ? 'Round rest' : current.phase === 'transition' ? 'Transition' : 'Block rest';
   const phaseLabel = status === 'ready' ? 'Ready when you are' : status === 'paused' ? projection.pauseReason === 'hidden' ? 'Paused · app was hidden' : projection.pauseReason === 'recovered' ? 'Recovered · paused' : 'Workout paused' : status === 'awaitingReady' ? 'Next block · ready?' : status === 'completed' ? 'Workout complete' : status === 'aborted' ? 'Workout ended' : isPrep ? 'Get ready' : isRest ? restLabel : format === 'amrap' ? 'AMRAP' : format === 'emom' ? 'Interval' : format === 'youGoIGo' ? `${turn?.athlete === 'B' ? names.B : names.A} works` : format === 'strength' ? 'Set' : timing === 'manual' ? 'Work · tap Done' : 'Work';
   const playerPhase = terminal ? 'complete' : status === 'paused' ? 'paused' : isRest ? 'rest' : isPrep ? 'prep' : status === 'ready' ? 'ready' : 'work';
-  const positionLabel = format === 'emom' && interval ? `INTERVAL ${interval.index} / ${interval.count}` : format === 'youGoIGo' && turn ? `TEAM ROUND ${turn.teamRound + 1}${turn.roundsTarget ? ` / ${turn.roundsTarget}` : ''} · TURN ${turn.number}` : format === 'strength' && round ? `SET ${roundNumber} / ${round.count}` : round ? `ROUND ${roundNumber} / ${round.count}` : `BLOCK ${current.sectionIndex + 1} / ${plan.sections.length}`;
+  // The top line names the block; rounds are the donut's dots, so a repeat is only spelled out where no donut shows.
+  const blockLabel = plan.sections.length > 1 ? `BLOCK ${current.sectionIndex + 1} / ${plan.sections.length}` : '';
+  const positionLabel = format === 'emom' && interval ? `INTERVAL ${interval.index} / ${interval.count}` : format === 'youGoIGo' && turn ? `TEAM ROUND ${turn.teamRound + 1}${turn.roundsTarget ? ` / ${turn.roundsTarget}` : ''} · TURN ${turn.number}` : round && !showDonut ? `${format === 'strength' ? 'SET' : 'ROUND'} ${roundNumber} / ${round.count}` : blockLabel;
   const caption = terminal ? 'ACTIVE SESSION TIME' : status === 'ready' || isPrep ? 'PREP COUNTDOWN' : status === 'awaitingReady' ? countUp ? section.capMs ? 'NEXT BLOCK · COUNTS UP TO THE CAP' : 'NEXT BLOCK · NO CAP' : clockScope === 'cap' ? 'NEXT BLOCK · TIME CAP' : clockScope === 'elapsed' ? 'NEXT BLOCK · NO CAP' : 'FIRST WORK INTERVAL' : isRest ? 'REST REMAINING' : countUp ? section.capMs ? 'ELAPSED · CAP BELOW' : 'ELAPSED · NO CAP' : CAPTIONS[clockScope];
   const laneHeading = isRest ? 'COMING UP AFTER REST' : status === 'awaitingReady' ? 'YOUR NEXT BLOCK' : isBlock && format === 'amrap' ? 'ONE ROUND · REPEAT UNTIL THE CAP' : isBlock ? 'THE WORK UNIT' : 'YOUR STATIONS';
   const unitTasks = (tasks ?? []) as TaskItem[];
@@ -314,13 +383,21 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
 
-    <div className={styles.player} ref={player} data-phase={playerPhase} data-scope={clockScope} data-progress={progress} data-warning="normal" data-wash={preferences.wash} data-clock-weight={clockWeight} data-clock-size={clockSize} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
+    <div className={styles.player} ref={player} data-boundary={status === 'awaitingReady' ? 'end' : intro !== undefined && intro === current.sectionIndex ? 'start' : undefined} data-phase={playerPhase} data-scope={clockScope} data-progress={progress} data-warning="normal" data-wash={preferences.wash} data-clock-weight={clockWeight} data-clock-size={clockSize} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
       <Perimeter progress={border} width={perimeterWidth} />
+      <div ref={exitLayer} className={own.exitLayer} aria-hidden="true" />
+      {status === 'awaitingReady' && current.sectionIndex > 0 ? (() => {
+        const finished = plan.sections[current.sectionIndex - 1];
+        const result = projection.results.find(item => item.sectionId === finished.id);
+        return <div key={`end-${finished.id}`} className={own.blockCard} data-kind="end" data-testid="block-card"><Icon name="check" size={20} /><span>BLOCK {current.sectionIndex} DONE</span><strong>{finished.title}</strong>{result && <small>{resultText(result)}</small>}</div>;
+      })() : intro !== undefined && intro === current.sectionIndex && !terminal ? <div key={`start-${intro}`} className={own.blockCard} data-kind="start" data-testid="block-card" aria-hidden="true">
+        <span>BLOCK {intro + 1} OF {plan.sections.length}</span><strong>{section.title}</strong><small>{[FORMAT_LABELS[format], roundView && roundView.rounds > 1 ? `${roundView.rounds} rounds` : '', section.capMs ? `cap ${displayTime(section.capMs)}` : ''].filter(Boolean).join(' · ')}</small>
+      </div> : null}
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span><span className={styles.position}>{positionLabel}</span>{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
-      {progress !== 'off' && <div className={styles.overall} data-testid="overall-progress" aria-label="Overall progress"><span className={styles.overallTrack}><span ref={overallFill} className={styles.overallFill} /></span>{progress !== 'bar' && <span ref={overallText} className={styles.overallText}>BLOCK 1 / {plan.sections.length} · 0 %</span>}</div>}
+      {progress !== 'off' && <div className={styles.overall} data-testid="overall-progress" aria-label="Overall progress"><span className={styles.overallTrack}>{plan.sections.map((item, index) => <span key={item.id} className={styles.overallSegment} data-segment={index} style={{ flexGrow: item.endIndex - item.startIndex + 1 }}><span ref={element => { segmentFills.current[index] = element; }} className={styles.overallFill} /></span>)}</span>{progress === 'detail' && <span ref={overallText} className={styles.overallText}>0 % DONE</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
-        <div className={styles.clockLine}><div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>{clockPercent && <span ref={clockPercentRef} className={styles.clockPercent} aria-label="Progress beside the clock">· 0 %</span>}</div>
+        <div className={styles.clockLine}>{donut}<div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>{clockPercent && <span ref={clockPercentRef} className={styles.clockPercent} aria-label="Progress beside the clock">0 %</span>}</div>
         <div className={styles.clockCaption}>{caption}</div>
         {!terminal && !editable && ((projection.capMs !== undefined && (clockScope !== 'cap' || countUp)) || clockScope === 'turn' || (isBlock && format === 'youGoIGo')) && <div className={own.secondaryClock}>
           {projection.capMs !== undefined && (clockScope !== 'cap' || countUp) && <span>CAP<strong ref={capClock}>{displayTime(projection.capMs)}</strong></span>}
@@ -331,7 +408,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       {terminal ? <div className={styles.finishMessage}><span className={styles.finishIcon}><Icon name="check" size={28} /></span><h2>{status === 'completed' ? 'That’s a good session.' : 'Every bit of movement counts.'}</h2><p>{status === 'completed' ? 'Take a breath. Grab some water. You earned it.' : 'Your session has ended.'}</p>
         {projection.results.length > 0 && <ul className={own.resultList} aria-label="Block results">{projection.results.map(result => <li key={result.sectionId}><span>{plan.sections.find(item => item.id === result.sectionId)?.title ?? result.sectionId}</span><span>{resultText(result)}</span></li>)}</ul>}
       </div> : <>
-        <div className={styles.laneHeading}>{laneHeading}<span>{!isBlock && currentWorkNumber > 0 ? `${currentWorkNumber} OF ${contextRows.length}` : ''}</span></div>
+        <div className={styles.laneHeading}>{laneHeading}<span>{roundView && roundView.size > 1 ? `MOVEMENT ${roundView.position} / ${roundView.size}` : ''}</span></div>
         {isBlock && format === 'amrap' ? <>
           {fitWarning && <p className={own.fitWarning}>Long block: {unitTasks.length} movements may not all fit on a small screen. Use the Context view to scroll.</p>}
           <ul className={own.taskList} aria-label="AMRAP block">{unitTasks.map((task, index) => <li key={task.nodeId} className={own.taskRow} data-pair={pair} data-highlight={highlight === task.nodeId} onClick={() => setHighlight(value => value === task.nodeId ? undefined : task.nodeId)}>
@@ -339,7 +416,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
             {(['A', 'B'] as const).filter(role => role === 'A' || pair).map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLevels load={item.load} unit={loadUnit} sex={loadSex(role)} /></span>; })}
           </li>)}</ul>
           <p className={own.taskHint}>Tap a row to mark where you are. It never changes the clock.</p>
-        </> : <div key={`${current.id}/${turn?.number ?? 0}`} className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}
+        </> : <div key={lanesKey} ref={lanesRef} className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}
 
         {(can('done') || can('switch') || can('finish') || can('count:round')) && <div className={own.actionBar} data-counter={Boolean(can('count:round') && counter)}>
           {can('done') && <button className={own.bigAction} data-testid="done" onClick={() => send('done', projection.occurrenceId)}><Icon name="check" size={26} />{timing === 'interval' ? 'Done · rest until next' : format === 'strength' ? 'Set done' : 'Done'}</button>}
@@ -358,7 +435,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       </>}
 
       {view === 'context' && <section className={styles.contextSection} aria-label="Workout context">
-        <div className={styles.contextHeading}><div><span className={styles.eyebrow}>THE GAME PLAN</span><h2>{section.title}</h2></div><button className={styles.quietButton} aria-pressed={following} onClick={() => setFollowing(value => !value)}><Icon name="focus" size={17} />{following ? 'Following workout' : 'Follow workout'}</button></div>
+        <div className={styles.contextHeading}><div><span className={styles.eyebrow}>THE GAME PLAN</span><h2>{section.title}</h2></div><Switch compact checked={following} onChange={setFollowing} label="Stick to movement" /></div>
         <div className={styles.contextList} ref={context} onWheel={() => setFollowing(false)} onTouchMove={() => setFollowing(false)}>
           <div className={styles.contextColumns}><span>#</span><span>{pair ? names.A : 'MOVEMENT'}</span><span>{pair ? names.B : ''}</span><span>{isBlock ? 'TARGET' : 'WORK'}</span></div>
           {contextRows.map((item, index) => {
@@ -369,7 +446,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
               const amount = primaryTarget(lanePrescription);
               return <>{lanePrescription.name}{amount ? ` · ${amount.amount} ${amount.unit}` : ''}{(lanePrescription.load || lanePrescription.notes) && <span className={own.contextDetail}>{lanePrescription.load && <LoadLevels load={lanePrescription.load} unit={loadUnit} sex={loadSex(role)} />}{lanePrescription.notes && <span>{lanePrescription.notes}</span>}</span>}</>;
             };
-            return <div key={item.anchor} ref={selected ? activeRow : undefined} className={styles.contextRow} data-active={selected} aria-current={selected ? 'step' : undefined}><span>{String(index + 1).padStart(2, '0')}</span><span>{cell('A', item.A)}</span><span>{pair ? cell('B', item.B) : '—'}</span><span>{item.durationMs !== undefined ? `${Math.round(item.durationMs / 1000)}s` : 'done'}</span></div>;
+            const done = !isBlock && !selected && (current.phase === 'roundRest' ? true : index + 1 < currentWorkNumber);
+            return <div key={item.anchor} ref={selected ? activeRow : undefined} className={styles.contextRow} data-active={selected} data-done={done || undefined} aria-current={selected ? 'step' : undefined}><span>{done ? <Icon name="check" size={12} /> : String(index + 1).padStart(2, '0')}</span><span>{cell('A', item.A)}</span><span>{pair ? cell('B', item.B) : '—'}</span><span>{item.durationMs !== undefined ? `${Math.round(item.durationMs / 1000)}s` : 'done'}</span></div>;
           })}
         </div>
         <div className={styles.contextFootnote}>{isBlock ? 'The whole block, in order. The clock only knows the cap.' : 'Assignments follow the current round. Authored rests are included in the total.'}</div>
@@ -397,7 +475,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send('resume', projection.occurrenceId)}><Icon name="play" />Resume</button></div>
       </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
-      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : 'Your pace. Keep moving.'}</span></div>
+      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : ''}</span></div>
     </div>
 
     <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Details</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>

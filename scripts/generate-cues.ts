@@ -1,5 +1,7 @@
 // Renders the spoken cues and every bundled movement name with open-licensed Piper voices into
 // apps/web/public/cues/<pack>/ (cues as <name>.mp3, movement names under names/<id>.mp3) plus packs.json and LICENSE.md.
+// Names bundled workouts write differently from their record ("Plank rows") are recorded as written under
+// names/text/<slug>.mp3, from packages/domain/src/generated/cue-phrases.json (scripts/bundle-workouts.ts writes it).
 // Everything ships inside the Docker image, so a session never depends on the device's voices.
 //   npm run cues:generate                      # every pack (locally through uv, which fetches piper-tts on demand)
 //   CUE_PACKS=british npm run cues:generate    # one pack
@@ -44,6 +46,7 @@ export const PACKS = [
 const RENDER_VERSION = 2;
 
 const outDir = resolve(process.env.CUES_OUT ?? 'apps/web/public/cues');
+const PHRASES = 'packages/domain/src/generated/cue-phrases.json';
 const wanted = (process.env.CUE_PACKS ?? '').split(',').map(item => item.trim()).filter(Boolean);
 const packs = wanted.length ? PACKS.filter(pack => wanted.includes(pack.id)) : PACKS;
 const voicesDir = resolve(process.env.PIPER_VOICES ?? '.cache/piper-voices');
@@ -57,7 +60,11 @@ for (const pack of packs) {
   }
 }
 
-const names = Object.fromEntries(seedMovements.map(record => [record.id, `${record.spokenName ?? record.name}.`]));
+const phrases = existsSync(PHRASES) ? JSON.parse(readFileSync(PHRASES, 'utf8')) as Record<string, string> : {};
+const names = {
+  ...Object.fromEntries(seedMovements.map(record => [record.id, `${record.spokenName ?? record.name}.`])),
+  ...Object.fromEntries(Object.entries(phrases).map(([slug, text]) => [`text/${slug}`, `${text}.`])),
+};
 const specPath = join(outDir, '.render-spec.json');
 writeFileSync(specPath, JSON.stringify({ renderVersion: RENDER_VERSION, outDir, voicesDir, packs: packs.map(({ id, voice }) => ({ id, voice })), clips: CUES, names }, null, 2));
 

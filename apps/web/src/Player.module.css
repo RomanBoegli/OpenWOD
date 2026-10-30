@@ -1,9 +1,9 @@
 /* Format-specific player pieces. The shared layout (perimeter, clock block, lanes, controls) stays in App.module.css. */
-.target { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 2px; font-variant-numeric: tabular-nums; line-height: 1; }
+.target { animation: land var(--t-slow) var(--ease) 180ms backwards; display: flex; align-items: baseline; gap: 8px; margin: 16px 0 2px; font-variant-numeric: tabular-nums; line-height: 1; }
 .target strong { font-size: clamp(56px, 6vw, 84px); font-weight: 700; letter-spacing: -3px; color: var(--ink); }
 .target small { font-size: 16px; font-weight: 600; letter-spacing: 1px; color: var(--ink-3); text-transform: uppercase; }
 .contextDetail { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; font-size: .74em; font-weight: 600; color: var(--ink-3); }
-.loadLine { display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--ink-2); font-size: 15px; font-weight: 600; }
+.loadLine { animation: rise var(--t-slow) var(--ease) 270ms backwards; display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--ink-2); font-size: 15px; font-weight: 600; }
 .secondaryClock { display: flex; justify-content: center; gap: 24px; margin-top: 10px; color: var(--ink-3); font-size: 11px; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; }
 .secondaryClock strong { color: var(--ink-2); font-weight: 600; margin-left: 6px; }
 .laneState { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 700; letter-spacing: 1.2px; }
@@ -132,3 +132,15 @@
   /* The context view's game plan lists the same movements, so the block steps aside like the stations do. */
   [data-performing=true][data-view=context] .taskList { display: none; }
 }
+/* Block boundaries (UI-24): a card names the block as it starts and fades by itself; at the end it stays until Ready.
+   It floats over the top rows, so neither the clock nor the stations move. */
+div.blockCard { position: absolute; z-index: 3; top: calc(var(--pad-top) + var(--ring-extra) - 8px); left: calc(var(--pad-x) + var(--ring-extra)); right: calc(var(--pad-x) + var(--ring-extra) + 60px); display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px; border-radius: 14px; background: var(--accent-fill); color: var(--accent-ink); box-shadow: 0 12px 36px var(--shadow); pointer-events: none; animation: blockCardIn var(--t-slow) var(--ease) both; }
+div.blockCard[data-kind=start] { animation: blockCardIn var(--t-slow) var(--ease) both, blockCardOut 400ms ease-in 1400ms forwards; }
+.blockCard > span { font-size: 10px; font-weight: 700; letter-spacing: 1.6px; }
+.blockCard > strong { font-size: 17px; font-weight: 650; letter-spacing: -.2px; }
+.blockCard > small { margin-left: auto; font-size: 12px; font-weight: 600; opacity: .85; }
+@keyframes blockCardIn { from { opacity: 0; transform: translateY(-10px) scale(.98); } }
+@keyframes blockCardOut { to { opacity: 0; transform: translateY(-6px); } }
+@media (max-width: 620px) { div.blockCard { padding: 8px 12px; } .blockCard > strong { font-size: 15px; } .blockCard > small { margin-left: 0; } }
+/* The stations a new movement replaces slide out here (Player.tsx); the overlay never takes a click. */
+div.exitLayer { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }

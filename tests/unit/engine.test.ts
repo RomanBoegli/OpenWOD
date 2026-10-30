@@ -263,6 +263,7 @@ describe('overall progress', () => {
     expect(read().fraction).toBe(0);
     now = 30_000; engine.tick();
     expect(read().fraction).toBeCloseTo(0.5 / plan.occurrences.length, 5);
+    expect(read().sectionFraction).toBeCloseTo(read().fraction, 5); // One section: the same share.
     expect(read().round).toEqual({ current: 1, total: 5 });
     now = 10_000 + plan.durationMs; engine.tick();
     expect(engine.project().status).toBe('completed');

@@ -431,6 +431,8 @@ In the focus view the big clock SHALL stay in the same place from one slot to th
 **UI-22** Settings SHALL have a Logbook section at `#/settings/logbook` listing every session played, newest first, with paging: the workout title linked to the workout while it is in the library, the date, the active time and the score, the outcome once and only when it is not Completed, the Interrupted, Modified and Corrected flags, and small icon actions to Repeat (the snapshot when the workout is gone), Correct score (DAT-05) and Delete (DAT-14). The header's clock icon SHALL open it, `#/history` SHALL lead to it, and the per-workout past sessions SHALL reflect deletions.
 
 **UI-23** A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove).
+
+**UI-24** The training view SHALL show where a block stands without repeating itself. A round donut beside the clock, opposite the percentage and standing on the same baseline, SHALL have one segment per movement of the round that fills movement by movement (a timed slot with its clock, manual work as a pulse), and one dot per round of the block below it. It never moves or pushes the clock (UI-20), steps aside where a narrow screen leaves no room, and leaves AMRAP and you-go-I-go blocks to the athletes (UI-06). The overall bar SHALL be split into one segment per block. The top line names the block, the stations heading counts the movement ("MOVEMENT 2 / 4"), and the state above the clock (Work, Rest, Get ready) SHALL be large enough to read across the room. A card SHALL name each block as its work begins and fade by itself, and a block that waits for Ready SHALL say it is done, with its result, in the frame's accent. When the next movement appears, the stations shown before SHALL slide out and the new ones slide in, which reduced motion suppresses (UI-10). The context view SHALL keep the movement under way in the middle of its list while its Stick to movement switch is on.
 Chips on a workout card and a workout's page SHALL state what holds for the whole workout: athletes, collection, difficulty and, once done, when it was last done.
 A format belongs to a block, so it SHALL show as a chip on each block of the workout's page and never among the workout's chips, and the library's format filter SHALL read "Block format".
 A library card SHALL show, in this order, those chips, the title, the description cut to two lines, the duration, blocks and movements, the equipment, and Start and Details.
@@ -457,6 +459,8 @@ With the truck horn the clock SHALL hold at each timed boundary for the length o
 **AUD-08** The app SHALL initialise/unlock audio from an explicit user gesture and detect speech/audio errors where possible. Failure SHALL not stop the workout. A visible sound status and working local beep fallback SHALL remain available. No runtime call to a cloud AI service is required.
 
 **AUD-09** Wake lock and sound readiness SHALL be checked in preflight. Screen Wake Lock requires a secure context and may be released by the platform, so the app SHALL detect release and reacquire when appropriate on return. Unavailable wake lock SHALL be explained before starting. [S3]
+
+**AUD-10** A movement SHALL be announced as written. A recorded name clip of a movement record SHALL play only when the written name, or its spoken name, is that record's own name or spoken name. The voice packs SHALL also record, under `names/text/`, every name the bundled workouts write differently from their record (`packages/domain/src/generated/cue-phrases.json`, written by the registry bundle). Any other name SHALL be read by the device voice.
 
 # 10 Persistence and results
 
@@ -697,11 +701,12 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-29 | Execute the fixture converted from example-wod.md: each block 2 × 3:40 with a 0:20 rest between the rounds plus a 2:00 rest after it, WOD 38:40, session 48:40 excluding prep and Ready waits, every rest shown in the preview. Alternate bodyweight/dumbbell assignments after each complete round, keep athlete A/B lanes stable, preview the next round correctly, and recover/export/import the same policy. | BLD-04/10/12, MOD-01/02, SHR-02/06 |
 | AT-30 | Open the authoring guide in both shapes. It lists every section format with its settings, the movement and equipment names of this installation, and examples that import unchanged. Paste an invalid reply: the import error appears with a way back to the reply and nothing is written. Paste a valid reply wrapped in prose and a code fence: the preview shows the workout and Save and edit opens it in the editor. | SHR-04/07, NFR-11 |
 | AT-31 | Rename an author, merge two others, undo one merge, delete an author and restore it. The library pages, search and Author filter follow each change, the files are unchanged, and the editor suggests the kept spelling while typing and nudges a near-duplicate. | LIB-02/04/06 |
+| AT-32 | Play the partner circuit in the context view at tablet and phone widths: the donut reads movement 4 of 4 with 4 rounds left at the fourth station, the active row lies inside the visible list, and round 2 begins at movement 1 of 4. Play full-body-partner: a card names block 1 and fades, block 1 done shows while waiting for Ready, and block 2 is named with its rounds. A lane written "Plank rows" is announced as written, never with the Renegade rows clip. | UI-06/10/20/24, AUD-10 |
 
 # 15 Where things stand
 
 Recorded 27 October 2026, plan version 1.17.
-All P0 requirements and the 31 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+All P0 requirements and the 32 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -736,6 +741,8 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The bundled Dumbbell full body 35 and six movement records it needed: dumbbell sumo squats, dumbbell pullovers, lateral raises, dumbbell sit-ups, dead bugs and bodyweight good mornings.
 - Authors are master data under Settings → Authors, with New, Rename, Merge, Delete and Restore. They are part of the library search, get an Author filter and are suggested in the editor (LIB-06). The 22 advanced workouts name "Coach programming" as their author.
 - The import preview is wider, shows each workout's state as a badge, and dialog buttons keep their labels on one line.
+- The training view shows a round donut and the rounds left in both views, a card at each block start, a done card while a block waits for Ready, and new movements slide in. The context view keeps the movement under way centred, which it failed to do on phones (UI-24).
+- Names written as an alias are announced as written: the recorded clip of a record plays only for its own name, and the packs record the four alias names the bundled workouts use (AUD-10).
 
 **Schema and storage versions today.**
 
@@ -769,7 +776,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-10, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-07, MOD-06, NFR-15, SHR-08, UI-24 and AT-32.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-07, MOD-06, NFR-15, SHR-08, UI-25 and AT-33.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 
