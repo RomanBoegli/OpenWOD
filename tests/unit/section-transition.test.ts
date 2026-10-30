@@ -60,8 +60,10 @@ describe('the rest after a section (BLD-14)', () => {
   it('leaves every bundled workout compiling to the same plan, with the block rests of timed circuits where they were', () => {
     for (const workout of bundledWorkouts) {
       const plan = compileWorkout(workout);
-      for (const compiled of plan.sections) if (compiled.restAfter) expect(compiled.format, workout.id).toBe('timedCircuit');
+      for (const compiled of plan.sections) if (compiled.restAfter && workout.id !== 'squat-snatch-battery') expect(compiled.format, workout.id).toBe('timedCircuit');
     }
+    // The snatch battery ends its first two EMOMs and its first two metcon pieces in the rest before the next block.
+    expect(compileWorkout(bundledWorkout('squat-snatch-battery')).sections.map(section => section.restAfter?.durationMs)).toEqual([undefined, undefined, undefined, 90_000, 90_000, undefined, undefined, 90_000, 90_000, undefined]);
     const fullBody = compileWorkout(bundledWorkout('full-body-partner'));
     expect(fullBody.sections[1]).toMatchObject({ transitionAfter: 'automatic', restAfter: { durationMs: 120_000 } });
     // A rest in the middle of a for-time list stays inside the cap.

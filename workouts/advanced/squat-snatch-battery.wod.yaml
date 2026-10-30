@@ -1,0 +1,469 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: squat-snatch-battery
+  revision: 1
+  title: Squat Snatch Battery
+  description: "A full class: five minutes of mobility, three easy rounds to get warm, five minutes to build up to the battery weight, then one squat snatch every 10 seconds for 3 minutes, every 20 seconds for 5 and every 30 seconds for 7, with 1:30 between them. Five sets of snatch high pulls straight into snatch deadlifts with 1:30 rest follow, and the metcon is three rounds, two rounds and one round, each for time, with 1:30 rest between them, at 50 kg (35 kg)."
+  attribution:
+    author: Coach programming
+    notes: Curated from a CrossFit class whiteboard; the metcon's 50 kg (35 kg) is the board's, the other loads are training suggestions with light/medium/heavy levels added by OpenWOD.
+  equipment:
+    - Jump rope
+    - Barbell
+  participants: 1
+  prep: 10s
+  sections:
+    - id: mobility
+      title: Mobility
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: mobility-stations
+        type: sequence
+        children:
+          - id: mobility-hips
+            type: timed
+            duration: 50s
+            assignments:
+              A:
+                notes: Hips; alternate sides
+                name: World's Greatest Stretch
+          - id: mobility-ankles
+            type: timed
+            duration: 50s
+            assignments:
+              A:
+                notes: Alternate sides
+                name: Ankle Rocks
+          - id: mobility-lats
+            type: timed
+            duration: 50s
+            assignments:
+              A:
+                notes: Lats; walk the hands to one side, then the other
+                name: Child's Pose
+          - id: mobility-shoulders
+            type: timed
+            duration: 50s
+            assignments:
+              A:
+                notes: A dowel, band or towel
+                name: PVC Pass-Throughs
+          - id: mobility-wrists
+            type: timed
+            duration: 50s
+            assignments:
+              A:
+                notes: Wrists
+                name: Gorilla Stretch
+          - id: mobility-torso
+            type: timed
+            duration: 25s
+            assignments:
+              A:
+                notes: Torso muscles; alternate sides
+                name: Side Bends
+          - id: mobility-spine
+            type: timed
+            duration: 25s
+            assignments:
+              A:
+                notes: Spine
+                name: Cat-Cow
+    - id: cardio
+      title: Cardio, three rounds
+      format: forTime
+      transitionAfter: manualReady
+      body:
+        id: cardio-rounds
+        type: repeat
+        count: 3
+        body:
+          id: cardio-round
+          type: sequence
+          children:
+            - id: cardio-single-unders
+              type: task
+              assignments:
+                A:
+                  name: Single-Unders
+                  reps: 100
+            - id: cardio-push-ups
+              type: task
+              assignments:
+                A:
+                  name: Push-Ups
+                  reps: 10
+            - id: cardio-shift-squats
+              type: task
+              assignments:
+                A:
+                  name: Shift Squats
+                  reps: 10
+            - id: cardio-pike-push-ups
+              type: task
+              assignments:
+                A:
+                  name: Pike Push-Ups
+                  reps: 8
+            - id: cardio-tyson-squats
+              type: task
+              assignments:
+                A:
+                  name: Tyson Squats
+                  reps: 8
+            - id: cardio-hollow-rocks
+              type: task
+              assignments:
+                A:
+                  name: Hollow Rocks
+                  reps: 8
+            - id: cardio-stretch
+              type: timed
+              duration: 30s
+              assignments:
+                A:
+                  name: Stretch of Choice
+    - id: snatch-prep
+      title: Prepare for the battery
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: snatch-prep-build
+        type: timed
+        duration: 5m
+        assignments:
+          A:
+            notes: Build up to the battery weight
+            name: Squat Snatches
+    - id: battery-10
+      title: Every 10 s for 3 min
+      format: emom
+      transitionAfter: automatic
+      interval: 10s
+      intervals: 18
+      body:
+        id: battery-10-list
+        type: sequence
+        children:
+          - id: battery-10-snatch
+            type: task
+            assignments:
+              A:
+                name: Squat Snatches
+                reps: 1
+                load:
+                  light:
+                    value: 55
+                    unit: percent
+                  medium:
+                    value: 60
+                    unit: percent
+                  heavy:
+                    value: 65
+                    unit: percent
+          - id: battery-10-rest
+            type: rest
+            duration: 1m30s
+            kind: blockRest
+    - id: battery-20
+      title: Every 20 s for 5 min
+      format: emom
+      transitionAfter: automatic
+      interval: 20s
+      intervals: 15
+      body:
+        id: battery-20-list
+        type: sequence
+        children:
+          - id: battery-20-snatch
+            type: task
+            assignments:
+              A:
+                name: Squat Snatches
+                reps: 1
+                load:
+                  light:
+                    value: 55
+                    unit: percent
+                  medium:
+                    value: 60
+                    unit: percent
+                  heavy:
+                    value: 65
+                    unit: percent
+          - id: battery-20-rest
+            type: rest
+            duration: 1m30s
+            kind: blockRest
+    - id: battery-30
+      title: Every 30 s for 7 min
+      format: emom
+      transitionAfter: manualReady
+      interval: 30s
+      intervals: 14
+      body:
+        id: battery-30-snatch
+        type: task
+        assignments:
+          A:
+            name: Squat Snatches
+            reps: 1
+            load:
+              light:
+                value: 55
+                unit: percent
+              medium:
+                value: 60
+                unit: percent
+              heavy:
+                value: 65
+                unit: percent
+    - id: snatch-deadlifts
+      title: Snatch deadlifts
+      format: strength
+      transitionAfter: manualReady
+      body:
+        id: snatch-deadlifts-sets
+        type: repeat
+        count: 5
+        betweenIterationsRest: 1m30s
+        body:
+          id: snatch-deadlifts-set
+          type: sequence
+          children:
+            - id: snatch-deadlifts-high-pulls
+              type: task
+              assignments:
+                A:
+                  notes: Percent of your snatch
+                  name: Snatch High Pulls
+                  reps: 3
+                  load:
+                    light:
+                      value: 80
+                      unit: percent
+                    medium:
+                      value: 85
+                      unit: percent
+                    heavy:
+                      value: 90
+                      unit: percent
+            - id: snatch-deadlifts-deadlifts
+              type: task
+              assignments:
+                A:
+                  notes: Same bar, straight on
+                  name: Snatch Deadlifts
+                  reps: 3
+                  load:
+                    light:
+                      value: 80
+                      unit: percent
+                    medium:
+                      value: 85
+                      unit: percent
+                    heavy:
+                      value: 90
+                      unit: percent
+    - id: metcon-3-rounds
+      title: "Metcon: 3 rounds"
+      format: forTime
+      transitionAfter: automatic
+      body:
+        id: metcon-3-rounds-body
+        type: sequence
+        children:
+          - id: metcon-three
+            type: repeat
+            count: 3
+            body:
+              id: metcon-three-round
+              type: sequence
+              children:
+                - id: metcon-three-shuttles
+                  type: task
+                  assignments:
+                    A:
+                      notes: Short shuttles
+                      name: Shuttle Runs
+                      reps: 8
+                - id: metcon-three-burpees
+                  type: task
+                  assignments:
+                    A:
+                      name: Burpees Over Bar
+                      reps: 6
+                - id: metcon-three-deadlifts
+                  type: task
+                  assignments:
+                    A:
+                      name: Deadlifts
+                      reps: 4
+                      load:
+                        light:
+                          value: 25
+                          women: 17.5
+                          unit: kg
+                        medium:
+                          value: 35
+                          women: 25
+                          unit: kg
+                        heavy:
+                          value: 50
+                          women: 35
+                          unit: kg
+                - id: metcon-three-stoh
+                  type: task
+                  assignments:
+                    A:
+                      name: Shoulder-to-Overhead
+                      reps: 10
+                      load:
+                        light:
+                          value: 25
+                          women: 17.5
+                          unit: kg
+                        medium:
+                          value: 35
+                          women: 25
+                          unit: kg
+                        heavy:
+                          value: 50
+                          women: 35
+                          unit: kg
+          - id: metcon-rest-1
+            type: rest
+            duration: 1m30s
+            kind: blockRest
+    - id: metcon-2-rounds
+      title: "Metcon: 2 rounds"
+      format: forTime
+      transitionAfter: automatic
+      body:
+        id: metcon-2-rounds-body
+        type: sequence
+        children:
+          - id: metcon-two
+            type: repeat
+            count: 2
+            body:
+              id: metcon-two-round
+              type: sequence
+              children:
+                - id: metcon-two-shuttles
+                  type: task
+                  assignments:
+                    A:
+                      notes: Short shuttles
+                      name: Shuttle Runs
+                      reps: 8
+                - id: metcon-two-burpees
+                  type: task
+                  assignments:
+                    A:
+                      name: Burpees Over Bar
+                      reps: 6
+                - id: metcon-two-deadlifts
+                  type: task
+                  assignments:
+                    A:
+                      name: Deadlifts
+                      reps: 4
+                      load:
+                        light:
+                          value: 25
+                          women: 17.5
+                          unit: kg
+                        medium:
+                          value: 35
+                          women: 25
+                          unit: kg
+                        heavy:
+                          value: 50
+                          women: 35
+                          unit: kg
+                - id: metcon-two-stoh
+                  type: task
+                  assignments:
+                    A:
+                      name: Shoulder-to-Overhead
+                      reps: 10
+                      load:
+                        light:
+                          value: 25
+                          women: 17.5
+                          unit: kg
+                        medium:
+                          value: 35
+                          women: 25
+                          unit: kg
+                        heavy:
+                          value: 50
+                          women: 35
+                          unit: kg
+          - id: metcon-rest-2
+            type: rest
+            duration: 1m30s
+            kind: blockRest
+    - id: metcon-1-round
+      title: "Metcon: 1 round"
+      format: forTime
+      transitionAfter: manualReady
+      body:
+        id: metcon-one
+        type: sequence
+        children:
+          - id: metcon-one-shuttles
+            type: task
+            assignments:
+              A:
+                notes: Short shuttles
+                name: Shuttle Runs
+                reps: 8
+          - id: metcon-one-burpees
+            type: task
+            assignments:
+              A:
+                name: Burpees Over Bar
+                reps: 6
+          - id: metcon-one-deadlifts
+            type: task
+            assignments:
+              A:
+                name: Deadlifts
+                reps: 4
+                load:
+                  light:
+                    value: 25
+                    women: 17.5
+                    unit: kg
+                  medium:
+                    value: 35
+                    women: 25
+                    unit: kg
+                  heavy:
+                    value: 50
+                    women: 35
+                    unit: kg
+          - id: metcon-one-stoh
+            type: task
+            assignments:
+              A:
+                name: Shoulder-to-Overhead
+                reps: 10
+                load:
+                  light:
+                    value: 25
+                    women: 17.5
+                    unit: kg
+                  medium:
+                    value: 35
+                    women: 25
+                    unit: kg
+                  heavy:
+                    value: 50
+                    women: 35
+                    unit: kg

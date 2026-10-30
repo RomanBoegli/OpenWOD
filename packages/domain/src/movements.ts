@@ -38,6 +38,7 @@ export const seedMovements: Movement[] = [
   { id: 'muscle-snatch', name: 'Muscle Snatches', family: 'snatch', equipment: ['Barbell'], category: 'weightlifting', notes: 'The bar is pulled overhead without rebending the knees' },
   { id: 'snatch-balance', name: 'Snatch Balance', family: 'snatch', equipment: ['Barbell'], category: 'weightlifting' },
   { id: 'snatch-pull', name: 'Snatch Pulls', family: 'snatch', equipment: ['Barbell'], category: 'strength' },
+  { id: 'snatch-high-pull', name: 'Snatch High Pulls', family: 'snatch', equipment: ['Barbell'], category: 'strength' },
   { id: 'dumbbell-snatch', name: 'Dumbbell Snatches', aliases: ['DB Snatches', 'Alternating Dumbbell Snatches', 'Single-Arm Dumbbell Snatches'], family: 'snatch', equipment: ['Dumbbells'], category: 'weightlifting' },
   { id: 'kettlebell-snatch', name: 'Kettlebell Snatches', aliases: ['KB Snatches'], family: 'snatch', equipment: ['Kettlebell'], category: 'weightlifting' },
 
@@ -73,6 +74,8 @@ export const seedMovements: Movement[] = [
   { id: 'zercher-squat', name: 'Zercher Squats', family: 'squat', equipment: ['Barbell'], category: 'strength', notes: 'The bar held in the crooks of the elbows' },
   { id: 'sandbag-squat', name: 'Sandbag Squats', aliases: ['Sandbag Front Squats', 'Bear Hug Squats'], family: 'squat', equipment: ['Sandbag'], category: 'conditioning' },
   { id: 'cossack-squat', name: 'Cossack Squats', family: 'squat', category: 'mobility' },
+  { id: 'shift-squat', name: 'Shift Squats', family: 'squat', category: 'mobility' },
+  { id: 'tyson-squat', name: 'Tyson Squats', family: 'squat', category: 'conditioning' },
 
   // Deadlifts
   { id: 'deadlift', name: 'Deadlifts', aliases: ['DL', 'Barbell Deadlifts'], equipment: ['Barbell'], category: 'strength' },
@@ -81,7 +84,7 @@ export const seedMovements: Movement[] = [
   { id: 'sumo-deadlift-high-pull', name: 'Sumo Deadlift High Pulls', shortName: 'SDHP', aliases: ['SDHP'], family: 'deadlift', equipment: ['Barbell'], category: 'weightlifting' },
   { id: 'dumbbell-deadlift', name: 'Dumbbell Deadlifts', aliases: ['DB Deadlifts'], family: 'deadlift', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'dumbbell-romanian-deadlift', name: 'Dumbbell Romanian Deadlifts', shortName: 'DB RDLs', aliases: ['DB RDLs', 'DB Romanian Deadlifts'], family: 'deadlift', equipment: ['Dumbbells'], category: 'strength' },
-  { id: 'snatch-grip-deadlift', name: 'Snatch-Grip Deadlifts', shortName: 'Snatch-Grip DLs', aliases: ['Snatch-Grip DLs'], family: 'deadlift', equipment: ['Barbell'], category: 'strength' },
+  { id: 'snatch-grip-deadlift', name: 'Snatch-Grip Deadlifts', shortName: 'Snatch-Grip DLs', aliases: ['Snatch-Grip DLs', 'Snatch Deadlifts'], family: 'deadlift', equipment: ['Barbell'], category: 'strength' },
   { id: 'deficit-deadlift', name: 'Deficit Deadlifts', family: 'deadlift', equipment: ['Barbell', 'Weight plate'], category: 'strength' },
   { id: 'kettlebell-deadlift', name: 'Kettlebell Deadlifts', aliases: ['KB Deadlifts'], family: 'deadlift', equipment: ['Kettlebell'], category: 'strength' },
 
@@ -316,6 +319,11 @@ export const seedMovements: Movement[] = [
   { id: 'quad-stretch', name: 'Quad Stretch', aliases: ['Quadriceps Stretch'], category: 'mobility' },
   { id: 'calf-stretch', name: 'Calf Stretch', category: 'mobility' },
   { id: 'pigeon-stretch', name: 'Pigeon Stretch', aliases: ['Pigeon Pose'], category: 'mobility' },
+  { id: 'stretch-of-choice', name: 'Stretch of Choice', category: 'mobility' },
+  { id: 'ankle-rock', name: 'Ankle Rocks', category: 'mobility', notes: 'The knee driven forward over the toes, heel down' },
+  { id: 'childs-pose', name: "Child's Pose", aliases: ['Childs Pose'], category: 'mobility' },
+  { id: 'gorilla-stretch', name: 'Gorilla Stretch', category: 'mobility', notes: 'Hands under the feet, palms up, toes to the wrist creases' },
+  { id: 'side-bend', name: 'Side Bends', category: 'mobility' },
   { id: 'active-recovery', name: 'Active Recovery', aliases: ['Recovery', 'Easy Movement', 'Shake Out'], category: 'mobility' },
   { id: 'deep-breathing', name: 'Deep Breathing', aliases: ['Breathing', 'Box Breathing', 'Breathe'], category: 'mobility' },
   { id: 'rest', name: 'Rest', aliases: ['Break', 'Recover'], category: 'mobility' },

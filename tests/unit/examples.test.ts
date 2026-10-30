@@ -12,7 +12,7 @@ const files = readdirSync(registry, { withFileTypes: true }).filter(entry => ent
 
 describe('the workout registry (workouts/**)', () => {
   it('bundles every file, once, under the id its name says', () => {
-    expect(files).toHaveLength(54);
+    expect(files).toHaveLength(55);
     expect(bundledWorkouts).toHaveLength(files.length);
     expect(new Set(bundledWorkouts.map(workout => workout.id)).size).toBe(bundledWorkouts.length);
     for (const file of files) {
@@ -30,7 +30,7 @@ describe('the workout registry (workouts/**)', () => {
     expect(benchmarks.title).toBe('Benchmarks');
     expect(benchmarks.workoutIds).toHaveLength(19);
     expect(benchmarks.workoutIds).toContain('fran');
-    expect(bundledCollections.find(collection => collection.id === 'advanced')!.workoutIds).toHaveLength(22);
+    expect(bundledCollections.find(collection => collection.id === 'advanced')!.workoutIds).toHaveLength(23);
     for (const collection of bundledCollections) for (const id of collection.workoutIds) expect(bundledWorkouts.some(workout => workout.id === id), id).toBe(true);
   });
 

@@ -265,3 +265,16 @@ The test now presses Save and edit and expects the editor's address, and `docs/d
 | Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.1. |
 
 Not recorded in this round: a session on a physical iPad or iPhone, the sixty new name clips rendered by Piper (the Cues workflow renders them on `main`), and the release workflow on GitHub runners before the tag.
+
+## Release 1.5.2, 30 October 2026
+
+Version 1.5.2: Title Case names, the tidied catalogue (268 records), Dumbbell Full Body Crunch, Squat Snatch Battery and the favicon cache header.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 258 passed in 31 files. New tests keep aliases, short names, Title Case and the bundled workouts' equipment consistent. |
+| Browser scenarios | Two full runs, both before the last edits to Squat Snatch Battery: 392 passed with 1 failure, then 390 passed with 3 failures. The second run shared the machine with both production builds. Its two static Firefox player failures pass 52 of 52 on a rerun. The library, editor and card specs pass 90 of 90 after the last edits. |
+| Static Logbook delete | Still failing intermittently in static Chromium (1 of 3 repeated runs). The deleted session was still listed after 25 seconds of repeated reloads, so the delete sometimes does not persist. The trace shows no console error. Open. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.2. |
+
+Not recorded in this round: the production smoke tests, a session on a physical device, and the new name clips (the Cues workflow renders them on `main`).

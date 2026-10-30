@@ -725,10 +725,11 @@ The detailed change history lives in the git log, the release notes under `docs/
 
 **In 1.5.2** (since `v1.5.1`):
 
-- Workout titles and movement names are in Title Case, in the 54 bundled workouts and the catalogue's names, short names and aliases. Block titles, notes and descriptions stay in sentence case, and the authoring guide asks for Title Case too.
-- The catalogue drops 99 aliases that only repeated a name in another case, plural or punctuation, lists every short name as an alias so it resolves, and has 260 records with Dumbbell Overhead Sit-Ups. A test keeps aliases, short names and the bundled workouts' equipment consistent.
+- Workout titles and movement names are in Title Case, in the bundled workouts and the catalogue's names, short names and aliases. Block titles, notes and descriptions stay in sentence case, and the authoring guide asks for Title Case too.
+- The catalogue drops 99 aliases that only repeated a name in another case, plural or punctuation, lists every short name as an alias so it resolves, and has 268 records with Dumbbell Overhead Sit-Ups and the movements of the Squat Snatch Battery. A test keeps aliases, short names and the bundled workouts' equipment consistent.
 - Dumbbell Full Body 35 becomes Dumbbell Full Body Crunch: a warm-up that runs into a 1:00 rest, 7:00 caps throughout, rests between movements and rounds, front rack lunges instead of sumo squats, overhead sit-ups, and notes on how each dumbbell is held.
 - Triceps Dips need no equipment: a bench, box, chair or sofa edge will do, and Chair Dips resolve to them.
+- New in Advanced: Squat Snatch Battery, a full class from a gym whiteboard (mobility, warm-up rounds, a squat snatch battery of EMOMs every 10, 20 and 30 s with 1:30 between them, five sets of snatch high pulls into snatch deadlifts, and a 3-2-1 metcon in three For time blocks, so each piece has its own time). Snatch Deadlifts resolve to Snatch-Grip Deadlifts. It is the first bundled workout whose EMOMs end in the rest before the next block.
 - The server lets browsers keep the favicon and the home-screen icons (`no-cache` instead of `no-store`), so Firefox shows the icon on a bookmark of the household page.
 
 **Schema and storage versions today.**
