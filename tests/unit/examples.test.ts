@@ -12,7 +12,7 @@ const files = readdirSync(registry, { withFileTypes: true }).filter(entry => ent
 
 describe('the workout registry (workouts/**)', () => {
   it('bundles every file, once, under the id its name says', () => {
-    expect(files).toHaveLength(53);
+    expect(files).toHaveLength(54);
     expect(bundledWorkouts).toHaveLength(files.length);
     expect(new Set(bundledWorkouts.map(workout => workout.id)).size).toBe(bundledWorkouts.length);
     for (const file of files) {

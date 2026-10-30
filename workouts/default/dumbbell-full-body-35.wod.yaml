@@ -1,0 +1,366 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: dumbbell-full-body-35
+  revision: 1
+  title: Dumbbell full body 35
+  description: "Thirty-five minutes with dumbbells: a timed warm-up, then legs, back and chest, shoulders and arms, and core, two rounds each within a 7, 7, 8 and 8 minute cap. One pair of dumbbells for the squats, hinges, rows, floor press and pullovers and a lighter pair for the shoulders, arms and core. Pick heavy dumbbells and keep every rep clean."
+  attribution:
+    author: OpenWOD
+    notes: Translated from a German home-workout plan.
+  equipment:
+    - Dumbbells
+    - Exercise mat
+  participants: 1
+  prep: 10s
+  sections:
+    - id: warm-up
+      title: Warm-up
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: warm-up-sequence
+        type: sequence
+        children:
+          - id: warm-up-jacks
+            type: timed
+            duration: 45s
+            assignments:
+              A:
+                name: Jumping jacks
+          - id: warm-up-arm-circles
+            type: timed
+            duration: 30s
+            assignments:
+              A:
+                name: Arm circles
+          - id: warm-up-inchworms
+            type: timed
+            duration: 45s
+            assignments:
+              A:
+                name: Inchworms
+          - id: warm-up-squats
+            type: timed
+            duration: 45s
+            assignments:
+              A:
+                name: Air squats
+          - id: warm-up-good-mornings
+            type: timed
+            duration: 45s
+            assignments:
+              A:
+                name: Bodyweight good mornings
+          - id: warm-up-shoulder-taps
+            type: timed
+            duration: 30s
+            assignments:
+              A:
+                name: Plank shoulder taps
+    - id: legs
+      title: Legs & glutes
+      format: forTime
+      transitionAfter: manualReady
+      cap: 7m
+      body:
+        id: legs-rounds
+        type: repeat
+        count: 2
+        body:
+          id: legs-round
+          type: sequence
+          children:
+            - id: legs-goblet-squats
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell held at the chest
+                  name: Dumbbell goblet squats
+                  reps: 12
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+            - id: legs-romanian-deadlifts
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Dumbbell Romanian deadlifts
+                  reps: 12
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+            - id: legs-sumo-squats
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell held between the legs
+                  name: Dumbbell sumo squats
+                  reps: 12
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+    - id: back-chest
+      title: Back & chest
+      format: forTime
+      transitionAfter: manualReady
+      cap: 7m
+      body:
+        id: back-chest-rounds
+        type: repeat
+        count: 2
+        body:
+          id: back-chest-round
+          type: sequence
+          children:
+            - id: back-chest-rows
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Bent-over dumbbell rows
+                  reps: 12
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+            - id: back-chest-floor-press
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Floor press
+                  reps: 12
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+            - id: back-chest-pullovers
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell held in both hands
+                  name: Dumbbell pullovers
+                  reps: 12
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+    - id: shoulders-arms
+      title: Shoulders & arms
+      format: forTime
+      transitionAfter: manualReady
+      cap: 8m
+      body:
+        id: shoulders-arms-rounds
+        type: repeat
+        count: 2
+        body:
+          id: shoulders-arms-round
+          type: sequence
+          children:
+            - id: shoulders-arms-press
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Dumbbell shoulder press
+                  reps: 10
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: shoulders-arms-curls
+              type: task
+              assignments:
+                A:
+                  notes: Per dumbbell
+                  name: Biceps curls
+                  reps: 12
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: shoulders-arms-triceps
+              type: task
+              assignments:
+                A:
+                  notes: Per dumbbell
+                  name: Overhead triceps extensions
+                  reps: 12
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: shoulders-arms-lateral-raises
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Lateral raises
+                  reps: 12
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+    - id: core
+      title: Abs & core
+      format: forTime
+      transitionAfter: manualReady
+      cap: 8m
+      body:
+        id: core-rounds
+        type: repeat
+        count: 2
+        body:
+          id: core-round
+          type: sequence
+          children:
+            - id: core-russian-twists
+              type: task
+              assignments:
+                A:
+                  name: Russian twists
+                  reps: 20
+            - id: core-sit-ups
+              type: task
+              assignments:
+                A:
+                  notes: One dumbbell held at the chest
+                  name: Dumbbell sit-ups
+                  reps: 12
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: core-plank-rows
+              type: task
+              assignments:
+                A:
+                  notes: Per side, one dumbbell per hand
+                  name: Plank rows
+                  reps: 10
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: core-dead-bugs
+              type: task
+              assignments:
+                A:
+                  notes: Per side
+                  name: Dead bugs
+                  reps: 12

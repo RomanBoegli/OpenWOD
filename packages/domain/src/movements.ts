@@ -56,6 +56,7 @@ export const seedMovements: Movement[] = [
   { id: 'goblet-squat', name: 'Goblet squats', aliases: ['Kettlebell goblet squats', 'KB goblet squats'], family: 'squat', equipment: ['Kettlebell'], category: 'strength', notes: 'A kettlebell or a dumbbell held at the chest' },
   { id: 'dumbbell-goblet-squat', name: 'Dumbbell goblet squats', shortName: 'DB goblet squats', aliases: ['DB goblet squats', 'Goblet squats with a dumbbell'], family: 'squat', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'dumbbell-front-squat', name: 'Dumbbell front squats', shortName: 'DB front squats', aliases: ['DB front squats'], family: 'squat', equipment: ['Dumbbells'], category: 'strength' },
+  { id: 'dumbbell-sumo-squat', name: 'Dumbbell sumo squats', shortName: 'DB sumo squats', aliases: ['DB sumo squats', 'Sumo goblet squats'], family: 'squat', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'jump-squat', name: 'Jump squats', aliases: ['Squat jumps'], family: 'squat', category: 'conditioning' },
   { id: 'pistol', name: 'Pistols', aliases: ['Pistol squats', 'Single-leg squats', 'One-legged squats'], family: 'squat', category: 'gymnastics' },
 
@@ -142,6 +143,7 @@ export const seedMovements: Movement[] = [
 
   // Sit-ups and core
   { id: 'sit-up', name: 'Sit-ups', aliases: ['Situps', 'Sit up'], category: 'conditioning' },
+  { id: 'dumbbell-sit-up', name: 'Dumbbell sit-ups', shortName: 'DB sit-ups', aliases: ['DB sit-ups', 'Weighted sit-ups'], family: 'sit-up', equipment: ['Dumbbells'], category: 'conditioning' },
   { id: 'abmat-sit-up', name: 'AbMat sit-ups', spokenName: 'Ab mat sit-ups', aliases: ['Ab mat sit-ups', 'Abmat situps', 'AbMat situps'], family: 'sit-up', equipment: ['AbMat'], category: 'conditioning' },
   { id: 'ghd-sit-up', name: 'GHD sit-ups', spokenName: 'G H D sit-ups', aliases: ['GHD situps', 'GHDs'], family: 'sit-up', category: 'conditioning', notes: 'Needs a GHD machine' },
   { id: 'v-up', name: 'V-ups', spokenName: 'Vee ups', aliases: ['V ups', 'Vups'], family: 'sit-up', category: 'conditioning' },
@@ -149,6 +151,7 @@ export const seedMovements: Movement[] = [
   { id: 'hollow-hold', name: 'Hollow hold', aliases: ['Hollow body hold', 'Hollow holds', 'Core hold'], family: 'sit-up', category: 'gymnastics' },
   { id: 'russian-twist', name: 'Russian twists', family: 'sit-up', category: 'conditioning' },
   { id: 'bicycle-crunch', name: 'Bicycle crunches', aliases: ['Bicycles'], family: 'sit-up', category: 'conditioning' },
+  { id: 'dead-bug', name: 'Dead bugs', aliases: ['Deadbugs'], family: 'sit-up', category: 'conditioning' },
   { id: 'plank', name: 'Plank', aliases: ['Plank hold', 'Front plank', 'Planks'], category: 'conditioning' },
   { id: 'plank-shoulder-tap', name: 'Plank shoulder taps', aliases: ['Shoulder taps'], family: 'plank', category: 'conditioning' },
   { id: 'side-plank', name: 'Side plank', aliases: ['Side planks', 'Side plank hold'], family: 'plank', category: 'conditioning' },
@@ -234,8 +237,11 @@ export const seedMovements: Movement[] = [
   { id: 'renegade-row', name: 'Renegade rows', aliases: ['Plank rows'], family: 'bent-over-row', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'biceps-curl', name: 'Biceps curls', aliases: ['Bicep curls', 'Dumbbell curls', 'DB curls'], equipment: ['Dumbbells'], category: 'strength' },
   { id: 'overhead-triceps-extension', name: 'Overhead triceps extensions', shortName: 'Triceps extensions', aliases: ['Triceps extensions', 'Tricep extensions', 'Skull crushers'], equipment: ['Dumbbells'], category: 'strength' },
+  { id: 'lateral-raise', name: 'Lateral raises', aliases: ['Dumbbell lateral raises', 'DB lateral raises', 'Side raises'], equipment: ['Dumbbells'], category: 'strength' },
+  { id: 'dumbbell-pullover', name: 'Dumbbell pullovers', shortName: 'DB pullovers', aliases: ['DB pullovers', 'Pullovers', 'Pull-overs'], equipment: ['Dumbbells'], category: 'strength' },
   { id: 'dumbbell-woodchopper', name: 'Dumbbell woodchoppers', shortName: 'DB woodchoppers', aliases: ['Woodchoppers', 'DB woodchoppers', 'Wood chops'], equipment: ['Dumbbells'], category: 'conditioning' },
   { id: 'good-morning', name: 'Good mornings', aliases: ['Barbell good mornings'], equipment: ['Barbell'], category: 'strength' },
+  { id: 'bodyweight-good-morning', name: 'Bodyweight good mornings', aliases: ['Air good mornings'], family: 'good-morning', category: 'mobility' },
   { id: 'turkish-get-up', name: 'Turkish get-ups', aliases: ['TGU', 'Get-ups', 'Kettlebell Turkish get-ups'], equipment: ['Kettlebell'], category: 'strength' },
   { id: 'ground-to-overhead', name: 'Ground-to-overhead', aliases: ['G2OH', 'Ground to overhead', 'Barbell ground-to-overhead'], equipment: ['Barbell'], category: 'weightlifting', notes: 'Any style from the floor to lockout' },
 
