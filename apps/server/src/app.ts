@@ -23,6 +23,15 @@ export function appVersion(): string {
   try { return (JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as { version?: string }).version ?? '0.0.0'; } catch { return '0.0.0'; }
 }
 
+/** Hashed build files never change and cue clips change with a voice pack only. Everything else is fetched afresh, so an upgrade shows at once. */
+function cacheControl(filePath: string): string {
+  if (filePath.includes('/assets/')) return 'public, max-age=31536000, immutable';
+  if (filePath.includes('/cues/')) return 'public, max-age=86400';
+  // Firefox keeps a favicon for bookmarks and history only from a response it may store, so icons are revalidated rather than never stored.
+  if (filePath.endsWith('/favicon.svg') || filePath.includes('/icons/')) return 'no-cache';
+  return 'no-store';
+}
+
 const SCOPE_LIMIT = 64;
 const SCOPE_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -54,7 +63,7 @@ export async function createServer({ logger = false, webRoot = resolve('dist/web
       setHeaders(response, filePath) {
         response.header('X-Content-Type-Options', 'nosniff');
         response.header('Referrer-Policy', 'same-origin');
-        response.header('Cache-Control', filePath.includes('/assets/') ? 'public, max-age=31536000, immutable' : filePath.includes('/cues/') ? 'public, max-age=86400' : 'no-store');
+        response.header('Cache-Control', cacheControl(filePath));
       },
     });
   }

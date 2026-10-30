@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { get } from 'node:https';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -161,6 +161,22 @@ describe('server', () => {
       const { exportedAt: _b, ...original } = exported;
       expect(again).toEqual(original);
     } finally { await from.close(); await to.close(); source.close(); target.close(); }
+  });
+
+  it('lets browsers keep the icons and hashed files, never the page', async () => {
+    const webRoot = join(scratch, 'web');
+    for (const dir of ['assets', 'cues', 'icons']) mkdirSync(join(webRoot, dir), { recursive: true });
+    for (const file of ['index.html', 'favicon.svg', 'assets/app-1a2b.js', 'cues/beep.mp3', 'icons/apple-touch-icon.png']) writeFileSync(join(webRoot, file), '');
+    const server = await createServer({ webRoot });
+    try {
+      const cache = async (url: string) => (await server.inject(url)).headers['cache-control'];
+      expect(await cache('/')).toBe('no-store');
+      // Firefox drops a no-store favicon from bookmarks and history.
+      expect(await cache('/favicon.svg')).toBe('no-cache');
+      expect(await cache('/icons/apple-touch-icon.png')).toBe('no-cache');
+      expect(await cache('/assets/app-1a2b.js')).toBe('public, max-age=31536000, immutable');
+      expect(await cache('/cues/beep.mp3')).toBe('public, max-age=86400');
+    } finally { await server.close(); }
   });
 
   it('isolates test scopes behind the header only when enabled', async () => {

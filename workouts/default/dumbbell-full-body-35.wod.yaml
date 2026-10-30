@@ -4,11 +4,10 @@ workout:
   schemaVersion: 2
   id: dumbbell-full-body-35
   revision: 1
-  title: Dumbbell full body 35
-  description: "Thirty-five minutes with dumbbells: a timed warm-up, then legs, back and chest, shoulders and arms, and core, two rounds each within a 7, 7, 8 and 8 minute cap. One pair of dumbbells for the squats, hinges, rows, floor press and pullovers and a lighter pair for the shoulders, arms and core. Pick heavy dumbbells and keep every rep clean."
+  title: Dumbbell Full Body Crunch
+  description: "Thirty-five minutes with dumbbells: a timed warm-up, then legs, back and chest, shoulders and arms, and core, two rounds each within a 7-minute cap. One pair of dumbbells for the squats, hinges, lunges, rows, floor press and pullovers and a lighter pair for the shoulders, arms and core. Pick heavy dumbbells and keep every rep clean."
   attribution:
     author: OpenWOD
-    notes: Translated from a German home-workout plan.
   equipment:
     - Dumbbells
     - Exercise mat
@@ -18,49 +17,56 @@ workout:
     - id: warm-up
       title: Warm-up
       format: timedCircuit
-      transitionAfter: manualReady
+      transitionAfter: automatic
       body:
-        id: warm-up-sequence
+        id: warm-up-body
         type: sequence
         children:
-          - id: warm-up-jacks
-            type: timed
-            duration: 45s
-            assignments:
-              A:
-                name: Jumping jacks
-          - id: warm-up-arm-circles
-            type: timed
-            duration: 30s
-            assignments:
-              A:
-                name: Arm circles
-          - id: warm-up-inchworms
-            type: timed
-            duration: 45s
-            assignments:
-              A:
-                name: Inchworms
-          - id: warm-up-squats
-            type: timed
-            duration: 45s
-            assignments:
-              A:
-                name: Air squats
-          - id: warm-up-good-mornings
-            type: timed
-            duration: 45s
-            assignments:
-              A:
-                name: Bodyweight good mornings
-          - id: warm-up-shoulder-taps
-            type: timed
-            duration: 30s
-            assignments:
-              A:
-                name: Plank shoulder taps
+          - id: warm-up-sequence
+            type: sequence
+            children:
+              - id: warm-up-jacks
+                type: timed
+                duration: 45s
+                assignments:
+                  A:
+                    name: Jumping jacks
+              - id: warm-up-arm-circles
+                type: timed
+                duration: 30s
+                assignments:
+                  A:
+                    name: Arm circles
+              - id: warm-up-inchworms
+                type: timed
+                duration: 45s
+                assignments:
+                  A:
+                    name: Inchworms
+              - id: warm-up-squats
+                type: timed
+                duration: 45s
+                assignments:
+                  A:
+                    name: Air squats
+              - id: warm-up-good-mornings
+                type: timed
+                duration: 45s
+                assignments:
+                  A:
+                    name: Bodyweight good mornings
+              - id: warm-up-shoulder-taps
+                type: timed
+                duration: 1m
+                assignments:
+                  A:
+                    name: Plank shoulder taps
+          - id: warm-up-rest
+            type: rest
+            duration: 1m
+            kind: blockRest
     - id: legs
-      title: Legs & glutes
+      title: Legs & Glutes
       format: forTime
       transitionAfter: manualReady
       cap: 7m
@@ -68,35 +74,37 @@ workout:
         id: legs-rounds
         type: repeat
         count: 2
+        betweenIterationsRest: 20s
         body:
           id: legs-round
           type: sequence
+          betweenChildrenRest: 10s
           children:
             - id: legs-goblet-squats
               type: task
               assignments:
                 A:
-                  notes: One dumbbell held at the chest
+                  notes: single (one dumbbell held with both hands)
                   name: Dumbbell goblet squats
                   reps: 12
                   load:
                     light:
-                      value: 7.5
-                      women: 5
+                      value: 8
+                      women: 6
                       unit: kg
                     medium:
-                      value: 10
-                      women: 7.5
+                      value: 12
+                      women: 10
                       unit: kg
                     heavy:
-                      value: 15
-                      women: 10
+                      value: 20
+                      women: 15
                       unit: kg
             - id: legs-romanian-deadlifts
               type: task
               assignments:
                 A:
-                  notes: One dumbbell per hand
+                  notes: double (one dumbbell per hand)
                   name: Dumbbell Romanian deadlifts
                   reps: 12
                   load:
@@ -112,12 +120,12 @@ workout:
                       value: 15
                       women: 10
                       unit: kg
-            - id: legs-sumo-squats
+            - id: legs-front-rack-lunges
               type: task
               assignments:
                 A:
-                  notes: One dumbbell held between the legs
-                  name: Dumbbell sumo squats
+                  notes: double (one dumbbell per hand)
+                  name: Dumbbell front rack lunges
                   reps: 12
                   load:
                     light:
@@ -133,7 +141,7 @@ workout:
                       women: 10
                       unit: kg
     - id: back-chest
-      title: Back & chest
+      title: Back & Chest
       format: forTime
       transitionAfter: manualReady
       cap: 7m
@@ -141,17 +149,19 @@ workout:
         id: back-chest-rounds
         type: repeat
         count: 2
+        betweenIterationsRest: 20s
         body:
           id: back-chest-round
           type: sequence
+          betweenChildrenRest: 10s
           children:
             - id: back-chest-rows
               type: task
               assignments:
                 A:
-                  notes: One dumbbell per hand
+                  notes: single (change halfway)
                   name: Bent-over dumbbell rows
-                  reps: 12
+                  reps: 24
                   load:
                     light:
                       value: 7.5
@@ -169,9 +179,9 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: One dumbbell per hand
+                  notes: double (one dumbbell per hand)
                   name: Floor press
-                  reps: 12
+                  reps: 24
                   load:
                     light:
                       value: 7.5
@@ -189,9 +199,9 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: One dumbbell held in both hands
+                  notes: single (one dumbbell held with both hands)
                   name: Dumbbell pullovers
-                  reps: 12
+                  reps: 15
                   load:
                     light:
                       value: 7.5
@@ -206,25 +216,27 @@ workout:
                       women: 10
                       unit: kg
     - id: shoulders-arms
-      title: Shoulders & arms
+      title: Shoulders & Arms
       format: forTime
       transitionAfter: manualReady
-      cap: 8m
+      cap: 7m
       body:
         id: shoulders-arms-rounds
         type: repeat
         count: 2
+        betweenIterationsRest: 20s
         body:
           id: shoulders-arms-round
           type: sequence
+          betweenChildrenRest: 10s
           children:
             - id: shoulders-arms-press
               type: task
               assignments:
                 A:
-                  notes: One dumbbell per hand
+                  notes: double (one dumbbell per hand, simultaneously)
                   name: Dumbbell shoulder press
-                  reps: 10
+                  reps: 15
                   load:
                     light:
                       value: 5
@@ -242,9 +254,9 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: Per dumbbell
+                  notes: double (one dumbbell per hand, simultaneously)
                   name: Biceps curls
-                  reps: 12
+                  reps: 15
                   load:
                     light:
                       value: 5
@@ -262,9 +274,9 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: Per dumbbell
+                  notes: single (one dumbbell held with both hands)
                   name: Overhead triceps extensions
-                  reps: 12
+                  reps: 15
                   load:
                     light:
                       value: 5
@@ -282,9 +294,9 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: One dumbbell per hand
+                  notes: double (one dumbbell per hand, simultaneously)
                   name: Lateral raises
-                  reps: 12
+                  reps: 10
                   load:
                     light:
                       value: 5
@@ -299,31 +311,47 @@ workout:
                       women: 7.5
                       unit: kg
     - id: core
-      title: Abs & core
+      title: Abs & Core
       format: forTime
       transitionAfter: manualReady
-      cap: 8m
+      cap: 7m
       body:
         id: core-rounds
         type: repeat
         count: 2
+        betweenIterationsRest: 10s
         body:
           id: core-round
           type: sequence
+          betweenChildrenRest: 5s
           children:
             - id: core-russian-twists
               type: task
               assignments:
                 A:
+                  notes: single (one dumbbell held with both hands)
                   name: Russian twists
                   reps: 20
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 12
+                      unit: kg
             - id: core-sit-ups
               type: task
               assignments:
                 A:
-                  notes: One dumbbell held at the chest
-                  name: Dumbbell sit-ups
-                  reps: 12
+                  notes: single (one dumbbell held with both hands)
+                  name: Dumbbell overhead sit-ups
+                  reps: 15
                   load:
                     light:
                       value: 5
@@ -341,9 +369,9 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: Per side, one dumbbell per hand
+                  notes: single (change halfway)
                   name: Plank rows
-                  reps: 10
+                  reps: 20
                   load:
                     light:
                       value: 5
@@ -361,6 +389,5 @@ workout:
               type: task
               assignments:
                 A:
-                  notes: Per side
                   name: Dead bugs
-                  reps: 12
+                  reps: 15

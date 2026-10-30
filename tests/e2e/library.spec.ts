@@ -26,7 +26,7 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'] }));
     await chip('Athletes', 'Solo').click(); // Groups narrow each other: the partner workout drops out.
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'], participants: 1 }));
-    await expect(list).toContainText('Dumbbell full body 35');
+    await expect(list).toContainText('Dumbbell Full Body Crunch');
     await expect(list).not.toContainText('Full body partner workout');
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await chip('Difficulty', 'Light').click();
