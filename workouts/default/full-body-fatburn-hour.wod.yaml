@@ -1,0 +1,341 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: full-body-fatburn-hour
+  revision: 1
+  title: Full Body Fatburn Hour
+  description: "About an hour of full-body work for the core, arms, back, legs and glutes: a warm-up, a dumbbell circuit of four rounds, a Tabata of four rounds, a core finisher of three rounds and a cool-down. You need a pair of dumbbells and an exercise mat."
+  attribution:
+    author: OpenWOD
+  equipment:
+    - Dumbbells
+    - Exercise mat
+  participants: 1
+  prep: 10s
+  sections:
+    - id: warmup
+      title: Warm-Up
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: warmup-sequence
+        type: sequence
+        children:
+          - id: warmup-jacks
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Jumping Jacks
+          - id: warmup-knees
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: High Knees
+          - id: warmup-squats
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Air Squats
+          - id: warmup-goodmornings
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Bodyweight Good Mornings
+          - id: warmup-buttkicks
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Butt Kicks
+          - id: warmup-inchworms
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Inchworms
+          - id: warmup-lunges
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Alternating Lunges
+          - id: warmup-climbers
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Mountain Climbers
+    - id: strength
+      title: Dumbbell Circuit
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: strength-rounds
+        type: repeat
+        count: 4
+        body:
+          id: strength-sequence
+          type: sequence
+          betweenChildrenRest: 15s
+          trailingRest: 15s
+          children:
+            - id: strength-curls
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Biceps Curls
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: strength-triceps
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: One dumbbell held with both hands
+                  name: Overhead Triceps Extensions
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: strength-rows
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Bent-Over Dumbbell Rows
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+            - id: strength-rdl
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: One dumbbell per hand
+                  name: Dumbbell Romanian Deadlifts
+                  load:
+                    light:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    medium:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    heavy:
+                      value: 15
+                      women: 10
+                      unit: kg
+            - id: strength-climbers
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  name: Mountain Climbers
+            - id: strength-bridges
+              type: timed
+              duration: 45s
+              assignments:
+                A:
+                  notes: One dumbbell on the hips
+                  name: Glute Bridges
+                  load:
+                    light:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+                    medium:
+                      value: 15
+                      women: 10
+                      unit: kg
+                    heavy:
+                      value: 20
+                      women: 15
+                      unit: kg
+    - id: tabata
+      title: Tabata
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: tabata-rounds
+        type: repeat
+        count: 4
+        body:
+          id: tabata-sequence
+          type: sequence
+          betweenChildrenRest: 10s
+          trailingRest: 10s
+          children:
+            - id: tabata-burpees
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Burpees
+            - id: tabata-knees
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: High Knees
+            - id: tabata-jumpsquats
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Jump Squats
+            - id: tabata-skaters
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Skater Jumps
+    - id: core-finisher
+      title: Core Finisher
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: core-rounds
+        type: repeat
+        count: 3
+        body:
+          id: core-sequence
+          type: sequence
+          betweenChildrenRest: 20s
+          trailingRest: 20s
+          children:
+            - id: core-reverse-crunches
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Reverse Crunches
+            - id: core-russian-twists
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  notes: One dumbbell held with both hands
+                  name: Russian Twists
+                  load:
+                    light:
+                      value: 5
+                      women: 2.5
+                      unit: kg
+                    medium:
+                      value: 7.5
+                      women: 5
+                      unit: kg
+                    heavy:
+                      value: 10
+                      women: 7.5
+                      unit: kg
+            - id: core-leg-raises
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Lying Leg Raises
+            - id: core-plank
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Plank
+            - id: core-deadbugs
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Dead Bugs
+            - id: core-bicycles
+              type: timed
+              duration: 40s
+              assignments:
+                A:
+                  name: Bicycle Crunches
+    - id: cooldown
+      title: Cool-Down
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: cooldown-sequence
+        type: sequence
+        children:
+          - id: cooldown-childpose
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Child's Pose
+          - id: cooldown-hipflexors
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                notes: One minute per side
+                name: Hip Flexor Stretch
+          - id: cooldown-hamstrings
+            type: timed
+            duration: 2m
+            assignments:
+              A:
+                notes: One minute per side
+                name: Hamstring Stretch
+          - id: cooldown-rotation
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                notes: 30 seconds per side
+                name: Supine Spinal Twist
+          - id: cooldown-cobra
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Cobra Stretch
+          - id: cooldown-breathing
+            type: timed
+            duration: 1m
+            assignments:
+              A:
+                name: Deep Breathing
