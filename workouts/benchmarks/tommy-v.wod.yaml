@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: tommy-v-for-time
-      title: Thrusters and rope climbs
+      title: Thrusters and Rope Climbs
       format: forTime
       transitionAfter: manualReady
       cap: 25m

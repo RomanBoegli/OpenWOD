@@ -73,7 +73,7 @@ workout:
                 notes: Spine
                 name: Cat-Cow
     - id: cardio
-      title: Cardio, three rounds
+      title: Cardio, Three Rounds
       format: forTime
       transitionAfter: manualReady
       body:
@@ -127,7 +127,7 @@ workout:
                 A:
                   name: Stretch of Choice
     - id: snatch-prep
-      title: Prepare for the battery
+      title: Prepare for the Battery
       format: timedCircuit
       transitionAfter: manualReady
       body:
@@ -222,7 +222,7 @@ workout:
                 value: 65
                 unit: percent
     - id: snatch-deadlifts
-      title: Snatch deadlifts
+      title: Snatch Deadlifts
       format: strength
       transitionAfter: manualReady
       body:
@@ -269,7 +269,7 @@ workout:
                       value: 90
                       unit: percent
     - id: metcon-3-rounds
-      title: "Metcon: 3 rounds"
+      title: "Metcon: 3 Rounds"
       format: forTime
       transitionAfter: automatic
       body:
@@ -339,7 +339,7 @@ workout:
             duration: 1m30s
             kind: blockRest
     - id: metcon-2-rounds
-      title: "Metcon: 2 rounds"
+      title: "Metcon: 2 Rounds"
       format: forTime
       transitionAfter: automatic
       body:
@@ -409,7 +409,7 @@ workout:
             duration: 1m30s
             kind: blockRest
     - id: metcon-1-round
-      title: "Metcon: 1 round"
+      title: "Metcon: 1 Round"
       format: forTime
       transitionAfter: manualReady
       body:

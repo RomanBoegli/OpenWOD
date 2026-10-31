@@ -9,14 +9,16 @@ const catalogue = new Catalogue(seedMovements);
 const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes', 'GHD', 'Battle rope', 'Tyre', 'Yoke'];
 
 // Title Case: every word capitalised except short articles, conjunctions and prepositions inside a name, inside hyphenated
-// compounds too ("Toes-to-Bar"). Acronyms and brands (DB, AbMat) pass as written, numbers and units after them or in brackets ("(cal)") too.
+// compounds too ("Toes-to-Bar"). Acronyms and brands (DB, AbMat) pass as written, numbers and the units after them ("10 s") or in
+// brackets ("(cal)") too.
 const MINOR = new Set(['a', 'an', 'the', 'and', 'or', 'nor', 'but', 'to', 'of', 'on', 'in', 'at', 'by', 'per', 'vs', 'via', 'as', 'for']);
+const UNITS = new Set(['s', 'min', 'm', 'km', 'cal', 'kg', 'lb', 'sec', 'x']);
 function isTitleCase(text: string): boolean {
   const words = text.split(' ');
   return words.every((word, index) => word.split('-').every((part, i) => {
     const bare = part.replace(/^[^A-Za-z0-9]+/, '').replace(/[^A-Za-z0-9]+$/, '');
     const inside = !(index === 0 && i === 0) && !(index === words.length - 1 && i === word.split('-').length - 1);
-    return !bare || /^[A-Z0-9]/.test(bare) || (inside && MINOR.has(bare)) || part.startsWith('(') || (i === 0 && /\d$/.test(words[index - 1] ?? ''));
+    return !bare || /^[A-Z0-9]/.test(bare) || (inside && MINOR.has(bare)) || part.startsWith('(') || (i === 0 && UNITS.has(bare) && /\d$/.test(words[index - 1] ?? ''));
   }));
 }
 
@@ -61,12 +63,13 @@ describe('seed movement catalogue', () => {
     }
   });
 
-  it('writes movement names and workout titles in Title Case', () => {
+  it('writes movement names, workout titles and block titles in Title Case', () => {
     const offending = (text: string) => !isTitleCase(text);
     const names = seedMovements.flatMap(record => [record.name, record.shortName ?? '', ...(record.aliases ?? [])]).filter(Boolean);
     expect(names.filter(offending)).toEqual([]);
     expect(fixtureNames().filter(offending)).toEqual([]);
     expect(bundledWorkouts.map(workout => workout.title).filter(offending)).toEqual([]);
+    expect(bundledWorkouts.flatMap(workout => workout.sections.map(section => section.title)).filter(offending)).toEqual([]);
   });
 
   it('lists in every bundled workout the equipment its movements need', () => {

@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: grace-for-time
-      title: 30 clean and jerks
+      title: 30 Clean and Jerks
       format: forTime
       transitionAfter: manualReady
       cap: 8m

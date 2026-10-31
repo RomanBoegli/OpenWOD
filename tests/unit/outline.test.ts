@@ -25,7 +25,7 @@ describe('workout outline', () => {
 
   it('AT-29: keeps alternating rounds separate, with the rest between rounds after a round and the block rest after the section', () => {
     const sections = outlineWorkout(compileWorkout(fullBodyPartner));
-    expect(sections.map(section => section.title)).toEqual(['Warm-up', 'Legs & strength', 'Upper body & arms', 'Abs & core', 'HYROX finisher', 'Cool-down']);
+    expect(sections.map(section => section.title)).toEqual(['Warm-Up', 'Legs & Strength', 'Upper Body & Arms', 'Abs & Core', 'HYROX Finisher', 'Cool-Down']);
     expect(sections[0].rounds).toHaveLength(1);
     expect(sections[0].rounds[0].label).toBe('');
     expect(sections[0].rounds[0].rows).toHaveLength(5);

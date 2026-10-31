@@ -15,7 +15,7 @@ workout:
   prep: 10s
   sections:
     - id: warm-up
-      title: Warm-up
+      title: Warm-Up
       format: timedCircuit
       transitionAfter: automatic
       body:

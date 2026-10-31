@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: pause-fs
-      title: Pause front squat
+      title: Pause Front Squat
       format: strength
       transitionAfter: manualReady
       body:

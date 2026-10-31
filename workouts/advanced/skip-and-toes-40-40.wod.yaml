@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: skip-toes
-      title: Gymnastics & core
+      title: Gymnastics & Core
       format: timedCircuit
       transitionAfter: manualReady
       body:

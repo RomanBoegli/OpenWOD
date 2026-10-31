@@ -15,7 +15,7 @@ workout:
   prep: 10s
   sections:
     - id: row-intervals
-      title: Row intervals
+      title: Row Intervals
       format: timedCircuit
       transitionAfter: manualReady
       body:

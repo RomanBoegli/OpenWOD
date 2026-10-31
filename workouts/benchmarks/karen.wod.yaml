@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: karen-for-time
-      title: 150 wall balls
+      title: 150 Wall Balls
       format: forTime
       transitionAfter: manualReady
       cap: 10m

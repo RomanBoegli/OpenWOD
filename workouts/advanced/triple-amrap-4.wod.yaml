@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: triple-amrap-1
-      title: AMRAP 4, part 1
+      title: AMRAP 4, Part 1
       format: amrap
       transitionAfter: manualReady
       cap: 4m
@@ -85,7 +85,7 @@ workout:
                     women: 15
                     unit: kg
     - id: triple-amrap-2
-      title: AMRAP 4, part 2
+      title: AMRAP 4, Part 2
       format: amrap
       transitionAfter: manualReady
       cap: 4m
@@ -153,7 +153,7 @@ workout:
                     women: 15
                     unit: kg
     - id: triple-amrap-3
-      title: AMRAP 4, part 3
+      title: AMRAP 4, Part 3
       format: amrap
       transitionAfter: manualReady
       cap: 4m

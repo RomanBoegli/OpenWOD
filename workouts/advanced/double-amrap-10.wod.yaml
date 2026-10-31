@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: double-amrap-1
-      title: AMRAP 10, part 1
+      title: AMRAP 10, Part 1
       format: amrap
       transitionAfter: manualReady
       cap: 10m
@@ -65,7 +65,7 @@ workout:
                 name: Burpees Over Bar
                 reps: 6
     - id: double-amrap-2
-      title: AMRAP 10, part 2
+      title: AMRAP 10, Part 2
       format: amrap
       transitionAfter: manualReady
       cap: 10m

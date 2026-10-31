@@ -742,6 +742,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 **After 1.5.2** (since `v1.5.2`, not released):
 
 - Every valid workout opens in the editor (BLD-15). Rests of their own length, timed movements in For time and strength, and groups with their own rounds are rows of the list, so Pull and Press Ladder, the Squat Snatch Battery's cardio block and imported files with rests of their own are editable. Drafts move to the browser-storage key `openwod.drafts.v2`, which a 1.5.2 build does not read.
+- Block titles are in Title Case too ("Warm-Up", "Metcon: 3 Rounds"), in all bundled workouts and in the authoring guide, and the Title Case test covers them. A word after a number stays lower-case only when it is a unit ("Every 10 s for 3 min").
 - New in Default: Full Body Fatburn Hour, about an hour with a warm-up, a dumbbell circuit, a Tabata, a core finisher and a cool-down, written so that 1.5.2 can import and edit it too. The catalogue has 272 records with Reverse Crunches, Lying Leg Raises, Supine Spinal Twist and Cobra Stretch.
 
 **Schema and storage versions today.**
@@ -771,7 +772,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Local browser tests run with `--project=firefox --project=webkit`, since headless Chromium fails locally while CI uses Chromium. Temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 - Timing is verified under the injected clock and by the production smoke, and the real-duration 60-minute run is no release gate.
 - Bundled workouts stay at revision 1. They wait for Ready unless they prescribe a rest or a straight continuation, and never have both a rest and a Ready gate (`workouts/README.md`).
-- Workout titles and movement names are in Title Case, block titles, notes and descriptions in sentence case.
+- Workout titles, block titles and movement names are in Title Case, notes and descriptions in sentence case.
 - The interface says "block" and "movement", while the code, the API and the files keep `section` and `slot`.
 - Collections and programs (LIB-03) are one concept named Collections, with one collection per workout.
 - Movement records carry no loads, and loads live on the prescriptions.

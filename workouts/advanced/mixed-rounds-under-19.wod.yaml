@@ -18,7 +18,7 @@ workout:
   prep: 10s
   sections:
     - id: mixed-rounds
-      title: Four rounds
+      title: Four Rounds
       format: forTime
       transitionAfter: manualReady
       cap: 19m

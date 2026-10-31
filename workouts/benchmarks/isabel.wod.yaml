@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: isabel-for-time
-      title: 30 snatches
+      title: 30 Snatches
       format: forTime
       transitionAfter: manualReady
       cap: 8m

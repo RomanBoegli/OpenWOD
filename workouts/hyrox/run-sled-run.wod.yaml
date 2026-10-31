@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: rsr
-      title: Run, sled, run
+      title: Run, Sled, Run
       format: forTime
       transitionAfter: manualReady
       body:

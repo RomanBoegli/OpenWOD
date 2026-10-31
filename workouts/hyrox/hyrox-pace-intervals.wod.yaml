@@ -23,7 +23,7 @@ workout:
   prep: 10s
   sections:
     - id: hyrox-sim
-      title: Runs and stations
+      title: Runs and Stations
       format: timedCircuit
       transitionAfter: manualReady
       body:

@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: warm-up
-      title: Warm-up
+      title: Warm-Up
       format: timedCircuit
       transitionAfter: manualReady
       body:
@@ -64,7 +64,7 @@ workout:
               B:
                 name: Inchworms
     - id: block-1
-      title: Legs & strength
+      title: Legs & Strength
       format: timedCircuit
       transitionAfter: automatic
       body:
@@ -160,7 +160,7 @@ workout:
             duration: 2m
             kind: blockRest
     - id: block-2
-      title: Upper body & arms
+      title: Upper Body & Arms
       format: timedCircuit
       transitionAfter: automatic
       body:
@@ -270,7 +270,7 @@ workout:
             duration: 2m
             kind: blockRest
     - id: block-3
-      title: Abs & core
+      title: Abs & Core
       format: timedCircuit
       transitionAfter: automatic
       body:
@@ -366,7 +366,7 @@ workout:
             duration: 2m
             kind: blockRest
     - id: block-4
-      title: HYROX finisher
+      title: HYROX Finisher
       format: timedCircuit
       transitionAfter: automatic
       body:
@@ -462,7 +462,7 @@ workout:
             duration: 2m
             kind: blockRest
     - id: cool-down
-      title: Cool-down
+      title: Cool-Down
       format: timedCircuit
       transitionAfter: manualReady
       body:

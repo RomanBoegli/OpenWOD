@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: ssm
-      title: Three rounds
+      title: Three Rounds
       format: forTime
       transitionAfter: manualReady
       body:

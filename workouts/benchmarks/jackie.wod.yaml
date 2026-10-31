@@ -18,7 +18,7 @@ workout:
   prep: 10s
   sections:
     - id: jackie-for-time
-      title: Row, thrusters, pull-ups
+      title: Row, Thrusters, Pull-Ups
       format: forTime
       transitionAfter: manualReady
       cap: 15m

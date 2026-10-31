@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: bs
-      title: Back squat
+      title: Back Squat
       format: strength
       transitionAfter: manualReady
       body:

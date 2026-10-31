@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: randy-for-time
-      title: 75 power snatches
+      title: 75 Power Snatches
       format: forTime
       transitionAfter: manualReady
       cap: 10m

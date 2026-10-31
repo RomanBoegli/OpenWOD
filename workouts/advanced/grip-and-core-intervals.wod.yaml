@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: grip
-      title: Grip & core
+      title: Grip & Core
       format: timedCircuit
       transitionAfter: manualReady
       body:

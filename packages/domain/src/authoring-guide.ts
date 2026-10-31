@@ -99,6 +99,7 @@ Write a duration as \`40s\`, \`2m\`, \`1m30s\`, \`1h\`, \`1:30\`, \`1:02:03\` or
 ## Sections
 
 Every section has \`id\`, \`title\`, \`format\`, \`transitionAfter\` and \`body\` (exactly one node), plus the settings its format allows and no others.
+A section \`title\` is short, in Title Case when it is in English, such as "Warm-Up" or "Metcon: 3 Rounds".
 \`transitionAfter: manualReady\` waits for the athletes to tap Ready before the next section, and \`automatic\` continues straight on.
 Use \`manualReady\` unless the request asks for a straight run into the next section, or the section ends with a rest before the next one.
 

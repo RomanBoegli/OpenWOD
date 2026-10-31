@@ -18,7 +18,7 @@ workout:
   prep: 10s
   sections:
     - id: helen-for-time
-      title: Three rounds
+      title: Three Rounds
       format: forTime
       transitionAfter: manualReady
       cap: 15m

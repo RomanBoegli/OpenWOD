@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: nancy-for-time
-      title: Five rounds
+      title: Five Rounds
       format: forTime
       transitionAfter: manualReady
       cap: 20m

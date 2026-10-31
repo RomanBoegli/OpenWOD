@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: angie-for-time
-      title: Four hundreds
+      title: Four Hundreds
       format: forTime
       transitionAfter: manualReady
       cap: 25m

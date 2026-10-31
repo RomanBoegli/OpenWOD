@@ -189,7 +189,7 @@ test.describe('overview', () => {
     await expect(page.getByRole('list', { name: 'Blocks' }).getByRole('listitem', { name: /^Between block/ })).toHaveCount(5);
     await expect(page.getByRole('listitem', { name: 'Between block 2 and 3' })).toContainText('Rest 02:00, then continues');
     const block = sections.nth(1);
-    await expect(block).toContainText('Legs & strength');
+    await expect(block).toContainText('Legs & Strength');
     await expect(block).toContainText('Round 1 of 2');
     await expect(block).toContainText('Round 2 of 2');
     const firstRows = block.getByRole('table').first().getByRole('row');
@@ -369,7 +369,7 @@ test.describe('formats', () => {
     await advance(page, 10_000);
     const card = page.getByTestId('block-card');
     await expect(card).toContainText('BLOCK 1 OF 6');
-    await expect(card).toContainText('Warm-up');
+    await expect(card).toContainText('Warm-Up');
     await expect(card).toBeHidden({ timeout: 5000 }); // It fades by itself.
     await advance(page, 5 * 60_000 + 1000);
     await expect(page.getByRole('button', { name: 'Start next block' })).toBeVisible();

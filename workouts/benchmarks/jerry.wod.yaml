@@ -17,7 +17,7 @@ workout:
   prep: 10s
   sections:
     - id: jerry-for-time
-      title: Run, row, run
+      title: Run, Row, Run
       format: forTime
       transitionAfter: manualReady
       cap: 30m

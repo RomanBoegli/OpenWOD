@@ -16,7 +16,7 @@ workout:
   prep: 10s
   sections:
     - id: dt-for-time
-      title: Five rounds
+      title: Five Rounds
       format: forTime
       transitionAfter: manualReady
       cap: 20m
