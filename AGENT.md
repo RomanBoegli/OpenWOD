@@ -728,18 +728,10 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version under the wordmark (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13), with the SQLite migration 3 and IndexedDB version 3.
 - 1.5.0: the tag exists but its workflow stopped in the production smoke test before an image was pushed, because the test still pressed Save to library. 1.5.1 publishes its changes.
 - 1.5.1: everything of 1.5.0, that is Create with AI (SHR-07), authors as master data (LIB-06), the round donut and block cards (UI-24) and cues that say the written name (AUD-10), plus 66 more movements and the usual shorthand, with no database or browser-storage migration.
-- 1.5.2: the changes listed under In 1.5.2, with no database or browser-storage migration. Notes in `docs/releases/v1.5.2.md`.
+- 1.5.2: Title Case workout titles and movement names, a catalogue without redundant aliases, Dumbbell Full Body Crunch, Squat Snatch Battery and the favicon on Firefox bookmarks, with no database or browser-storage migration.
+- 1.5.3, prepared: the changes below, with no database migration. Notes in `docs/releases/v1.5.3.md`.
 
-**In 1.5.2** (since `v1.5.1`):
-
-- Workout titles and movement names are in Title Case, in the bundled workouts and the catalogue's names, short names and aliases. Block titles, notes and descriptions stay in sentence case, and the authoring guide asks for Title Case too.
-- The catalogue drops 99 aliases that only repeated a name in another case, plural or punctuation, lists every short name as an alias so it resolves, and has 268 records with Dumbbell Overhead Sit-Ups and the movements of the Squat Snatch Battery. A test keeps aliases, short names and the bundled workouts' equipment consistent.
-- Dumbbell Full Body 35 becomes Dumbbell Full Body Crunch: a warm-up that runs into a 1:00 rest, 7:00 caps throughout, rests between movements and rounds, front rack lunges instead of sumo squats, overhead sit-ups, and notes on how each dumbbell is held.
-- Triceps Dips need no equipment: a bench, box, chair or sofa edge will do, and Chair Dips resolve to them.
-- New in Advanced: Squat Snatch Battery, a full class from a gym whiteboard (mobility, warm-up rounds, a squat snatch battery of EMOMs every 10, 20 and 30 s with 1:30 between them, five sets of snatch high pulls into snatch deadlifts, and a 3-2-1 metcon in three For time blocks, so each piece has its own time). Snatch Deadlifts resolve to Snatch-Grip Deadlifts. It is the first bundled workout whose EMOMs end in the rest before the next block.
-- The server lets browsers keep the favicon and the home-screen icons (`no-cache` instead of `no-store`), so Firefox shows the icon on a bookmark of the household page.
-
-**After 1.5.2** (since `v1.5.2`, not released):
+**In 1.5.3** (since `v1.5.2`):
 
 - Every valid workout opens in the editor (BLD-15). Rests of their own length, timed movements in For time and strength, and groups with their own rounds are rows of the list, so Pull and Press Ladder, the Squat Snatch Battery's cardio block and imported files with rests of their own are editable. Drafts move to the browser-storage key `openwod.drafts.v2`, which a 1.5.2 build does not read.
 - Block titles are in Title Case too ("Warm-Up", "Metcon: 3 Rounds"), in all bundled workouts and in the authoring guide, and the Title Case test covers them. A word after a number stays lower-case only when it is a unit ("Every 10 s for 3 min").
@@ -750,6 +742,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 - Workout model `schemaVersion` 2, workout file `formatVersion` 3 (`openwod.workout`), pack `formatVersion` 1, JSON export `formatVersion` 1.
 - SQLite schema version 3: migration 2 added household settings, migration 3 (`deleted sessions`) adds the `deleted_sessions` tombstone table.
 - IndexedDB version 3, which adds the `deletedSessions` store to version 2's `workouts`, `master` and `sessions`.
+- Editor drafts live in `localStorage` under `openwod.drafts.v2` since 1.5.3, moved once from `openwod.drafts.v1`.
 - An image of 1.3.x or older refuses a database migrated to version 3, so going back needs the pre-migration backup the server writes under `/data/backups/`.
 
 **Open gates on the user's side.**
