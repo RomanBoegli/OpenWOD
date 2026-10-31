@@ -278,3 +278,16 @@ Version 1.5.2: Title Case names, the tidied catalogue (268 records), Dumbbell Fu
 | Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.2. |
 
 Not recorded in this round: the production smoke tests, a session on a physical device, and the new name clips (the Cues workflow renders them on `main`).
+
+## Release 1.5.3, 31 October 2026
+
+Version 1.5.3: every valid workout opens in the editor (BLD-15), with rest rows, timed movements and groups, plus Full Body Fatburn Hour, four new movements and Title Case block titles.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 264 passed in 31 files. All 56 bundled workouts and 300 generated workout trees open in the editor and save back with the same work, rests and rounds. |
+| Browser scenarios | One full run of all six projects: 398 passed, 1 failed. The failure is the static Logbook delete test in static Chromium. The new import, edit and save test passes in server and static mode. |
+| Static Logbook delete | Unchanged from 1.5.2: it fails in 1 of 5 repeated runs in static Chromium, with the deleted session still listed after a reload. Open. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.3. |
+
+Not recorded in this round: the production smoke tests, a session on a physical device, and the new name clips (the Cues workflow renders them on `main`).
