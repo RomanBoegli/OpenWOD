@@ -24,7 +24,9 @@ export { freeWorkoutId, slugify } from '../../../packages/domain/src/library';
 import type { BuilderDraft } from '../../../packages/domain/src/builder';
 
 export interface StoredDraft { id: string; draft: BuilderDraft; updatedAt: string; mode: 'create' | 'replace'; /** File name when the draft came from an import. */ importedFrom?: string }
-const DRAFTS_KEY = 'openwod.drafts.v1';
+/** Version 2 drafts may hold rests and groups, which an older build cannot open, so they live under their own key. */
+const DRAFTS_KEY = 'openwod.drafts.v2';
+const DRAFTS_V1_KEY = 'openwod.drafts.v1';
 /** The single draft for a brand-new workout; editing an existing workout uses that workout's ID. */
 export const NEW_DRAFT_ID = 'new';
 /** Duplicate keeps its draft beside the workout's own edits. */
@@ -35,6 +37,12 @@ export const copySource = (draftId: string) => draftId.startsWith(COPY_PREFIX) ?
 
 export function loadDrafts(): StoredDraft[] {
   try {
+    // Version 1 drafts are version 2 drafts without rests or groups: they move across once.
+    const earlier = localStorage.getItem(DRAFTS_V1_KEY);
+    if (earlier !== null) {
+      if (localStorage.getItem(DRAFTS_KEY) === null) localStorage.setItem(DRAFTS_KEY, earlier);
+      localStorage.removeItem(DRAFTS_V1_KEY);
+    }
     const stored: unknown = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? '[]');
     if (!Array.isArray(stored)) return [];
     return stored.filter((item): item is StoredDraft => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && item.draft && Array.isArray(item.draft.sections) && typeof item.updatedAt === 'string' && ['create', 'replace'].includes(item.mode))).slice(0, 20).map(item => ({ ...item, ...(typeof item.importedFrom === 'string' ? { importedFrom: item.importedFrom.slice(0, 200) } : { importedFrom: undefined }) }));

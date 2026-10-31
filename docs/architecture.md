@@ -183,8 +183,8 @@ One ranked search (`packages/domain/src/search.ts`) serves the library and the m
 The library ranks by relevance when a query is present and lets the chosen sort break ties.
 The editor's picker fills the names and links the record, and highlights names no record knows with an inline Add.
 The editor has no equipment field: a workout's equipment is derived from the records of its movements (keyword inference for names no record knows) and shown on the live summary, and whatever an opened workout declared beyond that (a wall, a running route, a squat rack) is carried unchanged.
-An imported file that the editor can express opens as an unsaved draft (`#/draft/<id>`) with its movements linked where names match, so unknown ones are fixed before anything is saved.
-Files the editor cannot express keep the preview dialog.
+An imported workout file can open as an unsaved draft (`#/draft/<id>`) with its movements linked where names match, so unknown ones are fixed before anything is saved.
+A pack of several workouts imports from the preview dialog.
 Housekeeping (merge, rename, remove, restore the bundled set) is on the settings page, which is split into sections behind `#/settings/<section>`: General, Training view, Equipment, Movements and Collections.
 General holds appearance, athletes, and the difficulty calibration: the full-effort and long marks, the three weights and the three thresholds of `rateDifficulty`, with reference workouts re-rated live, stored as a device preference that is passed into every summary.
 Training view holds the load unit, sound and voices, and a Look & feel tile with the default view, timer ring width, pulse intensity and two milestone markers, each a time before the end and a colour, around a live miniature of the player that can run a preview.
@@ -200,14 +200,19 @@ Cards and buttons use a drop shadow on hover rather than a lift.
 
 ## Editor
 
-The editor works on a constrained builder model (`packages/domain/src/builder.ts`): sections with a format, whose slots are timed intervals (timed circuit), manual movements with targets and levelled loads (for time, strength), items of a block (AMRAP, you-go-I-go) or an interval's work (EMOM).
+The editor works on a builder model (`packages/domain/src/builder.ts`): sections with a format, whose slots are timed intervals (timed circuit), manual movements with targets and levelled loads (for time, strength), items of a block (AMRAP, you-go-I-go) or an interval's work (EMOM).
 Explicit between-slot, trailing, between-round and after-section rests.
 Optional rounds with the alternate assignment policy.
 Tabata-style per-slot repeats.
 And a ready gate or automatic continuation.
-A timed run before an alternating repeat (the HYROX doubles circuit) is the one bundled shape it still reports as not editable. `builderToWorkout` emits deterministic position-based IDs so the same draft always yields the same tree. `workoutToBuilder` is the inverse and returns null for shapes outside the model, which the UI reports rather than approximating.
+A section's list holds items, not only movements: in timed circuit, for time and strength it also holds rests of their own length and groups, each with its own rounds, rests and A/B swap and its own list, and a for time or strength movement can be timed.
+Movements carry no `kind`, so a stored draft of only movements is still a valid draft.
+With these, `workoutToBuilder` opens every workout the compiler accepts (BLD-15), and the plain form stays what a workout of one list with uniform rests opens in.
+It returns null only for a document the compiler would reject, which the UI reports rather than approximating.
+`builderToWorkout` emits deterministic position-based IDs so the same draft always yields the same tree: `s2-slot-3` is the third item of the second section, and its children inside a group are `s2-slot-3-1` onwards.
+The unit tests reopen every bundled workout and 300 generated trees and compare what they do, work by work.
 The live summary compiles the draft with the same compiler as the player. `validateDraft` adds author-level messages before structural checks.
-Drafts autosave to browser storage (`openwod.drafts.v1`, debounced), one draft per workout plus one for a new workout, and are removed when saved or discarded.
+Drafts autosave to browser storage (`openwod.drafts.v2`, debounced, read once from `openwod.drafts.v1`), one draft per workout plus one for a new workout, and are removed when saved or discarded.
 Saving replaces a saved workout at the next revision or creates a new saved workout with a free slugged ID.
 Bundled workouts are only ever duplicated.
 

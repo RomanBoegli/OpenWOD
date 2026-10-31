@@ -1,4 +1,4 @@
-import type { BuilderDraft } from '../../../packages/domain/src/builder';
+import { mapSlots, slotsOf, type BuilderDraft } from '../../../packages/domain/src/builder';
 import type { Catalogue, Movement } from '../../../packages/domain/src/catalogue';
 import { inferEquipment } from '../../../packages/domain/src/library';
 import type { Prescription, Workout, WorkoutNode } from '../../../packages/domain/src/schema';
@@ -17,7 +17,7 @@ export function linkPrescription(prescription: Prescription, catalogue: Catalogu
 }
 
 export function linkDraft(draft: BuilderDraft, catalogue: Catalogue): BuilderDraft {
-  return { ...draft, sections: draft.sections.map(section => ({ ...section, slots: section.slots.map(slot => ({ ...slot, A: linkPrescription(slot.A, catalogue), ...(slot.B ? { B: linkPrescription(slot.B, catalogue) } : {}) })) })) };
+  return { ...draft, sections: draft.sections.map(section => ({ ...section, slots: mapSlots(section.slots, slot => ({ ...slot, A: linkPrescription(slot.A, catalogue), ...(slot.B ? { B: linkPrescription(slot.B, catalogue) } : {}) })) })) };
 }
 
 export function linkWorkout(workout: Workout, catalogue: Catalogue): Workout {
@@ -33,7 +33,7 @@ export function linkWorkout(workout: Workout, catalogue: Catalogue): Workout {
 /** Movement names in a draft that no record knows, each once, in authored order. */
 export function unmatchedMovements(draft: BuilderDraft, catalogue: Catalogue): string[] {
   const names: string[] = [];
-  for (const section of draft.sections) for (const slot of section.slots) for (const prescription of [slot.A, slot.B]) {
+  for (const section of draft.sections) for (const slot of slotsOf(section.slots)) for (const prescription of [slot.A, slot.B]) {
     if (!prescription || !prescription.name.trim() || catalogue.resolve(prescription)) continue;
     if (!names.some(name => name.toLowerCase() === prescription.name.trim().toLowerCase())) names.push(prescription.name.trim());
   }

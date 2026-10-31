@@ -86,3 +86,14 @@
 .unmatched li button:hover { background: var(--hover); }
 .unmatched small { color: var(--ink-3); }
 .slots td .picker { width: 100%; }
+/* A rest of its own: one slim muted line with its length, in the list where it happens. */
+.restRow td { padding-top: 4px; padding-bottom: 4px; }
+.slots .restRow td:first-child { padding-top: 14px; }
+.restLine { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
+.slots td .restLine input { width: 96px; min-height: 36px; padding: 5px 9px; }
+/* A group: its own rounds and rests above its own list, marked by a left rule rather than more padding. */
+.nested { display: grid; gap: 2px; padding: 2px 0 6px 12px; border-left: 3px solid var(--accent-border); }
+.nested > .row .field { width: auto; margin: 8px 0; }
+.nested > .row .field input { min-height: 40px; }
+.addRow { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 6px; }
+@media (max-width: 620px) { .nested { padding-left: 8px; } .slots .restRow td:first-child { padding-top: 4px; } }

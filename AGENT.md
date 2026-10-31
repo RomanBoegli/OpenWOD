@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.18 · 30 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.19 · 31 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -174,6 +174,12 @@ A section that has both a rest and a Ready gate, as older timed circuits can, ke
 The section card lists slot settings first (repeat each slot, transition between slots) and round settings below (rounds, rest between rounds, A/B swap).
 A transition after the last slot of each round, from older workouts, stays stored and is shown only while it is set.
 The overview shows the same tile between section cards, and the difficulty rating counts the rest without taking it from a cap.
+
+**BLD-15** Every workout the compiler accepts SHALL open in the editor, whether it was bundled, imported or written by hand, so Edit and Duplicate are never withheld from a valid workout.
+Timed circuit, For time and strength lists SHALL hold, besides movements, rests of their own length at their place in the list and groups with their own rounds, rest between rounds, rest between movements and A/B swap, up to the two nested repeat levels of BLD-03.
+A movement in a For time or strength list SHALL be either until Done or timed.
+Saving an opened workout unchanged SHALL keep its movements, assignments, round structure and timing, except that a rest after the workout's very last movement is dropped and a rest after the last movement of each round joins the rest between rounds or sections.
+Workouts that fit the plain form, one list per section with uniform rests, SHALL open in it as before, and a rest or group added to a section whose movements each repeat SHALL first turn those repeats into groups of one, keeping the timing.
 
 # 6 Workout model and execution contract
 
@@ -702,11 +708,12 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-30 | Open the authoring guide in both shapes. It lists every section format with its settings, the movement and equipment names of this installation, and examples that import unchanged. Paste an invalid reply: the import error appears with a way back to the reply and nothing is written. Paste a valid reply wrapped in prose and a code fence: the preview shows the workout and Save and edit opens it in the editor. | SHR-04/07, NFR-11 |
 | AT-31 | Rename an author, merge two others, undo one merge, delete an author and restore it. The library pages, search and Author filter follow each change, the files are unchanged, and the editor suggests the kept spelling while typing and nudges a near-duplicate. | LIB-02/04/06 |
 | AT-32 | Play the partner circuit in the context view at tablet and phone widths: the donut reads movement 4 of 4 with 4 rounds left at the fourth station, the active row lies inside the visible list, and round 2 begins at movement 1 of 4. Play full-body-partner: a card names block 1 and fades, block 1 done shows while waiting for Ready, and block 2 is named with its rounds. A lane written "Plank rows" is announced as written, never with the Renegade rows clip. | UI-06/10/20/24, AUD-10 |
+| AT-33 | Import a workout whose Tabata block has a 10 s rest of its own after each movement and whose For time block has a timed stretch: its overview offers Edit and Duplicate, the editor shows the rests as rows and the stretch as timed, a changed rest and an added two-round group change the live summary by their exact time, and the saved workout reopens with both. Every bundled workout and 300 generated trees reopen and save with the same work, rounds and rests between works. | BLD-03/15, MOD-01 |
 
 # 15 Where things stand
 
-Recorded 30 October 2026, plan version 1.18.
-All P0 requirements and the 32 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+Recorded 31 October 2026, plan version 1.19.
+All P0 requirements and the 33 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -721,7 +728,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version under the wordmark (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13), with the SQLite migration 3 and IndexedDB version 3.
 - 1.5.0: the tag exists but its workflow stopped in the production smoke test before an image was pushed, because the test still pressed Save to library. 1.5.1 publishes its changes.
 - 1.5.1: everything of 1.5.0, that is Create with AI (SHR-07), authors as master data (LIB-06), the round donut and block cards (UI-24) and cues that say the written name (AUD-10), plus 66 more movements and the usual shorthand, with no database or browser-storage migration.
-- 1.5.2, prepared: the changes below, with no database or browser-storage migration. Notes in `docs/releases/v1.5.2.md`.
+- 1.5.2: the changes listed under In 1.5.2, with no database or browser-storage migration. Notes in `docs/releases/v1.5.2.md`.
 
 **In 1.5.2** (since `v1.5.1`):
 
@@ -731,6 +738,11 @@ The detailed change history lives in the git log, the release notes under `docs/
 - Triceps Dips need no equipment: a bench, box, chair or sofa edge will do, and Chair Dips resolve to them.
 - New in Advanced: Squat Snatch Battery, a full class from a gym whiteboard (mobility, warm-up rounds, a squat snatch battery of EMOMs every 10, 20 and 30 s with 1:30 between them, five sets of snatch high pulls into snatch deadlifts, and a 3-2-1 metcon in three For time blocks, so each piece has its own time). Snatch Deadlifts resolve to Snatch-Grip Deadlifts. It is the first bundled workout whose EMOMs end in the rest before the next block.
 - The server lets browsers keep the favicon and the home-screen icons (`no-cache` instead of `no-store`), so Firefox shows the icon on a bookmark of the household page.
+
+**After 1.5.2** (since `v1.5.2`, not released):
+
+- Every valid workout opens in the editor (BLD-15). Rests of their own length, timed movements in For time and strength, and groups with their own rounds are rows of the list, so Pull and Press Ladder, the Squat Snatch Battery's cardio block and imported files with rests of their own are editable. Drafts move to the browser-storage key `openwod.drafts.v2`, which a 1.5.2 build does not read.
+- New in Default: Full Body Fatburn Hour, about an hour with a warm-up, a dumbbell circuit, a Tabata, a core finisher and a cool-down, written so that 1.5.2 can import and edit it too. The catalogue has 272 records with Reverse Crunches, Lying Leg Raises, Supine Spinal Twist and Cobra Stretch.
 
 **Schema and storage versions today.**
 
@@ -765,7 +777,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-15 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-07, MOD-06, NFR-15, SHR-08, UI-25 and AT-33.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-16 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-07, MOD-06, NFR-15, SHR-08, UI-25 and AT-34.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

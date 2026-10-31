@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import { ready } from './helpers';
+import { serialiseWorkoutFile, type Workout, type WorkoutNode } from '../../packages/domain/src';
 
 test.describe('editor', () => {
   test('builds a pair circuit with live totals, saves it to the library, and plays it to completion', async ({ page }) => {
@@ -72,7 +73,7 @@ test.describe('editor', () => {
     await expect(drafts).toHaveCount(0);
   });
 
-  test('duplicates a bundled workout into an editable copy and explains structures it cannot edit', async ({ page }) => {
+  test('duplicates a bundled workout into an editable copy, and opens one with rests of their own', async ({ page }) => {
     await page.goto('/#/wod/partner-circuit');
     await page.getByRole('link', { name: 'Duplicate' }).click();
     await expect(page).toHaveURL(/#\/wod\/partner-circuit\/copy$/);
@@ -81,8 +82,46 @@ test.describe('editor', () => {
     await page.getByRole('button', { name: 'Save to library' }).click();
     await expect(page).toHaveURL(/#\/wod\/copy-of-partner-circuit$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Copy of Partner Circuit');
-    await page.goto('/#/wod/pull-and-press-ladder/edit');
-    await expect(page.getByRole('status')).toContainText('cannot change yet');
+    // BLD-15: the ladder's 1:00 rests between its rungs are rows of their own.
+    await page.goto('/#/wod/pull-and-press-ladder');
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByLabel('Block 1 rest 4', { exact: true })).toHaveValue('01:00');
+    await expect(page.getByLabel('Block 1 rest 8', { exact: true })).toHaveValue('01:00');
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeEnabled();
+  });
+
+  test('BLD-15: edits an imported workout with rests of its own, a timed movement and a group, and saves them', async ({ page }) => {
+    const timed = (id: string, name: string, durationMs: number): WorkoutNode => ({ id, type: 'timed', durationMs, assignments: { A: { name } } });
+    const rest = (id: string): WorkoutNode => ({ id, type: 'rest', durationMs: 10_000, kind: 'transition' });
+    const workout: Workout = { schemaVersion: 2, id: 'fatburn', revision: 1, title: 'Fatburn', equipment: [], participants: 1, prepMs: 10_000, sections: [
+      { id: 'tabata', title: 'Tabata', format: 'timedCircuit', transitionAfter: 'manualReady', body: { id: 'rounds', type: 'repeat', count: 4, body: { id: 'list', type: 'sequence', children: [timed('burpees', 'Burpees', 20_000), rest('rest-1'), timed('knees', 'High Knees', 20_000), rest('rest-2')] } } },
+      { id: 'cardio', title: 'Cardio', format: 'forTime', transitionAfter: 'manualReady', body: { id: 'cardio-list', type: 'sequence', children: [{ id: 'push-ups', type: 'task', assignments: { A: { name: 'Push-Ups', reps: 10 } } }, timed('stretch', 'Stretch of Choice', 30_000)] } },
+    ] };
+    await page.goto('/');
+    await page.locator('input[type=file]').setInputFiles({ name: 'fatburn.wod.yaml', mimeType: 'application/yaml', buffer: Buffer.from(serialiseWorkoutFile(workout)) });
+    await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Save and edit' }).click();
+    await expect(page).toHaveURL(/#\/wod\/fatburn\/edit$/);
+    const summary = page.getByRole('complementary', { name: 'Summary' });
+    // Four rounds of 20 s, 10 s, 20 s and 10 s, and the 30 s stretch on the clock.
+    await expect(summary).toContainText('04:30');
+    await expect(page.getByLabel('Block 1 rest 2', { exact: true })).toHaveValue('00:10');
+    await expect(page.getByLabel('Block 2 movement 2 work', { exact: true })).toHaveValue('timed');
+    await page.getByLabel('Block 1 rest 4', { exact: true }).fill('0:15');
+    await expect(summary).toContainText('04:50');
+    const cardio = page.getByRole('list', { name: 'Blocks' }).getByRole('listitem').nth(1);
+    await cardio.getByRole('button', { name: 'Add group', exact: true }).click();
+    await page.getByLabel('Block 2 group 3 movement 1', { exact: true }).fill('Air Squats');
+    await page.getByLabel('Block 2 group 3 movement 1 work', { exact: true }).selectOption('timed');
+    await page.locator('#s1-2-slot0-duration').fill('0:20');
+    // Two rounds of a 20 s movement put 40 s more on the clock.
+    await expect(summary).toContainText('05:30');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page).toHaveURL(/#\/wod\/fatburn$/);
+    await expect(page.getByRole('link', { name: 'Edit' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Duplicate' })).toBeVisible();
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByLabel('Block 2 group 3 rounds', { exact: true })).toHaveValue('2');
+    await expect(page.getByLabel('Block 1 rest 4', { exact: true })).toHaveValue('00:15');
   });
 
   test('edits a bundled workout in place, removes it, and restores it with the edits from settings', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { builderToWorkout, emptyDraft, emptySection, validateDraft, workoutToBuilder, type BuilderDraft, type BuilderSection } from '../../packages/domain/src/builder';
+import { builderToWorkout, emptyDraft, emptySection, emptySlot, validateDraft, workoutToBuilder, type BuilderDraft, type BuilderSection } from '../../packages/domain/src/builder';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
 import { bundledWorkouts } from '../../packages/domain/src/generated/bundled';
@@ -10,7 +10,7 @@ import type { SectionFormat } from '../../packages/domain/src/schema';
 /** BLD-14: what happens after a section, for every format. */
 const section = (format: SectionFormat, patch: Partial<BuilderSection> = {}): BuilderSection => {
   const base = emptySection(1, format);
-  return { ...base, title: format, slots: [{ ...base.slots[0], A: { name: 'Burpees', reps: 10 } }, { ...base.slots[0], A: { name: 'Air Squats', reps: 10 } }], ...(format === 'forTime' ? { capMs: 300_000 } : {}), ...patch };
+  return { ...base, title: format, slots: [{ ...emptySlot(1), A: { name: 'Burpees', reps: 10 } }, { ...emptySlot(1), A: { name: 'Air Squats', reps: 10 } }], ...(format === 'forTime' ? { capMs: 300_000 } : {}), ...patch };
 };
 const draftOf = (...sections: BuilderSection[]): BuilderDraft => ({ ...emptyDraft(1), title: 'Transitions', prepMs: 0, sections });
 
@@ -41,7 +41,7 @@ describe('the rest after a section (BLD-14)', () => {
   it('builds a you-go-I-go rest after the section as well', () => {
     const base = emptySection(2, 'youGoIGo');
     const draft: BuilderDraft = { ...emptyDraft(2), title: 'Pair', prepMs: 0, sections: [
-      { ...base, title: 'Sprints', capMs: 120_000, transitionAfter: 'automatic', blockRestMs: 45_000, slots: [{ ...base.slots[0], A: { name: 'Burpees', reps: 5 }, B: { name: '' } }] },
+      { ...base, title: 'Sprints', capMs: 120_000, transitionAfter: 'automatic', blockRestMs: 45_000, slots: [{ ...emptySlot(2), A: { name: 'Burpees', reps: 5 }, B: { name: '' } }] },
       { ...emptySection(2, 'timedCircuit'), title: 'Finisher', slots: [{ A: { name: 'Air Squats' }, B: { name: 'Burpees' }, durationMs: 30_000 }] },
     ] };
     const plan = compileWorkout(builderToWorkout(draft, { id: 'pair', revision: 1 }));
