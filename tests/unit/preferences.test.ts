@@ -12,9 +12,12 @@ describe('preferences', () => {
     expect(normalisePreferences(null)).toEqual(defaultPreferences);
     expect(normalisePreferences(['dark'])).toEqual(defaultPreferences);
   });
-  it('accepts every offered beep tone, the truck horn included, and falls back on an unknown one', () => {
+  it('accepts every offered beep tone, both recorded horns included, and falls back on an unknown one', () => {
     for (const [tone] of BEEP_TONES) expect(normalisePreferences({ beepTone: tone }).beepTone).toBe(tone);
+    // The truck horn keeps the value it was stored under before there was a second horn.
+    expect(Object.fromEntries(BEEP_TONES)).toMatchObject({ horn: 'Truck horn', ship: 'Ship horn' });
     expect(normalisePreferences({ beepTone: 'horn' }).beepTone).toBe('horn');
+    expect(normalisePreferences({ beepTone: 'ship' }).beepTone).toBe('ship');
     expect(normalisePreferences({ beepTone: 'kazoo' }).beepTone).toBe(defaultPreferences.beepTone);
   });
   it('carries a pre-1.1 single accent over to both themes', () => {

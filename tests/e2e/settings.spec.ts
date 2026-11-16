@@ -332,6 +332,25 @@ test.describe('workout view settings', () => {
     for (const button of [testVoice, testBeeps, testBoth]) await expect(button).toBeDisabled();
   });
 
+  test('the beep tone is one list, the two recorded horns in it like any other tone, and choosing a horn fetches its own recording', async ({ page }) => {
+    const stored = () => page.evaluate(() => (JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as Record<string, unknown>).beepTone);
+    await settingsAt(page, '/#/settings/player');
+    const tone = page.getByRole('combobox', { name: 'Beep tone', exact: true });
+    await expect(tone.locator('option')).toHaveText(['Classic', 'Soft', 'Sharp', 'Gym timer', 'Alarm', 'Truck horn', 'Ship horn']);
+    await expect(tone).toHaveValue('classic');
+    // Choosing a tone plays it: once a click has unlocked the sound, a horn's recording is fetched for the countdown.
+    await page.getByRole('region', { name: 'Sound and voice' }).getByRole('button', { name: 'Test beeps', exact: true }).click();
+    // The truck horn is stored as 'horn', as it was before there was a second one.
+    for (const [label, value, file] of [['Ship horn', 'ship', 'ship-horn'], ['Truck horn', 'horn', 'truck-horn']]) {
+      const [recording] = await Promise.all([page.waitForRequest(request => request.url().includes(file)), tone.selectOption({ label })]);
+      expect(recording.url()).toMatch(/\.m4a/);
+      await expect.poll(stored).toBe(value);
+      await expect(tone).toHaveValue(value);
+    }
+    await tone.selectOption({ label: 'Soft' });
+    await expect.poll(stored).toBe('soft');
+  });
+
   test('without recorded voices the Voice list says so in an entry that cannot be chosen', async ({ page }) => {
     await page.route('**/cues/packs.json', route => route.fulfill({ json: [] }));
     await settingsAt(page, '/#/settings/player');

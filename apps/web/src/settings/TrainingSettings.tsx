@@ -90,7 +90,7 @@ function SoundSettings({ preferences, onPreferencesChange, clipsReady, packs, au
       <label className={styles.field}>Beep volume<input type="range" min="0" max="1" step="0.1" value={preferences.beepVolume} onChange={event => update({ beepVolume: Number(event.target.value) })} /></label>
     </div>
     <label className={styles.field}>Beep tone<select value={preferences.beepTone} onChange={event => { update({ beepTone: event.target.value as Preferences['beepTone'] }); audio.tone = event.target.value as Preferences['beepTone']; void audio.testBeeps(); }}>{BEEP_TONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-    <small className={shared.fieldNote}>The beeps have their own level, so they can be louder than the voice when music is playing. Gym timer is the long, held beep of a gym clock, Alarm is harsher still, and Truck horn plays a recorded air horn. Choosing a tone plays it.</small>
+    <small className={shared.fieldNote}>The beeps have their own level, so they can be louder than the voice when music is playing. Gym timer is the long, held beep of a gym clock, Alarm is harsher still, and Truck horn and Ship horn play recordings, an air horn and the deep horn of a ship. Choosing a tone plays it.</small>
     {/* Each part of the sound on its own and both as a session plays them. A test follows the Sound choice above, so there is no voice to test while it is off. */}
     <div className={styles.buttonRow}>
       <button type="button" className={shared.quietButton} onClick={() => void audio.testVoice()} disabled={preferences.soundMode !== 'voice'}><Icon name="sound" />Test voice</button>

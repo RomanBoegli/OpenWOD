@@ -98,7 +98,7 @@ export function normalisePreferences(value: unknown): Preferences {
       volume: clamp(stored.volume, 0, 1, defaultPreferences.volume),
       // Before 1.1.0 one level served voice and beeps; the beeps start from that level.
       beepVolume: clamp(stored.beepVolume, 0, 1, clamp(stored.volume, 0, 1, defaultPreferences.beepVolume)),
-      beepTone: oneOf(stored.beepTone, ['classic', 'soft', 'sharp', 'gym', 'alarm', 'horn'], defaultPreferences.beepTone),
+      beepTone: oneOf(stored.beepTone, ['classic', 'soft', 'sharp', 'gym', 'alarm', 'horn', 'ship'], defaultPreferences.beepTone),
       view: oneOf(stored.view, ['focus', 'context'], defaultPreferences.view),
       wash: stored.wash !== false,
       cuePack: text(stored.cuePack, '', 40),

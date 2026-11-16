@@ -1,5 +1,6 @@
 import type { ClockValues, Projection } from '../../../packages/engine/src';
-import hornUrl from './assets/truck-horn.m4a';
+import truckHornUrl from './assets/truck-horn.m4a';
+import shipHornUrl from './assets/ship-horn.m4a';
 import { movementKey, movementSlug } from '../../../packages/domain/src/catalogue';
 import { seedMovements } from '../../../packages/domain/src/movements';
 
@@ -8,15 +9,21 @@ export type SoundMode = 'voice' | 'beeps' | 'silent';
  * The character of the synthesised beeps: a plain sine, a lower and rounder triangle, a higher and edgier square wave, the gym
  * timer (a pure 1 kHz tone held at full level with a hard start and stop, about 0.3 s for each count and 0.75 s for the Go, measured
  * from a recording of a gym clock: BEEP BEEP BEEP, BEEEEP), the alarm, a harsh sawtooth held three times as long as the classic beep,
- * or the truck horn, a recording rather than a synthesised tone (see hornSpan).
+ * or one of the two horns, recordings rather than synthesised tones (see hornSpan): the truck horn, stored as 'horn' since it
+ * was the only one, and the ship horn.
  */
-export type BeepTone = 'classic' | 'soft' | 'sharp' | 'gym' | 'alarm' | 'horn';
-export const BEEP_TONES: [BeepTone, string][] = [['classic', 'Classic'], ['soft', 'Soft'], ['sharp', 'Sharp'], ['gym', 'Gym timer'], ['alarm', 'Alarm'], ['horn', 'Truck horn']];
+export type BeepTone = 'classic' | 'soft' | 'sharp' | 'gym' | 'alarm' | 'horn' | 'ship';
+export const BEEP_TONES: [BeepTone, string][] = [['classic', 'Classic'], ['soft', 'Soft'], ['sharp', 'Sharp'], ['gym', 'Gym timer'], ['alarm', 'Alarm'], ['horn', 'Truck horn'], ['ship', 'Ship horn']];
+/** The recorded tones and the recording each one plays; every other tone is synthesised. */
+const HORNS = { horn: truckHornUrl, ship: shipHornUrl };
+type RecordedTone = keyof typeof HORNS;
+const isRecorded = (tone: BeepTone): tone is RecordedTone => tone in HORNS;
 interface Tone { wave: OscillatorType; pitch: number; gain: number; tail: number; /** One fixed pitch for every beep, in Hz. */ fixed?: number; /** Held at full level until the end, capped at this many seconds. */ hold?: number }
-const TONES: Record<Exclude<BeepTone, 'horn'>, Tone> = { classic: { wave: 'sine', pitch: 1, gain: 1, tail: 1 }, soft: { wave: 'triangle', pitch: .75, gain: .9, tail: 1.6 }, sharp: { wave: 'square', pitch: 1.25, gain: .4, tail: .8 }, gym: { wave: 'sine', pitch: 1, fixed: 1000, gain: 1.2, tail: 4, hold: .8 }, alarm: { wave: 'sawtooth', pitch: 1, gain: .6, tail: 3.2, hold: 1.2 } };
+const TONES: Record<Exclude<BeepTone, RecordedTone>, Tone> = { classic: { wave: 'sine', pitch: 1, gain: 1, tail: 1 }, soft: { wave: 'triangle', pitch: .75, gain: .9, tail: 1.6 }, sharp: { wave: 'square', pitch: 1.25, gain: .4, tail: .8 }, gym: { wave: 'sine', pitch: 1, fixed: 1000, gain: 1.2, tail: 4, hold: .8 }, alarm: { wave: 'sawtooth', pitch: 1, gain: .6, tail: 3.2, hold: 1.2 } };
 /**
- * How much of the recorded horn a beep plays, in seconds: a short blast for each countdown second and a Done, the full-level
- * part (1.4 s) at the Go or Rest boundary, and the whole recording (2.2 s, held then fading) when the workout is complete.
+ * How much of a recorded horn a beep plays, in seconds: a short blast for each countdown second and a Done, the full-level
+ * part (1.4 s) at the Go or Rest boundary, and the whole recording (the truck horn's 2.2 s, the ship horn's 2.8 s, each held
+ * then fading) when the workout is complete. Both recordings are longer than 1.4 s, so both hold the clock equally long.
  */
 export function hornSpan(length: number, duration: number): number {
   return Math.min(duration, length >= .3 ? Infinity : length >= .15 ? 1.4 : .3);
@@ -71,9 +78,11 @@ export class WorkoutAudio {
   /** Oscillator amplitude for the beep slider: squared so the low end stays gentle, the top is close to full scale (about -6 dBFS). */
   private get beepGain() { return this.beepVolume * this.beepVolume * .5; }
   tone: BeepTone = 'classic';
-  /** The decoded truck horn, once loaded; until then, or if it fails, the horn tone plays the classic beep. */
-  private horn?: AudioBuffer;
-  private hornLoading?: Promise<void>;
+  /** The decoded horns, once loaded, one buffer per recorded tone; until then, or if one fails, its tone plays the classic beep. */
+  private horns: Partial<Record<RecordedTone, AudioBuffer>> = {};
+  private hornsLoading: Partial<Record<RecordedTone, Promise<void>>> = {};
+  /** The chosen tone's recording, when it is a recorded tone and has loaded. */
+  private get horn(): AudioBuffer | undefined { return isRecorded(this.tone) ? this.horns[this.tone] : undefined; }
   /** Base URL for the pre-rendered cue clips; packs live in subfolders listed by packs.json. */
   clipBase = `${import.meta.env.BASE_URL}cues/`;
   /** Chosen pack id; '' means the first available. */
@@ -185,10 +194,10 @@ export class WorkoutAudio {
       const context = this.ensureContext();
       if (context.state !== 'running') this.unlockingSince = performance.now();
       try { await context.resume(); } finally { this.unlockingSince = 0; }
-      // A local oscillator unlocks the output from the user's explicit gesture, in the chosen tone (the horn's stand-in is classic).
-      this.synth(context.currentTime, .035, 660, .05, TONES[this.tone === 'horn' ? 'classic' : this.tone]);
+      // A local oscillator unlocks the output from the user's explicit gesture, in the chosen tone (a horn's stand-in is classic).
+      this.synth(context.currentTime, .035, 660, .05, TONES[isRecorded(this.tone) ? 'classic' : this.tone]);
       void this.preload();
-      if (this.tone === 'horn') void this.loadHorn();
+      void this.loadHorn();
     } catch { this.onError?.('Sound unavailable. The workout will continue visually.'); }
   }
 
@@ -198,43 +207,44 @@ export class WorkoutAudio {
     source.onended = () => { source.disconnect(); nodes.forEach(node => node.disconnect()); this.sources = this.sources.filter(item => item !== source); };
   }
 
-  /** How long the clock should wait at a boundary so the next slot starts as the horn's blast ends; other tones need no wait. */
+  /** How long the clock should wait at a boundary so the next slot starts as a horn's blast ends; other tones need no wait. */
   get boundaryHoldMs(): number {
-    return this.mode !== 'silent' && this.tone === 'horn' && this.horn ? Math.round(hornSpan(.18, this.horn.duration) * 1000) : 0;
+    return this.mode !== 'silent' && this.horn ? Math.round(hornSpan(.18, this.horn.duration) * 1000) : 0;
   }
 
-  /** Fetches and decodes the truck horn once. Failure is silent: the horn tone keeps falling back to the classic beep. */
+  /** Fetches and decodes the chosen tone's recording once, if it has one. Failure is silent: the tone keeps falling back to the classic beep. */
   loadHorn(): Promise<void> {
-    this.hornLoading ??= (async () => {
+    const tone = this.tone;
+    if (!isRecorded(tone)) return Promise.resolve();
+    return this.hornsLoading[tone] ??= (async () => {
       if (typeof fetch !== 'function') return;
       try {
         const context = this.ensureContext();
-        const response = await fetch(hornUrl);
-        if (response.ok) this.horn = await context.decodeAudioData(await response.arrayBuffer());
+        const response = await fetch(HORNS[tone]);
+        if (response.ok) this.horns[tone] = await context.decodeAudioData(await response.arrayBuffer());
       } catch { /* Missing or undecodable: classic beeps. */ }
-      if (!this.horn) this.hornLoading = undefined;
+      if (!this.horns[tone]) this.hornsLoading[tone] = undefined;
     })();
-    return this.hornLoading;
   }
 
   /** Schedules one beep and returns the instant it has ended, so a recorded word can follow it. */
   private beep(at: number, length: number, frequency: number): number {
     if (!this.context || this.context.state !== 'running') return at;
-    if (this.tone !== 'horn') return this.synth(at, length, frequency, this.beepGain, TONES[this.tone]);
-    if (this.horn) return this.blast(at, hornSpan(length, this.horn.duration));
+    if (!isRecorded(this.tone)) return this.synth(at, length, frequency, this.beepGain, TONES[this.tone]);
+    if (this.horn) return this.blast(this.horn, at, hornSpan(length, this.horn.duration));
     void this.loadHorn();
     return this.synth(at, length, frequency, this.beepGain, TONES.classic);
   }
 
-  /** Plays the start of the recorded horn for `span` seconds at the beep level, with a short fade so a cut blast does not click. */
-  private blast(at: number, span: number): number {
+  /** Plays the start of a recorded horn for `span` seconds at the beep level, with a short fade so a cut blast does not click. */
+  private blast(horn: AudioBuffer, at: number, span: number): number {
     const context = this.context!;
     const source = context.createBufferSource();
     const volume = context.createGain();
     const level = this.beepVolume * this.beepVolume * .7;
-    source.buffer = this.horn!;
+    source.buffer = horn;
     volume.gain.setValueAtTime(level, at);
-    if (span < this.horn!.duration) {
+    if (span < horn.duration) {
       volume.gain.setValueAtTime(level, at + span - .04);
       volume.gain.linearRampToValueAtTime(0, at + span);
     }
@@ -399,14 +409,14 @@ export class WorkoutAudio {
   async testBeeps() {
     await this.unlock();
     if (!this.context || this.mode === 'silent') return;
-    if (this.tone === 'horn') await this.loadHorn();
+    await this.loadHorn();
     this.countdown(this.context.currentTime + .1);
   }
 
   /** Both, as a session sounds: the countdown with its Go, then the chosen voice. */
   async test() {
     await this.prepareSample();
-    if (this.tone === 'horn') await this.loadHorn();
+    await this.loadHorn();
     const start = (this.context?.currentTime ?? 0) + .1;
     this.saySample((this.context && this.mode !== 'silent' ? this.countdown(start) : start) + .25);
   }

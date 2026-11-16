@@ -455,8 +455,9 @@ A field with a visible label carries no example or hint inside it.
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select the voice and its volume, with no speed option since 1.6.0. Choosing a voice or a beep tone SHALL play it. The beeps SHALL have their own volume and a choice of tones (version 1.11). The voice, the beeps and both together SHALL each be testable on their own. No microphone permission is needed.
-One tone, the truck horn, SHALL play a bundled recording scheduled on the same audio clock as the synthesised beeps, a short blast for each countdown second and a longer one for the boundary, and SHALL fall back to the classic beep until the recording has loaded or if it cannot be decoded.
-With the truck horn the clock SHALL hold at each timed boundary for the length of the horn's blast, outside active time, so the next slot starts as the blast ends.
+Two tones, the truck horn and since 1.6.0 the ship horn, SHALL each play a bundled recording of its own scheduled on the same audio clock as the synthesised beeps, a short blast for each countdown second and a longer one for the boundary, and SHALL fall back to the classic beep until the recording has loaded or if it cannot be decoded.
+Both are entries of the one tone list like any other, and the truck horn keeps its stored value `horn`.
+With either horn the clock SHALL hold at each timed boundary for the length of the horn's blast, the same for both, outside active time, so the next slot starts as the blast ends.
 
 **AUD-02** Audio SHALL consume semantic engine events: prep, work start, rest start, upcoming assignment, countdown, round start, cap reached, paused, resumed, and completed. Components SHALL not independently trigger their own timers or announcements.
 

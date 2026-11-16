@@ -17,10 +17,13 @@ afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 interface Source { at?: number; stopAt?: number; cancelled: boolean; kind: 'beep' | 'clip'; clip?: string; frequency?: number; wave?: string }
 
-function setup({ clips = false, horn = false, workout = partnerCircuit as Workout, started = 10_000 } = {}) {
+/** `horn` serves both recorded horns: true as recordings that decode, 'undecodable' as files no decoder accepts, false not at all. */
+function setup({ clips = false, horn = false as boolean | 'undecodable', workout = partnerCircuit as Workout, started = 10_000 } = {}) {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
   const sources: Source[] = [];
   const spoken: string[] = [];
+  /** The tone of every horn recording asked for, in order. */
+  const fetchedHorns: string[] = [];
   class FakeContext {
     state = 'running'; currentTime = 100; destination = {}; onstatechange?: () => void;
     async resume() { this.state = 'running'; }
@@ -41,20 +44,23 @@ function setup({ clips = false, horn = false, workout = partnerCircuit as Workou
       return { buffer: undefined as { name: string } | undefined, connect: (target: unknown) => target, disconnect: () => {}, start(at: number) { record.at = at; record.clip = this.buffer?.name; }, stop: (at?: number) => { if (at === undefined) record.cancelled = true; else record.stopAt = at; }, onended: undefined };
     }
     createGain() { return { gain: { value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: () => ({ destination: {} }), disconnect() {} }; }
-    async decodeAudioData(data: ArrayBuffer) { return { name: new TextDecoder().decode(data), duration: 2.2 }; }
+    // Every buffer is 2.2 s long, the truck horn's length, except the ship horn's 2.8 s.
+    async decodeAudioData(data: ArrayBuffer) { const name = new TextDecoder().decode(data); if (name === 'noise') throw new Error('undecodable'); return { name, duration: name === 'ship' ? 2.8 : 2.2 }; }
   }
   const context = new FakeContext();
   vi.stubGlobal('AudioContext', function () { return context; });
   vi.stubGlobal('window', { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (utterance: { text: string }) => spoken.push(utterance.text) } });
   vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} });
-  vi.stubGlobal('fetch', async (url: string) => url.includes('truck-horn') ? (horn ? { ok: true, arrayBuffer: async () => new TextEncoder().encode('horn').buffer } : { ok: false }) : !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)', names: 190 }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false });
+  // A horn's buffer is named after its tone: 'horn' for the truck horn, 'ship' for the ship horn.
+  const hornOf = (url: string) => url.includes('truck-horn') ? 'horn' : url.includes('ship-horn') ? 'ship' : undefined;
+  vi.stubGlobal('fetch', async (url: string) => { const tone = hornOf(url); if (tone) fetchedHorns.push(tone); return tone ? (horn ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(horn === true ? tone : 'noise').buffer } : { ok: false }) : !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)', names: 190 }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false }; });
   let now = 0;
   const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
   engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' });
   now = started; engine.tick();
   let n = 0;
   const command = (type: Parameters<WorkoutEngine['command']>[0]['type'], extra: Partial<Parameters<WorkoutEngine['command']>[0]> = {}) => engine.command({ id: `c${++n}`, occurrenceId: engine.occurrenceId, type, ...extra });
-  return { audio: new WorkoutAudio(), sources, spoken, context, engine, command, advance(ms: number) { now += ms; engine.tick(); } };
+  return { audio: new WorkoutAudio(), sources, spoken, fetchedHorns, context, engine, command, advance(ms: number) { now += ms; engine.tick(); } };
 }
 
 it('schedules future cues on the audio clock and cancels/rebases them after pause and resume', async () => {
@@ -200,14 +206,47 @@ it('shapes every beep by the chosen tone', async () => {
   expect(sources.map(source => source.wave)).toEqual(Array(5).fill('sawtooth'));
 });
 
-it('plays the recorded truck horn on the audio clock: a short blast per count, the full-level part for the Go, all of it at the end', async () => {
-  const { audio, sources, engine } = setup({ horn: true });
-  audio.tone = 'horn';
-  await audio.unlock(); await audio.loadHorn(); sources.length = 0;
-  audio.update(engine.project(), engine.readClocks());
-  expect(sources.map(source => [source.kind, source.clip, source.at])).toEqual([['clip', 'horn', 137], ['clip', 'horn', 138], ['clip', 'horn', 139], ['clip', 'horn', 140]]);
-  expect(sources.map(source => Math.round((source.stopAt! - source.at!) * 100) / 100)).toEqual([.31, .31, .31, 1.41]);
+it('plays a recorded horn on the audio clock, the truck horn or the ship horn: a short blast per count, the full-level part for the Go, all of it at the end', async () => {
+  for (const [tone, whole] of [['horn', 2.21], ['ship', 2.81]] as const) {
+    const { audio, sources, engine } = setup({ horn: true });
+    audio.tone = tone;
+    await audio.unlock(); await audio.loadHorn(); sources.length = 0;
+    audio.update(engine.project(), engine.readClocks());
+    expect(sources.map(source => [source.kind, source.clip, source.at])).toEqual([['clip', tone, 137], ['clip', tone, 138], ['clip', tone, 139], ['clip', tone, 140]]);
+    expect(sources.map(source => Math.round((source.stopAt! - source.at!) * 100) / 100)).toEqual([.31, .31, .31, 1.41]);
+    // The Go is the same 1.4 s of either recording, so the clock holds equally long for both; only the end plays each one whole.
+    expect(audio.boundaryHoldMs).toBe(1400);
+    sources.length = 0;
+    audio.update({ ...engine.project(), status: 'completed' }, engine.readClocks());
+    expect(sources.map(source => [source.clip, Math.round((source.stopAt! - source.at!) * 100) / 100])).toEqual([[tone, whole]]);
+  }
   expect([hornSpan(.08, 2.2), hornSpan(.06, 2.2), hornSpan(.18, 2.2), hornSpan(.35, 2.2), hornSpan(.35, .5)]).toEqual([.3, .3, 1.4, 2.2, .5]);
+  expect([hornSpan(.08, 2.8), hornSpan(.18, 2.8), hornSpan(.35, 2.8)]).toEqual([.3, 1.4, 2.8]);
+});
+
+it('keeps one recording per recorded tone, fetched once when its tone is first played, and holds the clock only for one that has loaded', async () => {
+  const { audio, sources, fetchedHorns } = setup({ horn: true });
+  await audio.unlock(); await audio.loadHorn();
+  // A synthesised tone asks for no recording and never holds the clock.
+  expect(fetchedHorns).toEqual([]);
+  expect(audio.boundaryHoldMs).toBe(0);
+  audio.tone = 'ship'; sources.length = 0;
+  expect(audio.boundaryHoldMs).toBe(0);
+  await audio.testBeeps(); // What choosing a tone in the settings does: after the unlock click, the countdown and the Go.
+  expect(sources.slice(1).map(source => source.clip)).toEqual(Array(4).fill('ship'));
+  expect(audio.boundaryHoldMs).toBe(1400);
+  // The truck horn has its own buffer: the ship horn's is no stand-in for it, and stays loaded beside it.
+  audio.tone = 'horn'; sources.length = 0;
+  expect(audio.boundaryHoldMs).toBe(0);
+  await audio.testBeeps();
+  expect(sources.slice(1).map(source => source.clip)).toEqual(Array(4).fill('horn'));
+  expect(audio.boundaryHoldMs).toBe(1400);
+  audio.tone = 'ship';
+  expect(audio.boundaryHoldMs).toBe(1400);
+  await audio.testBeeps(); await audio.test();
+  expect(fetchedHorns).toEqual(['ship', 'horn']);
+  audio.mode = 'silent';
+  expect(audio.boundaryHoldMs).toBe(0);
 });
 
 it('lets a boundary that has sounded ring out with its word, has the rest names follow it, and still stops one a skip never reached', async () => {
@@ -246,12 +285,18 @@ it('says Go once when the prep countdown ends on a task pressed through by hand,
   expect(spoken).toHaveLength(1); // The thrusters, read after the recorded Go.
 });
 
-it('falls back to the classic beep while the horn is missing', async () => {
-  const { audio, sources } = setup();
-  audio.tone = 'horn';
-  await audio.unlock(); sources.length = 0;
-  await audio.testBeeps();
-  expect(sources.map(source => [source.kind, source.wave, source.frequency])).toEqual([['beep', 'sine', 660], ...Array(3).fill(['beep', 'sine', 620]), ['beep', 'sine', 880]]);
+it('falls back to the classic beep while a horn is missing or cannot be decoded, and asks for it again the next time', async () => {
+  for (const tone of ['horn', 'ship'] as const) for (const horn of [false, 'undecodable'] as const) {
+    const { audio, sources, fetchedHorns } = setup({ horn });
+    audio.tone = tone;
+    await audio.unlock(); sources.length = 0;
+    await audio.testBeeps();
+    expect(sources.map(source => [source.kind, source.wave, source.frequency])).toEqual([['beep', 'sine', 660], ...Array(3).fill(['beep', 'sine', 620]), ['beep', 'sine', 880]]);
+    expect(audio.boundaryHoldMs).toBe(0);
+    // Only the chosen tone's recording was asked for, and more than once: a failure is not remembered.
+    expect(fetchedHorns.length).toBeGreaterThan(1);
+    expect(new Set(fetchedHorns)).toEqual(new Set([tone]));
+  }
 });
 
 it('holds the first cues of a Start until the audio context has resumed, so Get ready and the prep countdown use the clips', async () => {

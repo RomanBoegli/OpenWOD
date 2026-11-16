@@ -98,7 +98,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   }, [engine, uplink]);
 
   const refresh = useCallback(() => {
-    // The horn's blast holds the clock at each boundary; other tones keep the plan's exact timing.
+    // A horn's blast holds the clock at each boundary; other tones keep the plan's exact timing.
     engine.boundaryHoldMs = audio.boundaryHoldMs;
     engine.tick();
     const next = engine.project();
