@@ -1,8 +1,5 @@
 # **OpenWOD**
 
-*Not born.
-Made.*
-
 OpenWOD is a self-hosted virtual training coach for home workouts, solo or in pairs.
 It executes structured sessions in six formats (timed circuits, AMRAP, EMOM, for time, you-go-I-go and strength sets) on a deterministic clock, announces every transition by voice, and maintains an extensible workout library.
 It runs as a static site straight from GitHub Pages, or as a single container on your own hardware, and requires no account, cloud service or telemetry.
@@ -242,7 +239,7 @@ It binds to `127.0.0.1:8080` and keeps its own volume.
 ```
 apps/
   server/        Fastify: the household API over SQLite, migrations, health, the built app
-  web/           React 19 + Vite: library, editor, player, history, settings, the data layer under src/data/
+  web/           React 19 + Vite: library, editor, player, logbook, settings, the data layer under src/data/
 packages/
   domain/        Schema (TypeBox), compiler, difficulty, loads, movement catalogue, YAML exchange
   engine/        Deterministic session engine
