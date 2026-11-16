@@ -291,3 +291,20 @@ Version 1.5.3: every valid workout opens in the editor (BLD-15), with rest rows,
 | Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.5.3. |
 
 Not recorded in this round: the production smoke tests, a session on a physical device, and the new name clips (the Cues workflow renders them on `main`).
+
+## Release 1.6.0, 16 November 2026
+
+Version 1.6.0: a running session continues on another device (ENG-15), Start begins with one tap (UI-25), neutral station cards and a clock that takes the room (UI-04, UI-27), the settings rework (UI-28), editor fields that never work against the typing (BLD-16, BLD-17), Title Case equipment names (LIB-08), the ship horn (AUD-01) and Partner Band & Weight Upper Body Focus, with the SQLite migration 4.
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 326 passed in 37 files, with the type check, the schema check and the registry check. All 57 bundled workouts compile, and the example files of the README and of `docs/formats.md` import as they stand. |
+| Browser scenarios | Full runs of the four local projects (WebKit, Firefox, static WebKit, static Firefox), 870 tests. The run before the last two changes: 532 passed, 338 skipped, none failed. The run on the final code: 531 passed, 338 skipped, 1 failed. The skipped ones skip themselves by design: the screenshot spec, and tests that do not apply to a project. The Chromium projects run in CI only, since headless Chromium does not start on this machine. |
+| The one failure | `editor.spec.ts`, "a save the server refuses says so in the summary and keeps the edits", in WebKit: the title the test had just typed was empty again, so Save stayed disabled until the timeout. The trace shows no reload. It passed 20 of 20 reruns, and 136 probes in WebKit and Firefox kept a title typed before any server answer, before the device cache opened and at fifteen delays after the editor appeared. Unexplained and not reproduced. Open. |
+| Migration of a household's database | A copy of a 1.5.3 household database: the server migrates it from schema 3 to 4, writes `backups/pre-migration-v3-to-v4-<time>.sqlite` first and reports ready. Both files pass SQLite's integrity check with the same row counts, every stored workout compiles, an equipment name stored as "Exercise mat" shows as "Exercise Mat", and the settings of the older shape arrive in the new one. |
+| Backup and restore rehearsal | `scripts/rehearse-restore.sh` passed against an image built from source with all five voices: a saved workout survived the backup, the loss of the volume and the restore. Its first run stopped at the image build, where a new unit test read `docs/formats.md`, which the build context leaves out. The test now skips that file where `docs/` is absent. |
+| Production smoke tests, the image | Against a container of the image built from source, with all five voice packs and 277 names each, in WebKit and Firefox: 8 passed, 2 skipped (the test of the static shape), none failed. The container reports version 1.6.0 and schema 4. |
+| Production smoke tests, the static site | Against `vite preview` of the static build in WebKit and Firefox: 6 passed, 2 skipped, 2 failed. The two failures are the voice-pack test in each engine, which wants all five packs where this checkout has rendered one. The release workflow builds the site with all five. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.6.0, and the image builds with the check passing inside it (325 passed, 1 skipped). |
+
+Not recorded in this round: a session on a physical device, the hand-over between two real devices, the editor on a phone, how the trimmed ship horn sounds, and Chromium, which only CI runs.
