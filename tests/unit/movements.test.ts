@@ -30,11 +30,14 @@ describe('movement catalogue on a device', () => {
     expect(unmatchedMovements(draft, catalogue)).toEqual(['Pogo hops']);
     expect(recordForName('Pogo hops', catalogue)).toEqual({ id: 'pogo-hop', name: 'Pogo hops' });
     expect(recordForName('Kettlebell halos', catalogue)).toMatchObject({ id: 'kettlebell-halo', equipment: ['Kettlebell'] });
+    expect(recordForName('Band walks', catalogue)).toMatchObject({ id: 'band-walk', equipment: ['Resistance band'] });
   });
 
   it('summaries take equipment from the records of recognised movements', () => {
     const summary = summariseWorkout(fran, { catalogue: new Catalogue(seedMovements) });
     expect(summary.equipmentNeeded).toEqual(expect.arrayContaining(['Barbell', 'Pull-up bar']));
+    // The band comes from the band movements' records, and the floor press needs no bench.
+    expect(summariseWorkout(bundledWorkout('partner-band-weight-upper-body'), { catalogue: new Catalogue(seedMovements) }).equipmentNeeded).toEqual(['Dumbbells', 'Resistance band', 'Exercise mat']);
   });
 
   it('renaming keeps the old name as an alias; removing a head promotes its variants; merging redirects names', () => {

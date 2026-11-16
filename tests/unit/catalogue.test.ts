@@ -6,7 +6,7 @@ import type { WorkoutNode } from '../../packages/domain/src/schema';
 
 const catalogue = new Catalogue(seedMovements);
 
-const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes', 'GHD', 'Battle rope', 'Tyre', 'Yoke'];
+const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes', 'GHD', 'Battle rope', 'Tyre', 'Yoke', 'Resistance band'];
 
 // Title Case: every word capitalised except short articles, conjunctions and prepositions inside a name, inside hyphenated
 // compounds too ("Toes-to-Bar"). Acronyms and brands (DB, AbMat) pass as written, numbers and the units after them ("10 s") or in

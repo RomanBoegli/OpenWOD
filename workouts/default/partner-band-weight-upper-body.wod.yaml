@@ -1,0 +1,362 @@
+format: openwod.workout
+formatVersion: 3
+workout:
+  schemaVersion: 2
+  id: partner-band-weight-upper-body
+  revision: 1
+  title: Partner Band & Weight Upper Body Focus
+  description: "About 47 minutes for two with an upper-body focus: a warm-up, three circuits of four rounds for back and biceps, chest and triceps, and the full body, and a short Tabata to finish. One of you works with dumbbells while the other uses a mini resistance band or bodyweight, and A and B swap each round."
+  attribution:
+    author: OpenWOD
+  equipment:
+    - Dumbbells
+    - Resistance band
+    - Exercise mat
+  participants: 2
+  prep: 10s
+  sections:
+    - id: warm-up
+      title: Warm-Up
+      format: timedCircuit
+      transitionAfter: automatic
+      body:
+        id: warm-up-block
+        type: sequence
+        children:
+          - id: warm-up-sequence
+            type: sequence
+            children:
+              - id: warm-up-high-knees
+                type: timed
+                duration: 1m
+                assignments:
+                  A:
+                    name: High Knees
+                  B:
+                    name: High Knees
+              - id: warm-up-arm-circles
+                type: timed
+                duration: 1m
+                assignments:
+                  A:
+                    name: Arm Circles
+                  B:
+                    name: Arm Circles
+              - id: warm-up-hip-hinges
+                type: timed
+                duration: 1m
+                assignments:
+                  A:
+                    name: Hip Hinges
+                  B:
+                    name: Hip Hinges
+              - id: warm-up-squats
+                type: timed
+                duration: 1m
+                assignments:
+                  A:
+                    name: Air Squats
+                  B:
+                    name: Air Squats
+              - id: warm-up-cat-cow
+                type: timed
+                duration: 1m
+                assignments:
+                  A:
+                    name: Cat-Cow
+                  B:
+                    name: Cat-Cow
+          - id: warm-up-rest
+            type: rest
+            duration: 30s
+            kind: blockRest
+    - id: back-biceps
+      title: Back & Biceps
+      format: timedCircuit
+      transitionAfter: automatic
+      body:
+        id: back-biceps-block
+        type: sequence
+        children:
+          - id: back-biceps-rounds
+            type: repeat
+            count: 4
+            assignmentPolicy: alternate
+            betweenIterationsRest: 20s
+            body:
+              id: back-biceps-round
+              type: sequence
+              betweenChildrenRest: 30s
+              children:
+                - id: back-biceps-rows
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Dumbbell Rows
+                      load:
+                        light:
+                          value: 5
+                          women: 3
+                          unit: kg
+                        medium:
+                          value: 9
+                          women: 7
+                          unit: kg
+                        heavy:
+                          value: 14
+                          women: 10
+                          unit: kg
+                    B:
+                      name: Band Rows
+                - id: back-biceps-curls
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Biceps Curls
+                      load:
+                        light:
+                          value: 5
+                          women: 3
+                          unit: kg
+                        medium:
+                          value: 7
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 14
+                          women: 10
+                          unit: kg
+                    B:
+                      name: Band Curls
+                - id: back-biceps-flys
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Reverse Flys
+                      load:
+                        light:
+                          value: 1
+                          women: 1
+                          unit: kg
+                        medium:
+                          value: 3
+                          women: 2
+                          unit: kg
+                        heavy:
+                          value: 5
+                          women: 3
+                          unit: kg
+                    B:
+                      name: Banded Pull-Aparts
+          - id: back-biceps-rest
+            type: rest
+            duration: 30s
+            kind: blockRest
+    - id: chest-triceps
+      title: Chest & Triceps
+      format: timedCircuit
+      transitionAfter: automatic
+      body:
+        id: chest-triceps-block
+        type: sequence
+        children:
+          - id: chest-triceps-rounds
+            type: repeat
+            count: 4
+            assignmentPolicy: alternate
+            betweenIterationsRest: 20s
+            body:
+              id: chest-triceps-round
+              type: sequence
+              betweenChildrenRest: 20s
+              children:
+                - id: chest-triceps-press
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Floor Press
+                      load:
+                        light:
+                          value: 7
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 15
+                          women: 10
+                          unit: kg
+                        heavy:
+                          value: 20
+                          women: 14
+                          unit: kg
+                    B:
+                      name: Push-Ups
+                - id: chest-triceps-extensions
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      notes: One dumbbell held with both hands
+                      name: Overhead Triceps Extensions
+                      load:
+                        light:
+                          value: 3
+                          women: 2
+                          unit: kg
+                        medium:
+                          value: 7
+                          women: 5
+                          unit: kg
+                        heavy:
+                          value: 10
+                          women: 7
+                          unit: kg
+                    B:
+                      name: Knee Push-Ups
+                - id: chest-triceps-raises
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Lateral Raises
+                      load:
+                        light:
+                          value: 2
+                          women: 1
+                          unit: kg
+                        medium:
+                          value: 3
+                          women: 2
+                          unit: kg
+                        heavy:
+                          value: 5
+                          women: 3
+                          unit: kg
+                    B:
+                      name: Band External Rotations
+          - id: chest-triceps-rest
+            type: rest
+            duration: 30s
+            kind: blockRest
+    - id: full-body
+      title: Full Body
+      format: timedCircuit
+      transitionAfter: automatic
+      body:
+        id: full-body-block
+        type: sequence
+        children:
+          - id: full-body-rounds
+            type: repeat
+            count: 4
+            assignmentPolicy: alternate
+            betweenIterationsRest: 20s
+            body:
+              id: full-body-round
+              type: sequence
+              betweenChildrenRest: 20s
+              children:
+                - id: full-body-deadlifts
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Dumbbell Romanian Deadlifts
+                      load:
+                        light:
+                          value: 10
+                          women: 7
+                          unit: kg
+                        medium:
+                          value: 16
+                          women: 10
+                          unit: kg
+                        heavy:
+                          value: 20
+                          women: 14
+                          unit: kg
+                    B:
+                      name: Bodyweight Good Mornings
+                - id: full-body-squats
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      notes: One dumbbell held at the chest
+                      name: Dumbbell Goblet Squats
+                      load:
+                        light:
+                          value: 7
+                          women: 5
+                          unit: kg
+                        medium:
+                          value: 10
+                          women: 7
+                          unit: kg
+                        heavy:
+                          value: 15
+                          women: 10
+                          unit: kg
+                    B:
+                      name: Air Squats
+                - id: full-body-bird-dogs
+                  type: timed
+                  duration: 40s
+                  assignments:
+                    A:
+                      name: Bird Dogs
+                    B:
+                      name: Bird Dogs
+          - id: full-body-rest
+            type: rest
+            duration: 30s
+            kind: blockRest
+    - id: tabata
+      title: Tabata Finisher
+      format: timedCircuit
+      transitionAfter: manualReady
+      body:
+        id: tabata-rounds
+        type: repeat
+        count: 2
+        betweenIterationsRest: 10s
+        body:
+          id: tabata-round
+          type: sequence
+          betweenChildrenRest: 10s
+          children:
+            - id: tabata-jacks
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Jumping Jacks
+                B:
+                  name: Jumping Jacks
+            - id: tabata-high-knees
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: High Knees
+                B:
+                  name: High Knees
+            - id: tabata-lunges
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Alternating Lunges
+                B:
+                  name: Alternating Lunges
+            - id: tabata-shoulder-taps
+              type: timed
+              duration: 20s
+              assignments:
+                A:
+                  name: Plank Shoulder Taps
+                B:
+                  name: Plank Shoulder Taps

@@ -68,6 +68,8 @@ export function collectPrescriptions(workout: Workout): Prescription[] {
   return found;
 }
 
+/** A band as a word of its own ("Band walks", "Banded squats", "Mini-band rows"); the IT band is anatomy, and "husband" or "bandage" are other words. */
+const BAND = /^(?!.*\b(?:it.?|iliotibial )band).*\b(?:mini)?band(?:ed|s)?\b/;
 /** Movement keyword → the equipment it implies. Checked against normalised movement names; every match counts. */
 const EQUIPMENT_RULES: [RegExp, string][] = [
   [/barbell|thruster|deadlift|clean|jerk|snatch|back squat|front squat|overhead squat|push press|strict press|bench press|sumo deadlift/, 'Barbell'],
@@ -87,6 +89,7 @@ const EQUIPMENT_RULES: [RegExp, string][] = [
   [/sandbag/, 'Sandbag'],
   [/rope climb/, 'Climbing rope'],
   [/handstand|wall walk|hspu/, 'Wall'],
+  [BAND, 'Resistance band'],
 ];
 
 export const normalise = (text: string) => text.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').trim();
@@ -97,7 +100,7 @@ export const authorKey = (name: string) => normalise(name).replace(/[^a-z0-9]+/g
 
 /**
  * Equipment implied by movement names. A barbell is only inferred when nothing says the lift is done with a
- * dumbbell, kettlebell or ball, and not at all when the author declared handheld weights but no barbell.
+ * dumbbell, kettlebell, ball or band, and not at all when the author declared handheld weights but no barbell.
  */
 export function inferEquipment(movements: string[], declared: string[] = []): string[] {
   const found: string[] = [];
@@ -105,7 +108,7 @@ export function inferEquipment(movements: string[], declared: string[] = []): st
   const noBarbell = /dumbbell|kettlebell/.test(declaredText) && !/barbell/.test(declaredText);
   for (const movement of movements) {
     const text = normalise(movement);
-    const handheld = noBarbell || /dumbbell|\bdb\b|kettlebell|\bkb\b|sandbag|medicine ball|wall ?ball|slam ball|goblet|single.?arm|one.?arm/.test(text);
+    const handheld = noBarbell || /dumbbell|\bdb\b|kettlebell|\bkb\b|sandbag|medicine ball|wall ?ball|slam ball|goblet|single.?arm|one.?arm/.test(text) || (BAND.test(text) && !/barbell/.test(text));
     for (const [pattern, equipment] of EQUIPMENT_RULES) {
       if (equipment === 'Barbell' && handheld) continue;
       if (pattern.test(text) && !found.includes(equipment)) found.push(equipment);

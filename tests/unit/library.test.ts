@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { freeWorkoutId, slugify } from '../../packages/domain/src/library';
-import { durationBucket, equipmentOptions, matchesFilter, sortSummaries, summariseWorkout } from '../../packages/domain/src/library';
+import { durationBucket, equipmentOptions, inferEquipment, matchesFilter, sortSummaries, summariseWorkout } from '../../packages/domain/src/library';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
 const fullBodyPartner = bundledWorkout('full-body-partner');
 const partnerCircuit = bundledWorkout('partner-circuit');
@@ -51,6 +51,15 @@ describe('library summaries and filters', () => {
     expect(circuit.difficulty.label).toBe('Hard');
     expect(matchesFilter(circuit, { difficulty: [3] })).toBe(true);
     expect(matchesFilter(circuit, { difficulty: [1, 2] })).toBe(false);
+  });
+
+  it('infers a resistance band from a band movement the catalogue does not know, and from no other word', () => {
+    for (const name of ['Band Walks', 'Banded Good Mornings', 'Mini-Band Lateral Walks', 'Miniband Squats', 'Resistance Band Face Pulls', 'Monster Bands']) expect(inferEquipment([name]), name).toEqual(['Resistance band']);
+    for (const name of ['IT Band Stretch', 'IT-Band Roll', 'Iliotibial Band Stretch', 'Husband Carry', 'Bandage Wraps', 'Headband Toss']) expect(inferEquipment([name]), name).toEqual([]);
+    expect(inferEquipment(['Band-Assisted Pull-Ups'])).toEqual(['Pull-up bar', 'Resistance band']);
+    // A lift done against a band is not a barbell lift, unless the name says so.
+    expect(inferEquipment(['Band Deadlifts'])).toEqual(['Resistance band']);
+    expect(inferEquipment(['Banded Barbell Deadlifts'])).toEqual(['Barbell', 'Resistance band']);
   });
 
   it('sorts by title or duration and lists equipment once', () => {
