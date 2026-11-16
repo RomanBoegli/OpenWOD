@@ -1,4 +1,4 @@
-import { Type, type Static } from '@sinclair/typebox';
+import { Type } from '@sinclair/typebox';
 import { SECTION_FORMATS, WorkoutSchema, type Workout } from '../../domain/src/schema';
 import type { EngineEvent, SectionResult, Status } from './index';
 
@@ -33,7 +33,7 @@ export interface SessionRecord {
   corrections?: SessionCorrection[];
 }
 
-export const EVENT_LIMIT = 20_000;
+const EVENT_LIMIT = 20_000;
 const iso = Type.String({ minLength: 10, maxLength: 40 });
 const id = Type.String({ minLength: 1, maxLength: 200 });
 export const SectionResultSchema = Type.Object({
@@ -47,7 +47,7 @@ export const SectionResultSchema = Type.Object({
   skippedTurns: Type.Optional(Type.Integer({ minimum: 0 })),
   unacknowledged: Type.Array(id, { maxItems: 10_000 }),
 }, { additionalProperties: false });
-export const EngineEventSchema = Type.Object({
+const EngineEventSchema = Type.Object({
   id, sequence: Type.Integer({ minimum: 0 }), type: Type.String({ minLength: 1, maxLength: 40 }), occurrenceId: id, activeMs: Type.Integer({ minimum: 0 }),
   payload: Type.Optional(Type.Record(Type.String({ maxLength: 40 }), Type.Union([Type.String({ maxLength: 200 }), Type.Number(), Type.Boolean()]))),
 }, { additionalProperties: false });
@@ -71,7 +71,6 @@ export const SessionRecordSchema = Type.Object({
   revision: Type.Optional(Type.Integer({ minimum: 1 })),
   corrections: Type.Optional(Type.Array(SessionCorrectionSchema, { maxItems: 100 })),
 }, { $id: 'SessionRecord', additionalProperties: false });
-export type SessionRecordDocument = Static<typeof SessionRecordSchema>;
 
 /** Round persisted durations to the API's whole milliseconds while the engine keeps its full clock precision. */
 export function roundSessionTimes(record: SessionRecord): SessionRecord {

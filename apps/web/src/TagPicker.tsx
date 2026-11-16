@@ -3,7 +3,7 @@ import { keepFocus, nameKey as key, nearName, suggest, useListBelow } from './su
 import { Icon } from './Icon';
 import styles from './TagPicker.module.css';
 
-interface TagPickerProps { label: string; value: string[]; options: string[]; maxLength?: number; onChange: (next: string[]) => void }
+interface TagPickerProps { label: string; value: string[]; options: string[]; onChange: (next: string[]) => void }
 type Choice = { kind: 'pick' | 'new'; text: string };
 
 /**
@@ -12,7 +12,7 @@ type Choice = { kind: 'pick' | 'new'; text: string };
  * input removes the last chip. Used wherever the app keeps a repertoire (equipment today, whose names are written in
  * sentence case: "Pull-up bar", so a phone capitalises the first word only).
  */
-export function TagPicker({ label, value, options, maxLength = 80, onChange }: TagPickerProps) {
+export function TagPicker({ label, value, options, onChange }: TagPickerProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -58,7 +58,7 @@ export function TagPicker({ label, value, options, maxLength = 80, onChange }: T
   return <div className={styles.picker} role="group" aria-label={label}>
     <div ref={field} className={styles.field} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.querySelector('input')?.focus(); }}>
       {value.map(item => <span key={item} className={styles.tag}>{item}<button type="button" aria-label={`Remove ${item}`} {...keepFocus} onClick={() => onChange(value.filter(known => known !== item))}><Icon name="close" size={12} /></button></span>)}
-      <input role="combobox" aria-label={label} aria-expanded={open && choices.length > 0} aria-controls={listId} aria-autocomplete="list" aria-activedescendant={open && choices.length ? `${listId}-${current}` : undefined} autoComplete="off" autoCorrect="off" autoCapitalize="sentences" spellCheck={false} value={query} maxLength={maxLength}
+      <input role="combobox" aria-label={label} aria-expanded={open && choices.length > 0} aria-controls={listId} aria-autocomplete="list" aria-activedescendant={open && choices.length ? `${listId}-${current}` : undefined} autoComplete="off" autoCorrect="off" autoCapitalize="sentences" spellCheck={false} value={query} maxLength={80}
         onChange={event => onText(event.target.value)} onBlur={() => setOpen(false)} onKeyDown={onKeyDown} />
     </div>
     {showing && anchor && <ul id={listId} role="listbox" className={styles.list} style={anchor} aria-label={`${label} suggestions`} {...keepFocus}>

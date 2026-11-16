@@ -29,7 +29,6 @@ export interface ClockValues {
   /** Time since the current slot, turn or manual task began. */
   slotMs: number;
   capRemainingMs?: number;
-  turnRemainingMs?: number;
   /** While the clock waits at a boundary (see boundaryHoldMs), how long it still waits before it runs again. */
   holdMs?: number;
 }
@@ -196,7 +195,6 @@ export class WorkoutEngine {
     else if (scope === 'cap') { durationMs = section.capMs!; remainingMs = capRemainingMs!; }
     const values: ClockValues = { durationMs, remainingMs, fraction: durationMs ? remainingMs / durationMs : 0, slotMs, activeMs, sectionMs };
     if (capRemainingMs !== undefined) values.capRemainingMs = capRemainingMs;
-    if (turnRemainingMs !== undefined) values.turnRemainingMs = turnRemainingMs;
     if (holdMs > 0) values.holdMs = holdMs;
     return values;
   }
@@ -691,7 +689,7 @@ export function displayTime(ms: number, rounding: 'ceil' | 'floor' = 'ceil'): st
 }
 
 export interface WarningMarks { amberMs: number; redMs: number }
-export const DEFAULT_WARNING_MARKS: WarningMarks = { amberMs: 10_000, redMs: 3000 };
+const DEFAULT_WARNING_MARKS: WarningMarks = { amberMs: 10_000, redMs: 3000 };
 /**
  * How deep the background wash is, 0..1: one ramp over the whole slot, from nothing at its start to full at its end.
  * It only ever rises within a slot, so the colour marks change the hue (washMorph) but never the strength.

@@ -42,9 +42,9 @@ interface OverviewProps {
   live: LiveOffers;
 }
 
-/** The study view: everything the athletes will see, round by round, before anyone presses Start. */
 /** Targets only (no fallback hint), for table cells; loads are shown per level separately. */
 const targetText = (value: Prescription) => value.reps || value.calories || value.distance || value.timeMs ? prescriptionText({ ...value, load: undefined }) : '';
+/** The study view: everything the athletes will see, round by round, before anyone presses Start. */
 export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove, onExport, live }: OverviewProps) {
   const { workout, summary, source, editable } = entry;
   /** Shipped with the app, edited or not: removing it only hides it. */

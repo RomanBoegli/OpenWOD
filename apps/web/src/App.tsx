@@ -33,8 +33,8 @@ import styles from './App.module.css';
 import { newId } from './ids';
 import { onStartUnlock } from './start';
 
-/** The deployment shape in the footer, with a one-line explainer on hover or focus. */
 const BUNDLED_IDS = new Set(bundledWorkouts.map(workout => workout.id));
+/** The deployment shape in the footer, with a one-line explainer on hover or focus. */
 const SHAPE_LABELS = { server: 'Server', static: 'Static' } as const;
 const SHAPE_TIPS = {
   server: 'Your household server keeps the library, the session log and the settings for every device.',

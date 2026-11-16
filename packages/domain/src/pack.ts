@@ -10,11 +10,11 @@ import { assertBounded, compileSchema, issuesOf, parseWorkout, WorkoutValidation
  * (SHR-01/02). Pack ids are local to the file; an import remaps them. Everything else is as in a single workout
  * file: human durations, canonical YAML, no anchors, bounded size.
  */
-export const PACK_FORMAT = 'openwod.workoutPack';
-export const PACK_VERSION = 1;
+const PACK_FORMAT = 'openwod.workoutPack';
+const PACK_VERSION = 1;
 export const PACK_EXTENSION = '.wods.yaml';
 export const MAX_PACK_BYTES = 4 * 1_048_576;
-export const PACK_WORKOUT_LIMIT = 200;
+const PACK_WORKOUT_LIMIT = 200;
 
 export interface PackCollection { title: string; description?: string; workoutIds: string[] }
 export interface WorkoutPack { title?: string; description?: string; workouts: Workout[]; collections: PackCollection[] }
@@ -64,7 +64,7 @@ export function parsePackFile(text: string): WorkoutPack {
   return { ...(model.title ? { title: model.title } : {}), ...(model.description ? { description: model.description } : {}), workouts, collections };
 }
 
-export function toPackFile(pack: WorkoutPack): Record<string, unknown> {
+function toPackFile(pack: WorkoutPack): Record<string, unknown> {
   return {
     format: PACK_FORMAT, formatVersion: PACK_VERSION,
     ...(pack.title ? { title: pack.title } : {}), ...(pack.description ? { description: pack.description } : {}),

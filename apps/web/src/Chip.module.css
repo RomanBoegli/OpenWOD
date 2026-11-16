@@ -3,7 +3,7 @@
 .chip[data-kind=format] { --tone: var(--ink-2); background: var(--surface-3); border-color: var(--line-2); }
 .chip[data-kind=collection] { --tone: var(--phase-rest); }
 .chip[data-kind=done] { --tone: var(--accent-text); }
-.chip[data-kind=source], .chip[data-kind=neutral] { --tone: var(--ink-3); background: transparent; border-style: dashed; }
+.chip[data-kind=neutral] { --tone: var(--ink-3); background: transparent; border-style: dashed; }
 /* Filter chips: a solid, visibly bordered idle state and a filled active state so the two read apart in both themes. */
 button.chip { --tone: var(--ink-2); cursor: pointer; min-height: 36px; padding: 6px 12px; font-size: 12px; color: var(--ink-2); background: var(--surface-3); border: 1px solid var(--line-2); border-style: solid; transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
 button.chip:hover { background: var(--surface-5); color: var(--ink); border-color: color-mix(in srgb, var(--ink-3) 50%, transparent); }

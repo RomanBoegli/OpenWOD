@@ -50,7 +50,6 @@ div.ruler { position: absolute; inset: 0; z-index: 0; padding: 0; padding-inline
 .taskRow:hover { background: var(--hover); }
 .taskRow { display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: center; padding: 12px 16px; border-radius: 12px; background: var(--surface-1); border: 1px solid var(--line); }
 .taskRow[data-pair=true] { grid-template-columns: 34px 1fr 1fr; }
-.taskRow[data-done=true] { opacity: .5; }
 .taskRow[data-highlight=true] { border-color: var(--accent-border); background: var(--accent-soft); }
 .taskIndex { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--surface-3); color: var(--ink-3); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .taskCell { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; min-width: 0; }

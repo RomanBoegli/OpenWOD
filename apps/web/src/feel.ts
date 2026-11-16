@@ -1,10 +1,11 @@
 /**
  * Press feedback without a library: a ripple that starts where the pointer touched any button, link or card, and a
  * light tilt on cards that follow the pointer. Both are delegated from the document, cost nothing while idle, and are
- * skipped under reduced motion or on coarse pointers (the tilt). Styles live in global.css (.rippleWave, [data-tilt]).
+ * skipped under reduced motion or on coarse pointers (the tilt). The ripple is styled in global.css (.rippleWave); a card
+ * that tilts reads --tilt-x and --tilt-y in its own stylesheet.
  */
 const RIPPLE_TARGETS = 'button:not(:disabled), a[class], [data-ripple]';
-const SKIP = 'input, select, textarea, [data-no-ripple]';
+const SKIP = 'input, select, textarea';
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const finePointer = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 

@@ -211,9 +211,6 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
 
   const restart = useCallback(() => { audio.reset(); clockOffset.current = 0; startedAt.current = undefined; setSession(value => value + 1); }, [audio]);
 
-  /** Everything on its way is written: to this device and, as far as the server answers, to the household. */
-  const flushCheckpoints = useCallback(async () => { await queues.checkpoint.flush(); await queues.progress.flush(); await uplink.flush(); }, [queues, uplink]);
-
   /**
    * Hands the session over for good, to another tab (ENG-14) or another device (ENG-15): pauses, writes the last
    * checkpoint to this device, and from then on this player saves nothing and takes no command, so it can never
@@ -230,7 +227,7 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
   }, [engine, audio, queues]);
 
   return {
-    engine, plan: engine.plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints, detach,
+    engine, plan: engine.plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, detach,
     /** True while a restored session has taken no command since it was restored. */
     pristine: engine.revision === restoredRevision,
     /** The server's word that this session is another device's now (`controller`), or finished already (none). */

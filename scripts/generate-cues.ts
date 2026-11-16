@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path';
 import { seedMovements } from '../packages/domain/src/movements';
 
 /** Fixed cues, keyed as apps/web/src/audio.ts expects them. */
-export const CUES: Record<string, string> = {
+const CUES: Record<string, string> = {
   'get-ready': 'Get ready.',
   go: 'Go!',
   rest: 'Rest.',
@@ -34,7 +34,7 @@ export const CUES: Record<string, string> = {
   ended: 'Workout ended.',
 };
 /** Packs ship in this order; the first one is the default in the app. All English, two sexes, four accents. */
-export const PACKS = [
+const PACKS = [
   { id: 'british', label: 'British male (Alan)', voice: 'en_GB-alan-medium' },
   { id: 'american', label: 'American female (Amy)', voice: 'en_US-amy-medium' },
   { id: 'scottish', label: 'Scottish female (Alba)', voice: 'en_GB-alba-medium' },

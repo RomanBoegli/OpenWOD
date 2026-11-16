@@ -1,4 +1,4 @@
-import { Type, type Static } from '@sinclair/typebox';
+import { Type } from '@sinclair/typebox';
 import type { Movement } from './catalogue';
 import { authorKey, equipmentKey } from './library';
 import { bundledCollections } from './bundled';
@@ -35,11 +35,11 @@ export interface MasterData {
   committed: string[];
 }
 
-export const COLLECTION_LIMIT = 50;
-export const COLLECTION_SIZE = 500;
-export const MOVEMENT_LIMIT = 600;
-export const AUTHOR_LIMIT = 500;
-export const MOVEMENT_CATEGORIES = ['weightlifting', 'gymnastics', 'monostructural', 'strength', 'conditioning', 'mobility'] as const;
+const COLLECTION_LIMIT = 50;
+const COLLECTION_SIZE = 500;
+const MOVEMENT_LIMIT = 600;
+const AUTHOR_LIMIT = 500;
+const MOVEMENT_CATEGORIES = ['weightlifting', 'gymnastics', 'monostructural', 'strength', 'conditioning', 'mobility'] as const;
 
 const name = (max: number) => Type.String({ minLength: 1, maxLength: max });
 const CollectionSchema = Type.Object({
@@ -72,7 +72,6 @@ export const MasterDataSchema = Type.Object({
   hiddenAuthors: Type.Optional(Type.Array(name(160), { maxItems: AUTHOR_LIMIT })),
   committed: Type.Array(name(200), { maxItems: 2000 }),
 }, { $id: 'MasterData', additionalProperties: false });
-export type MasterDataDocument = Static<typeof MasterDataSchema>;
 
 /** Collections that ship with the app: one per registry folder with a collection.yaml. They are not editable; your own collections sit beside them. */
 export const builtInCollections: Collection[] = bundledCollections.map(collection => ({ ...collection, builtIn: true }));
@@ -82,7 +81,7 @@ export const emptyMasterData = (): MasterData => ({ equipmentAliases: {}, collec
 const text = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 const strings = (value: unknown, max: number, each = 80) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, max).map(item => item.trim().slice(0, each)) : [];
 
-export function readMovement(value: unknown): Movement | undefined {
+function readMovement(value: unknown): Movement | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const item = value as Partial<Movement>;
   const id = text(item.id, 80);

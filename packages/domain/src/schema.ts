@@ -11,7 +11,7 @@ const restDuration = Type.Integer({ minimum: 0, maximum: 86_400_000 });
  * on its own in a woman's lane of a pair workout. Percentages are of each athlete's own maximum, so they carry no
  * `women` value (the compiler rejects it).
  */
-export const LoadValueSchema = Type.Object({
+const LoadValueSchema = Type.Object({
   value: Type.Number({ minimum: 0, maximum: 10_000 }),
   women: Type.Optional(Type.Number({ minimum: 0, maximum: 10_000 })),
   unit: Type.Union([Type.Literal('kg'), Type.Literal('lb'), Type.Literal('percent')]),
@@ -19,16 +19,15 @@ export const LoadValueSchema = Type.Object({
 export type LoadValue = Static<typeof LoadValueSchema>;
 
 /** Loads by level. A single LoadValue (the version 1 shape) applies to every level. */
-export const LoadLevelsSchema = Type.Object({
+const LoadLevelsSchema = Type.Object({
   light: Type.Optional(LoadValueSchema),
   medium: Type.Optional(LoadValueSchema),
   heavy: Type.Optional(LoadValueSchema),
 }, { additionalProperties: false, minProperties: 1 });
-export type LoadLevels = Static<typeof LoadLevelsSchema>;
 export const LOAD_LEVELS = ['light', 'medium', 'heavy'] as const;
 export type LoadLevel = typeof LOAD_LEVELS[number];
 
-export const PrescriptionSchema = Type.Object({
+const PrescriptionSchema = Type.Object({
   /** Optional id of the movement record this prescription was picked from; the names below stay authoritative, so a file is complete without any catalogue. */
   movement: Type.Optional(Type.String({ pattern: '^[a-z0-9][a-z0-9-]{0,79}$', maxLength: 80 })),
   name: label,
@@ -46,7 +45,7 @@ export type Prescription = Static<typeof PrescriptionSchema>;
 
 const assignments = Type.Object({ A: PrescriptionSchema, B: Type.Optional(PrescriptionSchema) }, { additionalProperties: false });
 
-export const NodeSchema = Type.Recursive(Self => Type.Union([
+const NodeSchema = Type.Recursive(Self => Type.Union([
   Type.Object({ id, type: Type.Literal('timed'), durationMs: duration, assignments }, { additionalProperties: false }),
   /** Manual work with no execution duration: the athletes report completion. `completion` is the pair rule (BLD-06). */
   Type.Object({ id, type: Type.Literal('task'), assignments, completion: Type.Optional(Type.Union([Type.Literal('team'), Type.Literal('both')])) }, { additionalProperties: false }),
@@ -56,7 +55,7 @@ export const NodeSchema = Type.Recursive(Self => Type.Union([
 ]), { $id: 'WorkoutNode' });
 export type WorkoutNode = Static<typeof NodeSchema>;
 
-export const AttributionSchema = Type.Object({
+const AttributionSchema = Type.Object({
   author: Type.Optional(Type.String({ minLength: 1, maxLength: 160 })),
   sourceUrl: Type.Optional(Type.String({ minLength: 1, maxLength: 500, pattern: '^https?://' })),
   licence: Type.Optional(Type.String({ minLength: 1, maxLength: 300 })),
@@ -72,7 +71,7 @@ const count = Type.Integer({ minimum: 1, maximum: 999 });
  * amrap → capMs (+ counter); emom → intervalMs, intervals; forTime → optional capMs; youGoIGo → capMs or rounds,
  * optional turnMs; timedCircuit and strength → none.
  */
-export const SectionSchema = Type.Object({
+const SectionSchema = Type.Object({
   id,
   title: label,
   format: Type.Union([Type.Literal('timedCircuit'), Type.Literal('amrap'), Type.Literal('emom'), Type.Literal('forTime'), Type.Literal('youGoIGo'), Type.Literal('strength')]),
@@ -105,12 +104,11 @@ export const SCHEMA_VERSION = 2;
  * Sharing provenance (SHR-05): a stable identity that travels with the file, separate from the local id and revision.
  * `sourceRevision` is the author's revision at export; a derivative records what it came from and gets its own id.
  */
-export const SharingSchema = Type.Object({
+const SharingSchema = Type.Object({
   id: Type.String({ minLength: 1, maxLength: 120 }),
   sourceRevision: Type.Integer({ minimum: 1 }),
   derivedFrom: Type.Optional(Type.Object({ id: Type.String({ minLength: 1, maxLength: 120 }), sourceRevision: Type.Integer({ minimum: 1 }) }, { additionalProperties: false })),
 }, { additionalProperties: false });
-export type Sharing = Static<typeof SharingSchema>;
 
 export const WorkoutSchema = Type.Object({
   schemaVersion: Type.Literal(SCHEMA_VERSION),
@@ -135,4 +133,3 @@ export const WorkoutFileSchema = Type.Object({
   formatVersion: Type.Literal(FILE_VERSION),
   workout: WorkoutSchema,
 }, { $id: 'WorkoutFile', additionalProperties: false });
-export type WorkoutFile = Static<typeof WorkoutFileSchema>;

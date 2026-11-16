@@ -20,14 +20,12 @@ interface MovementPickerProps {
   catalogue: Catalogue;
   invalid?: boolean;
   onChange: (change: (current: Prescription) => Prescription) => void;
-  /** Called with the picked record's equipment so the workout can declare it. */
-  onPick?: (record: Movement) => void;
   /** Adds the typed name to the catalogue; returns the new record. */
   onAdd: (name: string) => Movement;
 }
 
 /** The movement name input with a catalogue picker: type, arrow down, Enter. Picking fills the names and links the record. */
-export function MovementPicker({ value, label, catalogue, invalid, onChange, onPick, onAdd }: MovementPickerProps) {
+export function MovementPicker({ value, label, catalogue, invalid, onChange, onAdd }: MovementPickerProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listId = useId();
@@ -50,7 +48,6 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onP
       const { shortName: _s, spokenName: _v, ...rest } = current;
       return { ...rest, movement: picked.id, name: picked.name, ...(picked.shortName ? { shortName: picked.shortName } : {}), ...(picked.spokenName ? { spokenName: picked.spokenName } : {}) };
     });
-    onPick?.(picked);
     setOpen(false);
   };
   const add = () => { const created = onAdd(query); pick(created); };

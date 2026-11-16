@@ -3,7 +3,7 @@ import { WorkoutValidationError } from '../../../packages/domain/src/validate';
 import { HouseholdError as ApiError } from '../../../packages/household/src/errors';
 
 /** Structured API errors (API-02) are the household's own (packages/household/src/errors.ts); this file maps them to replies. */
-export { ConflictError, HouseholdError as ApiError, NotFoundError } from '../../../packages/household/src/errors';
+export { HouseholdError as ApiError, NotFoundError } from '../../../packages/household/src/errors';
 
 export function errorHandler(error: FastifyError | ApiError | WorkoutValidationError | Error, request: FastifyRequest, reply: FastifyReply) {
   if (error instanceof ApiError) return reply.code(error.status).send({ error: { code: error.code, message: error.message, ...(error.path ? { path: error.path } : {}), ...error.extra } });

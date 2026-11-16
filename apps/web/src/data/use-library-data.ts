@@ -34,7 +34,6 @@ export interface LibraryData {
   /** True once the first load has answered (or failed), so a missing workout can be told from one still loading. */
   loaded: boolean;
   masterData: MasterData;
-  masterRevision: number;
   sessions: SessionView[];
   connection: Connection;
   schemaVersion?: number;
@@ -54,8 +53,6 @@ export interface LibraryData {
   recordSession: (record: SessionRecord) => Promise<void>;
   /** Sessions interrupted on this device, newest first (ENG-12). */
   recoveries: Recovery[];
-  /** False until this device's checkpoints have been read once; the player waits for it so a recovery is never missed. */
-  recoveriesReady: boolean;
   clearRecovery: (sessionId: string) => Promise<void>;
   refreshRecoveries: () => Promise<void>;
   correctSession: (id: string, results: SectionResult[], note?: string) => Promise<boolean>;
@@ -104,8 +101,7 @@ export function useLibraryData(): LibraryData {
   const [migrating, setMigrating] = useState(false);
   const [stats, setStats] = useState<BackendCounts>();
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
-  const [recoveriesReady, setRecoveriesReady] = useState(false);
-  const refreshRecoveries = useCallback(async () => { try { setRecoveries(await listRecoveries()); } catch { setRecoveries([]); } finally { setRecoveriesReady(true); } }, []);
+  const refreshRecoveries = useCallback(async () => { try { setRecoveries(await listRecoveries()); } catch { setRecoveries([]); } }, []);
   // A session dropped on this device is over: its live row on the server goes too, so no other device keeps offering it,
   // unless another device controls it by now (ENG-15). The static shape has no such row and the call does nothing.
   const clearRecovery = useCallback(async (sessionId: string) => {
@@ -373,8 +369,8 @@ export function useLibraryData(): LibraryData {
 
   return {
     mode: DATA_MODE, stats, exportAll, restore,
-    saved: savedWithQueued, loaded, masterData, masterRevision, sessions, connection, schemaVersion: ready.schemaVersion, serverVersion: ready.version, pendingIds,
+    saved: savedWithQueued, loaded, masterData, sessions, connection, schemaVersion: ready.schemaVersion, serverVersion: ready.version, pendingIds,
     conflicts: outbox.filter(item => item.state === 'conflict'), rejected: outbox.filter(item => item.state === 'rejected'), notice, legacy, migrating,
-    saveWorkout, archiveWorkout, updateMasterData, recordSession, recoveries, recoveriesReady, clearRecovery, refreshRecoveries, correctSession, deleteSession, loadMoreSessions, fetchSession, importPack, migrateDevice, resolveConflict, dismissRejected, refresh, clearNotice: () => setNotice(''),
+    saveWorkout, archiveWorkout, updateMasterData, recordSession, recoveries, clearRecovery, refreshRecoveries, correctSession, deleteSession, loadMoreSessions, fetchSession, importPack, migrateDevice, resolveConflict, dismissRejected, refresh, clearNotice: () => setNotice(''),
   };
 }

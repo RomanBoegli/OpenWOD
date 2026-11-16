@@ -10,7 +10,7 @@ import type { DeviceImport, DeviceImportReport, ExportDocument, LiveCheckpoint, 
 import { backupTo, isMemory, migrate, openDatabase, schemaVersion } from './db';
 import { ApiError, NotFoundError } from './errors';
 
-export type { DeviceImport, DeviceImportReport, LiveSession, LiveSessionAck, LiveSessionClaim, LiveSessionItem, LiveSessionList, LiveSessionPut, PackDecision, PackImport, PackImportReport, RestoreReport, SessionListItem, StoredWorkout } from '../../../packages/household/src/types';
+export type { LiveSessionClaim, LiveSessionPut, PackDecision } from '../../../packages/household/src/types';
 
 interface WorkoutRow { id: string; revision: number; sharing_origin: 'local' | 'imported'; document: string; created_at: string; updated_at: string; archived_at: string | null }
 interface SessionRow { id: string; workout_id: string; workout_revision: number; title: string; workout_document: string; started_at: string; finished_at: string; outcome: SessionRecord['outcome']; interrupted: number; modified: number; completion: number; active_ms: number; results: string; events: string; device_id: string; received_at: string; revision: number }
@@ -18,7 +18,7 @@ interface SessionRow { id: string; workout_id: string; workout_revision: number;
 interface LiveRow { id: string; workout_id: string; title: string; status: Status; active_ms: number; device_id: string; device_label: string; generation: number; revision: number; progress: string | null; saved_at: string; updated_at: string }
 const LIVE_COLUMNS = 'id, workout_id, title, status, active_ms, device_id, device_label, generation, revision, progress, saved_at, updated_at';
 /** A live session nobody has written to for this long is forgotten (ENG-15): its device is gone or the session was abandoned. */
-export const LIVE_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const LIVE_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 /** Whole milliseconds for the list; the snapshot is the player's own and is never trusted to hold a number. */
 const wholeMs = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
 

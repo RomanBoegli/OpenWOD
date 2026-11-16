@@ -11,7 +11,7 @@ import { DATA_MODE } from './mode';
  * through, so there every call fails without a request and the uplink does nothing. The session is always safe on
  * its own device first (checkpoints.ts); nothing here is awaited by the clock.
  */
-export type { LiveController, LiveSession, LiveSessionAck, LiveSessionItem, LiveSessionList, LiveSessionPut } from '../../../../packages/household/src/types';
+export type { LiveController, LiveSessionItem } from '../../../../packages/household/src/types';
 
 export const HANDOVER = DATA_MODE === 'server';
 

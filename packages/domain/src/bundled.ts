@@ -1,11 +1,11 @@
 import type { Workout } from './schema';
-import { bundledCollections, bundledWorkouts, type BundledCollection } from './generated/bundled';
+import { bundledCollections, bundledWorkouts } from './generated/bundled';
 
 /**
  * The workout registry: every file under workouts/<collection>/ at the repository root, bundled at build time by
  * scripts/bundle-workouts.ts. The files are the source of truth; this module only looks them up.
  */
-export { bundledCollections, bundledWorkouts, type BundledCollection };
+export { bundledCollections, bundledWorkouts };
 
 const byId = new Map(bundledWorkouts.map(workout => [workout.id, workout]));
 

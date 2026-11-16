@@ -37,7 +37,7 @@ export interface Backend {
   deleteSession(id: string): Promise<void>;
   importDevice(payload: DeviceImportPayload): Promise<DeviceImportReport>;
   importPack(payload: PackImportPayload): Promise<PackImportReport>;
-  /** Everything as one restorable JSON document (DAT-12). */
+  /** Everything as one restorable JSON document (DAT-11). */
   exportAll(): Promise<ExportDocument>;
   /** Replaces the whole household with an export; `backup` names the server's pre-restore copy. */
   restore(document: unknown): Promise<RestoreReport & { backup?: string }>;

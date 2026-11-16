@@ -6,7 +6,6 @@
 .sectionTop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
 .sectionTop > span { white-space: nowrap; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 2px; }
-.toolbar .quietButton { font-size: 12px; }
 .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; margin-top: 4px; }
 .field { display: grid; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); min-width: 0; margin: 8px 0; }
 .field input, .field select, .field textarea { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); color: var(--ink); font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 400; }
@@ -49,7 +48,6 @@
 .issues { margin: 0; padding: 12px 12px 12px 28px; background: var(--notice-bg); border: 1px solid var(--notice-border); border-radius: 10px; color: var(--notice-text); font-size: 12px; line-height: 1.6; }
 .status { margin: 0; font-size: 11px; color: var(--ink-3); }
 .saveActions { display: grid; gap: 6px; }
-.saveActions .primaryButton { width: 100%; }
 @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } .summary { position: static; } }
 @media (max-width: 620px) { .card { padding: 16px 14px; } .slots, .slots thead, .slots tbody, .slots tr, .slots td { display: block; } .slots thead { display: none; } .slots tr { padding: 10px 0; border-bottom: 1px solid var(--line-2); } .slots td { border: 0; padding: 4px 0; } .slots td:first-child { padding-top: 4px; } .slots td .field { width: 100%; } .laneGrid { grid-template-columns: 1fr; } .laneCell { min-width: 0; } }
 .formatHelp { margin: 2px 0 6px; font-size: 12px; color: var(--ink-3); line-height: 1.6; }
@@ -85,7 +83,6 @@
 .unmatched li button { min-height: 28px; padding: 2px 10px; border: 1px solid var(--notice-border); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
 .unmatched li button:hover { background: var(--hover); }
 .unmatched small { color: var(--ink-3); }
-.slots td .picker { width: 100%; }
 /* A rest of its own: one slim muted line with its length, in the list where it happens. */
 .restRow td { padding-top: 4px; padding-bottom: 4px; }
 .slots .restRow td:first-child { padding-top: 14px; }

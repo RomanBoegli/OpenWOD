@@ -40,7 +40,7 @@ export function issuesOf(validator: ValidateFunction, fallback: string): Validat
  * (new formats, a manual task node, richer targets and loads), so the migration only changes the version literal.
  * Newer versions are left untouched and fail validation with the version mismatch.
  */
-export function migrateWorkout(value: unknown): unknown {
+function migrateWorkout(value: unknown): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
   const record = value as Record<string, unknown>;
   if (record.schemaVersion === 1) return { ...record, schemaVersion: SCHEMA_VERSION };

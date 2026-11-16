@@ -54,7 +54,7 @@ export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Ath
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
-export const THEME_KEY = 'openwod.theme';
+const THEME_KEY = 'openwod.theme';
 
 const clamp = (value: unknown, min: number, max: number, fallback: number) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 const text = (value: unknown, fallback: string, max = 30) => typeof value === 'string' && value.trim() ? value.slice(0, max) : fallback;

@@ -78,7 +78,7 @@ function workoutDocument(value: unknown): Workout {
 }
 
 /** `If-Match: "3"` → 3; absent → undefined (create-only for documents). */
-export function expectedRevision(request: FastifyRequest): number | undefined {
+function expectedRevision(request: FastifyRequest): number | undefined {
   const header = request.headers['if-match'];
   if (header === undefined) return undefined;
   const raw = String(Array.isArray(header) ? header[0] : header).trim().replace(/^W\//, '').replace(/^"|"$/g, '');

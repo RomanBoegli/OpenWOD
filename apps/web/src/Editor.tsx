@@ -26,8 +26,8 @@ import { TimeInput } from './TimeInput';
 import transition from './Transition.module.css';
 
 /** A duration as mm:ss (TimeInput); the model only ever receives valid milliseconds. */
-function DurationField({ value, onChange, label, min = 0, id, allowEmpty = false, className }: { value: number; onChange: (ms: number) => void; label: string; min?: number; id?: string; allowEmpty?: boolean; className?: string }) {
-  return <label className={className ? `${styles.field} ${className}` : styles.field}>{label}<TimeInput id={id} value={value} min={min} allowEmpty={allowEmpty} placeholder={allowEmpty ? 'none' : undefined} onChange={onChange} /></label>;
+function DurationField({ value, onChange, label, min = 0, id, allowEmpty = false }: { value: number; onChange: (ms: number) => void; label: string; min?: number; id?: string; allowEmpty?: boolean }) {
+  return <label className={styles.field}>{label}<TimeInput id={id} value={value} min={min} allowEmpty={allowEmpty} placeholder={allowEmpty ? 'none' : undefined} onChange={onChange} /></label>;
 }
 
 /** A whole number of rounds, intervals or repeats (NumberInput): an emptied field stays empty while typing, and the model only ever receives a count within the bounds. */
@@ -248,7 +248,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
       </tr>;
       if (item.kind === 'group') {
         const group = (patch: Partial<BuilderGroup>) => updateItem<BuilderGroup>(s, path, i, current => ({ ...current, ...patch }));
-        return <tr key={i} className={styles.groupRow}>{number}
+        return <tr key={i}>{number}
           <td colSpan={span}><div className={styles.nested} role="group" aria-label={`${label} group ${i + 1}`}>
             <span className={styles.caption}>Group</span>
             <div className={styles.row}>
@@ -353,7 +353,6 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
                 {section.format === 'timedCircuit' && (section.slotRepeats > 1 || section.slots.every(isSlot)) && <CountField label="Repeat each movement" value={section.slotRepeats} onChange={slotRepeats => updateSection(s, { slotRepeats })} />}
                 {section.format === 'timedCircuit' && section.slotRepeats > 1 && <DurationField label="Rest within repeats" value={section.slotRepeatRestMs} onChange={slotRepeatRestMs => updateSection(s, { slotRepeatRestMs })} />}
                 <DurationField label={manual ? 'Rest between movements' : 'Transition between movements'} value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
-                {/* Older workouts can end every round with a transition after the last slot. It is kept and shown only while it is set. */}
               </div>}
               {!list && <div className={styles.row} role="group" aria-label={`Block ${s + 1} ${section.format === 'strength' ? 'set' : 'round'} settings`}>
                 <CountField label={roundsWord} value={section.rounds} aria-label={`Block ${s + 1} ${roundsWord.toLowerCase()}`} onChange={rounds => updateSection(s, { rounds })} />

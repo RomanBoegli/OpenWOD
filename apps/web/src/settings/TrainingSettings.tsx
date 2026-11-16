@@ -65,7 +65,7 @@ export function TrainingSettings(props: SettingsProps) {
   </>;
 }
 
-export function SoundSettings({ preferences, onPreferencesChange, clipsReady, packs, audio }: SettingsProps) {
+function SoundSettings({ preferences, onPreferencesChange, clipsReady, packs, audio }: SettingsProps) {
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
   /** The voice in use: the device's, the chosen pack, or the first pack while none was chosen ('' when no pack is installed). */
   const voice = preferences.cueSource === 'device' ? 'device' : preferences.cuePack || (packs[0]?.id ?? '');

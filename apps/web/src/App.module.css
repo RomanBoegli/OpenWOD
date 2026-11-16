@@ -29,7 +29,6 @@
 .description { color: var(--ink-3); max-width: 650px; font-size: 13px; line-height: 1.7; margin: 7px 0 14px; }
 .metadata { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; color: var(--ink-3); font-size: 11px; }
 .metadata > span { display: flex; align-items: center; gap: 7px; }
-.equipment { padding-left: 18px; border-left: 1px solid var(--line-2); }
 .viewSwitch { display: flex; gap: 4px; background: var(--surface-3); border: 1px solid var(--line); padding: 4px; border-radius: 11px; flex-shrink: 0; }
 .viewSwitch button { display: flex; gap: 7px; align-items: center; min-height: 42px; border: 0; border-radius: 7px; background: none; color: var(--ink-3); padding: 10px 13px; font-size: 12px; }
 .viewSwitch button[aria-pressed=true] { background: var(--surface-5); color: var(--ink); box-shadow: 0 1px 4px #0002; }
@@ -97,7 +96,6 @@
 .transport[data-side=back] { justify-self: end; }
 .transport[data-side=forward] { justify-self: start; }
 .transportCentre { display: flex; align-items: center; gap: 10px; }
-.secondaryControls { display: flex; gap: 4px; }
 .primaryButton { display: inline-flex; gap: 12px; align-items: center; justify-content: center; background: var(--accent-fill); color: var(--accent-ink); border: 1px solid var(--accent-border); border-radius: 11px; min-height: 56px; padding: 14px 35px; font-size: 14px; font-weight: 700; text-decoration: none; }
 .primaryButton:hover:not(:disabled) { background: var(--accent-fill-hover); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent-fill) 35%, transparent); }
 .primaryButton:active:not(:disabled) { transform: scale(.98); box-shadow: none; }
@@ -130,7 +128,6 @@
 .contextSection { margin-top: 27px; padding: 25px; background: color-mix(in srgb, var(--surface-5) 45%, transparent); border: 1px solid var(--line-2); border-radius: 17px; }
 .contextHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
 .contextHeading h2 { font-size: 22px; font-weight: 500; margin: 6px 0 0; letter-spacing: -.5px; }
-.contextHeading .quietButton { font-size: 11px; }
 .contextList { position: relative; max-height: 325px; overflow-y: auto; scroll-margin: 20px; }
 .contextColumns, .contextRow { display: grid; grid-template-columns: 35px 1fr 1fr 48px; align-items: center; gap: 16px; padding: 14px 12px; }
 .contextColumns { color: var(--ink-3); font-size: 9px; letter-spacing: 1px; border-bottom: 1px solid var(--line-2); }
@@ -156,9 +153,6 @@
 .dialog .dialogIntro { font-size: 12px; color: var(--ink-3); margin: 12px 0 23px; }
 .dialog label { display: grid; gap: 9px; font-size: 12px; color: var(--ink-2); margin-bottom: 19px; }
 .fieldNote { color: var(--ink-3); font-size: 12px; line-height: 1.55; font-weight: 400; letter-spacing: 0; text-transform: none; }
-.settingsBlock { display: grid; gap: 9px; margin-bottom: 19px; font-size: 12px; color: var(--ink-2); }
-.settingsLabel { font-size: 12px; color: var(--ink-2); }
-.chipGrid { display: flex; flex-wrap: wrap; gap: 6px; }
 /* Labelled switch (Switch.tsx): text left, toggle right; the track fills with the accent when on. */
 .switchRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; margin: 0 !important; font-size: 14px !important; font-weight: 500 !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--ink) !important; }
 .switchRow[data-compact] { min-height: 0; padding: 0; border-top: 0; justify-content: end; gap: 10px; font-size: 12px !important; font-weight: 600 !important; color: var(--ink-2) !important; white-space: nowrap; }
@@ -170,21 +164,11 @@
 .switchKnob { position: absolute; top: 2px; left: 2px; width: 25px; height: 25px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px #0005; transition: transform var(--t-fast) var(--ease); pointer-events: none; }
 .switch[data-checked=true] .switchKnob { transform: translateX(20px); }
 .switch:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 3px; }
-.chipToggle { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-3); color: var(--ink-3); font-size: 12px; cursor: pointer; margin: 0 !important; }
-.chipToggle[data-checked=true] { background: var(--accent-soft); border-color: var(--accent-border); color: var(--ink); }
-.chipToggle input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.chipToggle:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
 .dialog input:not([type=range]):not([type=radio]), .dialog select { width: 100%; min-width: 0; background: var(--input-bg); border: 1px solid var(--line-2); color: var(--ink); border-radius: 8px; padding: 13px 11px; min-height: 48px; }
-.dialog input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
 /* Phones: every form control at 16 px. Below that iOS Safari zooms the page when a field takes the focus. */
 @media (max-width: 620px) { .dialog input:not([type=range]):not([type=radio]), .dialog select { font-size: 16px; } }
-.nameFields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-3); }
 .segmented[data-two] { grid-template-columns: 1fr 1fr; }
-/* Options of uneven length share the row by content: short words stay narrow so four options fit one line. */
-.segmented[data-fit] { display: flex; }
-.segmented[data-fit] label { flex: 1 1 auto; padding: 0 10px; white-space: nowrap; }
-.segmented legend { padding: 0; margin-bottom: 9px; font-size: 12px; color: var(--ink-2); }
 .segmented label { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0; min-height: 44px; border-radius: 7px; color: var(--ink-3); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; cursor: pointer; }
 .segmented label[data-checked=true] { background: var(--surface-5); color: var(--ink); box-shadow: 0 1px 4px #0002; }
 .segmented input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
@@ -209,8 +193,8 @@
 .finishMessage p { font-size: 14px; color: var(--ink-2); }
 @media (min-width: 1500px) { .main { padding-top: 46px; } .player { --pad-top: 30px; --pad-x: 38px; --pad-bottom: 24px; } .clockBlock { padding: 32px 0; } }
 @media (max-width: 900px) { .header { height: 75px; padding: 0 25px; gap: 18px; } .main { padding: 27px 24px 22px; } .headerNote { display: none; } .workoutHeading { align-items: start; gap: 16px; } .description { max-width: 500px; } .viewSwitch { margin-top: 32px; } .viewSwitch button { padding: 8px; font-size: 11px; } .viewSwitch svg { display: none; } .player { --pad-top: 24px; --pad-x: 25px; --pad-bottom: 20px; } .lane { padding: 20px; } .lane h2 { font-size: 40px; } .bottomBar { flex-wrap: wrap; } .footer { font-size: 11px; } }
-@media (max-width: 620px) { .header { height: 70px; padding: 0 18px; gap: 8px; } .headerActions { gap: 3px; } .headerActions .quietButton { font-size: 11px; } .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 44px; padding: 8px; } .backLink span { display: none; } .brand { font-size: 21px; gap: 8px; letter-spacing: -.8px; } .brandVersion { margin-top: 2px; font-size: 9px; letter-spacing: .3px; } .brandMark { width: 32px; height: 32px; border-radius: 9px; } .brandMark svg { width: 25px; height: 25px; } .main { padding: 24px 15px 20px; } .workoutHeading { display: block; margin-bottom: 20px; } .workoutHeading h1 { font-size: 30px; } .eyebrow { font-size: 8px; letter-spacing: 1.5px; } .description { font-size: 12px; } .metadata { gap: 12px; font-size: 10px; } .equipment { border: 0; padding: 0; } .viewSwitch { margin-top: 18px; width: fit-content; } .viewSwitch button { padding: 7px 14px; } .viewSwitch svg { display: block; } .player { --pad-top: 22px; --pad-x: 20px; --pad-bottom: 20px; border-radius: 20px; } .playerTop { font-size: 10px; } .playerTop > span:last-child { font-size: 9px; letter-spacing: 1px; } .clockBlock { padding: 27px 0 24px; } .timer { font-size: 112px; letter-spacing: -6px; } .phase { font-size: 14px; } .lanes { grid-template-columns: minmax(0, 1fr); gap: 12px; } .lane { min-height: 0; padding: 17px 18px; } .lane h2 { margin-top: 16px; font-size: 40px; } .lane p { font-size: 11px; } .athleteLabel { font-size: 12px; } .athleteBadge { width: 30px; height: 30px; } .nextStrip { align-items: start; padding: 21px 0; text-align: left; font-size: 12px; line-height: 1.6; gap: 12px; } .nextLabel { font-size: 8px; margin-top: 3px; gap: 6px; } .controls { grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 16px; } .controls > .primaryButton { grid-row: 1; grid-column: 1/-1; width: 100%; min-height: 58px; } .secondaryControls { grid-row: 2; } .stopButton { grid-row: 2; } .sessionLine { margin-top: 11px; font-size: 9px; align-items: start; line-height: 1.5; } .sessionLine > span:last-child { text-align: right; max-width: 155px; } .bottomBar { padding-top: 17px; gap: 8px; } .readiness { width: 100%; font-size: 9px; } .sharing { margin-left: -10px; } .footer { flex-direction: column; gap: 10px; padding-top: 20px; } .footerLinks { justify-content: center; } .footerLinks { position: relative; } .footerMode { position: static; } .footerMode::after { left: 50%; right: auto; transform: translate(-50%, 4px); } .footerMode:hover::after, .footerMode:focus::after { transform: translateX(-50%); } .contextSection { padding: 20px 12px; } .contextHeading { padding: 0 5px; } .contextHeading h2 { font-size: 20px; } .contextHeading .quietButton { max-width: 140px; font-size: 10px; } .contextColumns, .contextRow { grid-template-columns: 20px 1fr 1fr 28px; gap: 10px; padding: 14px 8px; } .contextColumns { font-size: 8px; } .contextRow { font-size: 12px; overflow-wrap: anywhere; } .contextRow > span:first-child, .contextRow > span:last-child { font-size: 10px; } .contextFootnote { padding: 0 5px; line-height: 1.7; } .dialog { padding: 23px; } .dialogActions > button, .dialogActions > a { flex: 1 1 auto; } .nameFields { grid-template-columns: 1fr; gap: 0; } }
-@media (max-width: 360px) { .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 40px; padding: 8px; } .pill { display: none; } .backLink { display: none; } .timer { font-size: 96px; } .lane h2 { font-size: 36px; } .player { --pad-top: 20px; --pad-x: 17px; --pad-bottom: 20px; } }
+@media (max-width: 620px) { .header { height: 70px; padding: 0 18px; gap: 8px; } .headerActions { gap: 3px; } .headerActions .quietButton { font-size: 11px; } .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 44px; padding: 8px; } .backLink span { display: none; } .brand { font-size: 21px; gap: 8px; letter-spacing: -.8px; } .brandVersion { margin-top: 2px; font-size: 9px; letter-spacing: .3px; } .brandMark { width: 32px; height: 32px; border-radius: 9px; } .brandMark svg { width: 25px; height: 25px; } .main { padding: 24px 15px 20px; } .workoutHeading { display: block; margin-bottom: 20px; } .workoutHeading h1 { font-size: 30px; } .eyebrow { font-size: 8px; letter-spacing: 1.5px; } .description { font-size: 12px; } .metadata { gap: 12px; font-size: 10px; } .viewSwitch { margin-top: 18px; width: fit-content; } .viewSwitch svg { display: block; } .player { --pad-top: 22px; --pad-x: 20px; --pad-bottom: 20px; border-radius: 20px; } .playerTop { font-size: 10px; } .playerTop > span:last-child { font-size: 9px; letter-spacing: 1px; } .timer { font-size: 112px; letter-spacing: -6px; } .phase { font-size: 14px; } .lanes { grid-template-columns: minmax(0, 1fr); gap: 12px; } .lane { min-height: 0; padding: 17px 18px; } .lane p { font-size: 11px; } .athleteLabel { font-size: 12px; } .athleteBadge { width: 30px; height: 30px; } .nextStrip { align-items: start; padding: 21px 0; text-align: left; font-size: 12px; line-height: 1.6; gap: 12px; } .nextLabel { font-size: 8px; margin-top: 3px; gap: 6px; } .sessionLine { margin-top: 11px; font-size: 9px; align-items: start; line-height: 1.5; } .sessionLine > span:last-child { text-align: right; max-width: 155px; } .readiness { width: 100%; font-size: 9px; } .footer { flex-direction: column; gap: 10px; padding-top: 20px; } .footerLinks { justify-content: center; } .footerLinks { position: relative; } .footerMode { position: static; } .footerMode::after { left: 50%; right: auto; transform: translate(-50%, 4px); } .footerMode:hover::after, .footerMode:focus::after { transform: translateX(-50%); } .contextSection { padding: 20px 12px; } .contextHeading { padding: 0 5px; } .contextHeading h2 { font-size: 20px; } .contextColumns, .contextRow { grid-template-columns: 20px 1fr 1fr 28px; gap: 10px; padding: 14px 8px; } .contextColumns { font-size: 8px; } .contextRow { font-size: 12px; overflow-wrap: anywhere; } .contextRow > span:first-child, .contextRow > span:last-child { font-size: 10px; } .contextFootnote { padding: 0 5px; line-height: 1.7; } .dialog { padding: 23px; } .dialogActions > button, .dialogActions > a { flex: 1 1 auto; } }
+@media (max-width: 360px) { .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 40px; padding: 8px; } .pill { display: none; } .backLink { display: none; } .timer { font-size: 96px; } }
 
 /* During training, the player owns the usable viewport; controls stay in view. */
 .app[data-performing=true] { height: 100svh; overflow: hidden; }
@@ -322,7 +306,6 @@
   .screen[data-performing=true][data-view=context] .timer { font-size: 90px; }
   .screen[data-performing=true][data-view=context] .contextColumns { grid-template-columns: 16px 1fr 1fr 28px; }
   .screen[data-performing=true][data-view=context] .contextRow { font-size: 17px; grid-template-columns: 16px 1fr 1fr 28px; }
-  .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 22px; }
 }
 
 /* Performing on a screen wider than a phone and at most 1200 px tall (every iPad but the 13-inch held upright, a laptop, a
@@ -406,7 +389,6 @@
   .screen[data-performing=true] .playerTop { align-items: center; }
   .screen[data-performing=true] .playerTop .iconButton { margin: 0 0 0 6px; min-width: 34px; min-height: 34px; padding: 6px; border-radius: 9px; background: transparent; }
   .screen[data-performing=true][data-view=context] .contextSection { padding: 8px 10px; }
-  .screen[data-performing=true][data-view=context] .contextHeading .quietButton { min-height: 32px; padding: 4px 10px; gap: 6px; white-space: nowrap; max-width: none; }
   .screen[data-performing=true][data-view=context] .contextColumns { padding: 6px 8px; }
   .screen[data-performing=true][data-view=context] .contextRow { font-size: 15px; padding: 8px; line-height: 1.3; }
   .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 18px; }

@@ -4,7 +4,7 @@ import type { Preferences, ThemePreference } from './preferences';
 export type Theme = 'light' | 'dark';
 const THEME_COLOR: Record<Theme, string> = { dark: '#101613', light: '#f3f5ee' };
 
-export function resolveTheme(preference: ThemePreference, prefersDark: boolean): Theme {
+function resolveTheme(preference: ThemePreference, prefersDark: boolean): Theme {
   return preference === 'auto' ? (prefersDark ? 'dark' : 'light') : preference;
 }
 
@@ -28,7 +28,7 @@ export const BUILT_IN_COLORS = {
   red: { dark: '#ff998c', light: '#c12b1e' },
 } satisfies Record<string, Record<Theme, string>>;
 
-export function applyTheme(theme: Theme) {
+function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[theme]);
 }
@@ -127,19 +127,19 @@ function applyTokens(tokens: readonly string[], values: Record<string, string> |
 }
 
 /** Applies a chosen accent on top of the theme's stylesheet, or clears it so the built-in green returns. */
-export function applyAccent(hex: string, theme: Theme) { applyTokens(ACCENT_TOKENS, isHex(hex) ? accentTokens(hex, theme) : undefined); }
+function applyAccent(hex: string, theme: Theme) { applyTokens(ACCENT_TOKENS, isHex(hex) ? accentTokens(hex, theme) : undefined); }
 
 /** Applies a chosen rest colour, or clears it so the built-in blue returns. */
-export function applyRest(hex: string, theme: Theme) { applyTokens(REST_TOKENS, isHex(hex) ? restTokens(hex, theme) : undefined); }
+function applyRest(hex: string, theme: Theme) { applyTokens(REST_TOKENS, isHex(hex) ? restTokens(hex, theme) : undefined); }
 
 /** Tints the neutrals with the accent's hue at the chosen depth, or clears them when both are the built-in defaults. */
-export function applyNeutrals(accentHex: string, depth: DarkBackground | LightBackground, theme: Theme) {
+function applyNeutrals(accentHex: string, depth: DarkBackground | LightBackground, theme: Theme) {
   const builtIn = !isHex(accentHex) && depth === DEFAULT_BACKGROUND[theme];
   applyTokens(NEUTRAL_TOKENS, builtIn ? undefined : neutralTokens(accentHex, depth, theme));
 }
 
 /** The palette index.html applies before first paint, so a chosen background never flashes the built-in one. Mirrors the script there. */
-export const PALETTE_KEY = 'openwod.palette';
+const PALETTE_KEY = 'openwod.palette';
 function rememberPalette(theme: Theme) {
   const style = document.documentElement.style;
   const tokens = Object.fromEntries([...ACCENT_TOKENS, ...REST_TOKENS, ...NEUTRAL_TOKENS].map(token => [token, style.getPropertyValue(token)]).filter(([, value]) => value));
@@ -149,10 +149,8 @@ function rememberPalette(theme: Theme) {
   } catch { /* Storage unavailable: the page still paints, only the first frame shows the built-in palette. */ }
 }
 
-const NO_CHOICE: Preferences['accent'] = { dark: '', light: '' };
-
 /** Auto follows the operating system and reacts to live changes; an explicit choice overrides it. Each theme applies its own accent, rest colour and background depth. */
-export function useTheme(preference: ThemePreference, accent: Preferences['accent'] = NO_CHOICE, rest: Preferences['restColor'] = NO_CHOICE, background: BackgroundChoice = DEFAULT_BACKGROUND) {
+export function useTheme(preference: ThemePreference, accent: Preferences['accent'], rest: Preferences['restColor'], background: BackgroundChoice) {
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const update = () => {

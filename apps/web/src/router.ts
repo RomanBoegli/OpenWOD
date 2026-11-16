@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const SETTINGS_SECTIONS = ['general', 'player', 'equipment', 'movements', 'authors', 'collections', 'logbook'] as const;
 export type SettingsSection = typeof SETTINGS_SECTIONS[number];
@@ -41,6 +41,5 @@ export function useRoute() {
     window.addEventListener('hashchange', update);
     return () => window.removeEventListener('hashchange', update);
   }, []);
-  const navigate = useCallback((hash: string) => { window.location.hash = hash; }, []);
-  return { route, navigate };
+  return { route };
 }

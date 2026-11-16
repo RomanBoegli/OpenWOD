@@ -4,12 +4,12 @@ import { seedMovements } from '../../../packages/domain/src/movements';
 
 /**
  * Master data on this device: the household document (see packages/domain/src/master-data.ts) plus the editing
- * helpers the settings pages use. Browser storage keeps a copy until the server milestone; every read is sanitised.
+ * helpers the settings pages use. Browser storage still holds the copy from before 1.0 until it is moved (`loadMasterData`);
+ * every read is sanitised.
  */
 import { emptyMasterData, sanitiseMasterData, builtInCollections, editFor, type Collection, type CollectionEdit, type MasterData } from '../../../packages/domain/src/master-data';
-export { emptyMasterData, sanitiseMasterData, builtInCollections, mergeMasterData, isEmptyMasterData, type Collection, type CollectionEdit, type MasterData } from '../../../packages/domain/src/master-data';
+export { emptyMasterData, sanitiseMasterData, type Collection, type MasterData } from '../../../packages/domain/src/master-data';
 export type { Movement };
-export type { Sex } from '../../../packages/domain/src/prescription';
 
 const KEY = 'openwod.master.v1';
 
@@ -199,10 +199,6 @@ export function removeMovementAlias(data: MasterData, spelling: string): MasterD
 
 // ---- Collections ---------------------------------------------------------------------------------------------
 
-/**
- * Replaces a collection in place (so editing never reorders the list) or appends a new one. A workout belongs to one
- * of your collections at a time: the ids it now holds leave every other collection of yours.
- */
 /**
  * Saves a collection: a bundled one as a delta against the registry, your own in place (so editing never reorders
  * the list) or appended. A workout belongs to one collection at a time, so the ids it now holds leave every other

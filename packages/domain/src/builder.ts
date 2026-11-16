@@ -117,7 +117,7 @@ const isList = (format: SectionFormat) => LIST_FORMATS.includes(format);
 /** Manual formats whose movements may also run on the clock. */
 export const TIMED_MOVEMENT_FORMATS: SectionFormat[] = ['forTime', 'strength'];
 /** Whether a movement runs on the clock: every one in a timed circuit, the marked ones in for time and strength. */
-export const isTimed = (format: SectionFormat, slot: BuilderSlot) => format === 'timedCircuit' || (TIMED_MOVEMENT_FORMATS.includes(format) && slot.timed === true);
+const isTimed = (format: SectionFormat, slot: BuilderSlot) => format === 'timedCircuit' || (TIMED_MOVEMENT_FORMATS.includes(format) && slot.timed === true);
 
 function validatePrescription(value: Prescription | undefined, at: string, label: string, issues: BuilderIssue[]) {
   if (!value?.name.trim()) { issues.push({ path: at, message: `${label}: name the movement.` }); return; }

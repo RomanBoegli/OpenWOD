@@ -9,7 +9,6 @@ import { request } from './client';
 
 /** Typed calls for every household API route (apps/server/src/routes.ts). The record shapes live in packages/household. */
 export type { DeviceImportReport, PackDecision, PackImportReport, SessionListItem, StoredWorkout } from '../../../../packages/household/src/types';
-export type { Ready } from './backend';
 
 export const remote = {
   ready: () => request<Ready>('GET', '/health/ready', { timeoutMs: 4000 }),

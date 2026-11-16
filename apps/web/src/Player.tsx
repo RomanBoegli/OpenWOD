@@ -69,7 +69,7 @@ export function exportPackFile(pack: WorkoutPack) {
 }
 
 /** The one big number of a prescription: reps, calories, distance or a target time. */
-export function primaryTarget(value: Prescription): { amount: string; unit: string } | undefined {
+function primaryTarget(value: Prescription): { amount: string; unit: string } | undefined {
   if (value.reps) return { amount: String(value.reps), unit: value.reps === 1 ? 'rep' : 'reps' };
   if (value.calories) return { amount: String(value.calories), unit: 'cal' };
   if (value.distance) return { amount: String(value.distance.value), unit: value.distance.unit };
@@ -79,7 +79,7 @@ export function primaryTarget(value: Prescription): { amount: string; unit: stri
 
 const CAPTIONS: Record<ClockScope, string> = { prep: 'PREP COUNTDOWN', slot: 'WORK REMAINING', interval: 'INTERVAL REMAINING', turn: 'TURN REMAINING', cap: 'TIME CAP REMAINING', elapsed: 'ELAPSED · NO CAP' };
 
-export function resultText(result: SectionResult): string {
+function resultText(result: SectionResult): string {
   const parts: string[] = [];
   if (result.counter) parts.push(`${result.counter.rounds} ${result.counter.rounds === 1 ? 'round' : 'rounds'}${result.counter.reps ? ` + ${result.counter.reps} reps` : ''}`);
   if (result.teamRounds !== undefined) parts.push(`${result.teamRounds} team ${result.teamRounds === 1 ? 'round' : 'rounds'}, ${result.turns} turns`);
@@ -90,7 +90,7 @@ export function resultText(result: SectionResult): string {
 }
 
 type Role = 'A' | 'B';
-interface LaneState { state: 'done' | 'waiting' | 'rest' | 'active'; label: string }
+interface LaneState { state: 'waiting' | 'rest' | 'active'; label: string }
 /**
  * One station as the stage draws it: the lanes or a block's list, and the action bar under them. The live one is read from
  * the session; the ruler's come from the plan, each with all the furniture its block can show at once (UI-27).
@@ -188,7 +188,7 @@ function StageBody({ station, look, live }: { station: Station; look: StageLook;
         {item?.load ? <span className={own.loadLine}><LoadLevels load={item.load} unit={loadUnit} sex={sex(role)} /></span> : null}
         <p>{item ? target || item.load ? item.notes ?? '' : prescriptionText(item) : 'You’re at the finish.'}</p>
       </>}
-      {state && <span className={own.laneState} data-state={state.state}>{state.state === 'done' || state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
+      {state && <span className={own.laneState} data-state={state.state}>{state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
       {has(`done:${role}`) && <button className={`${styles.primaryButton} ${own.laneDone}`} onClick={() => live?.act('done', { athlete: role })}><Icon name="check" />{names[role]} done</button>}
     </section>;
   };

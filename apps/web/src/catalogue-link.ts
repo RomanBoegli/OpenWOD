@@ -9,7 +9,7 @@ import { movementSlug } from '../../../packages/domain/src/catalogue';
  * Linking prescriptions to movement records. A prescription whose name resolves gets the record's id; names stay as
  * written, so a workout file never depends on the catalogue (SHR-02). Unmatched names are what the editor highlights.
  */
-export function linkPrescription(prescription: Prescription, catalogue: Catalogue): Prescription {
+function linkPrescription(prescription: Prescription, catalogue: Catalogue): Prescription {
   if (prescription.movement && catalogue.get(prescription.movement)) return prescription;
   const record = catalogue.byName(prescription.name);
   if (!record) { if (!prescription.movement) return prescription; const { movement: _stale, ...rest } = prescription; return rest; }

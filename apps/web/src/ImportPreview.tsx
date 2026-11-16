@@ -17,10 +17,10 @@ import shared from './App.module.css';
  * equipment and attribution, and a state from its sharing provenance. Known provenance means Skip by default; a
  * newer revision of something imported before can replace it; an id that is taken is remapped on the server.
  */
-export type RowState = 'new' | 'renamed' | 'already' | 'newer';
-export interface ImportRow { workout: Workout; state: RowState; match?: LibraryEntry; decision: PackDecision }
+type RowState = 'new' | 'renamed' | 'already' | 'newer';
+interface ImportRow { workout: Workout; state: RowState; match?: LibraryEntry; decision: PackDecision }
 
-export function rowsFor(workouts: Workout[], entries: LibraryEntry[]): ImportRow[] {
+function rowsFor(workouts: Workout[], entries: LibraryEntry[]): ImportRow[] {
   const taken = new Set(entries.map(entry => entry.workout.id));
   return workouts.map(workout => {
     const match = workout.sharing ? entries.find(entry => entry.workout.sharing?.id === workout.sharing!.id) : undefined;

@@ -17,8 +17,6 @@ export interface Occurrence {
   timing: Timing;
   /** Active-time offset from the start of the workout; absent once an earlier occurrence has no known duration. */
   startMs?: number;
-  /** Offset from the start of its section; absent once an earlier occurrence in the section has no known duration. */
-  sectionStartMs?: number;
   /** 0 for manual occurrences. */
   durationMs: number;
   assignments?: Assignments;
@@ -132,7 +130,6 @@ export function compileWorkout(input: unknown): ExecutionPlan {
         anchor, sectionIndex, sectionId: section.id, phase, timing, durationMs, rounds: structuredClone(rounds), assignments,
       };
       if (known) occurrence.startMs = elapsed;
-      if (sectionKnown) occurrence.sectionStartMs = sectionElapsed;
       if (extra.completion) occurrence.completion = extra.completion;
       if (extra.interval) occurrence.interval = extra.interval;
       if (extra.tasks) occurrence.tasks = extra.tasks;

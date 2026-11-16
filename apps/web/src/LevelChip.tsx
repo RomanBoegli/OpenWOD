@@ -6,8 +6,8 @@ export const LEVEL_LABELS: Record<LoadLevel, string> = { light: 'Light', medium:
 export { LEVEL_LETTERS };
 
 /** A ski-slope style chip: blue L, red M, black H. The letter is always present, so colour is never the only cue. */
-export function LevelChip({ level, title, decorative = false }: { level: LoadLevel; title?: string; decorative?: boolean }) {
-  return <span className={styles.chip} data-level={level} title={title ?? LEVEL_LABELS[level]} aria-label={decorative ? undefined : LEVEL_LABELS[level]} aria-hidden={decorative || undefined}>{LEVEL_LETTERS[level]}</span>;
+function LevelChip({ level }: { level: LoadLevel }) {
+  return <span className={styles.chip} data-level={level} title={LEVEL_LABELS[level]} aria-label={LEVEL_LABELS[level]}>{LEVEL_LETTERS[level]}</span>;
 }
 
 /**

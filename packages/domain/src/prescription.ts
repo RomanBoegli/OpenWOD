@@ -56,7 +56,7 @@ export function levelsText(load: Prescription['load'], options: LoadOptions = {}
   return `${levels.map(level => `${LEVEL_LETTERS[level]} ${loadAmount(load[level]!, options)}`).join(' · ')} ${loadUnitLabel(unit)}`;
 }
 
-export function distanceText(distance: Prescription['distance']): string {
+function distanceText(distance: Prescription['distance']): string {
   return distance ? `${distance.value} ${distance.unit}` : '';
 }
 

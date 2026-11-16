@@ -32,7 +32,7 @@ export const outboxEvents = new EventTarget();
 const notify = () => outboxEvents.dispatchEvent(new Event('change'));
 
 /** 2 s, 4 s, 8 s … capped at one minute. */
-export const nextDelay = (attempts: number) => Math.min(60_000, 2000 * 2 ** Math.max(0, attempts - 1));
+const nextDelay = (attempts: number) => Math.min(60_000, 2000 * 2 ** Math.max(0, attempts - 1));
 
 export type Failure = 'retry' | 'rejected' | 'conflict';
 /** Network and server errors are retried; a validation error never will succeed; a revision conflict needs a decision. */

@@ -113,7 +113,7 @@ export function canonicalYaml(value: unknown): string {
 }
 
 /** Alphabetical, two-space JSON; used for the published JSON Schemas. */
-export function canonicalJson(value: unknown): string {
+function canonicalJson(value: unknown): string {
   const sort = (item: unknown): unknown => {
     if (Array.isArray(item)) return item.map(sort);
     if (item && typeof item === 'object') return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b, 'en')).map(([key, child]) => [key, sort(child)]));
@@ -127,7 +127,7 @@ export function publishedSchema(schema: object): string {
   return canonicalJson({ $schema: 'http://json-schema.org/draft-07/schema#', ...schema });
 }
 
-export function toWorkoutFile(workout: Workout): Record<string, unknown> {
+function toWorkoutFile(workout: Workout): Record<string, unknown> {
   return { format: FILE_FORMAT, formatVersion: FILE_VERSION, workout: toFileDurations(structuredClone(workout)) };
 }
 

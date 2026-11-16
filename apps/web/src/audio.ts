@@ -36,7 +36,7 @@ const PREFERRED = /enhanced|premium|siri|natural|neural|hd\b/i;
 const NOVELTY = /bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|albert|fred|junior|kathy|ralph|eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley/i;
 
 /** Ranks installed voices: the user's choice first, then enhanced/neural voices in the interface language, then local ones. */
-export function voiceScore(voice: SpeechSynthesisVoice, lang = 'en'): number {
+function voiceScore(voice: SpeechSynthesisVoice, lang = 'en'): number {
   const sameLanguage = voice.lang.toLowerCase().startsWith(lang.toLowerCase());
   return (sameLanguage ? 40 : 0) + (PREFERRED.test(voice.name) ? 30 : 0) + (voice.localService ? 10 : 0) + (voice.default ? 5 : 0) - (NOVELTY.test(voice.name) ? 50 : 0);
 }

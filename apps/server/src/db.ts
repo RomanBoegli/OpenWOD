@@ -109,7 +109,7 @@ export const MIGRATIONS: Migration[] = [
     `,
   },
 ];
-export const latestSchemaVersion = () => MIGRATIONS[MIGRATIONS.length - 1].version;
+const latestSchemaVersion = () => MIGRATIONS[MIGRATIONS.length - 1].version;
 
 export class SchemaNewerError extends Error {
   constructor(readonly found: number, readonly supported: number) {

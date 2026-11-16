@@ -1,6 +1,6 @@
 import { displayTime, type SectionResult } from '../../../packages/engine/src';
 import type { SessionOutcome, SessionRecord } from '../../../packages/engine/src/records';
-export type { SessionRecord, SessionOutcome } from '../../../packages/engine/src/records';
+export type { SessionRecord } from '../../../packages/engine/src/records';
 
 /**
  * Sessions on this device: logged when a workout finishes, was played to at least 80 % of its timed or capped
@@ -9,8 +9,8 @@ export type { SessionRecord, SessionOutcome } from '../../../packages/engine/src
  */
 
 const KEY = 'openwod.sessions.v1';
-export const SESSION_LIMIT = 500;
-export const DONE_THRESHOLD = 0.8;
+const SESSION_LIMIT = 500;
+const DONE_THRESHOLD = 0.8;
 
 export function loadSessions(): SessionRecord[] {
   try {
@@ -29,7 +29,7 @@ export function countsAsDone(outcome: SessionOutcome, activeMs: number, plannedM
 
 export type SessionSummary = Pick<SessionRecord, 'id' | 'workoutId' | 'finishedAt' | 'outcome' | 'completion'>;
 /** A session counts as done on the cards when it finished or covered enough of the plan; an abandoned one is history, not a tick. */
-export const isDone = (session: Pick<SessionRecord, 'outcome' | 'completion'>) => session.outcome !== 'aborted' || session.completion >= DONE_THRESHOLD;
+const isDone = (session: Pick<SessionRecord, 'outcome' | 'completion'>) => session.outcome !== 'aborted' || session.completion >= DONE_THRESHOLD;
 
 export function lastDone<T extends SessionSummary>(sessions: T[], workoutId: string): T | undefined {
   return sessions.filter(item => item.workoutId === workoutId && isDone(item)).sort((a, b) => b.finishedAt.localeCompare(a.finishedAt))[0];

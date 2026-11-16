@@ -6,7 +6,7 @@ import { test as base, expect, type TestInfo } from '@playwright/test';
  * reload within a test keeps its own. The `api` helper talks to the same scope for seeding and assertions. The static
  * projects need none of this: every test gets a fresh browser context, so its own IndexedDB library.
  */
-export const API = 'http://127.0.0.1:8787';
+const API = 'http://127.0.0.1:8787';
 
 export interface Api {
   scope: string;
