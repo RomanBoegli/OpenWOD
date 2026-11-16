@@ -300,18 +300,29 @@ test.describe('workout view settings', () => {
     await expectParts(none);
   });
 
-  test('sound and voice are toggles: three sound modes and one cell per voice, all the same size', async ({ page }) => {
+  test('sound is a toggle of three modes, and the voice is a list of every recorded voice and the device’s own, played when chosen', async ({ page }) => {
     // The recorded voices are rendered into the image, so a checkout may have none: the list is given here.
     const packs = ['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)'].map((label, index) => ({ id: `voice-${index + 1}`, label }));
     await page.route('**/cues/packs.json', route => route.fulfill({ json: packs }));
     const stored = () => page.evaluate(() => { const { soundMode, cueSource, cuePack } = JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as Record<string, unknown>; return { soundMode, cueSource, cuePack }; });
     await settingsAt(page, '/#/settings/player');
-    const sound = page.getByRole('radiogroup', { name: 'Sound', exact: true }), voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
+    const sound = page.getByRole('radiogroup', { name: 'Sound', exact: true }), voice = page.getByRole('combobox', { name: 'Voice', exact: true });
     // Three tests: the voice, the beeps, and both as a session plays them. Each follows the Sound choice.
     const [testVoice, testBeeps, testBoth] = ['Test voice', 'Test beeps', 'Test both'].map(name => page.getByRole('region', { name: 'Sound and voice' }).getByRole('button', { name, exact: true }));
     await expect(sound.getByRole('radio')).toHaveCount(3);
     await expect(sound.getByRole('radio', { name: 'Voice + beeps' })).toBeChecked();
     for (const button of [testVoice, testBeeps, testBoth]) await expect(button).toBeEnabled();
+    // Every installed voice and the device's own, too many for a toggle; the first pack speaks until one is chosen.
+    await expect(voice.locator('option')).toHaveText([...packs.map(pack => pack.label), 'Device voice only']);
+    await expect(voice).toHaveValue(packs[0].id);
+    // Choosing a voice plays it: once a click has unlocked the sound, the chosen pack's clips are fetched for the sample.
+    await testVoice.click();
+    const [clip] = await Promise.all([page.waitForRequest(request => request.url().includes(`/cues/${packs[3].id}/`)), voice.selectOption({ label: packs[3].label })]);
+    expect(clip.url()).toMatch(/\.mp3$/);
+    await expect.poll(stored).toMatchObject({ cueSource: 'clips', cuePack: packs[3].id });
+    await expect(voice).toHaveValue(packs[3].id);
+    await voice.selectOption('device');
+    await expect.poll(stored).toMatchObject({ cueSource: 'device' });
     await sound.getByRole('radio', { name: 'Beeps only' }).check();
     await expect.poll(stored).toMatchObject({ soundMode: 'beeps' });
     await expect(testBeeps).toBeEnabled();
@@ -319,47 +330,17 @@ test.describe('workout view settings', () => {
     await sound.getByRole('radio', { name: 'Silent' }).check();
     await expect.poll(stored).toMatchObject({ soundMode: 'silent' });
     for (const button of [testVoice, testBeeps, testBoth]) await expect(button).toBeDisabled();
-    // Every installed voice and the device's own; the first pack speaks until one is chosen.
-    await expect(voice.getByRole('radio')).toHaveCount(packs.length + 1);
-    await expect(voice.getByRole('radio', { name: packs[0].label })).toBeChecked();
-    await voice.getByRole('radio', { name: 'Device voice only' }).check();
-    await expect.poll(stored).toMatchObject({ cueSource: 'device' });
-    await voice.getByRole('radio', { name: packs[3].label }).check();
-    await expect.poll(stored).toMatchObject({ cueSource: 'clips', cuePack: packs[3].id });
-    await expect(voice.getByRole('radio', { name: 'Device voice only' })).not.toBeChecked();
-    // Three cells to a row, two on a phone, and every cell as large as the others whatever its name needs.
-    for (const [width, columns] of [[1280, 3], [390, 2]]) {
-      await page.setViewportSize({ width, height: 844 });
-      const cells = await voice.locator('label').evaluateAll(labels => labels.map(label => { const box = label.getBoundingClientRect(); return { x: Math.round(box.x), size: `${Math.round(box.width)} x ${Math.round(box.height)}` }; }));
-      expect(new Set(cells.map(cell => cell.size)).size).toBe(1);
-      expect(new Set(cells.map(cell => cell.x)).size).toBe(columns);
-    }
   });
 
-  test('a few voices fill their row: one recorded voice and the device voice share it in halves', async ({ page }) => {
-    await page.route('**/cues/packs.json', route => route.fulfill({ json: [{ id: 'british', label: 'British male (Alan)' }] }));
-    await settingsAt(page, '/#/settings/player');
-    const voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
-    await expect(voice.getByRole('radio')).toHaveCount(2);
-    for (const width of [1280, 390]) {
-      await page.setViewportSize({ width, height: 844 });
-      // No empty slot: the last cell ends where the control's inner edge is.
-      const { inner, last, sizes } = await voice.evaluate(group => { const labels = [...group.querySelectorAll('label')].map(label => label.getBoundingClientRect()); const box = group.getBoundingClientRect(), style = getComputedStyle(group); return { inner: Math.round(box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth)), last: Math.round(labels[labels.length - 1].right), sizes: labels.map(label => Math.round(label.width)) }; });
-      expect(Math.abs(inner - last)).toBeLessThanOrEqual(1);
-      expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
-    }
-  });
-
-  test('without recorded voices the Voice toggle says so in a cell that cannot be chosen', async ({ page }) => {
+  test('without recorded voices the Voice list says so in an entry that cannot be chosen', async ({ page }) => {
     await page.route('**/cues/packs.json', route => route.fulfill({ json: [] }));
     await settingsAt(page, '/#/settings/player');
-    const voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
-    await expect(voice.getByRole('radio')).toHaveCount(2);
-    const missing = voice.getByRole('radio', { name: 'Recorded voices (not installed in this build)' });
-    await expect(missing).toBeDisabled();
-    await expect(missing).toBeChecked();
-    await voice.getByRole('radio', { name: 'Device voice only' }).check();
-    await expect(missing).not.toBeChecked();
+    const voice = page.getByRole('combobox', { name: 'Voice', exact: true });
+    await expect(voice.locator('option')).toHaveText(['Recorded voices (not installed in this build)', 'Device voice only']);
+    await expect(voice.locator('option').first()).toHaveAttribute('disabled', '');
+    await expect(voice).toHaveValue('');
+    await voice.selectOption('device');
+    await expect(voice).toHaveValue('device');
     await expect.poll(() => page.evaluate(() => (JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as { cueSource?: string }).cueSource)).toBe('device');
   });
 

@@ -1,4 +1,4 @@
-import { Fragment, type CSSProperties } from 'react';
+import { Fragment } from 'react';
 import { TimerPreview } from './TimerPreview';
 import type { Preferences } from '../preferences';
 import { Switch } from '../Switch';
@@ -69,21 +69,21 @@ function SoundSettings({ preferences, onPreferencesChange, clipsReady, packs, au
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
   /** The voice in use: the device's, the chosen pack, or the first pack while none was chosen ('' when no pack is installed). */
   const voice = preferences.cueSource === 'device' ? 'device' : preferences.cuePack || (packs[0]?.id ?? '');
-  /** The cells of the Voice toggle to a row, so that no slot stays empty where the count allows it: two or three cells share one row, six make two rows of three, four two rows of two. */
-  const cells = Math.max(packs.length, 1) + 1;
-  const voiceColumns = cells <= 3 ? cells : cells % 3 === 0 ? 3 : cells % 2 === 0 ? 2 : 3;
+  /** Choosing a voice plays it, as choosing a beep tone does. The audio takes the choice at once, a render ahead of the stored setting, and stays quiet while the voice is off. */
+  const chooseVoice = (value: string) => {
+    if (value === 'device') { update({ cueSource: 'device' }); audio.cueSource = 'device'; }
+    else { update({ cueSource: 'clips', cuePack: value }); audio.cueSource = 'clips'; audio.cuePack = value; }
+    if (preferences.soundMode === 'voice') void audio.testVoice();
+  };
   return <section className={styles.card} aria-labelledby="sound-title">
     <h2 id="sound-title">Sound and voice</h2>
     <div className={styles.field}><span id="sound-label">Sound</span><div className={shared.segmented} role="radiogroup" aria-labelledby="sound-label">{([['voice', 'Voice + beeps'], ['beeps', 'Beeps only'], ['silent', 'Silent']] as const).map(([value, label]) => <label key={value} data-checked={preferences.soundMode === value}><input type="radio" name="sound-mode" value={value} checked={preferences.soundMode === value} onChange={() => update({ soundMode: value })} />{label}</label>)}</div></div>
-    <div className={styles.field}><span id="voice-label">Voice</span><div className={`${shared.segmented} ${styles.voices}`} style={{ '--voice-columns': voiceColumns } as CSSProperties} role="radiogroup" aria-labelledby="voice-label">
-      {packs.map(pack => <label key={pack.id} data-checked={voice === pack.id}><input type="radio" name="voice" value={pack.id} checked={voice === pack.id} onChange={() => update({ cueSource: 'clips', cuePack: pack.id })} />{pack.label}</label>)}
-      {packs.length === 0 && <label data-checked={voice === ''}><input type="radio" name="voice" value="" checked={voice === ''} disabled />Recorded voices (not installed in this build)</label>}
-      <label data-checked={voice === 'device'}><input type="radio" name="voice" value="device" checked={voice === 'device'} onChange={() => update({ cueSource: 'device' })} />Device voice only</label>
-    </div></div>
+    {/* A list, not a toggle: a release carries five recorded voices beside the device's own, while a checkout may have rendered one or none. */}
+    <label className={styles.field}>Voice<select value={voice} onChange={event => chooseVoice(event.target.value)}>{packs.map(pack => <option key={pack.id} value={pack.id}>{pack.label}</option>)}{packs.length === 0 && <option value="" disabled>Recorded voices (not installed in this build)</option>}<option value="device">Device voice only</option></select></label>
     <div className={styles.notes}>
       {preferences.cueSource === 'clips' && clipsReady === false && <small className={shared.fieldNote}>The recorded voices are not installed in this build, so the device voice is used. The Docker image renders them; locally run `npm run cues:generate`.</small>}
-      {/* The toggle above lists the voices this build carries, so the note names none and counts none. */}
-      <small className={shared.fieldNote}>The recorded voices are rendered offline with Piper and ship with the app. The chosen voice says Go, Rest, the countdown, who is up and every bundled movement. Your own movements are read by the device’s best English voice.</small>
+      {/* The list above names the voices this build carries, so the note names none and counts none. */}
+      <small className={shared.fieldNote}>The recorded voices are rendered offline with Piper and ship with the app. The chosen voice says Go, Rest, the countdown, who is up and every bundled movement. Your own movements are read by the device’s best English voice. Choosing a voice plays it.</small>
     </div>
     <div className={styles.twoUp}>
       <label className={styles.field}>Voice volume<input type="range" min="0" max="1" step="0.1" value={preferences.volume} onChange={event => update({ volume: Number(event.target.value) })} /></label>

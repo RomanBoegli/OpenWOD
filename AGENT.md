@@ -449,12 +449,12 @@ The clock is always bold and has no weight or size option.
 Every colour is chosen with one compact well that shows the colour as it will appear, opens the platform's own picker with the ready-made choices in it, and brings a reset to the built-in colour while a custom one is set.
 Appearance has one row per theme with that theme's accent and background, and every phase colour but work (rest, paused, first and second milestone) has a choice per theme, applied inside the player and its miniature only.
 The parts of the overall progress (the bar, the percentage under it, the percentage beside the clock and the round donut) are switched independently with checkboxes: every combination fits, a part that is off leaves no gap, the clock takes the width the donut and the percentage give back, and the miniature shows the chosen parts.
-A choice between a few named options (default view, sound, voice) is a toggle, not a dropdown, and a stored setting of an older shape is carried over, also when it arrives from another device.
+A choice between two or three named options (default view, sound) is a toggle, a longer list (the six voices, the beep tones) is a dropdown, and a stored setting of an older shape is carried over, also when it arrives from another device.
 A field with a visible label carries no example or hint inside it.
 
 # 9 Audio and spoken cues
 
-**AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select the voice and its volume, with no speed option since 1.6.0. The beeps SHALL have their own volume and a choice of tones (version 1.11). The voice, the beeps and both together SHALL each be testable on their own. No microphone permission is needed.
+**AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select the voice and its volume, with no speed option since 1.6.0. Choosing a voice or a beep tone SHALL play it. The beeps SHALL have their own volume and a choice of tones (version 1.11). The voice, the beeps and both together SHALL each be testable on their own. No microphone permission is needed.
 One tone, the truck horn, SHALL play a bundled recording scheduled on the same audio clock as the synthesised beeps, a short blast for each countdown second and a longer one for the boundary, and SHALL fall back to the classic beep until the recording has loaded or if it cannot be decoded.
 With the truck horn the clock SHALL hold at each timed boundary for the length of the horn's blast, outside active time, so the next slot starts as the blast ends.
 
