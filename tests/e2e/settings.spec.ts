@@ -306,15 +306,18 @@ test.describe('workout view settings', () => {
     const stored = () => page.evaluate(() => { const { soundMode, cueSource, cuePack } = JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as Record<string, unknown>; return { soundMode, cueSource, cuePack }; });
     await settingsAt(page, '/#/settings/player');
     const sound = page.getByRole('radiogroup', { name: 'Sound', exact: true }), voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
-    const test = page.getByRole('region', { name: 'Sound and voice' }).getByRole('button', { name: 'Test sound' });
+    // Three tests: the voice, the beeps, and both as a session plays them. Each follows the Sound choice.
+    const [testVoice, testBeeps, testBoth] = ['Test voice', 'Test beeps', 'Test both'].map(name => page.getByRole('region', { name: 'Sound and voice' }).getByRole('button', { name, exact: true }));
     await expect(sound.getByRole('radio')).toHaveCount(3);
     await expect(sound.getByRole('radio', { name: 'Voice + beeps' })).toBeChecked();
+    for (const button of [testVoice, testBeeps, testBoth]) await expect(button).toBeEnabled();
     await sound.getByRole('radio', { name: 'Beeps only' }).check();
     await expect.poll(stored).toMatchObject({ soundMode: 'beeps' });
-    await expect(test).toBeEnabled();
+    await expect(testBeeps).toBeEnabled();
+    for (const button of [testVoice, testBoth]) await expect(button).toBeDisabled();
     await sound.getByRole('radio', { name: 'Silent' }).check();
     await expect.poll(stored).toMatchObject({ soundMode: 'silent' });
-    await expect(test).toBeDisabled();
+    for (const button of [testVoice, testBeeps, testBoth]) await expect(button).toBeDisabled();
     // Every installed voice and the device's own; the first pack speaks until one is chosen.
     await expect(voice.getByRole('radio')).toHaveCount(packs.length + 1);
     await expect(voice.getByRole('radio', { name: packs[0].label })).toBeChecked();

@@ -367,16 +367,34 @@ export class WorkoutAudio {
     return 'speech';
   }
 
-  async test() {
+  /** What the tests announce: a pair's stations, as a session says them. */
+  private static readonly sample: Assignment = { A: { name: 'Row', movement: 'row' }, B: { name: 'Kettlebell swings', movement: 'kettlebell-swing' } };
+
+  /** Unlocks the sound and decodes what the sample announcement needs. */
+  private async prepareSample() {
     await this.unlock();
     await this.preload();
-    const sample: Assignment = { A: { name: 'Row', movement: 'row' }, B: { name: 'Kettlebell swings', movement: 'kettlebell-swing' } };
     // The same resolution as a session, so a hidden or replaced movement is prepared under the id that will be announced.
-    await this.prepareNames([sample.A, sample.B!].map(lane => this.nameKey(lane)));
+    await this.prepareNames([WorkoutAudio.sample.A, WorkoutAudio.sample.B!].map(lane => this.nameKey(lane)));
     if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
-    if (this.context && this.mode !== 'silent') this.beep(this.context.currentTime + .1, .15, 880);
-    const result = this.announce(sample, 'Ready to train.', ['get-ready'], (this.context?.currentTime ?? 0) + .4);
+  }
+
+  /** The sample announcement in the chosen voice, from `at` on the audio clock. */
+  private saySample(at: number) {
+    const result = this.announce(WorkoutAudio.sample, 'Ready to train.', ['get-ready'], at);
     if (result === 'mixed') this.onError?.('The movement names were read by the device voice: their recordings could not be loaded. Reload the page and try again, or pick another voice.');
+  }
+
+  /** The countdown and a Go from `at`, and the instant the Go has ended. */
+  private countdown(at: number): number {
+    for (const step of [0, 1, 2]) this.beep(at + step * .4, .08, 620);
+    return this.beep(at + 1.2, .18, 880);
+  }
+
+  /** The chosen voice alone, so it can be judged without the beeps. */
+  async testVoice() {
+    await this.prepareSample();
+    this.saySample((this.context?.currentTime ?? 0) + .1);
   }
 
   /** The countdown and a Go, as beeps only, so the tone and level can be judged without the voice. */
@@ -384,9 +402,15 @@ export class WorkoutAudio {
     await this.unlock();
     if (!this.context || this.mode === 'silent') return;
     if (this.tone === 'horn') await this.loadHorn();
-    const now = this.context.currentTime + .1;
-    for (const step of [0, 1, 2]) this.beep(now + step * .4, .08, 620);
-    this.beep(now + 1.2, .18, 880);
+    this.countdown(this.context.currentTime + .1);
+  }
+
+  /** Both, as a session sounds: the countdown with its Go, then the chosen voice. */
+  async test() {
+    await this.prepareSample();
+    if (this.tone === 'horn') await this.loadHorn();
+    const start = (this.context?.currentTime ?? 0) + .1;
+    this.saySample((this.context && this.mode !== 'silent' ? this.countdown(start) : start) + .25);
   }
 
   private lastTurn?: { key: string; number: number };
