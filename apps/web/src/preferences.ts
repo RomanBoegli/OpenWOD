@@ -9,7 +9,6 @@ export interface Preferences {
   names: { A: string; B: string };
   soundMode: SoundMode;
   cueSource: CueSource;
-  rate: number;
   volume: number;
   /** The beeps' own level (0 to 1) and character, independent of the voice. */
   beepVolume: number;
@@ -51,7 +50,7 @@ export interface Preferences {
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: { dark: '', light: '' }, second: { dark: '', light: '' } }, pauseColor: { dark: '', light: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: { bar: true, barPercent: true, clockPercent: false, donut: true }, nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: { dark: '', light: '' }, second: { dark: '', light: '' } }, pauseColor: { dark: '', light: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: { bar: true, barPercent: true, clockPercent: false, donut: true }, nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -95,7 +94,6 @@ export function normalisePreferences(value: unknown): Preferences {
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
       soundMode: oneOf(stored.soundMode, ['voice', 'beeps', 'silent'], defaultPreferences.soundMode),
       cueSource: oneOf(stored.cueSource, ['clips', 'device'], defaultPreferences.cueSource),
-      rate: clamp(stored.rate, .7, 1.3, defaultPreferences.rate),
       volume: clamp(stored.volume, 0, 1, defaultPreferences.volume),
       // Before 1.1.0 one level served voice and beeps; the beeps start from that level.
       beepVolume: clamp(stored.beepVolume, 0, 1, clamp(stored.volume, 0, 1, defaultPreferences.beepVolume)),

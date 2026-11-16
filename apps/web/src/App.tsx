@@ -63,7 +63,6 @@ export default function App() {
   audio.onClips = setClipsReady;
   audio.onPacks = setPacks;
   audio.cuePack = preferences.cuePack;
-  audio.rate = preferences.rate;
   audio.volume = preferences.volume;
   audio.beepVolume = preferences.beepVolume;
   audio.tone = preferences.beepTone;

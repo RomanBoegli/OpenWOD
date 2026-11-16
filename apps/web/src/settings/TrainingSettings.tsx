@@ -86,13 +86,10 @@ export function SoundSettings({ preferences, onPreferencesChange, clipsReady, pa
       <small className={shared.fieldNote}>The recorded voices are rendered offline with Piper and ship with the app. The chosen voice says Go, Rest, the countdown, who is up and every bundled movement. Your own movements are read by the device’s best English voice.</small>
     </div>
     <div className={styles.twoUp}>
-      <label className={styles.field}>Device voice speed<input type="range" min="0.7" max="1.3" step="0.1" value={preferences.rate} onChange={event => update({ rate: Number(event.target.value) })} /></label>
       <label className={styles.field}>Voice volume<input type="range" min="0" max="1" step="0.1" value={preferences.volume} onChange={event => update({ volume: Number(event.target.value) })} /></label>
-    </div>
-    <div className={styles.twoUp}>
-      <label className={styles.field}>Beep tone<select value={preferences.beepTone} onChange={event => { update({ beepTone: event.target.value as Preferences['beepTone'] }); audio.tone = event.target.value as Preferences['beepTone']; void audio.testBeeps(); }}>{BEEP_TONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label className={styles.field}>Beep volume<input type="range" min="0" max="1" step="0.1" value={preferences.beepVolume} onChange={event => update({ beepVolume: Number(event.target.value) })} /></label>
     </div>
+    <label className={styles.field}>Beep tone<select value={preferences.beepTone} onChange={event => { update({ beepTone: event.target.value as Preferences['beepTone'] }); audio.tone = event.target.value as Preferences['beepTone']; void audio.testBeeps(); }}>{BEEP_TONES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
     <small className={shared.fieldNote}>The beeps have their own level, so they can be louder than the voice when music is playing. Gym timer is the long, held beep of a gym clock, Alarm is harsher still, and Truck horn plays a recorded air horn. Choosing a tone plays it.</small>
     {/* Each part of the sound on its own and both as a session plays them. A test follows the Sound choice above, so there is no voice to test while it is off. */}
     <div className={styles.buttonRow}>

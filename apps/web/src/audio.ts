@@ -64,7 +64,6 @@ export class WorkoutAudio {
   private preloading?: Promise<void>;
   mode: SoundMode = 'voice';
   cueSource: CueSource = 'clips';
-  rate = 1;
   /** Voice volume, for the recorded clips and the device voice. */
   volume = .7;
   /** The beeps have their own level so they can cut through music while the voice stays conversational. */
@@ -324,7 +323,6 @@ export class WorkoutAudio {
     utterance.lang = lang;
     const voice = pickDefaultVoice(window.speechSynthesis.getVoices(), lang) ?? pickDefaultVoice(window.speechSynthesis.getVoices());
     if (voice) utterance.voice = voice;
-    utterance.rate = this.rate;
     utterance.volume = this.volume;
     utterance.onerror = event => { if (!['interrupted', 'canceled'].includes(event.error)) this.onError?.('Voice unavailable. Local beeps are still enabled.'); };
     window.speechSynthesis.speak(utterance);
