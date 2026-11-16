@@ -17,7 +17,7 @@ workout:
     author: CrossFit
     sourceUrl: https://www.crossfit.com/benchmark/cindy
   equipment:
-    - Pull-up bar
+    - Pull-Up Bar
   participants: 1
   prep: 10s
   sections:
@@ -31,9 +31,9 @@ workout:
         id: cindy-round
         type: sequence
         children:
-          - { id: pull-ups, type: task, assignments: { A: { name: Pull-ups, reps: 5 } } }
-          - { id: push-ups, type: task, assignments: { A: { name: Push-ups, reps: 10 } } }
-          - { id: squats, type: task, assignments: { A: { name: Air squats, reps: 15 } } }
+          - { id: pull-ups, type: task, assignments: { A: { name: Pull-Ups, reps: 5 } } }
+          - { id: push-ups, type: task, assignments: { A: { name: Push-Ups, reps: 10 } } }
+          - { id: squats, type: task, assignments: { A: { name: Air Squats, reps: 15 } } }
 ```
 
 ## Envelope
@@ -58,7 +58,7 @@ Import rejects YAML anchors, aliases and duplicate keys, files over 1 MB, duplic
 | `id`, `revision`, `title`, `description` | Identity and text. Imports that collide with an existing id become a copy with a free id, or replace a saved workout on explicit confirmation. |
 | `attribution` | Optional `author`, `sourceUrl` (metadata, never fetched), `licence`, `notes`. Renaming, merging or deleting an author under Settings → Authors changes what the app shows and searches, never the file. |
 | `sharing` | Optional provenance: a stable `id`, the author's `sourceRevision` at export, and `derivedFrom` (`id`, `sourceRevision`) on a derivative. Assigned on first export, kept on import, separate from the local `id` and `revision`. |
-| `equipment` | Declared equipment. The app also infers equipment from movement names and lets you merge spellings in settings. |
+| `equipment` | Declared equipment, in Title Case ("Pull-Up Bar"). The app also infers equipment from movement names, shows every name in Title Case however it was written, and lets you merge spellings in settings. |
 | `participants` | `1` or `2`. A and B are lanes, not people. Names are a device setting. |
 | `prep` | The countdown before the first section, 0 to 60 seconds. |
 | `sections` | One or more sections, each with a `format`, a `transitionAfter` rule (`manualReady` waits for a tap, `automatic` continues) and a `body`. |

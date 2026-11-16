@@ -30,4 +30,4 @@ node assets/brand/generate.mjs
 
 The generator uses only Node's standard library and reproduces all five SVGs. Edit the palette, outline geometry, or layout in `generate.mjs`; there are no third-party font files or runtime dependencies. The raster preview is an optional rendering of the comparison SVG, not part of the vector generation step.
 
-These assets are provided for the OpenWOD branding work. They have not yet replaced the current app header or favicon.
+The app draws the symbol from the same geometry: `apps/web/src/BrandMark.tsx` in the header, with the theme's colours, and `apps/web/public/favicon.svg` with the home-screen icons beside it.

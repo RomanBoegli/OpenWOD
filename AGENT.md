@@ -25,7 +25,7 @@ This specification defines observable behaviour, data semantics, operating const
 
 Requirements carry stable IDs. Changes should preserve IDs, record the reason, and update associated acceptance fixtures. All unmarked normative requirements are P0. Numerical limits and UI defaults below are proposed product decisions, not facts about the users' hardware.
 
-The complete P0 scope is the dependable first release, not a prerequisite for reviewing an early usable version. Phase 2 of the original plan delivered an initial household version for saved paired timed workouts and file sharing; the remaining formats and advanced authoring follow before the complete P0 release. Partial versions SHALL identify unsupported capabilities and SHALL NOT claim complete P0 compliance.
+The complete P0 scope is the dependable first release. Section 15 records what is delivered and what is deferred by decision.
 
 Success means the couple can create a workout once, select it on the iPad, press Play, and complete a timed partner session without touching the screen again. Completion-driven formats require only meaningful actions such as Switch, Done, or Finish.
 
@@ -33,7 +33,7 @@ Success means the couple can create a workout once, select it on the iPad, press
 
 ## 2.1 Included in the first release
 
-- A shared household exercise and workout library, plus named collections of workouts called programs.
+- A shared household movement and workout library, plus named collections of workouts.
 
 - One or two athlete profiles, mapped to stable A and B positions at session start.
 
@@ -45,33 +45,34 @@ Success means the couple can create a workout once, select it on the iPad, press
 
 - A distance-readable workout player, optional contextual list view, audio cues, and an animated screen-edge timer.
 
-- Basic session results, local interruption recovery, portable JSON workout/program import/export, and server backup/restore. One workout per file is a first-class sharing workflow.
+- Basic session results, local interruption recovery, portable YAML workout and pack import/export, and server backup/restore. One workout per file is a first-class sharing workflow.
 
 - GitHub Actions image publishing, Docker Compose, and Portainer Community Edition deployment on Docker Standalone.
 
 ## 2.2 Explicitly deferred
 
-P1: separate login accounts, richer progress comparisons, reusable section templates, calendar scheduling, a larger exercise catalogue, configurable language packs, and optional locally hosted speech generation.
+P1: separate login accounts, richer progress comparisons, reusable section templates, calendar scheduling and configurable language packs.
 
 P2: independent athlete timelines, live synchronisation across multiple devices, remote-control phones, wearables, equipment sensors, automatic rep detection, voice commands, workout generation by AI (a local rule-based generator is planned under BLD-13, section 15), a hosted public workout directory or social sharing service, leaderboards, nutrition tracking, and official competition scoring. Sharing portable workout files between installations is P0 and requires no public service.
 
 P0 is one authoritative player device per session. Two profiles do not imply two independently running timers. A simple household application does not require microservices or a database server.
+Ideas beyond this scope are tracked as GitHub issues with the `enhancement` label, not in this file.
 
 ## 2.3 Defaults that permit implementation now
 
 | Decision | Baseline |
 | - | - |
-| Interface and speech | English; kg, metres, kilometres, and machine calories. Schema permits other units. |
+| Interface and speech | English; kg or lb, metres, kilometres, and machine calories. |
 | Athlete identities | A and B are session roles; display names are editable. A stays left, B stays right. |
-| Access | One household login, shared library, optional persistent trusted-device session. Profiles are not security boundaries. |
-| Display | Responsive web app; desktop Safari/Firefox and half-width windows first for UX review, with tablet and phone reflow from the start. Dark high-contrast player. |
+| Access | No login (NFR-09 is deferred): one shared library on a trusted home network. Profiles are not security boundaries. |
+| Display | Responsive web app; desktop Safari/Firefox and half-width windows first for UX review, with tablet and phone reflow from the start. A dark and a light theme, both high-contrast. |
 | Timer perimeter | Remaining time drains clockwise from a full border to empty. |
 | Prep | One configurable 10-second countdown before starting; excluded from workout score. |
 | Section boundaries | Manual Ready by default; explicit automatic continuation permitted. |
 | Hidden app | Auto-pause at visibility loss when detected; return requires Resume. |
 | Interrupted reload | Recover paused from the last durable local checkpoint; no automatic wall-time catch-up. |
 | Deployment | One application container, SQLite in a named Docker volume, one replica. |
-| HTTPS | Trusted HTTPS for the intended iPad experience, normally through an existing reverse proxy. |
+| HTTPS | Trusted HTTPS for the intended iPad experience, through an existing reverse proxy or served by the container itself (DEP-18). |
 
 Validate layout and interactions first in desktop browsers and resized windows. Later real-device smoke tests cover touch, audio, wake lock, safe areas, and performance; physical iPad availability SHALL NOT block initial engineering or editor work.
 
@@ -85,16 +86,16 @@ Validate layout and interactions first in desktop browsers and resized windows. 
 
 | Use case | Expected flow |
 | - | - |
-| Reuse a workout | Library → workout summary → choose athletes and overrides → audio/display readiness → Play. |
+| Reuse a workout | Library → Start on the card or on the workout's page, which begins the session with that tap (UI-25). |
 | Build a circuit | Add activities → set work and transition time → set repeats and round rest → inspect expanded preview → save. |
 | Train in pairs | Assign A/B tasks per slot → preserve lane positions → automatically change tasks at timed boundaries. |
 | AMRAP | Display the active exercise block and cap; optionally count rounds; finish at the cap. |
 | You-go-I-go | Show the active athlete and task; Switch records a completed turn; the other athlete becomes active. |
 | HYROX-style session | Alternate run and station tasks; Done records a split and advances; no distance completion is inferred. |
 | Recover interruption | Show recovered workout, current position, and elapsed time; Resume or end as Aborted with Interrupted flagged. |
-| Share a WOD | Workout menu → Export workout → send the .wod.json file through an existing channel. |
-| Receive a WOD | Library or administration → Import → select file → review workout and conflicts → import a local copy → preview/play. |
-| Share a collection | Administration → Export selected workouts or program → send one .wods.json pack; recipient imports without setting up catalogue records. |
+| Share a WOD | Workout's page → Export → send the `.wod.yaml` file through an existing channel. |
+| Receive a WOD | Library → Import → select file → review workout and conflicts → import a local copy → preview/play. |
+| Share a collection | Library → export the selected workouts or a collection → send one `.wods.yaml` pack. The recipient imports without setting up catalogue records. |
 | Deploy | Portainer reads Compose from GitHub, pulls the image, creates storage, and starts a healthy service. |
 
 # 4 Domain vocabulary and workout semantics
@@ -138,6 +139,8 @@ The interface calls a section a block, while the code and the file format keep `
 
 **LIB-07** The library SHALL offer the sort Recently added: saved workouts by the date they joined the library, newest first, a workout still waiting for the server counting as the newest, and bundled workouts, which carry no date, after them by title. An edit keeps the date.
 
+**LIB-08** Equipment names SHALL be shown in Title Case ("Pull-Up Bar", "Treadmill or Running Route") wherever they appear, whatever case a file, an earlier version or a keyboard wrote them in. A part with a capital of its own ("SkiErg", "GHD") SHALL stay as written. A stored workout keeps its text, a merge or rename SHALL store the Title Case spelling, and what a household ticked as its own equipment SHALL follow the name's loose identity, not its spelling.
+
 ## 5.2 Builder
 
 **BLD-01** The builder SHALL support add, edit, duplicate, delete, and reorder for sections, activities, and repeat blocks. Touch and keyboard buttons SHALL provide an alternative to drag-and-drop.
@@ -178,6 +181,10 @@ A transition after the last slot of each round, from older workouts, stays store
 The overview shows the same tile between section cards, and the difficulty rating counts the rest without taking it from a cap.
 
 **BLD-15** Every workout the compiler accepts SHALL open in the editor, whether it was bundled, imported or written by hand, so Edit and Duplicate are never withheld from a valid workout.
+Timed circuit, For time and strength lists SHALL hold, besides movements, rests of their own length at their place in the list and groups with their own rounds, rest between rounds, rest between movements and A/B swap, up to the two nested repeat levels of BLD-03.
+A movement in a For time or strength list SHALL be either until Done or timed.
+Saving an opened workout unchanged SHALL keep its movements, assignments, round structure and timing, except that a rest after the workout's very last movement is dropped and a rest after the last movement of each round joins the rest between rounds or sections.
+Workouts that fit the plain form, one list per section with uniform rests, SHALL open in it as before, and a rest or group added to a section whose movements each repeat SHALL first turn those repeats into groups of one, keeping the timing.
 
 **BLD-16** A field of the editor SHALL never work against the person typing in it.
 Number fields in the editor and the score correction SHALL keep their own text while it is typed: an emptied field reads empty, never 0, the model receives only numbers within the field's bounds, and the field shows the stored value again when it loses focus.
@@ -189,10 +196,11 @@ A target the form does not show SHALL be kept.
 Suggestion lists (movements, authors, equipment) SHALL open on any change of the text, whatever the keyboard sends, and a tap or click on a suggestion SHALL pick it with the focus staying in the field.
 Retyping a movement's name SHALL drop the link to its catalogue record together with the record's short and spoken names.
 Switching a draft to Solo SHALL hide athlete B's lanes, swaps and Done rules without deleting them, so Pair restores them, and a saved solo workout carries none.
-Timed circuit, For time and strength lists SHALL hold, besides movements, rests of their own length at their place in the list and groups with their own rounds, rest between rounds, rest between movements and A/B swap, up to the two nested repeat levels of BLD-03.
-A movement in a For time or strength list SHALL be either until Done or timed.
-Saving an opened workout unchanged SHALL keep its movements, assignments, round structure and timing, except that a rest after the workout's very last movement is dropped and a rest after the last movement of each round joins the rest between rounds or sections.
-Workouts that fit the plain form, one list per section with uniform rests, SHALL open in it as before, and a rest or group added to a section whose movements each repeat SHALL first turn those repeats into groups of one, keeping the timing.
+
+**BLD-17** A movement name typed in the editor SHALL be matched to the catalogue whatever its case, plural or punctuation.
+When the field is left, a typed name the catalogue knows SHALL take the catalogue's spelling ("romanian deadlifts" becomes "Romanian Deadlifts") with the record's link, short name and spoken name, as a picked suggestion does, and a typed alias SHALL take the alias's spelling and the link.
+The text SHALL NOT change while it is being typed, a field that was only visited SHALL keep what it holds, and a name the catalogue lacks SHALL stay as typed.
+An equipment name typed in any case SHALL count as the known one and SHALL NOT be offered as new (LIB-08).
 
 # 6 Workout model and execution contract
 
@@ -258,54 +266,7 @@ The player SHALL identify which clock it displays. Paused or manually altered sc
 
 ## 6.4 Representative semantic fixture
 
-This Phase 0 data contract was formalised in a version 1 schema, since superseded by schemas/workout.v2.schema.json, and implemented as the canonical workout `workouts/default/partner-circuit.wod.yaml`. Identifiers are examples, not production records. Each slot lasts 40 seconds and contains simultaneous assignments. Additional workout capabilities extend the model in later milestones.
-
-```json
-{
-  "schemaVersion": 1,
-  "id": "partner-circuit",
-  "revision": 1,
-  "title": "Partner circuit",
-  "participants": 2,
-  "equipment": ["Rowing machine", "Kettlebell"],
-  "prepMs": 10000,
-  "sections": [{
-    "id": "conditioning",
-    "title": "Conditioning",
-    "format": "timedCircuit",
-    "transitionAfter": "manualReady",
-    "body": {
-      "id": "circuit",
-      "type": "repeat",
-      "count": 5,
-      "betweenIterationsRestMs": 60000,
-      "body": {
-        "id": "stations",
-        "type": "sequence",
-        "betweenChildrenRestMs": 10000,
-        "children": [
-          {
-            "id": "slot-1", "type": "timed", "durationMs": 40000,
-            "assignments": {"A": {"name": "Row"}, "B": {"name": "Kettlebell swings"}}
-          },
-          {
-            "id": "slot-2", "type": "timed", "durationMs": 40000,
-            "assignments": {"A": {"name": "Kettlebell swings"}, "B": {"name": "Row"}}
-          },
-          {
-            "id": "slot-3", "type": "timed", "durationMs": 40000,
-            "assignments": {"A": {"name": "Burpees"}, "B": {"name": "Air squats"}}
-          },
-          {
-            "id": "slot-4", "type": "timed", "durationMs": 40000,
-            "assignments": {"A": {"name": "Air squats"}, "B": {"name": "Burpees"}}
-          }
-        ]
-      }
-    }
-  }]
-}
-```
+The fixture is the bundled workout `workouts/default/partner-circuit.wod.yaml`, with its expected trace in `tests/unit/traces/partner-circuit.json`: after a 10-second prep, five rounds of four 40-second paired slots (Row and Kettlebell Swings, swapped, then Burpees and Air Squats, swapped) with 10 seconds between slots and 60 seconds between rounds, ending on a Ready gate.
 
 The between-children rule inserts rest only between children; the between-iterations rule inserts rest only between repetitions. These fields SHALL NOT silently add trailing rest.
 
@@ -334,7 +295,7 @@ The resolved timing is explicit in the document: each block is two rounds of fou
 | Cool-down | 5:00 |
 | Session | 48:40 excluding prep and Ready waits |
 
-Use this document to test paired table/context layout, long movement names, multi-section navigation, trailing rest display, and per-round assignment alternation. Markdown remains a human authoring/reference format; automatic interpretation of arbitrary Markdown or natural language is outside P0. The editor or a reviewed manual conversion produces validated portable JSON; imported executable files SHALL never guess missing timing semantics from prose.
+Use this document to test paired table/context layout, long movement names, multi-section navigation, trailing rest display, and per-round assignment alternation. Markdown remains a human authoring/reference format; automatic interpretation of arbitrary Markdown or natural language is outside P0. The editor or a reviewed manual conversion produces a validated workout file; imported executable files SHALL never guess missing timing semantics from prose.
 
 # 7 Session engine and timing requirements
 
@@ -493,7 +454,7 @@ A field with a visible label carries no example or hint inside it.
 
 # 9 Audio and spoken cues
 
-**AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select available speech voice, rate, and volume. The beeps SHALL have their own volume and a choice of tones, testable on their own (version 1.11). No microphone permission is needed.
+**AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select the voice and its volume, with no speed option since 1.6.0. The beeps SHALL have their own volume and a choice of tones (version 1.11). The voice, the beeps and both together SHALL each be testable on their own. No microphone permission is needed.
 One tone, the truck horn, SHALL play a bundled recording scheduled on the same audio clock as the synthesised beeps, a short blast for each countdown second and a longer one for the boundary, and SHALL fall back to the classic beep until the recording has loaded or if it cannot be decoded.
 With the truck horn the clock SHALL hold at each timed boundary for the length of the horn's blast, outside active time, so the next slot starts as the blast ends.
 
@@ -549,7 +510,7 @@ Removing it hides it, with any edits, through a list of removed workout ids in m
 
 ## 10.1 Portable WOD sharing
 
-SQLite remains the live datastore. JSON files are portable exchange documents; sharing a workout SHALL NOT require copying the database, accessing the container filesystem, or running another service.
+SQLite remains the live datastore. YAML files are portable exchange documents; sharing a workout SHALL NOT require copying the database, accessing the container filesystem, or running another service.
 
 **SHR-01** Each workout SHALL offer Export workout, producing one UTF-8 YAML file named from its title with a .wod.yaml suffix. The library and administration screen SHALL offer Import; administration SHALL also offer export of selected workouts/programs as one .wods.yaml pack. Import SHALL also accept the earlier JSON form, since YAML 1.2 is a superset of JSON. These actions SHALL work through ordinary browser file selection/download on desktop, tablet, and phone. Workout sharing SHALL be available when the first circuit editor is delivered.
 
@@ -569,7 +530,7 @@ Example filename: `partner-circuit.wod.yaml`. Its workout payload is the complet
 
 # 11 Architecture and interface boundaries
 
-The selected stack is React + TypeScript with Vite, CSS Modules and CSS variables, a pure TypeScript execution engine, a Node.js + Fastify backend, SQLite server storage, and IndexedDB browser storage. Use Vitest for domain/engine tests and Playwright for browser integration tests. Select and pin supported dependency/runtime versions and a maintained SQLite driver during implementation; prefer a driver that needs no native compilation per architecture, such as the Node.js built-in SQLite module if it is stable in the pinned Node.js version, or one that ships prebuilt binaries for both image architectures. The specification intentionally does not freeze patch versions before setup.
+The selected stack is React + TypeScript with Vite, CSS Modules and CSS variables, a pure TypeScript execution engine, a Node.js + Fastify backend, SQLite server storage, and IndexedDB browser storage. Use Vitest for domain/engine tests and Playwright for browser integration tests. The server uses the built-in `node:sqlite` module, so no driver compiles native code per architecture, and every dependency is pinned to an exact version in `package.json`.
 
 Frontend, backend, and tests SHALL share the versioned domain schemas and validation rules. The schemas SHALL have one source of truth in packages/domain, from which TypeScript types, runtime validators, and the published JSON Schemas under schemas/ are generated; CI SHALL fail when a committed generated file differs from its source. The backend SHALL serve the production frontend assets and same-origin API in one application container. The static shape (DEP-15) serves the same frontend without a backend and keeps the library in the browser behind the same client interface (DAT-10). SQLite is an embedded file datastore under /data and SHALL NOT require a second database container. Development may use separate Vite and API processes, with a development proxy. An existing HTTPS reverse proxy remains external deployment infrastructure.
 
@@ -589,19 +550,20 @@ flowchart TD
   H --> A
 ```
 
-## 11.1 Suggested repository boundaries
+## 11.1 Repository boundaries
 
 | Path | Purpose |
 | - | - |
-| apps/web/ | Library, builder, setup, player, history, client persistence. |
-| apps/server/ | HTTP API, authentication, SQLite repositories, migrations. |
+| apps/web/ | Library, editor, player, logbook, settings, client persistence. |
+| apps/server/ | HTTP API, SQLite store, migrations. |
 | packages/domain/ | Versioned schema, validators, compiler, shared types. |
 | packages/engine/ | Pure state machine, clock adapter contract, events and projections. |
+| packages/household/ | The household's rules for revisions, imports, merges and restore, shared by the server and the static shape. |
 | workouts/ | The workout registry: one hand-written YAML file per bundled workout, one folder per bundled collection, bundled at build time. |
 | tests/unit/traces/ | Expected execution traces of the canonical timed workouts. |
 | tests/e2e/ | User flows, network failure and persistence tests. |
 | schemas/ | Published versioned JSON Schemas for domain and sharing documents. |
-| docs/ | Deployment, backup, architecture decisions, contributor guide. |
+| docs/ | Architecture, development, deployment, the file format, the device checklist, validation records and release notes. |
 | compose.yaml | Default Portainer-ready production stack. |
 | deploy/compose.dev.yaml | Optional source-build/development setup. |
 | Dockerfile | Multi-stage production image build. |
@@ -610,7 +572,7 @@ flowchart TD
 
 ## 11.2 Minimum API contract
 
-**API-01** The server SHALL expose versioned JSON endpoints for workouts, programs, profiles, settings, sessions/results, import/export, authentication, and health. Exact route names may be established in implementation; the following operations are required.
+**API-01** The server SHALL expose versioned JSON endpoints under `/api/v1` for workouts, master data (collections, movements, authors, equipment), settings, sessions/results, live sessions (ENG-15), import/export, backup and health. The following operations are required.
 
 | Operation | Contract |
 | - | - |
@@ -649,16 +611,14 @@ The static shape of DEP-15 to DEP-17 is the second deployment: no container and 
 
 | Setting | Required behaviour |
 | - | - |
-| APP_IMAGE | Required full image reference, preferably pinned release/digest; example namespace clearly a placeholder. |
-| HTTP_PORT | Configurable host port; default 8080. |
-| PUBLIC_URL | Required canonical URL for deployment, normally trusted HTTPS. |
-| SESSION_SECRET | Required high-entropy secret; startup rejects missing/example values. |
-| BOOTSTRAP_PASSWORD | Required only for an empty database; hashed immediately and never logged. |
+| APP_IMAGE | Required full image reference, preferably a pinned release or digest. The example namespace is clearly a placeholder. |
+| HTTP_PORT | Configurable host port, default 8080. |
 | DATABASE_PATH | Defaults to /data/app.sqlite inside the persistent volume. |
-| LOG_LEVEL | Defaults to info; excludes credentials and full workout content. |
-| TRUST_PROXY | Explicit setting for a known reverse-proxy deployment. |
+| LOG_LEVEL | Defaults to info, and excludes full workout content. |
+| TRUST_PROXY | Explicit setting for a known reverse-proxy deployment, default false. |
+| HTTPS_KEY, HTTPS_CERT | Both or neither (DEP-18): set, the container serves HTTPS itself. |
 
-The implementation SHALL document exact environment names in .env.example and the README. If the public URL is HTTP, the setup screen SHALL indicate which browser capabilities are unavailable; production acceptance uses trusted HTTPS.
+The exact environment names are documented in `.env.example` and `docs/deploy.md`. Login settings join the table with NFR-09. Production acceptance uses trusted HTTPS, since wake lock and installation need a secure context.
 
 **DEP-08** A new deployment SHALL require only repository URL/reference, Compose path, image reference and environment values, plus registry credentials when the image is private. Git authentication and registry authentication SHALL be documented separately. No terminal commands should be necessary on the standard Portainer route.
 
@@ -690,7 +650,7 @@ The implementation SHALL document exact environment names in .env.example and th
 
 3. Enter documented variables and credentials if necessary; deploy without changing source files.
 
-4. Confirm healthy status and load the setup/login page through the configured URL.
+4. Confirm healthy status and load the library through the configured URL.
 
 5. Save a workout, run a session, redeploy the same stack, and verify both records remain.
 
@@ -708,14 +668,14 @@ The implementation SHALL document exact environment names in .env.example and th
 | NFR-06 | Server idle memory SHOULD remain below 256MiB and routine household use below 512MiB, excluding optional future TTS. Measure on the recorded deployment hardware. |
 | NFR-07 | Initial player and editing acceptance SHALL pass in desktop Safari and Firefox, including a recorded half-monitor-width window and responsive tablet/phone viewports. Automated browser tests SHALL cover Chromium, Firefox, and WebKit, with WebKit described as engine coverage rather than the installed Safari browser. Later physical iPad/iPhone smoke tests SHALL record device/OS/browser versions and cover touch, sound, wake lock, safe areas, and performance; home-screen mode SHALL be tested if offered. Physical-device checks SHALL NOT gate initial implementation or desktop UX review. |
 | NFR-08 | Essential controls SHALL be keyboard accessible with visible focus and accessible names. Screen-reader output SHALL announce phase changes without reading every second. |
-| NFR-09 | Authentication SHALL protect API data and exports; sessions SHALL use secure cookie settings appropriate to HTTPS, hashed passwords, login throttling, and protection against cross-site state-changing requests. |
+| NFR-09 | Deferred by decision (section 15): the server shape is for a trusted home network. When it is taken up, authentication SHALL protect API data and exports; sessions SHALL use secure cookie settings appropriate to HTTPS, hashed passwords, login throttling, and protection against cross-site state-changing requests. |
 | NFR-10 | Untrusted import content SHALL be treated as data, never executable HTML/script. Request/import sizes and model expansion SHALL be bounded. |
 | NFR-11 | Core operation SHALL not require third-party accounts, analytics, cloud AI, or an external exercise API. Browser/OS speech behaviour is a separately tested capability. |
 | NFR-12 | Schema migrations, domain validation, and engine transitions SHALL have automated tests. Production errors SHALL include actionable diagnostics without secrets. |
 | NFR-13 | Application upgrades SHALL not replace a running player's assets mid-session. An available frontend update SHALL apply at idle/reload after the session ends. Assets SHALL use content-hashed filenames, and the player SHALL preload every chunk it can need before Play (ENG-11). |
-| NFR-14 | The repository SHALL include a licence selected before public release, a dependency lockfile, and documented asset/voice licensing. The existing repository licence is GNU GPL version 3 and SHALL be retained; the suggested MIT default from version 1.0 is superseded by the existing project licence. |
+| NFR-14 | The repository SHALL include a licence selected before public release, a dependency lockfile, and documented asset/voice licensing. The repository licence is GNU GPL version 3 and SHALL be retained. |
 
-Desktop reference hardware, browser versions, and actual CSS viewport sizes are established in Phase 0. Record physical mobile hardware when available. These thresholds are targets to test, not measured performance claims. The two-metre recognition test applies to shared-display use, not handheld phone use.
+Reference hardware, browser versions and CSS viewport sizes are recorded with each round in `docs/validation.md`. Record physical mobile hardware when available. These thresholds are targets to test, not measured performance claims. The two-metre recognition test applies to shared-display use, not handheld phone use.
 
 # 14 Acceptance scenarios and traceability
 
@@ -757,7 +717,7 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-32 | Play the partner circuit in the context view at tablet and phone widths: the donut reads movement 4 of 4 with 4 rounds left at the fourth station, the active row lies inside the visible list, and round 2 begins at movement 1 of 4. Play full-body-partner: a card names block 1 and fades, block 1 done shows while waiting for Ready, and block 2 is named with its rounds. A lane written "Plank rows" is announced as written, never with the Renegade rows clip. | UI-06/10/20/24, AUD-10 |
 | AT-33 | Import a workout whose Tabata block has a 10 s rest of its own after each movement and whose For time block has a timed stretch: its overview offers Edit and Duplicate, the editor shows the rests as rows and the stretch as timed, a changed rest and an added two-round group change the live summary by their exact time, and the saved workout reopens with both. Every bundled workout and 300 generated trees reopen and save with the same work, rounds and rests between works. | BLD-03/15, MOD-01 |
 | AT-34 | Start a session on device A and play into round 1. Device B, already on the library, shows "Session running on A" after a focus event without a reload. Continue here on B: the player opens paused with "Continued from A", the block, round and clock of A, and Resume continues at that clock. A's next save makes it show "Continued on B." and ignore Space. B finishes: exactly one session in the logbook, no live row, and A offers nothing after a reload. Hide the app mid-session: the other devices read it as paused. End a session too short to count: no live row remains. Take a session back on A: it asks first and B steps aside. | ENG-15, ENG-12, ENG-14, DAT-03 |
-| AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-11 |
+| AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Type romanian deadlifts and leave the field: it reads Romanian Deadlifts, and it did not change while it was typed. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-17, BLD-11 |
 
 # 15 Where things stand
 
@@ -766,30 +726,8 @@ All P0 requirements and the 35 acceptance scenarios are implemented with automat
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
-
-- 1.0.0 to 1.1.0: the household server with SQLite, the device cache and outbox, recovery, single-tab control, packs and backup. The `v1.0.0` tag failed in validation before any image was built, so 1.1.0 is the first published image, adding the accent colour and the three-column library.
-- 1.1.1: the plain-HTTP fix, HTTPS served by the container itself (DEP-18) and a hardened release workflow.
-- 1.1.2: the phone layout during a session and the home-screen install (UI-16).
-- 1.2.0: the static shape on GitHub Pages with a zip on every release (DEP-15 to DEP-17), the browser-only library (DAT-10) and restore from the JSON export in both shapes (DAT-11).
-- 1.2.1: household settings on the server (DAT-12) and the phone layout before the start (UI-17).
-- 1.3.0: one search bar at every width (UI-18) and the not-found pages (UI-19).
-- 1.3.1: the session layout on tablets and short screens (UI-20).
-- 1.4.0: the Logbook with delete (UI-22, DAT-14), editable bundled workouts (DAT-13), the transition tile between blocks (BLD-14), workout-level chips and block-level formats (UI-23), the version under the wordmark (UI-21), the truck horn (AUD-01) and the timer colour marks (UI-13), with the SQLite migration 3 and IndexedDB version 3.
-- 1.5.0: the tag exists but its workflow stopped in the production smoke test before an image was pushed, because the test still pressed Save to library. 1.5.1 publishes its changes.
-- 1.5.1: everything of 1.5.0, that is Create with AI (SHR-07), authors as master data (LIB-06), the round donut and block cards (UI-24) and cues that say the written name (AUD-10), plus 66 more movements and the usual shorthand, with no database or browser-storage migration.
-- 1.5.2: Title Case workout titles and movement names, a catalogue without redundant aliases, Dumbbell Full Body Crunch, Squat Snatch Battery and the favicon on Firefox bookmarks, with no database or browser-storage migration.
-- 1.5.3: every valid workout opens in the editor (BLD-15) with rests, timed movements and groups as rows, block titles in Title Case, Full Body Fatburn Hour and four more movements, with no database migration and drafts moved to `openwod.drafts.v2`.
-- 1.6.0, prepared: the changes below, with the SQLite migration 4. Notes in `docs/releases/v1.6.0.md`.
-
-**In 1.6.0** (since `v1.5.3`):
-
-- Hand-over between devices (ENG-15, AT-34): the server keeps the running session in `live_sessions`, other devices offer Continue here, and the previous device steps aside. Same-device recovery is tightened with it: a taken-over tab is inert, leaving the player pauses and saves, and the play route decides once whether it restores (ENG-14).
-- Start begins the session with that tap (UI-25), from a card, a workout's page and the logbook.
-- The station cards and the game plan are neutral glass, the Pair and Solo chips take the accent, and the lane colour tokens and the lane caption are gone (UI-04).
-- The session layout fits an iPad in portrait and landscape and follows a turn (UI-20), and the clock takes the room the workout leaves at every width, sized from the plan's tallest station (UI-27).
-- Settings (UI-28): one compact colour well everywhere, each phase colour per theme including a paused colour, the overall progress as four checkboxes, toggles for default view, sound and voice, and no clock weight or size option. `progress`, `markColors` and `pauseColor` changed shape, with the old values carried over.
-- Editor fields never work against the typing (BLD-16, AT-35): buffered number fields (`NumberInput`), lane helpers that keep sibling data (`lane.ts`), suggestion lists that keep the focus on a tap, and 16 px controls on phones (UI-26).
-- The library sorts by Recently added (LIB-07), and a workout's page and the editor's summary state total, active and rest time (UI-23).
+Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.6.0.
+Two tags carry no image: `v1.0.0` failed in validation before any image was built, so 1.1.0 is the first published one, and the workflow of `v1.5.0` stopped in the production smoke test, so 1.5.1 publishes its changes.
 
 **Schema and storage versions today.**
 
@@ -808,10 +746,12 @@ The detailed change history lives in the git log, the release notes under `docs/
 The workout generator, planned for the release after 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
+Every other idea is a GitHub issue with the `enhancement` label (`gh issue list --label enhancement`).
+`apps/web/src/assets/dj-airhorn.m4a` and `just-do-it.webm` with `just-do-it.mov` wait for the buttons of issues #14 and #15: no code plays them yet, so a dead-code sweep leaves them, and the clip's licence is to settle before it ships.
 
 **Standing decisions and constraints.**
 
-- The user commits, tags and releases.
+- The user tags and releases. Since 16 November 2026 Claude may commit finished, verified work on `main` by itself, as co-author, and does not push.
 - Release images are built by the GitHub release workflow, and a local multi-architecture push is an emergency exit only. The workflow also creates the GitHub Release and never overwrites an existing one.
 - No runtime cloud service, no analytics and no cloud AI (NFR-11).
 - Login stays deferred (NFR-09): the server shape is for a trusted home network.
@@ -819,13 +759,13 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Local browser tests run with `--project=firefox --project=webkit`, since headless Chromium fails locally while CI uses Chromium. Temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 - Timing is verified under the injected clock and by the production smoke, and the real-duration 60-minute run is no release gate.
 - Bundled workouts stay at revision 1. They wait for Ready unless they prescribe a rest or a straight continuation, and never have both a rest and a Ready gate (`workouts/README.md`).
-- Workout titles, block titles and movement names are in Title Case, notes and descriptions in sentence case.
+- Workout titles, block titles, movement names and equipment names are in Title Case, notes and descriptions in sentence case.
 - The interface says "block" and "movement", while the code, the API and the files keep `section` and `slot`.
 - Collections and programs (LIB-03) are one concept named Collections, with one collection per workout.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-17 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-08, MOD-06, NFR-15, SHR-08, UI-29 and AT-36.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-09, MOD-06, NFR-15, SHR-08, UI-29 and AT-36.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 
@@ -833,15 +773,15 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 
 | Risk | Treatment |
 | - | - |
-| iPad speech timing or voices are inadequate | Boundary beeps stay local and precise, and speech is advisory. Cached local TTS is a P1 option. |
+| A device voice is inadequate | The recorded voice packs ship with the app and boundary beeps stay local and precise. Device speech only reads a name that has no clip. |
 | Long prescriptions do not read at two metres | Short names, reflow at every width and a preflight warning for crowded blocks. The physical two-metre test (AT-18) is pending. |
-| Approaching the iPad for handoffs is inconvenient | A large Switch control. Keyboard or Bluetooth remote support is a possible later enhancement. |
+| Approaching the iPad for handoffs is inconvenient | A large Switch control and the keyboard. A phone as a remote is issue #4. |
 | Hidden-app behaviour on mobile surprises users | Explicit auto-pause and the Interrupted flag, with no lock-screen guarantee. Physical mobile checks are pending. |
 | Independent athlete progress is requested later | Athlete and completion policies stay explicit, and truly independent timelines stay deferred. |
 | A database migration breaks rollback | A consistent pre-migration backup and the documented image and database rollback (DEP-12). |
 | The browser evicts the static shape's library | Keep data on this device (`navigator.storage.persist()`) and the JSON backup with restore (DAT-10, DAT-11). |
-| A long block does not fit a short frame | Rack & Run AMRAP 25, a seven-row AMRAP block, still scrolls on a short landscape frame (52 px at 1180×796) with the clock at its minimum. A two-column list for long blocks is the likely fix. Open since 1.6.0. |
-| Pair workouts are tight on small phones | At 375×667 and below, rows still press together for pair workouts where each athlete has a Done button. Open since 1.6.0. |
+| A long block does not fit a short frame | Rack & Run AMRAP 25, a seven-row AMRAP block, still scrolls on a short landscape frame (52 px at 1180×796) with the clock at its minimum. A two-column list is issue #13. |
+| Pair workouts are tight on small phones | At 375×667 and below, rows still press together for pair workouts where each athlete has a Done button. |
 | A hand-over copy outlives its session | A session too short to count that ends offline keeps its row on the server until it expires after 12 hours, so other devices offer it meanwhile. Discard in the library removes it. |
 
 # 17 Source references
@@ -863,8 +803,3 @@ Sources establish terminology and platform/deployment constraints. Workout seman
 - **S7 — Image publishing:** [GitHub documentation on publishing Docker images](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images).
 
 Reference review date: 26 October 2026. Recheck platform support and deployment documentation when selecting implementation versions.
-
-# Future feature requests
-
-No request is open: every earlier one is delivered, and their original wording lives in the git history of this file.
-The next planned feature is the workout generator of section 15.

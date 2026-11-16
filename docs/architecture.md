@@ -1,4 +1,4 @@
-# Initial architecture decisions
+# Architecture decisions
 
 ## Runtime and dependencies
 
@@ -14,16 +14,16 @@ Semantic validation additionally enforces global node IDs, athlete counts, two n
 Bound object depth/count before recursive validation.
 Compiling clones authoring input to isolate the session.
 
-The Phase 0 compiler handles timed work/rest, sequences, repeats, explicit trailing transitions, and an authored alternate-assignment policy.
+The compiler handles timed work and rest, manual tasks, sequences, repeats, explicit trailing transitions, and an authored alternate-assignment policy.
 It emits cumulative offsets, stable content anchors, repeat paths, and distinct generated-rest identities.
 A/B names are presentation settings.
 Swaps change assignments, not athlete identity.
 Preview and engine use the same compiler.
 Known unsupported capabilities are rejected rather than approximated.
 
-The 20-minute circuit is the first exact trace.
-The supplied full-body workout is the second: two four-minute rounds plus two minutes of rest in each block.
-Warm-up/cooldown make 50 active minutes.
+The 20-minute partner circuit is the first exact trace.
+The supplied full-body workout is the second: each block is two rounds of 3:40 with 20 seconds between them and two minutes of rest after it.
+With warm-up and cool-down it has 48:40 of active time.
 Manual section readiness waits are excluded from active time.
 Every trailing rest is authored explicitly.
 
@@ -79,14 +79,14 @@ The UI additionally suppresses rapid repeated navigation taps.
 
 Speech is self-contained: five English [Piper](https://github.com/OHF-Voice/piper1-gpl) voices are rendered at image build time (`scripts/generate-cues.ts`, `scripts/render-cues.py`) as fixed cues plus one clip per bundled movement, and the player decodes the clips a workout needs before Play.
 An announcement ("A, kettlebell swings. B, row.") is a sequence of clips when the pack has every name, otherwise the device's best English voice reads the names after the recorded lead cue.
-The device voice is never offered as a choice beyond that fallback.
+The device voice is the fallback for a name the pack lacks, and "Device voice only" is one of the voices in the settings.
 Locally generated beeps use the AudioContext clock.
 Only future countdown/deadline cues are scheduled.
 Pause/navigation cancels pending sources and speech.
 Each resumed segment obtains a fresh clock mapping.
 Fixed cues (countdown numbers, Go/Rest at a boundary, Get ready, Paused, Resume, Complete) prefer pre-rendered MP3 clips under `apps/web/public/cues/`, decoded once before Play and scheduled at the same instants as the beeps.
 A boundary before a manual Ready gate or at the very end plays no Go/Rest.
-Dynamic text (athlete assignments) stays on device speech, with the best installed voice chosen by `pickDefaultVoice`.
+Athlete assignments are spoken from the name clips where the pack has them (AUD-10), and otherwise by device speech, with the best installed voice chosen by `pickDefaultVoice`.
 Missing clips fall back to beeps plus device speech without any error.
 Speech is optional, device-provided, best-effort, and never controls progression.
 Semantic and audio identities include the session and occurrence.
@@ -171,7 +171,7 @@ Relative URLs and hash routes let one build run at `https://romanboegli.ch/OpenW
 
 ## Screens, routes and theme
 
-The app has two screens behind hash routes: the library at `#/` and the player at `#/wod/<id>`.
+The app's screens sit behind hash routes: the library at `#/`, a workout's page at `#/wod/<id>` with the player at `/play` and the editor at `/edit` and `/copy`, a new workout at `#/new`, an imported draft at `#/draft/<id>`, the settings at `#/settings/<section>`, and a logged session's own copy of its workout at `#/history/<id>/play`.
 Hash routes need no server rewrites and keep reloads and the back button working.
 The library filters pure summaries from `packages/domain/src/library.ts`, computed once per entry.
 Colours are CSS custom properties on `:root`. `data-theme` on the root element selects the dark or light set.
@@ -183,7 +183,7 @@ The player keeps its dark-first contrast targets in both sets.
 
 The bundled workouts are hand-written YAML files under `workouts/<collection>/`, one per workout.
 A folder with a `collection.yaml` is a bundled collection, so every bundled workout sits in at most one collection.
-A workout belongs to one collection at a time, and the card shows it as a thin corner label.
+A workout belongs to one collection at a time, and the card shows it as a chip among its chips.
 The user's edits to a bundled collection are stored as a delta (title, description, added and removed ids) so a workout added to that folder in a later release still appears.
 A full copy saved by an earlier build is converted on load. `scripts/bundle-workouts.ts` parses every file with the same importer the app uses, checks that ids match file names and are unique and that every movement name resolves in the catalogue, and writes `packages/domain/src/generated/bundled.ts`, which the app, the tests and the server import. `npm run check` fails when the bundle is stale.
 The files are the source of truth, so a workout is changed by editing its file, never a TypeScript fixture, and the frozen timing traces under `tests/unit/traces/` keep the eight original timed sessions honest.
@@ -193,7 +193,7 @@ The files are the source of truth, so a workout is changed by editing its file, 
 Movements are first-class records (`packages/domain/src/catalogue.ts`): id, display, short and spoken names, aliases, equipment, category, notes, and one optional `family` link to a parent record.
 Every variant is its own record (Hang power cleans, Kipping pull-ups).
 There is no modifier algebra and no generated naming, because coaches already think in named variants and a flat record can be named, spoken, loaded and merged without rules.
-The bundled catalogue (`movements.ts`, 193 records) seeds the device.
+The bundled catalogue (`movements.ts`, more than 270 records) seeds the device.
 The user's own records, overrides of bundled ones, removals and merge aliases live in master data on the device (`apps/web/src/master-data.ts`) and compose into one `Catalogue` per render.
 Names resolve loosely (`movementKey`: case, accents, punctuation and a plural s per word are ignored) and a prescription may carry a `movement` id.
 The id wins when it resolves, the name otherwise, so files stay portable (SHR-02) and editing a record never rewrites a workout (LIB-02).
@@ -202,28 +202,30 @@ Summaries take equipment from the records of recognised movements and fall back 
 One ranked search (`packages/domain/src/search.ts`) serves the library and the movement picker: every query token must match some weighted field exactly, as a prefix, inside a word or with a small typo (optimal-string-alignment distance, one edit from four letters, two from eight, and hyphenated words are also indexed joined).
 The library ranks by relevance when a query is present and lets the chosen sort break ties.
 The editor's picker fills the names and links the record, and highlights names no record knows with an inline Add.
-The editor has no equipment field: a workout's equipment is derived from the records of its movements (keyword inference for names no record knows) and shown on the live summary, and whatever an opened workout declared beyond that (a wall, a running route, a squat rack) is carried unchanged.
+A name typed without picking is matched whatever its case, plural or punctuation, and takes the catalogue's spelling when the field is left (`Catalogue.spelling`), never while it is typed.
+The editor has no equipment field: a workout's equipment is derived from the records of its movements (keyword inference for names no record knows) and shown on the live summary, and whatever an opened workout declared beyond that (a wall, a running route, a squat rack) is carried along.
+Equipment names are shown in Title Case wherever they appear (`equipmentName` in `packages/domain/src/library.ts`): the summary, the catalogue records, the merges and the ticked equipment settle the case as they are read, so a stored workout keeps its text and nothing is migrated.
 An imported workout file can open as an unsaved draft (`#/draft/<id>`) with its movements linked where names match, so unknown ones are fixed before anything is saved.
 A pack of several workouts imports from the preview dialog.
-Housekeeping (merge, rename, remove, restore the bundled set) is on the settings page, which is split into sections behind `#/settings/<section>`: General, Training view, Equipment, Movements and Collections.
+Housekeeping (merge, rename, remove, restore the bundled set) is on the settings page, which is split into sections behind `#/settings/<section>`: General, Training view, Equipment, Movements, Authors, Collections and Logbook.
 General holds appearance, athletes, and the difficulty calibration: the full-effort and long marks, the three weights and the three thresholds of `rateDifficulty`, with reference workouts re-rated live, stored as a device preference that is passed into every summary.
 Training view holds the load unit, sound and voices, and a Look & feel tile with the default view, the parts of the overall progress as four checkboxes, timer ring width, pulse intensity, the two milestone markers and a grid of the phase colours per theme, around a live miniature of the player that can run a preview.
 Every colour is chosen with the same compact well (`settings/ColorField.tsx`), which carries the platform's own picker.
 The miniature is painted by the player's own wash overlay (the shared `.wash` rules in `App.module.css`, fed the same custom properties), so the pulse looks the same in both, and the milestone and paused colours of the theme in effect override the player's amber, red and paused tokens as inline custom properties, on the player and the miniature only.
 In the player's focus view the clock is sized from the room the workout leaves: unseen copies of every distinct station of the plan are measured at the frame's width, their tallest reserves the stations' room, and the clock block takes the rest (UI-27).
-The three master-data pages share one flow (`apps/web/src/settings/`): a searchable dense list with a New button, Create and Edit in the same modal form, Remove behind a confirmation that names the consequence, and multi-select with a merge bar.
+The four master-data pages (equipment, movements, authors, collections) share one flow (`apps/web/src/settings/`): a searchable dense list with a New button, Create and Edit in the same modal form, Remove behind a confirmation that names the consequence, and multi-select with a merge bar.
 A merge stays listed with Undo until it is committed.
 Fields that draw on a repertoire (equipment, today) use `TagPicker`: ranked suggestions while typing, Enter or a comma takes one, and an unknown name is offered as "Add …" so new entries are created in place, with a nudge when the new name is within a typo of a known one.
 The suggestion list is fixed to the viewport so it never scrolls the dialog it sits in.
 
-Press feedback is delegated from the document (`apps/web/src/feel.ts`): a ripple of the element's own colour from the pointer position on buttons, links and cards, and a light tilt on library cards for fine pointers.
+Press feedback is delegated from the document (`apps/web/src/feel.ts`): a ripple of the element's own colour from the pointer position on buttons, links and cards, and a light tilt on library cards and on the block cards of a workout's page for fine pointers.
 Both stop under reduced motion.
 Cards and buttons use a drop shadow on hover rather than a lift.
 
 ## Editor
 
 The editor works on a builder model (`packages/domain/src/builder.ts`): sections with a format, whose slots are timed intervals (timed circuit), manual movements with targets and levelled loads (for time, strength), items of a block (AMRAP, you-go-I-go) or an interval's work (EMOM).
-Explicit between-slot, trailing, between-round and after-section rests.
+Explicit between-slot, between-round and after-section rests, with a trailing rest of an older workout folded into those when it opens.
 Optional rounds with the alternate assignment policy.
 Tabata-style per-slot repeats.
 And a ready gate or automatic continuation.
@@ -236,11 +238,11 @@ The unit tests reopen every bundled workout and 300 generated trees and compare 
 The live summary compiles the draft with the same compiler as the player. `validateDraft` adds author-level messages before structural checks.
 Drafts autosave to browser storage (`openwod.drafts.v2`, debounced, read once from `openwod.drafts.v1`), one draft per workout plus one for a new workout, and are removed when saved or discarded.
 Saving replaces a saved workout at the next revision or creates a new saved workout with a free slugged ID.
-Bundled workouts are only ever duplicated.
+A bundled workout is edited in place as a saved workout under the same id (DAT-13), or duplicated.
 
 ## Deployment and tests
 
-The production root Compose names the stack `openwod`, uses an image reference and a named `/data` volume, and passes `DATABASE_PATH`, `LOG_LEVEL` and `TRUST_PROXY`.
+The production root Compose names the stack `openwod`, uses an image reference and a named `/data` volume, and passes `DATABASE_PATH`, `LOG_LEVEL`, `TRUST_PROXY` and, for HTTPS served by the container, `HTTPS_KEY` and `HTTPS_CERT`.
 Source-build Compose is a separate local route named `openwod-preview`.
 Health reports persistence and the schema version once the database is open.
 Images run the unit and schema checks during their build.

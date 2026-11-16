@@ -28,6 +28,7 @@ Record the device, OS version, browser and the result of each line in the releas
 
 - [ ] Type a movement name and tap a suggestion: it is picked, and the keyboard stays up.
 - [ ] Choose Metres, delete the amount and type another: the kind stays and the field keeps the focus (AT-35).
+- [ ] Type romanian deadlifts in lower case and leave the field: it reads Romanian Deadlifts, and it did not change while you typed (BLD-17).
 - [ ] Focus a field on a phone: the page does not zoom.
 
 ## Interruptions and recovery
@@ -37,7 +38,7 @@ Record the device, OS version, browser and the result of each line in the releas
 - [ ] Open the same session in a second tab: the second one offers Take over, the first one stops controlling.
 - [ ] Start a session on one device and open the app on another: the second one shows the running session with Continue here, and after Continue here and Resume the first one steps aside and names the device that continued (AT-34).
 - [ ] Finish the session on the second device: it appears in the logbook exactly once, and neither device offers it any more.
-- [ ] Turn off Wi-Fi mid-session, finish, turn it on: the session appears in History exactly once and the "changes waiting" pill clears.
+- [ ] Turn off Wi-Fi mid-session, finish, turn it on: the session appears in the logbook exactly once and the "changes waiting" pill clears.
 - [ ] Put the phone in a pocket with the screen locked for two minutes: on unlock the session is paused or still running, never jumped ahead.
 
 ## Household

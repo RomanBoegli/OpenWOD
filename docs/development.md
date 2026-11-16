@@ -16,7 +16,7 @@ Nothing is installed globally.
 
 | Path | Purpose |
 | --- | --- |
-| `apps/web/` | React app: library, overview, editor, player, history, settings (one file per section under `src/settings/`), the household data layer under `src/data/` (API client, IndexedDB, outbox, checkpoints, session lock), theme, audio, wake lock. |
+| `apps/web/` | React app: library, overview, editor, player, logbook, settings (one file per section under `src/settings/`), the household data layer under `src/data/` (API client, IndexedDB, outbox, checkpoints, session lock, the hand-over between devices), theme, audio, wake lock. |
 | `apps/server/` | Fastify: the household API over SQLite (`db.ts` migrations, `store.ts`, `routes.ts`), configuration, health, and the built app. |
 | `packages/domain/` | TypeBox schema (the single source for types, validators and published JSON Schemas), YAML exchange, compiler, outline, difficulty, library summaries and filters, editor builder model, load formatting, the generated workout bundle. |
 | `packages/engine/` | Pure session state machine with an injected clock. |
@@ -44,7 +44,7 @@ Browser tests drive the player through an injected clock (`window.__openwodTest`
 The Playwright configuration starts the API with `DATABASE_PATH=:memory:` and test scopes enabled, and every test sends its own `X-OpenWOD-Scope` header, so parallel workers never share data and a reload within a test keeps its own.
 The `api` fixture talks to the same scope for seeding and assertions.
 The static projects (`static-chromium`, `static-firefox`, `static-webkit`) run against a `static-test` dev server on port 5175 with no API behind it.
-They rerun the player, editor, settings, screens, tabs, library and recovery specs and add `tests/e2e/static/` (library, packs, history, backup, migration, strings, settings), and `serverOnly()` from `e2e/fixtures.ts` skips a test that needs the API.
+They rerun the player, editor, settings, screens, tabs, library and recovery specs and add `tests/e2e/static/` (library, cards, packs, history, backup, migration, strings, settings, session layout, time fields), and `serverOnly()` from `e2e/fixtures.ts` skips a test that needs the API.
 `tests/unit/local-backend.test.ts` runs the shared household suite against IndexedDB through `fake-indexeddb`.
 The production smoke takes `OPENWOD_PRODUCTION_MODE=static` for the static site, for example `OPENWOD_PRODUCTION_URL=http://127.0.0.1:4173/ OPENWOD_PRODUCTION_MODE=static npm run test:production` against `preview:static`.
 WebKit stands in for Safari's engine. `SCREENS=1 npx playwright test --project=webkit tests/e2e/screens.spec.ts` captures a screenshot set of every screen in both themes for visual review.
@@ -54,7 +54,7 @@ A change there is a change in behaviour and must be deliberate.
 
 ## Recorded voices
 
-`npm run cues:generate` renders five English voice packs with [Piper](https://github.com/OHF-Voice/piper1-gpl) into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`. `CUE_PACKS=british` renders one): the fixed cues (Go, Rest, countdown, A, B, Next, Last interval, …) as `<cue>.mp3` and every bundled movement's spoken name under `names/<movement-id>.mp3`, about 200 clips and 2 MB per pack.
+`npm run cues:generate` renders five English voice packs with [Piper](https://github.com/OHF-Voice/piper1-gpl) into `apps/web/public/cues/<pack>/` (needs `uv` and `ffmpeg`. `CUE_PACKS=british` renders one): the fixed cues (Go, Rest, countdown, A, B, Next, Last interval, …) as `<cue>.mp3`, every bundled movement's spoken name under `names/<movement-id>.mp3`, and the few names a bundled workout writes differently from its record under `names/text/<slug>.mp3`, about 300 clips and 3 MB per pack.
 Names the bundled workouts write differently from their record ("Plank rows" for Renegade rows) are recorded as written under `names/text/<slug>.mp3`. `npm run workouts:bundle` lists them in `packages/domain/src/generated/cue-phrases.json`, and the app plays a record's clip only for the record's own name (AUD-10).
 The list of packs and cue texts lives in `scripts/generate-cues.ts`. `scripts/render-cues.py` does the synthesis with the Piper Python API so a voice model loads once per pack.
 Every clip is trimmed and brought to the same level (-18 dBFS RMS, peaks under -1 dBFS) in two ffmpeg passes, because single-pass loudness normalisation cannot measure clips this short.
@@ -104,8 +104,8 @@ Once per repository, before the first tag that publishes the static site:
 - Settings → Actions → General → Workflow permissions: allow `contents: write`, which the release job needs to create the GitHub Release.
 - Optionally dispatch the **Cues** workflow once, so the first tag finds the voices in the cache instead of rendering them inside the release.
 
-1. Pick the version, `vX.Y.Z`, and put `X.Y.Z` in `package.json`, `package-lock.json` (both `version` fields), `CITATION.cff` (with the release date), the image tag of `.env.example` and the `ARG VERSION` default of the `Dockerfile`.
-2. Write `docs/releases/vX.Y.Z.md` from the previous one: what changed, where to get it, supported browsers, known limitations, the schema version, and upgrading.
+1. Pick the version, `vX.Y.Z`, and put `X.Y.Z` in `package.json`, `package-lock.json` (both `version` fields), `CITATION.cff` (with the release date), the image tag of `.env.example` and of the README's Docker example, and the `ARG VERSION` default of the `Dockerfile`.
+2. Write `docs/releases/vX.Y.Z.md` from the previous one: where to get it, then `## New Features` and `## Bugfixes` with one line per change, then `## Upgrading` with the schema version and what going back needs.
    It becomes the body of the GitHub Release as it is, so leave the digest as a placeholder: the release job appends the image digest line by itself.
 3. Run `npm run check`, `npm run build`, `npm run build:static`, the browser suite in Firefox and WebKit for both shapes, `scripts/rehearse-restore.sh`, and go through `docs/device-checklist.md` on a real device.
    Also run the production smoke against the static build, the one test the release runs that the browser suite does not: `npm run preview:static` in one terminal, then `OPENWOD_PRODUCTION_URL=http://127.0.0.1:4173 OPENWOD_PRODUCTION_MODE=static npm run test:production`.
@@ -130,7 +130,7 @@ Once per repository, before the first tag that publishes the static site:
 6. The first time: open the package on GitHub (Packages → the repository's image) and set its visibility, or add registry credentials to the Portainer stack.
    A fresh package is private.
 7. Put the digest into the Portainer stack's `APP_IMAGE`, redeploy, and check `/api/v1/health/ready` reports the new version.
-   Open `https://romanboegli.ch/OpenWOD/` and check the footer version and the five voices under Settings → Sound.
+   Open `https://romanboegli.ch/OpenWOD/` and check the version under the wordmark and the five voices under Settings → Training view.
 8. The GitHub Release is already there, created by the workflow, with the notes, the digest line and the zip.
    Releases up to 1.1.2 were created by hand, and a release that exists already makes the job stop rather than overwrite it.
 

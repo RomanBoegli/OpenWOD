@@ -38,7 +38,7 @@ Nothing is built on the server.
 Without Portainer, the same file runs with plain Docker Compose, and any LLM assistant can guide you through it.
 
 1. Push the repository to GitHub and run the release workflow (a `v*` tag publishes that tag, a manual run publishes `sha-<commit>`).
-   It validates, runs the browser tests, and builds native amd64 and arm64 images with the recorded cue voices.
+   It validates, runs the Check workflow unless this commit already passed it, and builds native amd64 and arm64 images with the recorded cue voices.
    On each native runner it starts the candidate container, waits for readiness, and runs `npm run test:production` against that container in Chromium, Firefox and WebKit.
    A real workout, all five voice packs, name clips and browser audio decoding must pass before the candidate image is pushed.
    The combined GHCR manifest is published only when both architectures pass.
@@ -113,14 +113,14 @@ The installed app still loads from the server on every start and keeps the devic
 
 ## What the server stores
 
-Workouts, collections, the movement catalogue's edits and the session log of the household live in the database.
+Workouts, collections, the movement catalogue's edits, the session log and the settings of the household live in the database.
 Each device keeps a cache of them for an instant start and for reading while the server is away, and an outbox of changes that could not be uploaded yet.
 A running session is checkpointed on its device first, and the player never waits for the server, so a server restart or redeploy during a workout changes nothing in the player.
 In the background the device also sends each checkpoint and, every few seconds, a small progress record to the server, so that another device can continue the session (hand-over).
 The table `live_sessions` holds the last of each per running session.
 That copy is removed when the session is finished or discarded, and 12 hours after its device last wrote to it.
 It is working state: the JSON export does not carry it and a restore clears it.
-Preferences such as names, theme and sound stay on each device.
+Preferences such as names, theme and sound are the household's and follow every device (DAT-12).
 
 ## Backup
 
