@@ -10,10 +10,10 @@ workout:
     author: Coach programming
     notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
-    - Medicine ball
+    - Medicine Ball
     - Wall
-    - Rowing machine
-    - Plyo box
+    - Rowing Machine
+    - Plyo Box
   participants: 1
   prep: 10s
   sections:

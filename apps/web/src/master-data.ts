@@ -1,5 +1,5 @@
 import { Catalogue, movementKey, type Movement } from '../../../packages/domain/src/catalogue';
-import { authorKey, equipmentKey } from '../../../packages/domain/src/library';
+import { authorKey, equipmentKey, equipmentName } from '../../../packages/domain/src/library';
 import { seedMovements } from '../../../packages/domain/src/movements';
 
 /**
@@ -34,10 +34,10 @@ export function loadMasterData(): MasterData {
 /** The canonical spelling for an equipment name after merges. */
 export const canonicalEquipment = (aliases: Record<string, string>) => (name: string): string => aliases[equipmentKey(name)] ?? name;
 
-/** Merge every spelling in `names` into `target`: all of them, including the target's own key, map to the target. */
+/** Merge every spelling in `names` into `target`: all of them, including the target's own key, map to the target, in Title Case. */
 export function mergeEquipment(data: MasterData, names: string[], target: string): MasterData {
   const aliases = { ...data.equipmentAliases };
-  const canonical = target.trim();
+  const canonical = equipmentName(target);
   if (!canonical) return data;
   for (const name of names) if (name.trim()) aliases[equipmentKey(name)] = canonical;
   // Anything that pointed at one of the merged names now points at the target too.

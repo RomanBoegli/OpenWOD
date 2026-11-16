@@ -10,7 +10,7 @@ workout:
     author: OpenWOD
     notes: "An EMOM in the CrossFit sense: work starts on each minute boundary whether or not the previous set was reported."
   equipment:
-    - Rowing machine
+    - Rowing Machine
   participants: 2
   prep: 10s
   sections:

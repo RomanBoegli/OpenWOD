@@ -1,6 +1,6 @@
 import { Type } from '@sinclair/typebox';
 import type { Movement } from './catalogue';
-import { authorKey, equipmentKey } from './library';
+import { authorKey, equipmentKey, equipmentName } from './library';
 import { bundledCollections } from './bundled';
 
 /**
@@ -93,7 +93,7 @@ function readMovement(value: unknown): Movement | undefined {
   const aliases = strings(item.aliases, 20, 160);
   if (aliases.length) record.aliases = aliases;
   if (text(item.family, 80)) record.family = text(item.family, 80);
-  const equipment = strings(item.equipment, 10);
+  const equipment = strings(item.equipment, 10).map(equipmentName);
   if (equipment.length) record.equipment = equipment;
   if (typeof item.category === 'string' && (MOVEMENT_CATEGORIES as readonly string[]).includes(item.category)) record.category = item.category as Movement['category'];
   if (text(item.notes, 500)) record.notes = text(item.notes, 500);
@@ -119,7 +119,7 @@ export function sanitiseMasterData(value: unknown): MasterData {
   try {
     const stored = (value && typeof value === 'object' ? value : {}) as Partial<MasterData>;
     const aliases: Record<string, string> = {};
-    if (stored.equipmentAliases && typeof stored.equipmentAliases === 'object') for (const [key, alias] of Object.entries(stored.equipmentAliases)) if (text(key, 80) && text(alias, 80)) aliases[equipmentKey(key)] = text(alias, 80);
+    if (stored.equipmentAliases && typeof stored.equipmentAliases === 'object') for (const [key, alias] of Object.entries(stored.equipmentAliases)) if (text(key, 80) && text(alias, 80)) aliases[equipmentKey(key)] = equipmentName(text(alias, 80));
     const collections: Collection[] = Array.isArray(stored.collections) ? stored.collections.filter((item): item is Collection => Boolean(item && typeof item === 'object' && typeof item.id === 'string' && typeof item.title === 'string' && Array.isArray(item.workoutIds))).slice(0, COLLECTION_LIMIT).map(item => ({ id: text(item.id, 120), title: text(item.title, 120) || 'Collection', ...(item.description ? { description: text(item.description, 500) } : {}), workoutIds: item.workoutIds.filter((id): id is string => typeof id === 'string').slice(0, COLLECTION_SIZE) })) : [];
     const movements = (Array.isArray(stored.movements) ? stored.movements : []).map(readMovement).filter((item): item is Movement => Boolean(item)).slice(0, MOVEMENT_LIMIT);
     const hiddenMovements = strings(stored.hiddenMovements, MOVEMENT_LIMIT);

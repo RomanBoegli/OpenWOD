@@ -1,6 +1,7 @@
 import type { BeepTone, CueSource, SoundMode } from './audio';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import { DEFAULT_CALIBRATION, normaliseCalibration, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
+import { equipmentName } from '../../../packages/domain/src/library';
 import { DARK_BACKGROUNDS, DEFAULT_BACKGROUND, LIGHT_BACKGROUNDS, type BackgroundChoice } from './theme';
 
 export type ThemePreference = 'auto' | 'light' | 'dark';
@@ -116,7 +117,7 @@ export function normalisePreferences(value: unknown): Preferences {
       background: { dark: oneOf(stored.background?.dark, DARK_BACKGROUNDS, DEFAULT_BACKGROUND.dark), light: oneOf(stored.background?.light, LIGHT_BACKGROUNDS, DEFAULT_BACKGROUND.light) },
       progress: progressParts(stored.progress),
       nudgeSeconds: Math.round(clamp(stored.nudgeSeconds, 1, 60, defaultPreferences.nudgeSeconds)),
-      myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
+      myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => equipmentName(item.slice(0, 80))) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,
       difficulty: normaliseCalibration(stored.difficulty),
     };

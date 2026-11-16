@@ -5,7 +5,7 @@ import { compileWorkout, FORMAT_SETTINGS } from '../../packages/domain/src/compi
 import { seedMovements } from '../../packages/domain/src/movements';
 import { DURATION_KEYS, LOAD_LEVELS, parseWorkoutFile, SECTION_FORMATS, serialiseWorkoutFile } from '../../packages/domain/src';
 
-const equipment = [...new Set(seedMovements.flatMap(record => record.equipment ?? [])), 'Exercise mat', 'Running route'];
+const equipment = [...new Set(seedMovements.flatMap(record => record.equipment ?? [])), 'Exercise Mat', 'Running Route'];
 const guide = buildAuthoringGuide({ movements: seedMovements, equipment });
 const rowOf = (first: string) => guide.split('\n').find(line => line.startsWith(`| \`${first}\` |`));
 
@@ -35,7 +35,7 @@ describe('the authoring guide (SHR-07)', () => {
     for (const name of equipment) expect(guide).toContain(name);
     const own = buildAuthoringGuide({ movements: [...seedMovements, { id: 'yoke-carry', name: 'Yoke Carries' }], equipment: ['Yoke'] });
     expect(own).toContain('**Other:** Yoke Carries');
-    expect(own).toContain('## Equipment names\n\nYoke\n');
+    expect(own).toContain('## Equipment names\n\nUse these names where one fits. Equipment that is not listed is allowed, with an English name in Title Case.\n\nYoke\n');
     expect(new TextEncoder().encode(guide).length).toBeLessThan(25_000);
   });
 

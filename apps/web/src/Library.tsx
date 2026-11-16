@@ -3,7 +3,7 @@ import { type Workout } from '../../../packages/domain/src';
 import { MAX_PACK_BYTES, parseSharedFile, type PackCollection, type SharedFile } from '../../../packages/domain/src/pack';
 import type { PackDecision } from './data/remote';
 import { ImportPreview } from './ImportPreview';
-import { authorOptions, equipmentOptions, matchesFilter, searchFields, sortSummaries, summariseWorkout, type DurationBucket, type LibraryFilter, type LibrarySort, type SummaryOptions, type WorkoutSummary } from '../../../packages/domain/src/library';
+import { authorOptions, equipmentName, equipmentOptions, matchesFilter, searchFields, sortSummaries, summariseWorkout, type DurationBucket, type LibraryFilter, type LibrarySort, type SummaryOptions, type WorkoutSummary } from '../../../packages/domain/src/library';
 import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domain/src/difficulty';
 import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
 import type { Preferences } from './preferences';
@@ -114,7 +114,7 @@ function loadFilters(): StoredFilters {
       open: stored.open === true,
       query: typeof stored.query === 'string' ? stored.query.slice(0, 200) : '',
       participants: stored.participants === 1 || stored.participants === 2 ? stored.participants : '',
-      equipment: strings(stored.equipment), duration: strings(stored.duration).filter((item): item is DurationBucket => ['short', 'medium', 'long'].includes(item)),
+      equipment: strings(stored.equipment).map(equipmentName), duration: strings(stored.duration).filter((item): item is DurationBucket => ['short', 'medium', 'long'].includes(item)),
       difficulty: Array.isArray(stored.difficulty) ? stored.difficulty.filter((item): item is DifficultyLevel => [1, 2, 3, 4].includes(item as number)) : [],
       format: strings(stored.format).filter((item): item is SectionFormat => (SECTION_FORMATS as readonly string[]).includes(item)),
       collectionIds: strings(stored.collectionIds),

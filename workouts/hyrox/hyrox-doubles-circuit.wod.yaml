@@ -11,13 +11,13 @@ workout:
     sourceUrl: https://maintain.hyrox.com/rulebooks/HYROX_RulebookDoubles_EN.pdf
     notes: "A training variation of the published HYROX race structure (8 runs, 8 stations); the format is not an official prescription. Timed intervals replace race distances. Heavy loads are the Doubles open-division station standards from the Season 26/27 rulebook (men and mixed / women); medium and light are training suggestions. Swap stations you lack: a heavy carry for the sled, a treadmill or shuttle for the run."
   equipment:
-    - Treadmill or running route
+    - Treadmill or Running Route
     - SkiErg
     - Sled
-    - Rowing machine
+    - Rowing Machine
     - Kettlebell
     - Sandbag
-    - Medicine ball
+    - Medicine Ball
     - Wall
   participants: 2
   prep: 10s

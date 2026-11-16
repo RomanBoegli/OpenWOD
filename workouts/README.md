@@ -29,8 +29,8 @@ It is part of `npm run check`.
 
 1. Copy a similar file into the right folder and rename it to `<id>.wod.yaml`.
    Set `workout.id` to the same id (lower-case, hyphens) and `revision: 1`.
-   Write the workout `title`, every block `title` and every movement `name` in Title Case ("Dumbbell Front Rack Lunges", "Toes-to-Bar", "Warm-Up"), and notes and descriptions in sentence case.
-2. Give every node a unique `id`, end each section with `transitionAfter: manualReady` (Wait for Ready) unless the workout prescribes a timed rest before the next section (a `blockRest` node at the end of the body with `transitionAfter: automatic`) or a straight continuation (`automatic` without a rest), set `attribution.author`, and list the `equipment` the movements need using the catalogue's names (Barbell, Rowing machine, Bike, SkiErg, Plyo box, Medicine ball, Slam ball, Jump rope, Pull-up bar, Rings, Kettlebell, Dumbbells, Bench, Sled, Sandbag, Climbing rope, Wall, AbMat, Weight plate, Parallettes, GHD, Battle rope, Tyre, Yoke, Resistance band) plus `Running route`, `Treadmill or running route`, `Exercise mat` or `Squat rack` where that is what the session needs.
+   Write the workout `title`, every block `title`, every movement `name` and every `equipment` name in Title Case ("Dumbbell Front Rack Lunges", "Toes-to-Bar", "Warm-Up", "Pull-Up Bar"), and notes and descriptions in sentence case.
+2. Give every node a unique `id`, end each section with `transitionAfter: manualReady` (Wait for Ready) unless the workout prescribes a timed rest before the next section (a `blockRest` node at the end of the body with `transitionAfter: automatic`) or a straight continuation (`automatic` without a rest), set `attribution.author`, and list the `equipment` the movements need using the catalogue's names (Barbell, Rowing Machine, Bike, SkiErg, Plyo Box, Medicine Ball, Slam Ball, Jump Rope, Pull-Up Bar, Rings, Kettlebell, Dumbbells, Bench, Sled, Sandbag, Climbing Rope, Wall, AbMat, Weight Plate, Parallettes, GHD, Battle Rope, Tyre, Yoke, Resistance Band) plus `Running Route`, `Treadmill or Running Route`, `Exercise Mat` or `Squat Rack` where that is what the session needs.
 3. Use movement names or aliases from `movements.ts`.
    Add a record there first if the movement is new (the voice packs render one clip per record), with a Title Case name, its short name among the aliases, and no alias that only repeats the name in another case, plural or punctuation.
 4. Put standards (ball target, box height, race distances) in the description or the movement `notes`, coaching cues in `notes`, and loads as levels (below).
@@ -69,8 +69,8 @@ Men's amounts that already existed were kept and only the women's amounts added 
 | `curls-push-ups-sit-ups-emom-12` | Biceps curls get levels 7.5/10/15 kg (5/7.5/10 kg) per dumbbell as a starting weight. | Suggestion. |
 | `double-amrap-10` | Women's front squats 20/30/42.5 kg. | Suggestion (≈ 0.7 × men). |
 | `fourteens-amrap-14` | Women's thrusters 15/20/29 kg. | Heavy 43 (29) kg = Fran Rx (CrossFit.com standard). Lighter levels suggestion. |
-| `grip-and-core-intervals` | Plate pinch hold 5/10/15 kg (2.5/5/10 kg) per hand. Suitcase carry 16/24/32 kg (12/16/24 kg). `Plates` renamed `Weight plate`. | Suggestion. |
-| `mixed-rounds-under-19` | `Plates` renamed `Weight plate`. | None. |
+| `grip-and-core-intervals` | Plate pinch hold 5/10/15 kg (2.5/5/10 kg) per hand. Suitcase carry 16/24/32 kg (12/16/24 kg). `Plates` renamed `Weight Plate`. | Suggestion. |
+| `mixed-rounds-under-19` | `Plates` renamed `Weight Plate`. | None. |
 | `overhead-endurance-emom-20` | Dumbbell overhead lunges 7.5/10/15 kg (5/7.5/10 kg) per dumbbell. Wall balls 4/6/9 kg (3/4/6 kg) with target. Description states the target. | Wall balls heavy: CrossFit standard. Lunges: suggestion. |
 | `partner-mirror-chipper` | Women's wall balls 4/6/9 kg (men's 6/9/12 kg kept, the program's heavy-ball choice) and slam balls 10/15/20 kg. Target in notes. | Suggestion. |
 | `pull-and-press-ladder` | Women's loads per rung: 20/30/42.5, 25/35/47.5, 30/42.5/60 kg. | Suggestion (≈ 0.7 × men). |
@@ -81,7 +81,7 @@ Men's amounts that already existed were kept and only the women's amounts added 
 | `three-minute-windows` | Women's deadlifts 30/42.5/60 kg. Women's power cleans and shoulder-to-overhead 20/30/45 kg. Box height in notes. | Suggestion. |
 | `triple-amrap-4` | Women's dumbbell clean and jerks and carry shuttles 7.5/12.5/15 kg per hand. Shuttle note says the same dumbbells. | Suggestion. |
 | `wall-ball-row-burpee-emom-20` | Wall balls 4/6/9 kg (3/4/6 kg) with target. Box height in notes. Description states the target. `Wall` added. | Wall balls heavy: CrossFit standard. Lighter levels suggestion. |
-| `hyrox-doubles-circuit` | Loads on sled push, sled pull, farmers carry, sandbag lunges and wall balls. Standards in the description. `sourceUrl` set to the Doubles rulebook. Attribution notes updated. `Kettlebells` → `Kettlebell`, `Treadmill or running route` and `Wall` added. | Heavy = HYROX Doubles open standard, Season 26/27 rulebook (standard). Medium and light suggestion. |
+| `hyrox-doubles-circuit` | Loads on sled push, sled pull, farmers carry, sandbag lunges and wall balls. Standards in the description. `sourceUrl` set to the Doubles rulebook. Attribution notes updated. `Kettlebells` → `Kettlebell`, `Treadmill or Running Route` and `Wall` added. | Heavy = HYROX Doubles open standard, Season 26/27 rulebook (standard). Medium and light suggestion. |
 | `hyrox-engine-emom-24` | Same loads and notes on every station and wall-ball minute. Standards in the description. Equipment as above. | Heavy = HYROX open standard (standard). Medium and light suggestion. |
 | `hyrox-pace-intervals` | Same loads and notes. Standards in the description. Equipment as above. | Heavy = HYROX open standard (standard). Medium and light suggestion. |
 | `run-sled-run` | Sled push levels changed from 50/75/100 kg to 70/105/152 kg (50/70/102 kg) total incl. sled. Description states race distance and load. `sourceUrl` set to the rulebook. | Heavy = HYROX open standard (standard). Medium and light suggestion. |

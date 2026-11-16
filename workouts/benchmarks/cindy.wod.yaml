@@ -11,7 +11,7 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/cindy
     notes: Follows the published benchmark. Scale pull-ups with a band or ring rows.
   equipment:
-    - Pull-up bar
+    - Pull-Up Bar
   participants: 1
   prep: 10s
   sections:

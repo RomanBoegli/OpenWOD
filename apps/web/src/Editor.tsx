@@ -8,7 +8,7 @@ import type { SaveResult } from './data/use-library-data';
 import { workoutHref } from './router';
 import { displayTime } from '../../../packages/engine/src';
 import type { Catalogue, Movement } from '../../../packages/domain/src/catalogue';
-import { equipmentKey, inferEquipment } from '../../../packages/domain/src/library';
+import { equipmentKey, equipmentName, inferEquipment } from '../../../packages/domain/src/library';
 import { recordForName, unmatchedMovements } from './catalogue-link';
 import { MovementPicker } from './MovementPicker';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -90,13 +90,13 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
   const parkedWomen = useRef<{ at: string; amount: number } | undefined>(undefined);
   // Equipment is derived, never typed: the catalogue records of the movements in the lanes, keyword inference for
   // names no record knows, plus whatever the opened workout declared that no movement accounts for (a wall, a
-  // running route, a squat rack), which is carried as it was.
+  // running route, a squat rack), which is carried along in Title Case.
   const [extras] = useState(() => initial.equipment.filter(item => item.trim() && !derivedEquipment(lanesOf(initial), catalogue).some(known => equipmentKey(known) === equipmentKey(item)))); // Fixed when the editor opens; the parent hands in a fresh `initial` after every autosave.
   const board = useMemo(() => {
     const lanes = lanesOf(draft);
     const movements = [...new Map(lanes.map(lane => [lane.name.trim().toLowerCase(), lane.name.trim()])).values()];
     const seen = new Map<string, string>();
-    for (const item of [...derivedEquipment(lanes, catalogue), ...extras]) if (!seen.has(equipmentKey(item))) seen.set(equipmentKey(item), item.trim());
+    for (const item of [...derivedEquipment(lanes, catalogue), ...extras]) if (!seen.has(equipmentKey(item))) seen.set(equipmentKey(item), equipmentName(item));
     return { movements, equipment: [...seen.values()] };
   }, [draft, extras, catalogue]);
   /** The draft as it is compiled, autosaved and saved: the derived equipment replaces whatever the draft carries. */

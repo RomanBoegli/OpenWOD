@@ -24,13 +24,16 @@ export function EquipmentSettings({ preferences, onPreferencesChange, masterData
   const names = useMemo(() => equipmentOptions(entries.map(entry => entry.summary)), [entries]);
   const visible = names.filter(name => !query.trim() || name.toLowerCase().includes(query.trim().toLowerCase()));
   const merges = Object.entries(masterData.equipmentAliases).filter(([key, name]) => key !== equipmentKey(name) && !masterData.committed.includes(`equipment:${key}`));
-  const owned = (name: string) => preferences.myEquipment.includes(name);
-  const setOwned = (name: string, have: boolean) => update({ myEquipment: have ? [...preferences.myEquipment.filter(item => item !== name), name] : preferences.myEquipment.filter(item => item !== name) });
+  // Ticks follow the loose identity, not the spelling: a tick set under "Pull-up bar" holds for "Pull-Up Bar".
+  const same = (a: string, b: string) => equipmentKey(a) === equipmentKey(b);
+  const owned = (name: string) => preferences.myEquipment.some(item => same(item, name));
+  const others = (names: string[]) => preferences.myEquipment.filter(item => !names.some(name => same(item, name)));
+  const setOwned = (name: string, have: boolean) => update({ myEquipment: have ? [...others([name]), name] : others([name]) });
   const merge = () => {
     const target = mergeTarget.trim() || selection[0];
     if (!target || selection.length < 2) return;
     onMasterDataChange(data => mergeEquipment(data, selection, target));
-    if (selection.some(owned)) update({ myEquipment: [...preferences.myEquipment.filter(item => !selection.includes(item)), target] });
+    if (selection.some(owned)) update({ myEquipment: [...others(selection), target] });
     setSelection([]); setMergeTarget('');
   };
   const rename = () => {
@@ -38,7 +41,7 @@ export function EquipmentSettings({ preferences, onPreferencesChange, masterData
     const to = renaming.to.trim();
     if (to && to !== renaming.from) {
       onMasterDataChange(data => mergeEquipment(data, [renaming.from], to));
-      if (owned(renaming.from)) update({ myEquipment: preferences.myEquipment.map(item => item === renaming.from ? to : item) });
+      if (owned(renaming.from)) update({ myEquipment: [...others([renaming.from]), to] });
     }
     setRenaming(undefined);
   };

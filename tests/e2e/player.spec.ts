@@ -478,7 +478,7 @@ test.describe('formats', () => {
     await chip('Equipment', 'Only my equipment').click();
     await expect(page.getByText('Nothing matches yet')).toBeVisible();
     await page.goto('/#/settings/equipment');
-    await page.getByRole('checkbox', { name: 'I have Pull-up bar' }).check();
+    await page.getByRole('checkbox', { name: 'I have Pull-Up Bar' }).check();
     await page.getByRole('link', { name: 'Back to library' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Cindy');
     await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Fran');

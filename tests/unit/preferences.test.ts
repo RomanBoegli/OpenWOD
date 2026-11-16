@@ -54,6 +54,10 @@ describe('preferences', () => {
     // What is stored afterwards is the new shape, which reads back unchanged.
     expect(normalisePreferences(loadPreferences())).toEqual(loadPreferences());
   });
+  it('reads the equipment at home in Title Case, whatever an older build stored', () => {
+    expect(normalisePreferences({ myEquipment: ['Pull-up bar', 'kettlebell', 'SkiErg', '', 7] }).myEquipment).toEqual(['Pull-Up Bar', 'Kettlebell', 'SkiErg']);
+  });
+
   it('keeps the skip length between 1 and 60 whole seconds', () => {
     store.set('openwod.preferences.v1', JSON.stringify({ nudgeSeconds: 2.6 }));
     expect(loadPreferences().nudgeSeconds).toBe(3);

@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { Catalogue, MOVEMENT_ID_PATTERN, movementKey } from '../../packages/domain/src/catalogue';
 import { seedMovements } from '../../packages/domain/src/movements';
 import { bundledWorkouts } from '../../packages/domain/src/bundled';
+import { equipmentName } from '../../packages/domain/src/library';
 import type { WorkoutNode } from '../../packages/domain/src/schema';
 
 const catalogue = new Catalogue(seedMovements);
 
-const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing machine', 'Bike', 'SkiErg', 'Plyo box', 'Medicine ball', 'Slam ball', 'Jump rope', 'Pull-up bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing rope', 'Wall', 'AbMat', 'Weight plate', 'Parallettes', 'GHD', 'Battle rope', 'Tyre', 'Yoke', 'Resistance band'];
+const ALLOWED_EQUIPMENT = ['Barbell', 'Rowing Machine', 'Bike', 'SkiErg', 'Plyo Box', 'Medicine Ball', 'Slam Ball', 'Jump Rope', 'Pull-Up Bar', 'Rings', 'Kettlebell', 'Dumbbells', 'Bench', 'Sled', 'Sandbag', 'Climbing Rope', 'Wall', 'AbMat', 'Weight Plate', 'Parallettes', 'GHD', 'Battle Rope', 'Tyre', 'Yoke', 'Resistance Band'];
 
 // Title Case: every word capitalised except short articles, conjunctions and prepositions inside a name, inside hyphenated
 // compounds too ("Toes-to-Bar"). Acronyms and brands (DB, AbMat) pass as written, numbers and the units after them ("10 s") or in
@@ -63,13 +64,27 @@ describe('seed movement catalogue', () => {
     }
   });
 
-  it('writes movement names, workout titles and block titles in Title Case', () => {
+  it('gives a typed name the spelling its record has, for the name and for an alias', () => {
+    expect(catalogue.spelling('romanian deadlifts')).toBe('Romanian Deadlifts');
+    expect(catalogue.spelling('push ups')).toBe('Push-Ups');
+    expect(catalogue.spelling('burpee')).toBe('Burpees');
+    expect(catalogue.spelling('TOES TO BAR')).toBe('Toes-to-Bar');
+    expect(catalogue.spelling('rdl')).toBe('RDL');
+    expect(catalogue.spelling('press ups')).toBe('Press-Ups');
+    expect(catalogue.spelling('pogo skips')).toBeUndefined();
+  });
+
+  it('writes movement names, equipment names, workout titles and block titles in Title Case', () => {
     const offending = (text: string) => !isTitleCase(text);
     const names = seedMovements.flatMap(record => [record.name, record.shortName ?? '', ...(record.aliases ?? [])]).filter(Boolean);
     expect(names.filter(offending)).toEqual([]);
     expect(fixtureNames().filter(offending)).toEqual([]);
     expect(bundledWorkouts.map(workout => workout.title).filter(offending)).toEqual([]);
     expect(bundledWorkouts.flatMap(workout => workout.sections.map(section => section.title)).filter(offending)).toEqual([]);
+    // Equipment follows the same convention, and the app's own rule would respell none of the names it ships.
+    const equipment = [...new Set([...ALLOWED_EQUIPMENT, ...bundledWorkouts.flatMap(workout => workout.equipment)])];
+    expect(equipment.filter(offending)).toEqual([]);
+    expect(equipment.filter(name => equipmentName(name) !== name)).toEqual([]);
   });
 
   it('lists in every bundled workout the equipment its movements need', () => {

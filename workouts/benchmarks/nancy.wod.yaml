@@ -11,7 +11,7 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/nancy
     notes: Follows the published benchmark. Heavy is the published Rx for men with the women’s Rx in brackets; medium and light are common scalings, rounded to plate and kettlebell sizes.
   equipment:
-    - Running route
+    - Running Route
     - Barbell
   participants: 1
   prep: 10s

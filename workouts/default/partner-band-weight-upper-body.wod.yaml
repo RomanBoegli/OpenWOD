@@ -10,8 +10,8 @@ workout:
     author: OpenWOD
   equipment:
     - Dumbbells
-    - Resistance band
-    - Exercise mat
+    - Resistance Band
+    - Exercise Mat
   participants: 2
   prep: 10s
   sections:

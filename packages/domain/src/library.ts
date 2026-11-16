@@ -73,28 +73,42 @@ const BAND = /^(?!.*\b(?:it.?|iliotibial )band).*\b(?:mini)?band(?:ed|s)?\b/;
 /** Movement keyword → the equipment it implies. Checked against normalised movement names; every match counts. */
 const EQUIPMENT_RULES: [RegExp, string][] = [
   [/barbell|thruster|deadlift|clean|jerk|snatch|back squat|front squat|overhead squat|push press|strict press|bench press|sumo deadlift/, 'Barbell'],
-  [/\brow\b|rowing|rower/, 'Rowing machine'],
+  [/\brow\b|rowing|rower/, 'Rowing Machine'],
   [/assault|echo bike|air bike|bike erg|\bbike\b|cycling/, 'Bike'],
   [/ski ?erg|\bski\b/, 'SkiErg'],
-  [/box jump|box step|step.?over|step.?up/, 'Plyo box'],
-  [/wall ?ball|medicine ball|med ball/, 'Medicine ball'],
-  [/slam ball/, 'Slam ball'],
-  [/double.?under|single.?under|jump rope|skipping/, 'Jump rope'],
-  [/pull.?up|chin.?up|toes.?to.?bar|knee raise|dead hang|bar muscle|chest.?to.?bar|hanging/, 'Pull-up bar'],
+  [/box jump|box step|step.?over|step.?up/, 'Plyo Box'],
+  [/wall ?ball|medicine ball|med ball/, 'Medicine Ball'],
+  [/slam ball/, 'Slam Ball'],
+  [/double.?under|single.?under|jump rope|skipping/, 'Jump Rope'],
+  [/pull.?up|chin.?up|toes.?to.?bar|knee raise|dead hang|bar muscle|chest.?to.?bar|hanging/, 'Pull-Up Bar'],
   [/ring (row|dip|muscle|support)|rings\b|ring muscle/, 'Rings'],
   [/kettlebell|\bkb\b/, 'Kettlebell'],
   [/dumbbell|\bdb\b/, 'Dumbbells'],
   [/bench press|floor press|bench\b/, 'Bench'],
   [/sled/, 'Sled'],
   [/sandbag/, 'Sandbag'],
-  [/rope climb/, 'Climbing rope'],
+  [/rope climb/, 'Climbing Rope'],
   [/handstand|wall walk|hspu/, 'Wall'],
-  [BAND, 'Resistance band'],
+  [BAND, 'Resistance Band'],
 ];
 
 export const normalise = (text: string) => text.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').trim();
 /** Loose identity for equipment names: case, accents and a trailing plural s are ignored ("Kettlebells" ≈ "kettlebell"). */
 export const equipmentKey = (name: string) => normalise(name).replace(/\s+/g, ' ').replace(/s$/, '');
+const JOINING_WORDS = new Set(['a', 'an', 'and', 'the', 'or', 'of', 'to', 'in', 'on', 'for', 'with']);
+/**
+ * Equipment names are shown in Title Case however a file, an older build or a keyboard wrote them ("pull-up bar" →
+ * "Pull-Up Bar"). A part with a capital of its own stays as it is ("SkiErg", "GHD"), a joining word inside a name
+ * stays small, and so does what starts with a digit or follows a number ("16 kg").
+ */
+export const equipmentName = (name: string): string => {
+  const words = name.trim().split(/\s+/);
+  return words.map((word, index) => word.split('-').map((part, at, parts) => {
+    const inside = !(index === 0 && at === 0) && !(index === words.length - 1 && at === parts.length - 1);
+    if (/\p{Lu}/u.test(part) || (inside && JOINING_WORDS.has(part)) || (at === 0 && /\d$/.test(words[index - 1] ?? ''))) return part;
+    return part.replace(/^([^\p{L}\p{N}]*)(\p{Ll})/u, (_, lead: string, letter: string) => lead + letter.toUpperCase());
+  }).join('-')).join(' ');
+};
 /** Loose identity for author names: case, accents, punctuation and spacing are ignored ("Cross-Fit" ≈ "crossfit "). */
 export const authorKey = (name: string) => normalise(name).replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -133,7 +147,8 @@ export function summariseWorkout(workout: Workout, options: SummaryOptions = {})
   const plan = compileWorkout(workout);
   const prescriptions = collectPrescriptions(workout);
   const movements = prescriptions.map(item => item.name);
-  const canonical = options.canonicalEquipment ?? ((name: string) => name);
+  // A saved workout keeps the spelling it was written with, so the case is settled here, after the merges.
+  const canonical = (name: string) => equipmentName(options.canonicalEquipment ? options.canonicalEquipment(name) : name);
   const known = options.catalogue ? prescriptions.filter(item => options.catalogue!.resolve(item)) : [];
   const unknown = prescriptions.filter(item => !known.includes(item)).map(item => item.name);
   const inferred = [...known.flatMap(item => options.catalogue!.equipmentOf(item)), ...inferEquipment(unknown, workout.equipment)];

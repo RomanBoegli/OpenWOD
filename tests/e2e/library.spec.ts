@@ -22,10 +22,10 @@ test.describe('library', () => {
     await chip('Duration', 'Up to 20 min').click(); // Accumulative: both buckets now match.
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ duration: ['long', 'short'] }));
     await page.getByRole('button', { name: 'Clear filters' }).click();
-    await chip('Equipment', 'Exercise mat').click();
-    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'] }));
+    await chip('Equipment', 'Exercise Mat').click();
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise Mat'] }));
     await chip('Athletes', 'Solo').click(); // Groups narrow each other: the partner workout drops out.
-    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise mat'], participants: 1 }));
+    await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ equipment: ['Exercise Mat'], participants: 1 }));
     await expect(list).toContainText('Dumbbell Full Body Crunch');
     await expect(list).not.toContainText('Full Body Partner Workout');
     await page.getByRole('button', { name: 'Clear filters' }).click();

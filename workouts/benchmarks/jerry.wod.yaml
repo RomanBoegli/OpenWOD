@@ -11,8 +11,8 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/jerry
     notes: Follows the published benchmark. No loads; scale by shortening the pieces.
   equipment:
-    - Running route
-    - Rowing machine
+    - Running Route
+    - Rowing Machine
   participants: 1
   prep: 10s
   sections:

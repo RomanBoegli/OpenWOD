@@ -10,7 +10,7 @@ workout:
     author: OpenWOD
     notes: A you-go-I-go sprint format common in partner classes.
   equipment:
-    - Rowing machine
+    - Rowing Machine
   participants: 2
   prep: 10s
   sections:

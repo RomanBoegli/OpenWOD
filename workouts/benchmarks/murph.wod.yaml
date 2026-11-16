@@ -11,8 +11,8 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/murph
     notes: Follows the published benchmark. The 20 lb (14 lb) weight vest is optional and stays in the notes; the only loads are your own bodyweight.
   equipment:
-    - Running route
-    - Pull-up bar
+    - Running Route
+    - Pull-Up Bar
   participants: 1
   prep: 10s
   sections:

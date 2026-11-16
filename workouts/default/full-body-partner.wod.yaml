@@ -11,7 +11,7 @@ workout:
     notes: Encoded from docs/source/example-wod.md with its timing made explicit (section 6.5 of AGENT.md).
   equipment:
     - Dumbbells
-    - Exercise mat
+    - Exercise Mat
   participants: 2
   prep: 10s
   sections:

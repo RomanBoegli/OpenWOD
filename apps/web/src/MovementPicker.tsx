@@ -30,6 +30,8 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onA
   const [active, setActive] = useState(0);
   const listId = useId();
   const root = useRef<HTMLDivElement>(null);
+  /** Whether the name was typed since the field took the focus: only then does leaving it settle the spelling. */
+  const typed = useRef(false);
   const record = catalogue.resolve(value);
   const query = value.name.trim();
   const options = useMemo(() => open && query ? rankBySearch(catalogue.records, query, movementSearchFields(catalogue), 10) : [], [catalogue, open, query]);
@@ -44,6 +46,7 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onA
   }, [open]);
 
   const pick = (picked: Movement) => {
+    typed.current = false;
     onChange(current => {
       const { shortName: _s, spokenName: _v, ...rest } = current;
       return { ...rest, movement: picked.id, name: picked.name, ...(picked.shortName ? { shortName: picked.shortName } : {}), ...(picked.spokenName ? { spokenName: picked.spokenName } : {}) };
@@ -55,14 +58,29 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onA
    * A retyped name is another movement: the link goes, and with it the short and spoken names of the picked record. Any
    * change of the text opens the list; Android keyboards, dictation, swipe typing and a paste send no printable key.
    */
-  const rename = (name: string) => { setOpen(true); onChange(current => { const { movement: _m, shortName: _s, spokenName: _v, ...rest } = current; return { ...rest, name }; }); };
+  const rename = (name: string) => { typed.current = true; setOpen(true); onChange(current => { const { movement: _m, shortName: _s, spokenName: _v, ...rest } = current; return { ...rest, name }; }); };
+  /**
+   * Leaving the field settles a typed name the catalogue knows on the catalogue's spelling ("romanian deadlifts" →
+   * "Romanian Deadlifts"), so the lane reads like the others and gets the record's recorded voice. A name of a record
+   * is picked whole; an alias keeps being the alias. Never while typing: "burpee" may still become "burpee box jumps".
+   */
+  const settle = () => {
+    setOpen(false);
+    if (!typed.current) return;
+    typed.current = false;
+    const known = catalogue.byName(value.name);
+    const spelling = catalogue.spelling(value.name);
+    if (!known || !spelling) return;
+    if (spelling === known.name) pick(known);
+    else onChange(current => ({ ...current, movement: known.id, name: spelling }));
+  };
 
   return <div ref={root} className={styles.picker} data-unmatched={unmatched || undefined}>
     <input
       role="combobox" aria-label={label} aria-autocomplete="list" aria-expanded={open && options.length > 0} aria-controls={listId} aria-activedescendant={open && options[active] ? `${listId}-${active}` : undefined}
       value={value.name} maxLength={160} placeholder="Movement" autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false} aria-invalid={invalid || undefined}
       onChange={event => rename(event.target.value)}
-      onBlur={() => setOpen(false)}
+      onBlur={settle}
       onKeyDown={event => {
         if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); setActive(index => Math.min(index + 1, Math.max(options.length - 1, 0))); }
         else if (event.key === 'ArrowUp') { event.preventDefault(); setActive(index => Math.max(index - 1, 0)); }

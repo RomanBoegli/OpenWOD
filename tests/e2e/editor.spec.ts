@@ -427,6 +427,35 @@ test.describe('pickers', () => {
     await expect(page.getByTestId('movement-A')).toHaveText('Burpees');
   });
 
+  test('a name typed in lower case settles on the catalogue’s spelling when the field is left, and known equipment is not offered as new', async ({ page }) => {
+    await page.goto('/#/new'); await page.getByRole('heading', { level: 1, name: 'Build a workout' }).waitFor();
+    await page.getByRole('radio', { name: 'Solo' }).check();
+    const lane = page.getByRole('combobox', { name: 'Block 1 movement 1', exact: true });
+    await lane.pressSequentially('romanian deadlifts');
+    // Known whatever the case, and left as typed while the cursor is in the field.
+    await expect(lane).toHaveValue('romanian deadlifts');
+    await expect(page.getByText('Not in your catalogue')).toHaveCount(0);
+    await lane.press('Tab');
+    await expect(lane).toHaveValue('Romanian Deadlifts');
+    // An alias stays the alias, in the record's spelling, and a name the catalogue lacks stays as typed.
+    await lane.fill('press ups'); await lane.press('Tab');
+    await expect(lane).toHaveValue('Press-Ups');
+    await lane.fill('pogo skips'); await lane.press('Tab');
+    await expect(lane).toHaveValue('pogo skips');
+    await page.goto('/#/settings/movements'); await page.getByRole('heading', { level: 1 }).waitFor();
+    await page.getByRole('button', { name: 'New movement' }).click();
+    const form = page.getByRole('dialog', { name: 'New movement' });
+    const equipment = form.getByRole('combobox', { name: 'Equipment' });
+    await equipment.fill('rowing machine');
+    await expect(form.getByRole('listbox', { name: 'Equipment suggestions' }).getByRole('option').first()).toHaveText('Rowing Machine');
+    await expect(form.getByRole('option', { name: /^Add/ })).toHaveCount(0);
+    await equipment.press('Enter');
+    await expect(form.getByRole('button', { name: 'Remove Rowing Machine' })).toBeVisible();
+    // A new name typed in lower case is kept in Title Case.
+    await equipment.fill('ab wheel'); await equipment.press('Enter');
+    await expect(form.getByRole('button', { name: 'Remove Ab Wheel' })).toBeVisible();
+  });
+
   test('an equipment list takes a clicked suggestion and a comma typed as text, closes after each, and drops a chip on a click only', async ({ page }) => {
     await page.goto('/#/settings/movements'); await page.getByRole('heading', { level: 1 }).waitFor();
     await page.getByRole('button', { name: 'New movement' }).click();
@@ -435,7 +464,7 @@ test.describe('pickers', () => {
     const chips = form.getByRole('group', { name: 'Equipment', exact: true }).getByRole('button', { name: /^Remove / });
     await equipment.fill('row');
     const option = form.getByRole('listbox', { name: 'Equipment suggestions' }).getByRole('option').first();
-    await expect(option).toHaveText('Rowing machine');
+    await expect(option).toHaveText('Rowing Machine');
     expect(await keepsFocus(option)).toBe(true);
     await option.click();
     await expect(chips).toHaveCount(1);
@@ -453,6 +482,6 @@ test.describe('pickers', () => {
     await expect(chips).toHaveCount(2);
     await form.getByRole('button', { name: 'Remove Barbell' }).click();
     await expect(chips).toHaveCount(1);
-    await expect(form.getByRole('button', { name: 'Remove Rowing machine' })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Remove Rowing Machine' })).toBeVisible();
   });
 });

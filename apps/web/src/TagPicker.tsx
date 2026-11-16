@@ -10,7 +10,7 @@ type Choice = { kind: 'pick' | 'new'; text: string };
  * A list of names picked from a repertoire: type to get ranked suggestions, Enter or a comma takes the highlighted one,
  * and a name the repertoire lacks is offered as "Add …" so new entries are created in place. Backspace on an empty
  * input removes the last chip. Used wherever the app keeps a repertoire (equipment today, whose names are written in
- * sentence case: "Pull-up bar", so a phone capitalises the first word only).
+ * Title Case: "Pull-Up Bar", so a phone capitalises every word).
  */
 export function TagPicker({ label, value, options, onChange }: TagPickerProps) {
   const [query, setQuery] = useState('');
@@ -58,7 +58,7 @@ export function TagPicker({ label, value, options, onChange }: TagPickerProps) {
   return <div className={styles.picker} role="group" aria-label={label}>
     <div ref={field} className={styles.field} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.querySelector('input')?.focus(); }}>
       {value.map(item => <span key={item} className={styles.tag}>{item}<button type="button" aria-label={`Remove ${item}`} {...keepFocus} onClick={() => onChange(value.filter(known => known !== item))}><Icon name="close" size={12} /></button></span>)}
-      <input role="combobox" aria-label={label} aria-expanded={open && choices.length > 0} aria-controls={listId} aria-autocomplete="list" aria-activedescendant={open && choices.length ? `${listId}-${current}` : undefined} autoComplete="off" autoCorrect="off" autoCapitalize="sentences" spellCheck={false} value={query} maxLength={80}
+      <input role="combobox" aria-label={label} aria-expanded={open && choices.length > 0} aria-controls={listId} aria-autocomplete="list" aria-activedescendant={open && choices.length ? `${listId}-${current}` : undefined} autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false} value={query} maxLength={80}
         onChange={event => onText(event.target.value)} onBlur={() => setOpen(false)} onKeyDown={onKeyDown} />
     </div>
     {showing && anchor && <ul id={listId} role="listbox" className={styles.list} style={anchor} aria-label={`${label} suggestions`} {...keepFocus}>

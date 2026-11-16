@@ -11,11 +11,11 @@ workout:
     sourceUrl: https://www.crossfit.com/workout/2013/09/22
     notes: Follows the published benchmark structure. Loads shown are the published Rx; scale freely.
   equipment:
-    - Medicine ball
+    - Medicine Ball
     - Wall
     - Barbell
-    - Plyo box
-    - Rowing machine
+    - Plyo Box
+    - Rowing Machine
   participants: 1
   prep: 10s
   sections:

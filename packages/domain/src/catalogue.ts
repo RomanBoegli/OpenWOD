@@ -24,7 +24,7 @@ export interface Movement {
   aliases?: string[];
   /** Parent record id for a variant; one level only. */
   family?: string;
-  /** Canonical equipment names as the library uses them ("Barbell", "Pull-up bar"). Empty means bodyweight. */
+  /** Canonical equipment names as the library uses them ("Barbell", "Pull-Up Bar"). Empty means bodyweight. */
   equipment?: string[];
   category?: MovementCategory;
   /** Standards, scaling, coaching notes. Never executed. */
@@ -66,6 +66,11 @@ export class Catalogue {
     return (prescription.movement && this.byId.get(prescription.movement)) || this.byKey.get(movementKey(prescription.name));
   }
   byName(name: string): Movement | undefined { return this.byKey.get(movementKey(name)); }
+  /** A known name as its record writes it, whatever case, plural or punctuation it was typed in: the record's name, or the alias that matched ("toes to bar" → "Toes-to-Bar"). */
+  spelling(name: string): string | undefined {
+    const record = this.byName(name);
+    return record && [record.name, ...(record.aliases ?? [])].find(known => movementKey(known) === movementKey(name));
+  }
   /** The family head for a record, or the record itself when it has no parent or the parent is unknown. */
   head(record: Movement): Movement { return (record.family && this.byId.get(record.family)) || record; }
   variants(id: string): Movement[] { return this.records.filter(record => record.family === id); }

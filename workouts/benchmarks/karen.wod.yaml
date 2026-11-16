@@ -11,7 +11,7 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/karen
     notes: Follows the published benchmark. Heavy is the published Rx for men with the women’s Rx in brackets; medium and light are common scalings, rounded to plate and kettlebell sizes.
   equipment:
-    - Medicine ball
+    - Medicine Ball
     - Wall
   participants: 1
   prep: 10s

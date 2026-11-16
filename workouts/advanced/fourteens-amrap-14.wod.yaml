@@ -10,8 +10,8 @@ workout:
     author: Coach programming
     notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
-    - Pull-up bar
-    - Rowing machine
+    - Pull-Up Bar
+    - Rowing Machine
     - Barbell
   participants: 1
   prep: 10s

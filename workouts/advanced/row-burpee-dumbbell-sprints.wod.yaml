@@ -10,8 +10,8 @@ workout:
     author: Coach programming
     notes: Curated from a CrossFit class program shared in a members chat; loads are training suggestions with light/medium/heavy levels added by OpenWOD.
   equipment:
-    - Rowing machine
-    - Plyo box
+    - Rowing Machine
+    - Plyo Box
     - Dumbbells
   participants: 2
   prep: 10s

@@ -11,7 +11,7 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/annie
     notes: Follows the published benchmark. Bodyweight only; there are no loads to scale.
   equipment:
-    - Jump rope
+    - Jump Rope
   participants: 1
   prep: 10s
   sections:

@@ -11,8 +11,8 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/tabata-this
     notes: Follows the published benchmark structure. Score each movement by its lowest interval; the row counts calories.
   equipment:
-    - Rowing machine
-    - Pull-up bar
+    - Rowing Machine
+    - Pull-Up Bar
   participants: 1
   prep: 10s
   sections:

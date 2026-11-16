@@ -11,7 +11,7 @@ workout:
     sourceUrl: https://maintain.hyrox.com/rulebooks/HYROX_RulebookDoubles_EN.pdf
     notes: A HYROX-style run and station sequence. Heavy is the open-division sled push standard from the Season 26/27 rulebook (total incl. sled); medium and light are training suggestions.
   equipment:
-    - Running route
+    - Running Route
     - Sled
   participants: 1
   prep: 10s

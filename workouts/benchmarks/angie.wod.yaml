@@ -11,7 +11,7 @@ workout:
     sourceUrl: https://www.crossfit.com/benchmark/angie
     notes: Follows the published benchmark. Bodyweight only; there are no loads to scale.
   equipment:
-    - Pull-up bar
+    - Pull-Up Bar
   participants: 1
   prep: 10s
   sections:

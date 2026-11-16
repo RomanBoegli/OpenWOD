@@ -184,6 +184,8 @@ ${movementNames(movements)}
 
 ## Equipment names
 
+Use these names where one fits. Equipment that is not listed is allowed, with an English name in Title Case.
+
 ${equipment.join(', ')}
 
 ${EXAMPLES.map(([title, id]) => `## ${title}\n\n${yaml(serialiseWorkoutFile({ ...bundledWorkout(id), sharing: undefined }))}`).join('\n\n')}

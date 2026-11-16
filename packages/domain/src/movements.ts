@@ -26,7 +26,7 @@ export const seedMovements: Movement[] = [
   { id: 'single-dumbbell-clean-and-jerk', name: 'Single-Dumbbell Clean and Jerks', shortName: 'Single DB Clean & Jerks', aliases: ['Single DB Clean & Jerks', 'Single DB Clean and Jerks', 'Single-Arm Dumbbell Clean and Jerks', 'One-Arm Dumbbell Clean and Jerks'], family: 'clean', equipment: ['Dumbbells'], category: 'weightlifting' },
   { id: 'kettlebell-clean', name: 'Kettlebell Cleans', aliases: ['KB Cleans'], family: 'clean', equipment: ['Kettlebell'], category: 'weightlifting' },
   { id: 'sandbag-clean', name: 'Sandbag Cleans', aliases: ['Sandbag Cleans to Shoulder'], family: 'clean', equipment: ['Sandbag'], category: 'conditioning' },
-  { id: 'medicine-ball-clean', name: 'Medicine Ball Cleans', aliases: ['Med Ball Cleans', 'Wall Ball Cleans'], family: 'clean', equipment: ['Medicine ball'], category: 'conditioning' },
+  { id: 'medicine-ball-clean', name: 'Medicine Ball Cleans', aliases: ['Med Ball Cleans', 'Wall Ball Cleans'], family: 'clean', equipment: ['Medicine Ball'], category: 'conditioning' },
 
   // Snatches
   { id: 'snatch', name: 'Snatches', aliases: ['Barbell Snatches'], equipment: ['Barbell'], category: 'weightlifting' },
@@ -58,7 +58,7 @@ export const seedMovements: Movement[] = [
   // Squats (umbrella head)
   { id: 'squat', name: 'Squats', category: 'strength' },
   { id: 'air-squat', name: 'Air Squats', aliases: ['Bodyweight Squats'], family: 'squat', category: 'conditioning' },
-  { id: 'air-squat-to-plate', name: 'Air Squats to a Plate', shortName: 'Squats to Plate', aliases: ['Squats to a Plate', 'Squats to Plate'], family: 'squat', equipment: ['Weight plate'], category: 'conditioning', notes: 'Squat until you touch a plate on the floor; sets depth' },
+  { id: 'air-squat-to-plate', name: 'Air Squats to a Plate', shortName: 'Squats to Plate', aliases: ['Squats to a Plate', 'Squats to Plate'], family: 'squat', equipment: ['Weight Plate'], category: 'conditioning', notes: 'Squat until you touch a plate on the floor; sets depth' },
   { id: 'back-squat', name: 'Back Squat', aliases: ['Barbell Back Squats', 'BS'], family: 'squat', equipment: ['Barbell'], category: 'strength' },
   { id: 'front-squat', name: 'Front Squats', aliases: ['Barbell Front Squats', 'FS'], family: 'squat', equipment: ['Barbell'], category: 'strength' },
   { id: 'pause-front-squat', name: 'Pause Front Squat', aliases: ['Paused Front Squats', 'Tempo Front Squats'], family: 'squat', equipment: ['Barbell'], category: 'strength' },
@@ -70,7 +70,7 @@ export const seedMovements: Movement[] = [
   { id: 'dumbbell-overhead-squat', name: 'Dumbbell Overhead Squats', shortName: 'DB Overhead Squats', aliases: ['DB Overhead Squats', 'DB OHS', 'Single-Arm Dumbbell Overhead Squats'], family: 'squat', equipment: ['Dumbbells'], category: 'weightlifting' },
   { id: 'jump-squat', name: 'Jump Squats', aliases: ['Squat Jumps'], family: 'squat', category: 'conditioning' },
   { id: 'pistol', name: 'Pistols', aliases: ['Pistol Squats', 'Single-Leg Squats', 'One-Legged Squats'], family: 'squat', category: 'gymnastics' },
-  { id: 'box-squat', name: 'Box Squats', family: 'squat', equipment: ['Barbell', 'Plyo box'], category: 'strength' },
+  { id: 'box-squat', name: 'Box Squats', family: 'squat', equipment: ['Barbell', 'Plyo Box'], category: 'strength' },
   { id: 'zercher-squat', name: 'Zercher Squats', family: 'squat', equipment: ['Barbell'], category: 'strength', notes: 'The bar held in the crooks of the elbows' },
   { id: 'sandbag-squat', name: 'Sandbag Squats', aliases: ['Sandbag Front Squats', 'Bear Hug Squats'], family: 'squat', equipment: ['Sandbag'], category: 'conditioning' },
   { id: 'cossack-squat', name: 'Cossack Squats', family: 'squat', category: 'mobility' },
@@ -85,7 +85,7 @@ export const seedMovements: Movement[] = [
   { id: 'dumbbell-deadlift', name: 'Dumbbell Deadlifts', aliases: ['DB Deadlifts'], family: 'deadlift', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'dumbbell-romanian-deadlift', name: 'Dumbbell Romanian Deadlifts', shortName: 'DB RDLs', aliases: ['DB RDLs', 'DB Romanian Deadlifts'], family: 'deadlift', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'snatch-grip-deadlift', name: 'Snatch-Grip Deadlifts', shortName: 'Snatch-Grip DLs', aliases: ['Snatch-Grip DLs', 'Snatch Deadlifts'], family: 'deadlift', equipment: ['Barbell'], category: 'strength' },
-  { id: 'deficit-deadlift', name: 'Deficit Deadlifts', family: 'deadlift', equipment: ['Barbell', 'Weight plate'], category: 'strength' },
+  { id: 'deficit-deadlift', name: 'Deficit Deadlifts', family: 'deadlift', equipment: ['Barbell', 'Weight Plate'], category: 'strength' },
   { id: 'kettlebell-deadlift', name: 'Kettlebell Deadlifts', aliases: ['KB Deadlifts'], family: 'deadlift', equipment: ['Kettlebell'], category: 'strength' },
 
   // Bench press
@@ -101,9 +101,9 @@ export const seedMovements: Movement[] = [
   { id: 'squat-clean-thruster', name: 'Clusters', aliases: ['Squat Clean Thrusters'], family: 'thruster', equipment: ['Barbell'], category: 'weightlifting', notes: 'A squat clean straight into a thruster' },
 
   // Balls
-  { id: 'wall-ball', name: 'Wall Balls', aliases: ['Wall-Ball Shots', 'WB', 'Wallballs'], equipment: ['Medicine ball'], category: 'conditioning', notes: '10 ft men / 9 ft women target; 20 lb / 14 lb ball' },
-  { id: 'slam-ball', name: 'Slam Balls', aliases: ['Ball Slams', 'Slam Ball Slams', 'Medicine Ball Slams'], equipment: ['Slam ball'], category: 'conditioning' },
-  { id: 'slam-ball-ground-to-overhead', name: 'Slam Ball Ground-to-Overhead', shortName: 'Slam Ball G2OH', aliases: ['Slam Ball G2OH'], family: 'slam-ball', equipment: ['Slam ball'], category: 'conditioning' },
+  { id: 'wall-ball', name: 'Wall Balls', aliases: ['Wall-Ball Shots', 'WB', 'Wallballs'], equipment: ['Medicine Ball'], category: 'conditioning', notes: '10 ft men / 9 ft women target; 20 lb / 14 lb ball' },
+  { id: 'slam-ball', name: 'Slam Balls', aliases: ['Ball Slams', 'Slam Ball Slams', 'Medicine Ball Slams'], equipment: ['Slam Ball'], category: 'conditioning' },
+  { id: 'slam-ball-ground-to-overhead', name: 'Slam Ball Ground-to-Overhead', shortName: 'Slam Ball G2OH', aliases: ['Slam Ball G2OH'], family: 'slam-ball', equipment: ['Slam Ball'], category: 'conditioning' },
 
   // Kettlebell swings
   { id: 'kettlebell-swing', name: 'Kettlebell Swings', aliases: ['KB Swings', 'KBS'], equipment: ['Kettlebell'], category: 'weightlifting' },
@@ -114,39 +114,39 @@ export const seedMovements: Movement[] = [
   { id: 'kettlebell-windmill', name: 'Kettlebell Windmills', shortName: 'KB Windmills', aliases: ['KB Windmills'], equipment: ['Kettlebell'], category: 'strength' },
 
   // Pull-ups
-  { id: 'pull-up', name: 'Pull-Ups', aliases: ['Pullups', 'Pull Up'], equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'strict-pull-up', name: 'Strict Pull-Ups', family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'kipping-pull-up', name: 'Kipping Pull-Ups', family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'butterfly-pull-up', name: 'Butterfly Pull-Ups', family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'chest-to-bar-pull-up', name: 'Chest-to-Bar Pull-Ups', shortName: 'C2B Pull-Ups', spokenName: 'Chest to bar pull-ups', aliases: ['C2B', 'CTB', 'C2B Pull-Ups', 'Chest-to-Bar'], family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'chin-up', name: 'Chin-Ups', aliases: ['Chinups'], family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'weighted-pull-up', name: 'Weighted Pull-Ups', family: 'pull-up', equipment: ['Pull-up bar'], category: 'strength' },
-  { id: 'jumping-pull-up', name: 'Jumping Pull-Ups', family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'pull-up', name: 'Pull-Ups', aliases: ['Pullups', 'Pull Up'], equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'strict-pull-up', name: 'Strict Pull-Ups', family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'kipping-pull-up', name: 'Kipping Pull-Ups', family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'butterfly-pull-up', name: 'Butterfly Pull-Ups', family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'chest-to-bar-pull-up', name: 'Chest-to-Bar Pull-Ups', shortName: 'C2B Pull-Ups', spokenName: 'Chest to bar pull-ups', aliases: ['C2B', 'CTB', 'C2B Pull-Ups', 'Chest-to-Bar'], family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'chin-up', name: 'Chin-Ups', aliases: ['Chinups'], family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'weighted-pull-up', name: 'Weighted Pull-Ups', family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'strength' },
+  { id: 'jumping-pull-up', name: 'Jumping Pull-Ups', family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
   { id: 'ring-row', name: 'Ring Rows', aliases: ['Australian Pull-Ups'], family: 'pull-up', equipment: ['Rings'], category: 'gymnastics' },
-  { id: 'dead-hang', name: 'Dead Hang', aliases: ['Bar Hang', 'Dead Hang Hold'], family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'l-sit-pull-up', name: 'L-Sit Pull-Ups', spokenName: 'L sit pull-ups', family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'kipping-swing', name: 'Kipping Swings', aliases: ['Kip Swings'], family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'scap-pull-up', name: 'Scap Pull-Ups', aliases: ['Scapular Pull-Ups', 'Scap Pulls'], family: 'pull-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'dead-hang', name: 'Dead Hang', aliases: ['Bar Hang', 'Dead Hang Hold'], family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'l-sit-pull-up', name: 'L-Sit Pull-Ups', spokenName: 'L sit pull-ups', family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'kipping-swing', name: 'Kipping Swings', aliases: ['Kip Swings'], family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'scap-pull-up', name: 'Scap Pull-Ups', aliases: ['Scapular Pull-Ups', 'Scap Pulls'], family: 'pull-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
 
   // Muscle-ups
   { id: 'muscle-up', name: 'Muscle-Ups', aliases: ['Ring Muscle-Ups', 'RMU'], equipment: ['Rings'], category: 'gymnastics', notes: 'Ring muscle-ups unless the workout says bar' },
-  { id: 'bar-muscle-up', name: 'Bar Muscle-Ups', aliases: ['BMU'], family: 'muscle-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'bar-muscle-up', name: 'Bar Muscle-Ups', aliases: ['BMU'], family: 'muscle-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
   { id: 'strict-muscle-up', name: 'Strict Muscle-Ups', aliases: ['Strict Ring Muscle-Ups'], family: 'muscle-up', equipment: ['Rings'], category: 'gymnastics' },
-  { id: 'strict-bar-muscle-up', name: 'Strict Bar Muscle-Ups', aliases: ['Strict BMU'], family: 'muscle-up', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'strict-bar-muscle-up', name: 'Strict Bar Muscle-Ups', aliases: ['Strict BMU'], family: 'muscle-up', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
 
   // Toes-to-bar
-  { id: 'toes-to-bar', name: 'Toes-to-Bar', aliases: ['T2B', 'TTB'], equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'knees-to-elbows', name: 'Knees-to-Elbows', aliases: ['K2E'], family: 'toes-to-bar', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'hanging-knee-raise', name: 'Hanging Knee Raises', aliases: ['Knee Raises', 'Hanging Leg Raises'], family: 'toes-to-bar', equipment: ['Pull-up bar'], category: 'gymnastics' },
-  { id: 'strict-toes-to-bar', name: 'Strict Toes-to-Bar', shortName: 'Strict T2B', spokenName: 'Strict toes to bar', aliases: ['Strict T2B'], family: 'toes-to-bar', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'toes-to-bar', name: 'Toes-to-Bar', aliases: ['T2B', 'TTB'], equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'knees-to-elbows', name: 'Knees-to-Elbows', aliases: ['K2E'], family: 'toes-to-bar', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'hanging-knee-raise', name: 'Hanging Knee Raises', aliases: ['Knee Raises', 'Hanging Leg Raises'], family: 'toes-to-bar', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
+  { id: 'strict-toes-to-bar', name: 'Strict Toes-to-Bar', shortName: 'Strict T2B', spokenName: 'Strict toes to bar', aliases: ['Strict T2B'], family: 'toes-to-bar', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
   { id: 'toes-to-rings', name: 'Toes-to-Rings', shortName: 'T2R', spokenName: 'Toes to rings', aliases: ['T2R'], family: 'toes-to-bar', equipment: ['Rings'], category: 'gymnastics' },
-  { id: 'windshield-wiper', name: 'Windshield Wipers', aliases: ['Hanging Windshield Wipers'], family: 'toes-to-bar', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'windshield-wiper', name: 'Windshield Wipers', aliases: ['Hanging Windshield Wipers'], family: 'toes-to-bar', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
 
   // Handstands
   { id: 'handstand-push-up', name: 'Handstand Push-Ups', shortName: 'HSPU', aliases: ['HSPU', 'Handstand Pushups'], equipment: ['Wall'], category: 'gymnastics' },
   { id: 'strict-handstand-push-up', name: 'Strict Handstand Push-Ups', shortName: 'Strict HSPU', aliases: ['Strict HSPU'], family: 'handstand-push-up', equipment: ['Wall'], category: 'gymnastics' },
   { id: 'kipping-handstand-push-up', name: 'Kipping Handstand Push-Ups', shortName: 'Kipping HSPU', aliases: ['Kipping HSPU'], family: 'handstand-push-up', equipment: ['Wall'], category: 'gymnastics' },
-  { id: 'deficit-handstand-push-up', name: 'Deficit Handstand Push-Ups', shortName: 'Deficit HSPU', aliases: ['Deficit HSPU'], family: 'handstand-push-up', equipment: ['Wall', 'Weight plate'], category: 'gymnastics' },
+  { id: 'deficit-handstand-push-up', name: 'Deficit Handstand Push-Ups', shortName: 'Deficit HSPU', aliases: ['Deficit HSPU'], family: 'handstand-push-up', equipment: ['Wall', 'Weight Plate'], category: 'gymnastics' },
   { id: 'wall-facing-handstand-push-up', name: 'Wall-Facing Handstand Push-Ups', shortName: 'Wall-Facing HSPU', spokenName: 'Wall facing handstand push-ups', aliases: ['Wall-Facing HSPU'], family: 'handstand-push-up', equipment: ['Wall'], category: 'gymnastics' },
   { id: 'pike-push-up', name: 'Pike Push-Ups', aliases: ['Box Pike Push-Ups'], family: 'handstand-push-up', category: 'gymnastics' },
   { id: 'handstand-hold', name: 'Handstand Hold', aliases: ['Wall-Facing Handstand Hold'], family: 'handstand-push-up', equipment: ['Wall'], category: 'gymnastics' },
@@ -167,12 +167,12 @@ export const seedMovements: Movement[] = [
   { id: 'ring-support-hold', name: 'Ring Support Hold', aliases: ['Ring Support'], family: 'dip', equipment: ['Rings'], category: 'gymnastics' },
 
   // Rope climbs
-  { id: 'rope-climb', name: 'Rope Climbs', equipment: ['Climbing rope'], category: 'gymnastics', notes: '15 ft / 4.5 m standard' },
-  { id: 'legless-rope-climb', name: 'Legless Rope Climbs', family: 'rope-climb', equipment: ['Climbing rope'], category: 'gymnastics' },
+  { id: 'rope-climb', name: 'Rope Climbs', equipment: ['Climbing Rope'], category: 'gymnastics', notes: '15 ft / 4.5 m standard' },
+  { id: 'legless-rope-climb', name: 'Legless Rope Climbs', family: 'rope-climb', equipment: ['Climbing Rope'], category: 'gymnastics' },
 
   // L-sit
   { id: 'l-sit', name: 'L-Sit', aliases: ['L-Sit Hold'], equipment: ['Parallettes'], category: 'gymnastics' },
-  { id: 'hanging-l-sit', name: 'Hanging L-Sit', spokenName: 'Hanging L sit', aliases: ['Hanging L-Sit Hold'], family: 'l-sit', equipment: ['Pull-up bar'], category: 'gymnastics' },
+  { id: 'hanging-l-sit', name: 'Hanging L-Sit', spokenName: 'Hanging L sit', aliases: ['Hanging L-Sit Hold'], family: 'l-sit', equipment: ['Pull-Up Bar'], category: 'gymnastics' },
   { id: 'skin-the-cat', name: 'Skin the Cat', equipment: ['Rings'], category: 'gymnastics' },
 
   // Sit-ups and core
@@ -207,21 +207,21 @@ export const seedMovements: Movement[] = [
   { id: 'burpee-over-bar', name: 'Burpees Over Bar', aliases: ['Bar-Facing Burpees', 'Burpees Over the Bar'], family: 'burpee', equipment: ['Barbell'], category: 'conditioning' },
   { id: 'lateral-burpee-over-bar', name: 'Lateral Burpees Over Bar', shortName: 'Lateral Bar Burpees', aliases: ['Lateral Bar Burpees', 'Lateral Burpees Over the Bar', 'Lateral Bar-Facing Burpees', 'Lateral Burpees'], family: 'burpee', equipment: ['Barbell'], category: 'conditioning' },
   { id: 'burpee-over-dumbbell', name: 'Burpees Over Dumbbells', shortName: 'Burpees Over DBs', aliases: ['Burpees Over DBs', 'Burpees Over the Dumbbell', 'Dumbbell-Facing Burpees'], family: 'burpee', equipment: ['Dumbbells'], category: 'conditioning' },
-  { id: 'burpee-over-rower', name: 'Burpees Over Rower', aliases: ['Burpees Over the Rower', 'Burpees Over Erg'], family: 'burpee', equipment: ['Rowing machine'], category: 'conditioning' },
-  { id: 'burpee-box-jump-over', name: 'Burpee Box Jump Overs', shortName: 'Burpee BJO', aliases: ['Burpee BJO', 'BBJO'], family: 'burpee', equipment: ['Plyo box'], category: 'conditioning' },
-  { id: 'burpee-box-jump', name: 'Burpee Box Jumps', family: 'burpee', equipment: ['Plyo box'], category: 'conditioning' },
+  { id: 'burpee-over-rower', name: 'Burpees Over Rower', aliases: ['Burpees Over the Rower', 'Burpees Over Erg'], family: 'burpee', equipment: ['Rowing Machine'], category: 'conditioning' },
+  { id: 'burpee-box-jump-over', name: 'Burpee Box Jump Overs', shortName: 'Burpee BJO', aliases: ['Burpee BJO', 'BBJO'], family: 'burpee', equipment: ['Plyo Box'], category: 'conditioning' },
+  { id: 'burpee-box-jump', name: 'Burpee Box Jumps', family: 'burpee', equipment: ['Plyo Box'], category: 'conditioning' },
   { id: 'burpee-broad-jump', name: 'Burpee Broad Jumps', aliases: ['BBJ'], family: 'burpee', category: 'conditioning' },
-  { id: 'burpee-pull-up', name: 'Burpee Pull-Ups', aliases: ['Burpee Pullups'], family: 'burpee', equipment: ['Pull-up bar'], category: 'conditioning' },
+  { id: 'burpee-pull-up', name: 'Burpee Pull-Ups', aliases: ['Burpee Pullups'], family: 'burpee', equipment: ['Pull-Up Bar'], category: 'conditioning' },
   { id: 'devil-press', name: 'Devil Presses', aliases: ['Dumbbell Devil Presses', 'DB Devil Presses'], equipment: ['Dumbbells'], category: 'conditioning', notes: 'Burpee into a double dumbbell snatch' },
   { id: 'man-maker', name: 'Man Makers', aliases: ['Manmakers', 'Dumbbell Man Makers'], equipment: ['Dumbbells'], category: 'conditioning', notes: 'Push-up, row each side, squat clean, thruster' },
 
   // Box jumps
-  { id: 'box-jump', name: 'Box Jumps', aliases: ['BJ'], equipment: ['Plyo box'], category: 'conditioning', notes: '24 in men / 20 in women' },
-  { id: 'box-jump-over', name: 'Box Jump Overs', aliases: ['BJO'], family: 'box-jump', equipment: ['Plyo box'], category: 'conditioning' },
-  { id: 'box-step-up', name: 'Box Step-Ups', aliases: ['Step-Ups'], family: 'box-jump', equipment: ['Plyo box'], category: 'conditioning' },
-  { id: 'box-step-over', name: 'Box Step-Overs', aliases: ['Step-Overs'], family: 'box-jump', equipment: ['Plyo box'], category: 'conditioning' },
-  { id: 'lateral-box-jump', name: 'Lateral Box Jumps', aliases: ['Lateral Box Jump Overs'], family: 'box-jump', equipment: ['Plyo box'], category: 'conditioning' },
-  { id: 'dumbbell-box-step-up', name: 'Dumbbell Box Step-Ups', shortName: 'DB Box Step-Ups', aliases: ['DB Box Step-Ups', 'Weighted Step-Ups', 'Dumbbell Step-Ups'], family: 'box-jump', equipment: ['Plyo box', 'Dumbbells'], category: 'conditioning' },
+  { id: 'box-jump', name: 'Box Jumps', aliases: ['BJ'], equipment: ['Plyo Box'], category: 'conditioning', notes: '24 in men / 20 in women' },
+  { id: 'box-jump-over', name: 'Box Jump Overs', aliases: ['BJO'], family: 'box-jump', equipment: ['Plyo Box'], category: 'conditioning' },
+  { id: 'box-step-up', name: 'Box Step-Ups', aliases: ['Step-Ups'], family: 'box-jump', equipment: ['Plyo Box'], category: 'conditioning' },
+  { id: 'box-step-over', name: 'Box Step-Overs', aliases: ['Step-Overs'], family: 'box-jump', equipment: ['Plyo Box'], category: 'conditioning' },
+  { id: 'lateral-box-jump', name: 'Lateral Box Jumps', aliases: ['Lateral Box Jump Overs'], family: 'box-jump', equipment: ['Plyo Box'], category: 'conditioning' },
+  { id: 'dumbbell-box-step-up', name: 'Dumbbell Box Step-Ups', shortName: 'DB Box Step-Ups', aliases: ['DB Box Step-Ups', 'Weighted Step-Ups', 'Dumbbell Step-Ups'], family: 'box-jump', equipment: ['Plyo Box', 'Dumbbells'], category: 'conditioning' },
   { id: 'broad-jump', name: 'Broad Jumps', aliases: ['Standing Broad Jumps'], category: 'conditioning' },
   { id: 'tuck-jump', name: 'Tuck Jumps', category: 'conditioning' },
 
@@ -239,7 +239,7 @@ export const seedMovements: Movement[] = [
   { id: 'dumbbell-walking-lunge', name: 'Dumbbell Walking Lunges', shortName: 'DB Walking Lunges', aliases: ['DB Walking Lunges', 'Dumbbell Lunges', 'DB Lunges'], family: 'lunge', equipment: ['Dumbbells'], category: 'conditioning' },
   { id: 'sandbag-lunge', name: 'Sandbag Lunges', aliases: ['Sandbag Walking Lunges'], family: 'lunge', equipment: ['Sandbag'], category: 'conditioning' },
   { id: 'back-rack-lunge', name: 'Back Rack Lunges', aliases: ['Back Rack Walking Lunges', 'Barbell Back Rack Lunges'], family: 'lunge', equipment: ['Barbell'], category: 'strength' },
-  { id: 'plate-overhead-lunge', name: 'Plate Overhead Lunges', aliases: ['Overhead Plate Lunges', 'Plate Overhead Walking Lunges', 'Overhead Plate Walking Lunges'], family: 'lunge', equipment: ['Weight plate'], category: 'conditioning' },
+  { id: 'plate-overhead-lunge', name: 'Plate Overhead Lunges', aliases: ['Overhead Plate Lunges', 'Plate Overhead Walking Lunges', 'Overhead Plate Walking Lunges'], family: 'lunge', equipment: ['Weight Plate'], category: 'conditioning' },
   { id: 'lateral-lunge', name: 'Lateral Lunges', aliases: ['Side Lunges'], family: 'lunge', category: 'conditioning' },
 
   // Carries
@@ -256,7 +256,7 @@ export const seedMovements: Movement[] = [
   { id: 'sandbag-carry', name: 'Sandbag Carry', aliases: ['Sandbag Carries', 'Sandbag Bear Hug Carry', 'Bear Hug Carry'], family: 'farmers-carry', equipment: ['Sandbag'], category: 'conditioning' },
   { id: 'yoke-carry', name: 'Yoke Carry', aliases: ['Yoke Carries', 'Yoke Walk'], family: 'farmers-carry', equipment: ['Yoke'], category: 'strength' },
   { id: 'sandbag-over-shoulder', name: 'Sandbag Over Shoulder', aliases: ['Sandbag to Shoulder', 'Sandbag Over the Shoulder'], equipment: ['Sandbag'], category: 'conditioning' },
-  { id: 'plate-pinch-hold', name: 'Plate Pinch Hold', aliases: ['Plate Pinch'], equipment: ['Weight plate'], category: 'strength' },
+  { id: 'plate-pinch-hold', name: 'Plate Pinch Hold', aliases: ['Plate Pinch'], equipment: ['Weight Plate'], category: 'strength' },
 
   // Sled
   { id: 'sled-push', name: 'Sled Push', aliases: ['Prowler Push'], equipment: ['Sled'], category: 'strength' },
@@ -265,7 +265,7 @@ export const seedMovements: Movement[] = [
   { id: 'tyre-flip', name: 'Tyre Flips', aliases: ['Tire Flips'], equipment: ['Tyre'], category: 'strength' },
 
   // Monostructural
-  { id: 'row', name: 'Row', aliases: ['Rowing', 'Rower', 'Row (cal)', 'Row (m)', 'Row for Calories', 'Erg Row', 'Cal Row', 'C2 Row', 'Concept2 Row'], equipment: ['Rowing machine'], category: 'monostructural' },
+  { id: 'row', name: 'Row', aliases: ['Rowing', 'Rower', 'Row (cal)', 'Row (m)', 'Row for Calories', 'Erg Row', 'Cal Row', 'C2 Row', 'Concept2 Row'], equipment: ['Rowing Machine'], category: 'monostructural' },
   { id: 'run', name: 'Run', aliases: ['Running', 'Run (m)', 'Run (km)', 'Jog', 'Treadmill Run', 'Treadmill'], category: 'monostructural' },
   { id: 'run-together', name: 'Run Together', aliases: ['Partner Run', 'Team Run'], family: 'run', category: 'monostructural' },
   { id: 'shuttle-run', name: 'Shuttle Runs', aliases: ['Shuttle Sprints', 'Shuttles'], family: 'run', category: 'monostructural' },
@@ -275,10 +275,10 @@ export const seedMovements: Movement[] = [
   { id: 'bike', name: 'Bike', aliases: ['Bike (cal)', 'Cycling', 'Bike Erg', 'BikeErg', 'Biking'], equipment: ['Bike'], category: 'monostructural' },
   { id: 'assault-bike', name: 'Assault Bike', aliases: ['Air Bike', 'Assault Bike (cal)', 'Fan Bike', 'Assault'], family: 'bike', equipment: ['Bike'], category: 'monostructural' },
   { id: 'echo-bike', name: 'Echo Bike', aliases: ['Echo Bike (cal)', 'Echo', 'Rogue Echo Bike'], family: 'bike', equipment: ['Bike'], category: 'monostructural' },
-  { id: 'double-under', name: 'Double-Unders', aliases: ['DU', 'DUs', 'Dubs'], equipment: ['Jump rope'], category: 'monostructural' },
-  { id: 'single-under', name: 'Single-Unders', aliases: ['SU', 'Singles', 'Jump Rope', 'Skipping'], family: 'double-under', equipment: ['Jump rope'], category: 'monostructural' },
-  { id: 'crossover', name: 'Crossovers', aliases: ['Crossover Double-Unders', 'Cross-Overs'], family: 'double-under', equipment: ['Jump rope'], category: 'monostructural' },
-  { id: 'triple-under', name: 'Triple-Unders', aliases: ['TU'], family: 'double-under', equipment: ['Jump rope'], category: 'monostructural' },
+  { id: 'double-under', name: 'Double-Unders', aliases: ['DU', 'DUs', 'Dubs'], equipment: ['Jump Rope'], category: 'monostructural' },
+  { id: 'single-under', name: 'Single-Unders', aliases: ['SU', 'Singles', 'Jump Rope', 'Skipping'], family: 'double-under', equipment: ['Jump Rope'], category: 'monostructural' },
+  { id: 'crossover', name: 'Crossovers', aliases: ['Crossover Double-Unders', 'Cross-Overs'], family: 'double-under', equipment: ['Jump Rope'], category: 'monostructural' },
+  { id: 'triple-under', name: 'Triple-Unders', aliases: ['TU'], family: 'double-under', equipment: ['Jump Rope'], category: 'monostructural' },
 
   // Bodyweight conditioning
   { id: 'jumping-jack', name: 'Jumping Jacks', aliases: ['Star Jumps'], category: 'conditioning' },
@@ -288,7 +288,7 @@ export const seedMovements: Movement[] = [
   { id: 'skater-jump', name: 'Skater Jumps', aliases: ['Skaters', 'Lateral Skater Jumps'], category: 'conditioning' },
   { id: 'bear-crawl', name: 'Bear Crawls', category: 'conditioning' },
   { id: 'crab-walk', name: 'Crab Walks', category: 'conditioning' },
-  { id: 'battle-rope', name: 'Battle Ropes', aliases: ['Battle Rope Waves', 'Rope Waves', 'Battle Rope Slams'], equipment: ['Battle rope'], category: 'conditioning' },
+  { id: 'battle-rope', name: 'Battle Ropes', aliases: ['Battle Rope Waves', 'Rope Waves', 'Battle Rope Slams'], equipment: ['Battle Rope'], category: 'conditioning' },
   { id: 'wall-sit', name: 'Wall Sit', aliases: ['Wall Squat Hold'], equipment: ['Wall'], category: 'strength' },
   { id: 'glute-bridge', name: 'Glute Bridges', aliases: ['Hip Bridges'], category: 'strength' },
   { id: 'hip-thrust', name: 'Hip Thrusts', aliases: ['Barbell Hip Thrusts'], family: 'glute-bridge', equipment: ['Barbell', 'Bench'], category: 'strength' },
@@ -297,9 +297,9 @@ export const seedMovements: Movement[] = [
   { id: 'bent-over-row', name: 'Bent-Over Rows', aliases: ['Barbell Rows', 'Barbell Bent-Over Rows'], equipment: ['Barbell'], category: 'strength' },
   { id: 'dumbbell-row', name: 'Dumbbell Rows', aliases: ['DB Rows', 'Single-Arm Dumbbell Rows', 'Bent-Over Dumbbell Rows'], family: 'bent-over-row', equipment: ['Dumbbells'], category: 'strength' },
   { id: 'renegade-row', name: 'Renegade Rows', aliases: ['Plank Rows'], family: 'bent-over-row', equipment: ['Dumbbells'], category: 'strength' },
-  { id: 'band-row', name: 'Band Rows', aliases: ['Banded Rows', 'Resistance Band Rows', 'Seated Band Rows'], family: 'bent-over-row', equipment: ['Resistance band'], category: 'strength' },
+  { id: 'band-row', name: 'Band Rows', aliases: ['Banded Rows', 'Resistance Band Rows', 'Seated Band Rows'], family: 'bent-over-row', equipment: ['Resistance Band'], category: 'strength' },
   { id: 'biceps-curl', name: 'Biceps Curls', aliases: ['Dumbbell Curls', 'DB Curls'], equipment: ['Dumbbells'], category: 'strength' },
-  { id: 'band-curl', name: 'Band Curls', aliases: ['Banded Curls', 'Resistance Band Curls', 'Band Biceps Curls'], family: 'biceps-curl', equipment: ['Resistance band'], category: 'strength' },
+  { id: 'band-curl', name: 'Band Curls', aliases: ['Banded Curls', 'Resistance Band Curls', 'Band Biceps Curls'], family: 'biceps-curl', equipment: ['Resistance Band'], category: 'strength' },
   { id: 'overhead-triceps-extension', name: 'Overhead Triceps Extensions', shortName: 'Triceps Extensions', aliases: ['Triceps Extensions', 'Skull Crushers'], equipment: ['Dumbbells'], category: 'strength' },
   { id: 'lateral-raise', name: 'Lateral Raises', aliases: ['Dumbbell Lateral Raises', 'DB Lateral Raises', 'Side Raises'], equipment: ['Dumbbells'], category: 'strength' },
   { id: 'reverse-fly', name: 'Reverse Flys', aliases: ['Dumbbell Reverse Flys', 'DB Reverse Flys', 'Reverse Flyes', 'Reverse Flies', 'Rear Delt Flys'], equipment: ['Dumbbells'], category: 'strength' },
@@ -317,8 +317,8 @@ export const seedMovements: Movement[] = [
   { id: 'worlds-greatest-stretch', name: "World's Greatest Stretch", aliases: ['Worlds Greatest Stretch'], category: 'mobility' },
   { id: 'cat-cow', name: 'Cat-Cow', category: 'mobility' },
   { id: 'leg-swing', name: 'Leg Swings', category: 'mobility' },
-  { id: 'banded-pull-apart', name: 'Banded Pull-Aparts', aliases: ['Band Pull-Aparts', 'Pull-Aparts'], equipment: ['Resistance band'], category: 'mobility' },
-  { id: 'band-external-rotation', name: 'Band External Rotations', aliases: ['Banded External Rotations', 'External Rotations', 'Shoulder External Rotations'], equipment: ['Resistance band'], category: 'mobility' },
+  { id: 'banded-pull-apart', name: 'Banded Pull-Aparts', aliases: ['Band Pull-Aparts', 'Pull-Aparts'], equipment: ['Resistance Band'], category: 'mobility' },
+  { id: 'band-external-rotation', name: 'Band External Rotations', aliases: ['Banded External Rotations', 'External Rotations', 'Shoulder External Rotations'], equipment: ['Resistance Band'], category: 'mobility' },
   { id: 'hip-hinge', name: 'Hip Hinges', aliases: ['Hip Hinge Drill'], category: 'mobility' },
   { id: 'chest-and-shoulder-stretch', name: 'Chest & Shoulder Stretch', shortName: 'Chest Stretch', aliases: ['Chest and Shoulder Stretch', 'Chest Stretch', 'Shoulder Stretch', 'Pec Stretch'], category: 'mobility' },
   { id: 'hamstring-stretch', name: 'Hamstring Stretch', category: 'mobility' },

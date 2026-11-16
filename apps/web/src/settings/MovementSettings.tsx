@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CATEGORY_LABELS, MOVEMENT_CATEGORIES, movementSlug, type Movement, type MovementCategory } from '../../../../packages/domain/src/catalogue';
-import { collectPrescriptions } from '../../../../packages/domain/src/library';
+import { collectPrescriptions, equipmentName } from '../../../../packages/domain/src/library';
 import { commitMerge, freeMovementId, mergeMovements, removeMovement, removeMovementAlias, restoreBundledMovements, seedIds, upsertMovement } from '../master-data';
 import { recordForName } from '../catalogue-link';
 import { movementRows } from './movement-rows';
@@ -119,7 +119,7 @@ export function MovementSettings({ masterData, onMasterDataChange, catalogue, en
         <label className={styles.field}>Spoken name<input value={form.spokenName} maxLength={160} onChange={event => setForm({ ...form, spokenName: event.target.value })} /></label>
         <label className={styles.field}>Also known as<input value={form.aliases} maxLength={500} onChange={event => setForm({ ...form, aliases: event.target.value })} /></label>
         <label className={styles.field}>Category<select value={form.category} onChange={event => setForm({ ...form, category: event.target.value as MovementForm['category'] })}><option value="">Unset</option>{MOVEMENT_CATEGORIES.map(category => <option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label>
-        <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={form.equipment} options={equipmentChoices} onChange={equipment => setForm({ ...form, equipment })} /></div>
+        <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={form.equipment} options={equipmentChoices} onChange={equipment => setForm({ ...form, equipment: equipment.map(equipmentName) })} /></div>
         <label className={`${styles.field} ${styles.wide}`}>Notes<input value={form.notes} maxLength={500} onChange={event => setForm({ ...form, notes: event.target.value })} /></label>
       </div>}
     </FormDialog>

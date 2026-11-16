@@ -10,7 +10,7 @@ workout:
     author: OpenWOD
     notes: "The first canonical fixture: four stations, five rounds, shared between two athletes."
   equipment:
-    - Rowing machine
+    - Rowing Machine
     - Kettlebell
   participants: 2
   prep: 10s

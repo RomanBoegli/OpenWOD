@@ -17,17 +17,18 @@ describe('master data document', () => {
 
   it('sanitises a stored document, dropping what is out of bounds, and the result validates', () => {
     const data = sanitiseMasterData({
-      equipmentAliases: { 'kettle bells': 'Kettlebell', '': 'nothing', bad: 42 },
+      equipmentAliases: { 'kettle bells': 'Kettlebell', 'chin-up bar': 'Pull-up bar', '': 'nothing', bad: 42 },
       collections: [{ id: 'mine', title: 'Mine', workoutIds: ['fran', 7] }, { id: 'benchmarks', title: 'Benchmarks renamed', workoutIds: ['fran'] }, 'junk'],
-      movements: [{ id: 'pogo-hop', name: 'Pogo hops', category: 'nonsense' }, { id: 'Bad Id', name: 'x' }],
+      movements: [{ id: 'pogo-hop', name: 'Pogo hops', category: 'nonsense', equipment: ['jump rope'] }, { id: 'Bad Id', name: 'x' }],
       hiddenMovements: ['thruster', ''],
       movementAliases: { 'Wall-Ball Shots': 'wall-ball' },
       committed: ['equipment:kettle bell'],
     });
-    expect(data.equipmentAliases).toEqual({ 'kettle bell': 'Kettlebell' });
+    // Equipment names stored by an older build come back in Title Case.
+    expect(data.equipmentAliases).toEqual({ 'kettle bell': 'Kettlebell', 'chin-up bar': 'Pull-Up Bar' });
     expect(data.collections).toEqual([{ id: 'mine', title: 'Mine', workoutIds: ['fran'] }]);
     expect(data.collectionEdits.benchmarks?.title).toBe('Benchmarks renamed');
-    expect(data.movements).toEqual([{ id: 'pogo-hop', name: 'Pogo hops' }]);
+    expect(data.movements).toEqual([{ id: 'pogo-hop', name: 'Pogo hops', equipment: ['Jump Rope'] }]);
     expect(data.hiddenMovements).toEqual(['thruster']);
     expect(validate(data)).toBe(true);
     expect(validate({ ...data, extra: true })).toBe(false);

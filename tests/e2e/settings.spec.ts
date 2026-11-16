@@ -55,13 +55,14 @@ test.describe('settings and log', () => {
 
   test('merges equipment names and creates, edits and removes a collection through the settings dialogs', async ({ page }) => {
     await page.goto('/#/settings/equipment'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
-    await page.getByRole('checkbox', { name: 'Select Medicine ball' }).check();
-    await page.getByRole('checkbox', { name: 'Select Slam ball' }).check();
+    await page.getByRole('checkbox', { name: 'Select Medicine Ball' }).check();
+    await page.getByRole('checkbox', { name: 'Select Slam Ball' }).check();
     await page.getByRole('combobox', { name: 'Keep as' }).fill('Wall ball');
     await page.getByRole('button', { name: /^Merge/ }).click();
-    await expect(page.getByRole('list', { name: 'Merged names' })).toContainText('Wall ball');
-    await page.getByRole('button', { name: 'Rename Wall ball' }).click();
-    const rename = page.getByRole('dialog', { name: 'Rename Wall ball' });
+    // Typed in sentence case, kept in Title Case like every equipment name.
+    await expect(page.getByRole('list', { name: 'Merged names' })).toContainText('Wall Ball');
+    await page.getByRole('button', { name: 'Rename Wall Ball' }).click();
+    const rename = page.getByRole('dialog', { name: 'Rename Wall Ball' });
     await rename.getByRole('textbox', { name: 'Name' }).fill('Wallball');
     await rename.getByRole('button', { name: 'Rename' }).click();
     await expect(page.getByRole('list', { name: 'Equipment in the library' })).toContainText('Wallball');
@@ -83,7 +84,7 @@ test.describe('settings and log', () => {
     await page.getByRole('group', { name: 'Collection' }).getByRole('button', { name: 'Short and sharp' }).click();
     await expect(page.getByRole('list', { name: 'Workouts' }).getByRole('listitem')).toHaveCount(2);
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Wallball');
-    await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Medicine ball');
+    await expect(page.getByRole('list', { name: 'Workouts' })).not.toContainText('Medicine Ball');
     await page.goto('/#/wod/karen');
     await expect(page.getByRole('region', { name: 'Equipment' })).toContainText('Wallball');
     await page.goto('/#/settings/collections');
@@ -149,13 +150,13 @@ test.describe('movements and search', () => {
     const form = page.getByRole('dialog', { name: 'Edit Hang Power Cleans' });
     const equipment = form.getByRole('combobox', { name: 'Equipment' });
     await equipment.pressSequentially('row');
-    await expect(form.getByRole('listbox', { name: 'Equipment suggestions' }).getByRole('option').first()).toHaveText('Rowing machine');
+    await expect(form.getByRole('listbox', { name: 'Equipment suggestions' }).getByRole('option').first()).toHaveText('Rowing Machine');
     await equipment.press('Enter');
     await equipment.pressSequentially('Sandbox');
     await expect(form.getByRole('option', { name: 'Add “Sandbox”' })).toBeVisible();
     await equipment.press('Enter');
     await expect(form.getByRole('group', { name: 'Equipment', exact: true })).toContainText('Barbell');
-    await expect(form.getByRole('group', { name: 'Equipment', exact: true })).toContainText('Rowing machine');
+    await expect(form.getByRole('group', { name: 'Equipment', exact: true })).toContainText('Rowing Machine');
     await expect(form.getByRole('group', { name: 'Equipment', exact: true })).toContainText('Sandbox');
     await form.getByRole('button', { name: 'Remove Barbell' }).click();
     await form.getByRole('button', { name: 'Save movement' }).click();
@@ -166,7 +167,7 @@ test.describe('movements and search', () => {
     await page.getByRole('dialog', { name: 'Remove Hang Power Cleans?' }).getByRole('button', { name: 'Remove' }).click();
     await expect(page.getByRole('checkbox', { name: 'Select Hang Power Cleans' })).toHaveCount(0);
     await page.goto('/#/wod/odd-circuit');
-    await expect(page.getByRole('region', { name: 'Equipment' })).toContainText('Plyo box');
+    await expect(page.getByRole('region', { name: 'Equipment' })).toContainText('Plyo Box');
   });
 
   test('the library search forgives typos and filters survive navigation within the session', async ({ page }) => {

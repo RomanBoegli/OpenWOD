@@ -10,7 +10,7 @@ workout:
     author: OpenWOD
   equipment:
     - Dumbbells
-    - Exercise mat
+    - Exercise Mat
   participants: 1
   prep: 10s
   sections:
