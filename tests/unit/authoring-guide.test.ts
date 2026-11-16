@@ -39,6 +39,19 @@ describe('the authoring guide (SHR-07)', () => {
     expect(new TextEncoder().encode(guide).length).toBeLessThan(25_000);
   });
 
+  it('asks for loads on every weighted movement and keeps notes to a few words', () => {
+    const section = (heading: string) => guide.slice(guide.indexOf(`## ${heading}`), guide.indexOf('\n## ', guide.indexOf(`## ${heading}`) + 4));
+    // Loads: a recommendation on every weighted movement, levels with women's amounts, one unit that the app converts.
+    expect(section('Loads')).toMatch(/Give every movement that is done with a weight a load/);
+    expect(section('Loads')).toMatch(/levels with a women's amount on each/);
+    expect(section('Loads')).toMatch(/`kg`, or in `lb`.*never both.*converted/);
+    // Notes: best left out, otherwise an alternative, a scaling or a qualifier, never how the movement is done.
+    expect(rowOf('notes')).toMatch(/Best left out.*alternative or a scaling/);
+    expect(section('Prescriptions')).toMatch(/never describe how a movement is done/);
+    expect(section('Checklist before you answer')).toMatch(/carry a load/);
+    expect(section('Checklist before you answer')).toMatch(/`notes` are left out/);
+  });
+
   it('keeps clear of the words the static build keeps off the library page', () => {
     expect(guide).not.toMatch(/household server|\bservers?\b|upload/i);
   });

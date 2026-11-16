@@ -82,7 +82,7 @@ ${yaml(`format: ${FILE_FORMAT}\nformatVersion: ${FILE_VERSION}\nworkout:\n  sche
 | \`id\` | yes | Lower-case words joined by hyphens, such as \`upper-body-emom-20\`. Letters, digits and \`_ . : -\`, at most 120 characters. |
 | \`revision\` | yes | \`1\`. |
 | \`title\` | yes | Short, it is shown big, in Title Case when it is in English. At most 160 characters. |
-| \`description\` | no | What the session is, standards and scaling. At most 2000 characters. |
+| \`description\` | no | What the session is, in a sentence or two. General standards and scaling go here, once, not into every movement's \`notes\`. At most 2000 characters. |
 | \`attribution\` | no | \`author\`, \`sourceUrl\` (starting with https://), \`licence\`, \`notes\`. Set \`author\` and \`sourceUrl\` when the workout comes from a known source. |
 | \`equipment\` | yes | What the workout needs, from the equipment names below, or \`[]\` for bodyweight only. At most 30. |
 | \`participants\` | yes | \`1\` for solo, \`2\` for a pair. A pair has the lanes \`A\` and \`B\`, which are positions, not names. |
@@ -136,16 +136,19 @@ In AMRAP, EMOM and you-go-I-go sections that closing rest is the only rest allow
 | \`distance\` | \`{ value: 400, unit: m }\`, or \`unit: km\`. |
 | \`time\` | A target time or hold as a duration. It is shown, it never runs a clock. |
 | \`load\` | See loads. |
-| \`notes\` | Free text up to 500 characters: tempo, scaling, how to hold the weight, standards such as box height. |
+| \`notes\` | Best left out. Where it helps, a few words with an alternative or a scaling, such as \`Or ring rows\` or \`From the knees if needed\`, or a qualifier the number needs, such as \`Per side\`. |
 
 The targets are shown big, so give one main target per prescription. "10 per side" is \`reps: 10\` with \`notes: Per side\`.
+\`notes\` are shown small under the movement, where there is room for a few words only: never describe how a movement is done, and never repeat the name, the target or the load.
 
 ## Loads
 
+Give every movement that is done with a weight a load, also when the request names none: a recommendation to start from helps far more than an empty field.
 A load is \`{ value, women, unit }\`: \`value\` is the men's (or only) amount, \`women\` the optional women's amount in the same unit, and \`unit\` is \`kg\`, \`lb\` or \`percent\` (of a one-rep max). A percentage takes no \`women\` value.
-Prefer levels, so each athlete picks one: \`load\` with the keys ${list([...LOAD_LEVELS])}, each a load as above.
+Prefer levels with a women's amount on each, so that every athlete finds theirs: \`load\` with the keys ${list([...LOAD_LEVELS])}, each a load as above.
 Heavy is the prescribed (Rx) load, medium about 70 % and light about half of it, rounded to real equipment (dumbbells in 2.5 kg steps, kettlebells 8, 12, 16, 20, 24, 28 or 32 kg).
 Women's amounts are about 0.7 × the men's unless the source says otherwise. Dumbbell and kettlebell loads are per hand unless \`notes\` says one implement. Bodyweight movements have no load.
+Write loads in \`kg\`, or in \`lb\` when the request uses pounds, and never both: the app shows them in the unit chosen in its settings, converted and rounded to real plates.
 
 ## Pairs
 
@@ -170,6 +173,8 @@ With \`participants: 2\`:
 - Each section carries only the settings its format allows, and the ones it needs.
 - Pair workouts have \`A\` and \`B\` on every work slot and \`completion\` where it is required.
 - Movement and equipment names come from the lists below wherever one fits.
+- Movements done with a weight carry a load, with levels and women's amounts wherever you can tell them.
+- \`notes\` are left out, or are a few words with an alternative, a scaling or a qualifier.
 
 ## Movement names
 
