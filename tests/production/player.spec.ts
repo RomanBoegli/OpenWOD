@@ -17,7 +17,7 @@ test('the production container plays a real interval without test injection', as
   await page.goto('./');
   expect(await page.evaluate(() => typeof window.__openwodTest)).toBe('undefined');
   await page.goto('./#/settings/sound');
-  await page.getByRole('combobox', { name: 'Sound', exact: true }).selectOption('silent');
+  await page.getByRole('radiogroup', { name: 'Sound', exact: true }).getByRole('radio', { name: 'Silent' }).check();
   await page.goto('./');
   const file = serialiseWorkoutFile({
     schemaVersion: 2, revision: 1, id, title, participants: 2, prepMs: 0, equipment: [],
@@ -28,8 +28,8 @@ test('the production container plays a real interval without test injection', as
   await page.getByRole('button', { name: 'Save and edit' }).click();
   await expect(page).toHaveURL(new RegExp(`#/wod/${id}(-\\d+)?/edit$`));
   await page.goto('./');
+  // Start on the card begins the session with that tap (UI-25): there is no second Start to press.
   await page.getByRole('link', { name: `Start ${title}` }).first().click();
-  await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Workout complete', { timeout: 5000 });
   await expect(page.getByTestId('primary-timer')).toHaveText('00:01');
   expect(await page.evaluate(() => typeof window.__openwodTest)).toBe('undefined');
@@ -60,7 +60,7 @@ test('the production container ships the recorded cue packs', async ({ page, req
   expect(durationSeconds).toBeGreaterThan(0.5);
   await page.goto('./#/settings/sound');
   // The pack list arrives with packs.json after the page renders, so wait for it instead of reading the first paint.
-  await expect(page.getByRole('combobox', { name: 'Voice', exact: true }).locator('option')).toHaveText(['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)', 'Device voice only']);
+  await expect(page.getByRole('radiogroup', { name: 'Voice', exact: true }).locator('label')).toHaveText(['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)', 'Device voice only']);
 });
 
 test('the production container is installable from a phone\'s home screen', async ({ page, request }) => {
