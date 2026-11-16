@@ -21,7 +21,7 @@ import { AthletesChip, Chip } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { rankBySearch } from '../../../packages/domain/src/search';
 import { copyHref, draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
-import { requestStart } from './start';
+import { useStart } from './start';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
 import { copySource, freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
@@ -145,6 +145,7 @@ function useMasonry(grid: RefObject<HTMLUListElement | null>) {
 }
 
 export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, drafts, onDiscardDraft, preferences, onPreferencesChange, catalogue, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery, live, onDiscardLive }: LibraryProps) {
+  const { starting, start } = useStart();
   const [migrationHidden, setMigrationHidden] = useState(false);
   // A checkpoint on this device may belong to a session that is live in another tab (ENG-14). That one is not
   // interrupted, and discarding it would delete the save of a running session, so each banner asks the lock first.
@@ -305,7 +306,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
             {summary.equipmentNeeded.length > 0 ? summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</button>) : <span className={styles.tag} data-plain>Bodyweight only</span>}
           </div>
           <div className={styles.cardActions}>
-            <a className={shared.primaryButton} href={playHref(workout.id)} onClick={() => requestStart(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
+            <a className={shared.primaryButton} href={playHref(workout.id)} onClick={event => start(event, workout.id, workout)} aria-busy={starting === workout.id || undefined} aria-label={`Start ${summary.title}`}><Icon name={starting === workout.id ? 'loading' : 'play'} size={18} />Start</a>
             <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Details of ${summary.title}`}><Icon name="list" size={17} />Details</a>
           </div>
         </li>;

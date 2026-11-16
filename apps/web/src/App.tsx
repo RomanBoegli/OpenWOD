@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workout } from '../../../packages/domain/src';
 import { bundledWorkouts } from '../../../packages/domain/src/bundled';
-import { authorOptions } from '../../../packages/domain/src/library';
+import { authorOptions, collectPrescriptions } from '../../../packages/domain/src/library';
 import { WorkoutAudio } from './audio';
 import { Library, toEntry, type LibraryEntry } from './Library';
 import { exportPackFile, exportWorkoutFile } from './Player';
@@ -31,7 +31,7 @@ import { listRecoveries, type Recovery } from './data/checkpoints';
 import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
 import { newId } from './ids';
-import { onStartUnlock } from './start';
+import { onStartSound } from './start';
 
 const BUNDLED_IDS = new Set(bundledWorkouts.map(workout => workout.id));
 /** The deployment shape in the footer, with a one-line explainer on hover or focus. */
@@ -69,8 +69,12 @@ export default function App() {
 
   useTheme(preferences.theme, preferences.accent, preferences.restColor, preferences.background);
   useEffect(() => { void audio.listPacks(); }, [audio]);
-  // A Start link's tap is the gesture that unlocks the sound; the player it opens begins at once (start.ts).
-  useEffect(() => onStartUnlock(() => { if (!__OPENWOD_TEST__) void audio.unlock(); }), [audio]);
+  // A Start link's tap is the gesture that unlocks the sound, and the link waits until the workout can sound as chosen: the
+  // player it then opens begins at once, with everything it plays loaded (start.ts). Test builds have no sound to wait for.
+  useEffect(() => onStartSound({
+    unlock: () => { if (!__OPENWOD_TEST__) void audio.unlock(); },
+    ready: workout => __OPENWOD_TEST__ ? Promise.resolve() : audio.whenReady(workout ? collectPrescriptions(workout).map(item => audio.nameKey(item)) : []),
+  }), [audio]);
   useEffect(() => installFeel(), []);
   useEffect(() => { if (route.name !== 'play' && route.name !== 'historyPlay') window.scrollTo(0, 0); }, [route]);
   // The interrupted-session banners follow this device's checkpoints: read again on every route change (a player just left

@@ -14,7 +14,7 @@ import { Player } from './Player';
 import { sessionScore } from './session-log';
 import type { Preferences } from './preferences';
 import { LOGBOOK_HREF, playHref, snapshotPlayHref, workoutHref } from './router';
-import { requestStart } from './start';
+import { startReady, useStart } from './start';
 import type { SessionView } from './data/use-library-data';
 import type { LiveOffers } from './data/use-live-sessions';
 import type { DataMode } from './data/mode';
@@ -46,6 +46,7 @@ const PAGE = 50;
  * corrections (DAT-05) and Delete (DAT-14).
  */
 export function Logbook({ mode, sessions, entries, onCorrect, onDelete, onLoadMore, fetchSession }: LogbookProps) {
+  const { starting, start } = useStart();
   const [correcting, setCorrecting] = useState<SessionView>();
   const [deleting, setDeleting] = useState<SessionView>();
   const [loadingMore, setLoadingMore] = useState(false);
@@ -75,7 +76,7 @@ export function Logbook({ mode, sessions, entries, onCorrect, onDelete, onLoadMo
             <p className={styles.meta}><time dateTime={session.finishedAt}>{shortWhen(session.finishedAt)}</time> · {displayTime(session.activeMs, 'floor')}{score ? ` · ${score}` : ''}</p>
           </div>
           <div className={styles.actions}>
-            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} onClick={() => requestStart(session.workoutId)} aria-label="Repeat" title={entry ? 'Repeat' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name="play" size={16} /></a>
+            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} onClick={event => start(event, session.workoutId, entry?.workout, session.id)} aria-busy={starting === session.id || undefined} aria-label="Repeat" title={entry ? 'Repeat' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name={starting === session.id ? 'loading' : 'play'} size={16} /></a>
             {!session.pending && session.results.length > 0 && <button type="button" className={shared.iconButton} aria-label="Correct score" title="Correct score" onClick={() => setCorrecting(session)}><Icon name="edit" size={16} /></button>}
             <button type="button" className={shared.iconButton} aria-label="Delete" title="Delete" onClick={() => setDeleting(session)}><Icon name="trash" size={16} /></button>
           </div>
@@ -135,7 +136,15 @@ interface SnapshotPlayerProps {
 /** Plays the workout exactly as it was saved with a past session, for workouts that have since left the library (DAT-05/09). */
 export function SnapshotPlayer({ sessionId, fetchSession, ...player }: SnapshotPlayerProps) {
   const [state, setState] = useState<{ status: 'loading' } | { status: 'missing' } | { status: 'ready'; record: SessionRecord }>({ status: 'loading' });
-  useEffect(() => { let cancelled = false; void fetchSession(sessionId).then(record => { if (!cancelled) setState(record?.workout ? { status: 'ready', record } : { status: 'missing' }); }); return () => { cancelled = true; }; }, [sessionId, fetchSession]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchSession(sessionId).then(async record => {
+      // Repeat was pressed on a copy that is only known now: its names load before the player opens and starts (start.ts).
+      if (record?.workout) await startReady(record.workout);
+      if (!cancelled) setState(record?.workout ? { status: 'ready', record } : { status: 'missing' });
+    });
+    return () => { cancelled = true; };
+  }, [sessionId, fetchSession]);
   if (state.status === 'loading') return <p className={shared.notice} role="status">Loading the saved workout…</p>;
   if (state.status === 'missing') return <p className={shared.notice} role="status">That session has no saved workout to repeat. <a href={LOGBOOK_HREF}>Back to the logbook</a>.</p>;
   return <Player key={sessionId} workout={state.record.workout!} {...player} />;

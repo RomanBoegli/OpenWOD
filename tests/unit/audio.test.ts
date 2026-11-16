@@ -339,6 +339,68 @@ it('loads the clips and the chosen horn while the output is still asked for, so 
   expect(sources).toEqual([]);
 });
 
+/** Lets pending promise callbacks run, as many turns as a load of clips takes. */
+async function settle() { for (let turn = 0; turn < 100; turn++) await Promise.resolve(); }
+
+it('a Start waits until the session can sound as chosen: the output, the clips, its names and the chosen horn', async () => {
+  const { audio, sources, spoken, context } = setup({ clips: true, horn: true });
+  audio.tone = 'ship';
+  audio.resolveMovement = lane => ({ Thrusters: 'thruster', 'Pull-Ups': 'pull-up' } as Record<string, string>)[lane.name];
+  // The tap on a card's Start: nothing has loaded yet and the output is still asked for.
+  context.state = 'suspended';
+  let resumed!: () => void;
+  context.resume = () => new Promise<void>(resolve => { resumed = () => { context.state = 'running'; resolve(); }; });
+  void audio.unlock();
+  let ready = false;
+  void audio.whenReady(['thruster', 'pull-up']).then(() => { ready = true; });
+  await settle();
+  // Every recording is there, and the Start still waits for the output.
+  expect(audio.clipsReady).toBe(true);
+  expect(audio.boundaryHoldMs).toBe(1400);
+  expect(ready).toBe(false);
+  resumed(); await settle();
+  expect(ready).toBe(true);
+  // The session that starts now announces with the clips and the horn from its first frame.
+  const engine = new WorkoutEngine(compileWorkout(bundledWorkout('fran') as Workout), () => 0, 'card-start');
+  engine.command({ id: 'play', type: 'play', occurrenceId: 'ready' }); engine.tick();
+  sources.length = 0;
+  audio.update(engine.project(), engine.readClocks());
+  expect(spoken).toEqual([]);
+  expect(sources.map(source => source.clip)).toEqual(['ship', 'three', 'ship', 'two', 'ship', 'one', 'ship', 'go', 'get-ready', 'thruster']);
+});
+
+it('a Start stops waiting after two seconds: without an output or a server the session begins all the same', async () => {
+  const { audio, context } = setup({ clips: true });
+  vi.stubGlobal('fetch', () => new Promise(() => {}));
+  context.state = 'suspended';
+  context.resume = () => new Promise<void>(() => {});
+  void audio.unlock();
+  let ready = false;
+  void audio.whenReady(['thruster']).then(() => { ready = true; });
+  vi.advanceTimersByTime(1999); await settle();
+  expect(ready).toBe(false);
+  vi.advanceTimersByTime(1); await settle();
+  expect(ready).toBe(true);
+});
+
+it('a Start waits for nothing the sound mode does not play', async () => {
+  const { audio } = setup({ clips: true });
+  // A server that never answers: the voice clips stay on their way.
+  vi.stubGlobal('fetch', () => new Promise(() => {}));
+  let ready = '';
+  audio.mode = 'silent';
+  void audio.whenReady(['thruster']).then(() => { ready += 'silent '; });
+  audio.mode = 'beeps';
+  void audio.unlock();
+  void audio.whenReady(['thruster']).then(() => { ready += 'beeps '; });
+  audio.mode = 'voice'; audio.cueSource = 'device';
+  void audio.whenReady(['thruster']).then(() => { ready += 'device voice '; });
+  audio.cueSource = 'clips';
+  void audio.whenReady(['thruster']).then(() => { ready += 'recorded voice '; });
+  await settle();
+  expect(ready).toBe('silent beeps device voice ');
+});
+
 it('AUD-10: a name written as an alias is announced as written, never with its record’s clip', () => {
   const { audio } = setup();
   audio.resolveMovement = lane => ({ 'Plank Rows': 'renegade-row', 'Renegade Rows': 'renegade-row', 'renegade row': 'renegade-row', 'AbMat Sit-Ups': 'abmat-sit-up', 'Pogo hops': 'pogo-hop' } as Record<string, string>)[lane.name];

@@ -18,7 +18,7 @@ import type { LiveOffers } from './data/use-live-sessions';
 import { displayTime } from '../../../packages/engine/src';
 import { spanLabel, type LibraryEntry } from './Library';
 import { copyHref, editHref, playHref } from './router';
-import { requestStart } from './start';
+import { useStart } from './start';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
@@ -50,6 +50,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
   /** Shipped with the app, edited or not: removing it only hides it. */
   const builtIn = source === 'bundled' || entry.bundled === true;
   const cell = (value: Prescription | undefined, role: 'A' | 'B') => value ? <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{value.load ? <small><LoadLevels load={value.load} unit={loadUnit} sex={workout.participants === 2 ? loadsFor[role] : undefined} /></small> : null}</> : null;
+  const { starting, start } = useStart();
   const [removing, setRemoving] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const plan = useMemo(() => compileWorkout(workout), [workout]);
@@ -82,7 +83,7 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
           {attribution && <p className={styles.attribution}>{summary.author && <span>By {summary.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
         </div>
         <div className={styles.actions}>
-          <a className={shared.primaryButton} href={playHref(workout.id)} onClick={() => requestStart(workout.id)}><Icon name="play" />Start workout</a>
+          <a className={shared.primaryButton} href={playHref(workout.id)} onClick={event => start(event, workout.id, workout)} aria-busy={starting === workout.id || undefined}><Icon name={starting === workout.id ? 'loading' : 'play'} />Start workout</a>
           {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name="edit" size={16} />Edit</a>}
           {editable && <a className={shared.quietButton} href={copyHref(workout.id)}><Icon name="copy" size={16} />Duplicate</a>}
           <button className={shared.quietButton} onClick={() => onExport(workout)}><Icon name="download" size={17} />Export</button>

@@ -13,6 +13,8 @@ Record the device, OS version, browser and the result of each line in the releas
 ## Audio
 
 - [ ] Beeps and the chosen voice play at the first boundary after Start, with the device's silent switch on and off.
+- [ ] Reload the app and tap Start on a card: the button's icon turns for a moment, then Get ready, the movement names and the countdown come in the chosen voice and beep tone, not in the device voice.
+- [ ] Go back and start another workout without a reload: its first movement names come in the chosen voice too.
 - [ ] Voices keep playing while the screen is locked for a few seconds and after it is unlocked.
 - [ ] A phone call or notification sound during a workout does not stop the clock, and cues resume afterwards.
 - [ ] The two-metre test: the next movement is readable and the countdown is audible from the far side of the room with music playing at a normal level.

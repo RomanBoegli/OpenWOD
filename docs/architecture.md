@@ -80,6 +80,7 @@ The UI additionally suppresses rapid repeated navigation taps.
 Speech is self-contained: five English [Piper](https://github.com/OHF-Voice/piper1-gpl) voices are rendered at image build time (`scripts/generate-cues.ts`, `scripts/render-cues.py`) as fixed cues plus one clip per bundled movement, and the player decodes the clips a workout needs before Play.
 An announcement ("A, kettlebell swings. B, row.") is a sequence of clips when the pack has every name, otherwise the device's best English voice reads the names after the recorded lead cue.
 The device voice is the fallback for a name the pack lacks, and "Device voice only" is one of the voices in the settings.
+Start on a card begins the session with one tap, so the tapped link first waits until the sound output has resumed and those clips and a recorded beep tone have loaded, for two seconds at most, and shows a turning circle meanwhile.
 Locally generated beeps use the AudioContext clock.
 Only future countdown/deadline cues are scheduled.
 Pause/navigation cancels pending sources and speech.

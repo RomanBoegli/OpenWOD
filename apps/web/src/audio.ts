@@ -28,6 +28,8 @@ const TONES: Record<Exclude<BeepTone, RecordedTone>, Tone> = { classic: { wave: 
 export function hornSpan(length: number, duration: number): number {
   return Math.min(duration, length >= .3 ? Infinity : length >= .15 ? 1.4 : .3);
 }
+/** How long a Start waits for the sound at most, in milliseconds: for the output and for the recordings (see whenReady). */
+const START_WAIT_MS = 2000;
 export type CueSource = 'clips' | 'device';
 export type CueName = 'get-ready' | 'go' | 'rest' | 'switch' | 'three' | 'two' | 'one' | 'paused' | 'resume' | 'complete' | 'a' | 'b' | 'next' | 'last-interval' | 'a-waiting' | 'b-waiting' | 'ended';
 /** A recorded voice pack: fixed cues plus, when `names` is set, one clip per bundled movement under names/<id>.mp3. */
@@ -69,6 +71,8 @@ export class WorkoutAudio {
   private spoken = new Set<string>();
   private clips = new Map<CueName, AudioBuffer>();
   private preloading?: Promise<void>;
+  /** The pack the load under way was asked for, known before the load itself learns which pack it got. */
+  private preloadingFor?: string;
   mode: SoundMode = 'voice';
   cueSource: CueSource = 'clips';
   /** Voice volume, for the recorded clips and the device voice. */
@@ -131,7 +135,8 @@ export class WorkoutAudio {
   /** Fetches and decodes every clip once so a session never needs the network after Play (ENG-11). Failure is silent: beeps and device speech remain. */
   preload(): Promise<void> {
     const wanted = this.cuePack || this.packs[0]?.id || '';
-    if (this.preloading && this.loadedPack === wanted && (this.packs.length || !this.clips.size)) return this.preloading;
+    if (this.preloading && (this.loadedPack === wanted || this.preloadingFor === wanted) && (this.packs.length || !this.clips.size)) return this.preloading;
+    this.preloadingFor = wanted;
     this.preloading = (async () => {
       if (typeof fetch !== 'function') return;
       let context: AudioContext;
@@ -187,6 +192,8 @@ export class WorkoutAudio {
 
   /** When an unlock began, while its resume is pending (0 otherwise): the first cues of a Start wait for it (AUD-02). */
   private unlockingSince = 0;
+  /** The resume the last unlock asked for, settled either way. */
+  private resuming: Promise<void> = Promise.resolve();
 
   async unlock() {
     if (this.mode === 'silent') return;
@@ -196,12 +203,30 @@ export class WorkoutAudio {
       // The output is asked for first, within the gesture, and the recordings load meanwhile: decoding needs no running
       // context, and a browser that finds no audio output (Firefox on such a machine) never answers the resume.
       const resumed = context.resume();
+      this.resuming = resumed.then(() => {}, () => {});
       void this.preload();
       void this.loadHorn();
       try { await resumed; } finally { this.unlockingSince = 0; }
       // A local oscillator unlocks the output from the user's explicit gesture, in the chosen tone (a horn's stand-in is classic).
       this.synth(context.currentTime, .035, 660, .05, TONES[isRecorded(this.tone) ? 'classic' : this.tone]);
     } catch { this.onError?.('Sound unavailable. The workout will continue visually.'); }
+  }
+
+  /**
+   * Resolves once a session can sound as chosen: the output the last unlock asked for has resumed, and the recordings this
+   * sound mode plays have loaded, the pack's cues, the session's names (by clip key, see nameKey) and a recorded beep tone.
+   * A Start waits for it before the player opens (ENG-11, UI-25). It gives up after two seconds, so a machine without an
+   * output or a server that is away holds a Start back by that much, and the device voice and the classic beep stand in.
+   */
+  whenReady(names: string[]): Promise<void> {
+    if (this.mode === 'silent') return Promise.resolve();
+    const voice = this.mode === 'voice' && this.cueSource === 'clips';
+    const ready = Promise.all([this.resuming, this.loadHorn(), ...(voice ? [this.preload(), this.prepareNames(names)] : [])]);
+    return new Promise(resolve => {
+      const done = () => { clearTimeout(limit); resolve(); };
+      const limit = setTimeout(done, START_WAIT_MS);
+      void ready.then(done, done);
+    });
   }
 
   private track(source: AudioScheduledSourceNode, ...nodes: AudioNode[]) {
@@ -432,7 +457,7 @@ export class WorkoutAudio {
     const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}:${projection.clockScope}:${projection.nudges}`;
     // Start dispatches in the same gesture as the unlock, before the context has resumed: scheduling then would fall back to the
     // device voice for "Get ready" and skip the prep countdown. The next frame after the resume schedules everything on the clips.
-    if (this.token !== token && this.mode !== 'silent' && this.unlockingSince && this.context?.state !== 'running' && performance.now() - this.unlockingSince < 2000) return;
+    if (this.token !== token && this.mode !== 'silent' && this.unlockingSince && this.context?.state !== 'running' && performance.now() - this.unlockingSince < START_WAIT_MS) return;
     const clips = this.useClips && this.clipsReady;
     if (this.token === token) {
       this.acknowledgementCue(projection, clocks);

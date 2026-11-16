@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.20 · 16 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.21 · 16 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -433,7 +433,7 @@ A format belongs to a block, so it SHALL show as a chip on each block of the wor
 A library card SHALL show, in this order, those chips, the title, the description cut to two lines, the duration, blocks and movements, the equipment, and Start and Details.
 The library's filters SHALL come in this order: athletes, collection, difficulty with the same chips as the cards, duration, block format, equipment.
 
-**UI-25** Start SHALL begin the session with that tap: on a library card, on a workout's page and on Repeat in the logbook the tap unlocks the sound (AUD-08) and the player opens in the prep countdown, with no second Start. The ready screen remains for a reload, a bookmark and the back button, which have no tap to unlock the sound with, and an interrupted or handed-over session SHALL never start by itself (ENG-12, ENG-15).
+**UI-25** Start SHALL begin the session with that tap: on a library card, on a workout's page and on Repeat in the logbook the tap unlocks the sound (AUD-08) and the player opens in the prep countdown, with no second Start. The ready screen remains for a reload, a bookmark and the back button, which have no tap to unlock the sound with, and an interrupted or handed-over session SHALL never start by itself (ENG-12, ENG-15). The tapped Start SHALL show that it is busy and open the player once the session can sound as chosen: the sound output has resumed and the recordings it plays have loaded (the voice clips, the movement names and a recorded beep tone). It SHALL wait two seconds at most, after which the session begins with the device voice and the classic beep standing in.
 
 **UI-26** At 620 px or less every form control SHALL use a font of at least 16 px, so iOS Safari does not zoom the page when a field takes the focus.
 
@@ -722,7 +722,7 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 
 # 15 Where things stand
 
-Recorded 16 November 2026, plan version 1.20.
+Recorded 16 November 2026, plan version 1.21.
 All P0 requirements and the 35 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
