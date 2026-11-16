@@ -727,7 +727,7 @@ All P0 requirements and the 35 acceptance scenarios are implemented with automat
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
-Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.6.0.
+Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.6.1.
 Two tags carry no image: `v1.0.0` failed in validation before any image was built, so 1.1.0 is the first published one, and the workflow of `v1.5.0` stopped in the production smoke test, so 1.5.1 publishes its changes.
 
 **Schema and storage versions today.**
@@ -744,7 +744,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for the release after 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for the release after 1.6.1: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 A faster browser suite is planned and not started: quick runs in WebKit alone, runs by area and by changed files, more local workers, and four parallel jobs in the Check workflow.

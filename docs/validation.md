@@ -308,4 +308,22 @@ Version 1.6.0: a running session continues on another device (ENG-15), Start beg
 | Production smoke tests, the static site | Against `vite preview` of the static build in WebKit and Firefox: 6 passed, 2 skipped, 2 failed. The two failures are the voice-pack test in each engine, which wants all five packs where this checkout has rendered one. The release workflow builds the site with all five. |
 | Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.6.0, and the image builds with the check passing inside it (326 passed, 1 skipped). |
 
-Not recorded in this round: a session on a physical device, the hand-over between two real devices, the editor on a phone and how the trimmed ship horn sounds.
+Not recorded in this round: a session on a physical device, the hand-over between two real devices and the editor on a phone.
+The owner listened to the trimmed ship horn before the tag.
+
+## Release 1.6.1, 16 November 2026
+
+Version 1.6.1: Start waits until the sound has loaded (UI-25), so the first announcement and the first countdown of a session come in the chosen voice and beep tone.
+
+| Check | Result |
+| --- | --- |
+| The fault in 1.6.0 | Recorded in Playwright's Firefox and WebKit against the production build of the static site, with every call to the device voice and every clip that starts written down. First Start after a load: both engines read "Get ready. A, High Knees. B, High Knees." with the device voice, because the output had resumed before the clips were decoded (about 90 ms before in Firefox, 14 ms in WebKit), and the prep countdown had beeps without words. A second workout started without a reload: Get ready from the clip, then its names from the device voice, in both engines. Ship horn with beeps only: Firefox scheduled no horn for the first countdown, WebKit did. The clips themselves were sound: a household server on 1.6.0 serves `names/high-knee.mp3` in all five packs, and the 285 clips of its British pack decode in both engines. |
+| The same recordings with the fix, static site | First Start after a load: the player opens 0.15 to 0.3 s after the tap, and Get ready, A, High Knees, B, High Knees and three, two, one, go are clips, with no call to the device voice. A second workout without a reload: its names are clips. Ship horn with beeps only: four horn blasts are scheduled for the first countdown in both engines, and the voice clips are not waited for. Start workout on a workout's page behaves like the card. With every clip request held back by 0.6 s the icon turns for about 0.8 s, then the same result. A cold start asks for each clip once (46 requests: 17 cues and 29 names). |
+| The same recordings with the fix, the image | Against a container of the image built from source, with all five voice packs: after the tap the player opens in 0.29 s in Firefox and 0.17 s in WebKit with every cue from the clips, and a second workout without a reload announces its names from the clips. |
+| Unit tests and repository check | 330 passed in 37 files, with the type check, the schema check and the registry check. New: a Start waits for the output, the clips, its names and the chosen horn, stops waiting after two seconds, and waits for nothing the sound mode does not play. |
+| Browser scenarios | One full run of the four local projects (WebKit, Firefox, static WebKit, static Firefox), 870 tests: 532 passed, 338 skipped, none failed. The Start links take the same path in test builds, with no sound to wait for. |
+| Production smoke tests, the image | Against that container in WebKit and Firefox: 8 passed, 2 skipped (the test of the static shape). The real Start on a card passes in both. |
+| Production smoke tests, the static site | Against `vite preview` of the static build in WebKit and Firefox: 6 passed, 2 skipped, 2 failed. The two failures are the voice-pack test in each engine, which wants five packs where the checkout holds one. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.6.1, and the image builds with the check passing inside it (329 passed, 1 skipped) and reports 1.6.1. |
+
+Not recorded in this round: Chromium, which does not run headless on this machine (the Check on GitHub runs the browser scenarios in it, without sound), a session on a physical device, and the Start on an iPhone and an iPad.
