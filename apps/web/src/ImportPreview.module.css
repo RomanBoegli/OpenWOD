@@ -12,3 +12,5 @@
 .row[data-state=new] .state, .row[data-state=renamed] .state, .row[data-state=newer] .state { background: var(--accent-soft); border-color: var(--accent-border); color: var(--accent-text); }
 .decision { display: grid; gap: 4px; font-size: 11px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-3); min-width: 190px; margin: 0; }
 .decision select { min-height: 40px; padding: 6px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font-size: 13px; text-transform: none; letter-spacing: 0; }
+/* Phones: every form control at 16 px. Below that iOS Safari zooms the page when a field takes the focus. */
+@media (max-width: 620px) { .decision select { font-size: 16px; } }

@@ -20,6 +20,11 @@ export interface Checkpoint {
   status: Status;
   savedAt: string;
   startedAt?: string;
+  /**
+   * On a session taken over from another device that has not been resumed here yet (ENG-15): that device's name and,
+   * on this device's clock, when it last saved. The player asks before continuing and says where the session comes from.
+   */
+  handover?: { from: string; savedAt: string };
 }
 export interface Progress { sessionId: string; checkpointRevision: number; phaseMs: number; activeMs: number; sectionMs: number; savedAt: string }
 export interface Recovery { checkpoint: Checkpoint; progress?: Progress }
@@ -58,6 +63,9 @@ export async function listRecoveries(): Promise<Recovery[]> {
     .map(checkpoint => { const record = progress.find(item => item.sessionId === checkpoint.sessionId); return { checkpoint, ...(record && record.checkpointRevision === checkpoint.revision ? { progress: record } : {}) }; });
 }
 
+/** When a recoverable session was last saved: its checkpoint, or the progress record on top of it. */
+export const lastSaved = ({ checkpoint, progress }: Recovery): string => progress && progress.checkpointRevision === checkpoint.revision && progress.savedAt > checkpoint.savedAt ? progress.savedAt : checkpoint.savedAt;
+
 /** Applies a progress record to the checkpoint it names: only the clock offsets move, nothing else. */
 export function applyProgress(snapshot: EngineSnapshot, progress?: Progress): EngineSnapshot {
   if (!progress || progress.checkpointRevision !== snapshot.revision || progress.activeMs < snapshot.activeMs) return snapshot;
@@ -74,6 +82,21 @@ export async function finishSession(sessionId: string, record?: SessionRecord): 
     if (record) get('outbox').put({ id: sessionItemId(record.id), kind: 'session', body: record, createdAt: new Date().toISOString(), attempts: 0, nextAttemptAt: 0, state: 'pending' } satisfies OutboxItem);
   });
   if (record) outboxEvents.dispatchEvent(new Event('change'));
+}
+
+/**
+ * Takes over a session claimed from another device (ENG-15) in one transaction: its checkpoint replaces this device's
+ * copy, and the progress record of that session is the claimed one or none. A record this device still holds from an
+ * earlier turn at the session would otherwise extend a checkpoint it does not belong to. The checkpoint carries its
+ * `handover` note, which the ordinary recovery then finds with it. The function is async so that a record IndexedDB
+ * refuses aborts the transaction instead of leaving the checkpoint written alone.
+ */
+export function adoptSession(checkpoint: Checkpoint, progress?: Progress): Promise<void> {
+  return transaction(['checkpoints', 'progress'], 'readwrite', async get => {
+    get('checkpoints').put(checkpoint);
+    if (progress && progress.sessionId === checkpoint.sessionId && progress.checkpointRevision === checkpoint.revision) get('progress').put(progress);
+    else get('progress').delete(checkpoint.sessionId);
+  });
 }
 
 

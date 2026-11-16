@@ -57,7 +57,7 @@ export function AuthorSettings({ masterData, onMasterDataChange, entries }: Sett
       <div className={styles.cardHeading}><h2 id="authors-title">Authors</h2><span className={styles.hint}>{plural(names.length, 'author')}</span></div>
       <p className={styles.hint}>Who wrote or published your workouts. Rename an author, or tick two or more and merge them into one spelling used on every page, in search, in the filters and in the editor’s suggestions. Workout files keep their own text.</p>
       <div className={styles.listTop}>
-        <label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} placeholder="CrossFit, coach…" aria-label="Find authors" onChange={event => setQuery(event.target.value)} /></label>
+        <label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} aria-label="Find authors" onChange={event => setQuery(event.target.value)} /></label>
         <button type="button" className={shared.primaryButton} onClick={() => setAdding('')}><Icon name="plus" size={16} />New author</button>
       </div>
       {selection.length >= 2 && <div className={styles.mergeBar} role="group" aria-label="Merge selected authors">

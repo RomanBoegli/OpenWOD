@@ -1,6 +1,5 @@
 .chip { --tone: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 10px; border-radius: 999px; font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .4px; line-height: 1; color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, transparent); border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent); white-space: nowrap; text-decoration: none; }
-.chip[data-kind=pair] { --tone: var(--lane-a); }
-.chip[data-kind=solo] { --tone: var(--lane-b); }
+.chip[data-kind=pair], .chip[data-kind=solo] { --tone: var(--accent-text); }
 .chip[data-kind=format] { --tone: var(--ink-2); background: var(--surface-3); border-color: var(--line-2); }
 .chip[data-kind=collection] { --tone: var(--phase-rest); }
 .chip[data-kind=done] { --tone: var(--accent-text); }
@@ -9,6 +8,6 @@
 button.chip { --tone: var(--ink-2); cursor: pointer; min-height: 36px; padding: 6px 12px; font-size: 12px; color: var(--ink-2); background: var(--surface-3); border: 1px solid var(--line-2); border-style: solid; transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
 button.chip:hover { background: var(--surface-5); color: var(--ink); border-color: color-mix(in srgb, var(--ink-3) 50%, transparent); }
 button.chip:active { transform: scale(.97); }
-button.chip[data-kind=pair] { color: var(--lane-a); } button.chip[data-kind=solo] { color: var(--lane-b); } button.chip[data-kind=collection] { color: var(--phase-rest); }
+button.chip[data-kind=pair], button.chip[data-kind=solo] { color: var(--accent-text); } button.chip[data-kind=collection] { color: var(--phase-rest); }
 button.chip[aria-pressed=true] { background: var(--accent-fill); color: var(--accent-ink); border-color: var(--accent-border); font-weight: 700; }
 button.chip[aria-pressed=true]:hover { background: var(--accent-fill-hover); color: var(--accent-ink); }

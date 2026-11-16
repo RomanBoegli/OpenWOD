@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { formatDuration } from '../../../packages/domain/src';
 import { compileWorkout, type Phase } from '../../../packages/domain/src/compiler';
-import { outlineWorkout, type OutlineSection } from '../../../packages/domain/src/outline';
+import { outlineWorkout, restMs, type OutlineSection } from '../../../packages/domain/src/outline';
 import type { Workout } from '../../../packages/domain/src/schema';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
 import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
@@ -10,11 +10,15 @@ import { AthletesChip, Chip } from './Chip';
 import type { LoadUnit, Sex } from '../../../packages/domain/src/prescription';
 import type { Collection } from './master-data';
 import { agoText, sessionScore } from './session-log';
+import { elapsedText } from './data/checkpoints';
+import { sessionHeadline } from './data/live-sessions';
 import { DATA_MODE } from './data/mode';
 import type { SessionView } from './data/use-library-data';
+import type { LiveOffers } from './data/use-live-sessions';
 import { displayTime } from '../../../packages/engine/src';
-import type { LibraryEntry } from './Library';
+import { spanLabel, type LibraryEntry } from './Library';
 import { copyHref, editHref, playHref } from './router';
+import { requestStart } from './start';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
@@ -32,19 +36,27 @@ function transitionText(section: OutlineSection): string {
   return rest ? `${rest}continues` : 'Continues straight away';
 }
 
-interface OverviewProps { entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionView[]; loadsFor: { A: Sex; B: Sex }; loadUnit: LoadUnit; onRemove: (id: string) => void; onExport: (workout: Workout) => void }
+interface OverviewProps {
+  entry: LibraryEntry; names: { A: string; B: string }; collections: Collection[]; sessions: SessionView[]; loadsFor: { A: Sex; B: Sex }; loadUnit: LoadUnit; onRemove: (id: string) => void; onExport: (workout: Workout) => void;
+  /** Sessions running on other devices of the household (ENG-15); the ones of this workout are offered above the actions. */
+  live: LiveOffers;
+}
 
 /** The study view: everything the athletes will see, round by round, before anyone presses Start. */
 /** Targets only (no fallback hint), for table cells; loads are shown per level separately. */
 const targetText = (value: Prescription) => value.reps || value.calories || value.distance || value.timeMs ? prescriptionText({ ...value, load: undefined }) : '';
-export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove, onExport }: OverviewProps) {
+export function Overview({ entry, names, collections, sessions, loadsFor, loadUnit, onRemove, onExport, live }: OverviewProps) {
   const { workout, summary, source, editable } = entry;
   /** Shipped with the app, edited or not: removing it only hides it. */
   const builtIn = source === 'bundled' || entry.bundled === true;
   const cell = (value: Prescription | undefined, role: 'A' | 'B') => value ? <>{value.name}{targetText(value) ? <small>{targetText(value)}</small> : null}{value.load ? <small><LoadLevels load={value.load} unit={loadUnit} sex={workout.participants === 2 ? loadsFor[role] : undefined} /></small> : null}</> : null;
   const [removing, setRemoving] = useState(false);
+  const [continuing, setContinuing] = useState(false);
   const plan = useMemo(() => compileWorkout(workout), [workout]);
   const sections = useMemo(() => outlineWorkout(plan), [plan]);
+  // The facts at a glance: total is active plus rest, each written as on the library card.
+  const rest = useMemo(() => restMs(plan), [plan]);
+  const span = (ms: number) => spanLabel(plan.durationKind, ms);
   const pair = workout.participants === 2;
   const attribution = workout.attribution;
   const movementCounts = useMemo(() => {
@@ -60,13 +72,17 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
       {/* What holds for the whole workout; each block card names its own format. */}
       <div className={`${shared.metadata} ${styles.chips}`}><AthletesChip participants={workout.participants} />{collections.map(collection => <Chip key={collection.id} kind="collection">{collection.title}</Chip>)}<DifficultyChip difficulty={summary.difficulty} detailed />{sessions.length > 0 && <Chip kind="done" icon="check">{sessions.length === 1 ? 'Done once' : `Done ${sessions.length}×`} · {agoText(sessions[0].finishedAt)}</Chip>}</div>
       <h1>{workout.title}</h1>
+      {live.sessions.filter(session => session.workoutId === workout.id).map(session => <section key={session.id} className={styles.live} role="status" aria-label="Session on another device">
+        <strong>{sessionHeadline(session)} · updated {elapsedText(live.ageMs(session))}</strong>
+        <button type="button" className={shared.primaryButton} disabled={continuing} onClick={() => { setContinuing(true); void live.onContinue(session.id).finally(() => setContinuing(false)); }}><Icon name="play" size={16} />Continue here</button>
+      </section>)}
       <div className={styles.lead}>
         <div className={styles.leadText}>
           {workout.description && <p className={shared.description}>{workout.description}</p>}
           {attribution && <p className={styles.attribution}>{summary.author && <span>By {summary.author}</span>}{attribution.sourceUrl && <a href={attribution.sourceUrl} target="_blank" rel="noreferrer noopener">Source</a>}{attribution.licence && <span>{attribution.licence}</span>}{attribution.notes && <span>{attribution.notes}</span>}</p>}
         </div>
         <div className={styles.actions}>
-          <a className={shared.primaryButton} href={playHref(workout.id)}><Icon name="play" />Start workout</a>
+          <a className={shared.primaryButton} href={playHref(workout.id)} onClick={() => requestStart(workout.id)}><Icon name="play" />Start workout</a>
           {editable && <a className={shared.quietButton} href={editHref(workout.id)}><Icon name="edit" size={16} />Edit</a>}
           {editable && <a className={shared.quietButton} href={copyHref(workout.id)}><Icon name="copy" size={16} />Duplicate</a>}
           <button className={shared.quietButton} onClick={() => onExport(workout)}><Icon name="download" size={17} />Export</button>
@@ -76,15 +92,16 @@ export function Overview({ entry, names, collections, sessions, loadsFor, loadUn
     </div>
 
     <dl className={styles.facts} aria-label="At a glance">
-      <div><dt>{summary.durationKind === 'exact' ? 'Active time' : summary.durationKind === 'capped' ? 'Up to' : 'Timed parts'}</dt><dd>{displayTime(summary.activeMs)}</dd></div>
-      <div><dt>Prep</dt><dd>{formatDuration(workout.prepMs)}</dd></div>
+      <div><dt>Total time</dt><dd>{span(plan.durationMs)}</dd></div>
+      <div><dt>Active time</dt><dd>{span(plan.durationMs - rest)}</dd></div>
+      <div><dt>Rest time</dt><dd>{displayTime(rest)}</dd></div>
       <div><dt>Blocks</dt><dd>{sections.length}</dd></div>
       <div><dt>Movements</dt><dd>{summary.movements.length}</dd></div>
-      <div><dt>Ready gates</dt><dd>{Math.max(0, sections.filter((section, index) => index < sections.length - 1 && section.transitionAfter === 'manualReady').length)}</dd></div>
+      <div><dt>Equipment</dt><dd>{summary.equipmentNeeded.length}</dd></div>
     </dl>
 
     <ol className={styles.sections} aria-label="Blocks">
-      {sections.map((section, index) => <Fragment key={section.id}><li className={styles.section}>
+      {sections.map((section, index) => <Fragment key={section.id}><li className={styles.section} data-tilt>
         <div className={styles.sectionHeading}>
           <div><span className={shared.eyebrow}>BLOCK {index + 1} OF {sections.length}</span><div className={styles.blockTitle}><h2>{section.title}</h2><Chip kind="format">{FORMAT_LABELS[section.format]}</Chip></div></div>
           <div className={styles.sectionFacts}><span>{section.durationKind === 'open' ? 'Open' : section.durationKind === 'capped' ? `Cap ${displayTime(section.capMs ?? section.durationMs)}` : displayTime(section.durationMs)}</span>{section.emom && <span>{section.emom.intervals} × {formatDuration(section.emom.intervalMs)}</span>}{section.youGoIGo?.rounds && <span>{section.youGoIGo.rounds} team rounds</span>}{section.youGoIGo?.turnMs && <span>{formatDuration(section.youGoIGo.turnMs)} per turn</span>}{index === sections.length - 1 && <span>{section.restAfterMs ? `Final block · then ${formatDuration(section.restAfterMs)} rest` : 'Final block'}</span>}</div>

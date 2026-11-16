@@ -107,6 +107,7 @@ test.describe('household server', () => {
     expect(full.corrections[0].note).toBe('Miscounted');
     await row.getByRole('link', { name: 'Repeat' }).click();
     await expect(page).toHaveURL(/#\/wod\/cindy\/play$/);
+    await expect(page.getByRole('status')).toHaveText('Get ready'); // Repeat starts the session with that tap.
   });
 
   test('AT-24: the server going away mid-session changes nothing in the player, and the result uploads afterwards', async ({ page, api }) => {
@@ -150,6 +151,21 @@ test.describe('household server', () => {
     const workouts = page.getByRole('list', { name: 'Workouts' });
     await expect(workouts.getByRole('listitem').filter({ hasText: 'Kept' })).toBeVisible();
     await expect(workouts.getByRole('listitem').filter({ hasText: 'Added later' })).toHaveCount(0);
+  });
+
+  test('a device that stays open reads the library again when it is looked at, without a reload', async ({ page, api }) => {
+    await page.goto('/');
+    const workouts = page.getByRole('list', { name: 'Workouts' });
+    await expect(workouts.getByRole('listitem').first()).toBeVisible();
+    await page.evaluate(() => { (window as unknown as { __stayed?: boolean }).__stayed = true; });
+    // Another device saves a workout meanwhile.
+    expect((await api.put('/api/v1/workouts/from-elsewhere', { document: own('from-elsewhere', 'Saved elsewhere') })).status).toBe(201);
+    // Coming back reads again, at most once in five seconds: the first focus may fall into the pause after the start.
+    await expect(async () => {
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+      await expect(workouts.getByRole('listitem').filter({ hasText: 'Saved elsewhere' })).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 20_000 });
+    expect(await page.evaluate(() => (window as unknown as { __stayed?: boolean }).__stayed)).toBe(true);
   });
 
   test('a settings change on one device reaches the other devices of the household', async ({ page, browser, api }) => {

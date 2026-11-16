@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { BUNDLED, partnerCircuit, bundledCount, ready, communityFile, openFilters } from './helpers';
+import { BUNDLED, partnerCircuit, bundledCount, ready, communityFile, openFilters, ownFile, fact } from './helpers';
 import { serialiseWorkoutFile } from '../../packages/domain/src';
 import { bundledWorkouts } from '../../packages/domain/src/bundled';
 
@@ -37,8 +37,9 @@ test.describe('library', () => {
     await page.getByRole('button', { name: 'Clear filters' }).click();
     await page.getByRole('link', { name: 'Start Full Body Partner Workout' }).click();
     await ready(page);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Full Body Partner Workout');
-    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    // Start on the card begins the session at once: no second Start on the player.
+    await expect(page).toHaveURL(/#\/wod\/full-body-partner\/play$/);
+    await expect(page.getByRole('status')).toHaveText('Get ready');
     await page.evaluate(() => window.__openwodTest!.advance(310_000));
     await expect(page.getByRole('status')).toHaveText('Next block · ready?');
     await page.getByRole('button', { name: 'Start next block' }).click();
@@ -68,8 +69,11 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(BUNDLED + 1);
     await page.getByRole('link', { name: 'Start Community circuit' }).click();
     await ready(page);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Community circuit');
+    await expect(page.getByRole('status')).toHaveText('Get ready');
     await expect(page.getByTestId('movement-A')).toHaveText('Row');
+    await page.getByRole('button', { name: 'End session' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'End session' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Community circuit');
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export WOD' }).click();
     expect((await download).suggestedFilename()).toBe('community-circuit.wod.yaml');
@@ -97,6 +101,41 @@ test.describe('library', () => {
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ authors: ['Coach programming'], participants: 2 }));
     await chip('Author', 'OpenWOD').click(); // Any of the chosen authors.
     await expect(list.getByRole('listitem')).toHaveCount(bundledCount({ authors: ['Coach programming', 'OpenWOD'], participants: 2 }));
+  });
+
+  test('sorts by date added: the workout that joined last comes first, bundled ones follow by title', async ({ page }) => {
+    for (const [title, id] of [['Aaa First', 'aaa-first'], ['Zzz Second', 'zzz-second']] as const) {
+      await page.locator('input[type=file]').setInputFiles(ownFile(title, id));
+      await page.getByRole('dialog', { name: 'Preview your WOD' }).getByRole('button', { name: 'Save and edit' }).click();
+      await expect(page).toHaveURL(/#\/wod\/[^/]+\/edit$/);
+      await page.goto('/');
+      await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
+    }
+    await openFilters(page);
+    await page.getByLabel('Sort').selectOption('newest');
+    const titles = page.getByRole('list', { name: 'Workouts' }).getByRole('listitem').getByRole('heading', { level: 2 });
+    await expect(titles).toHaveCount(BUNDLED + 2);
+    await expect(titles.nth(0)).toHaveText('Zzz Second');
+    await expect(titles.nth(1)).toHaveText('Aaa First');
+    await expect(titles.nth(2)).toHaveText(bundledWorkouts.map(workout => workout.title).sort((a, b) => a.localeCompare(b, 'en'))[0]);
+    await page.reload(); // The sort survives within the browser session.
+    await expect(titles.nth(0)).toHaveText('Zzz Second');
+  });
+
+  test('a workout’s page splits its time into active and rest, and counts blocks, movements and equipment', async ({ page }) => {
+    await page.goto('/#/wod/partner-circuit');
+    const facts = page.getByLabel('At a glance');
+    await expect(facts.locator('dt')).toHaveText(['Total time', 'Active time', 'Rest time', 'Blocks', 'Movements', 'Equipment']);
+    await expect(fact(facts, 'Total time')).toHaveText('19:50');
+    await expect(fact(facts, 'Active time')).toHaveText('13:20');
+    await expect(fact(facts, 'Rest time')).toHaveText('06:30'); // 2:30 of transitions and 4:00 between rounds.
+    await expect(fact(facts, 'Blocks')).toHaveText('1');
+    await expect(fact(facts, 'Equipment')).toHaveText(/^\d+$/);
+    // A capped workout states its cap as the time, plainly, as its library card does.
+    await page.goto('/#/wod/fran');
+    await expect(fact(facts, 'Total time')).toHaveText('10:00');
+    await expect(fact(facts, 'Active time')).toHaveText('10:00');
+    await expect(fact(facts, 'Rest time')).toHaveText('00:00');
   });
 
   test('an unknown address shows the not-found page with a way back', async ({ page }) => {

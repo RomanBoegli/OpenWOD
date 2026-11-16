@@ -7,8 +7,6 @@
   --accent-soft: #c8ee9110; --accent-track: #c8ee911e; --focus: #d7f6a9;
   --line: #ffffff0c; --line-2: #ffffff1a;
   --surface-1: #192119; --surface-2: #20291e; --surface-3: #1c241c; --surface-4: #222c20; --surface-5: #35402f; --input-bg: #151e14; --hover: #ffffff08;
-  --lane-a: #d0ebaa; --lane-a-bg: #29332188; --lane-a-border: #c6dfac22;
-  --lane-b: #c9c0eb; --lane-b-bg: #2b2c2f77; --lane-b-border: #c9c0eb22;
   --phase-work: #c8ee91; --phase-rest: #a3cbf0; --phase-paused: #d1ccb8; --phase-amber: #f4ca80; --phase-red: #ff998c;
   --danger: #ffb0a4; --error-text: #ffc3b7; --modified: #f3cf9e;
   --notice-bg: #f6c78a10; --notice-border: #f6c78a33; --notice-text: #edcda3;
@@ -24,8 +22,6 @@
   --accent-soft: #2f7a0f14; --accent-track: #2f7a0f22; --focus: #2f6f0f;
   --line: #00000012; --line-2: #00000022;
   --surface-1: #ffffff; --surface-2: #f8faf3; --surface-3: #e7ece1; --surface-4: #ffffff; --surface-5: #ffffff; --input-bg: #ffffff; --hover: #00000008;
-  --lane-a: #2f6b12; --lane-a-bg: #eef5e4; --lane-a-border: #2f6b1233;
-  --lane-b: #4b3fa3; --lane-b-bg: #efeef8; --lane-b-border: #4b3fa333;
   --phase-work: #2f7a0f; --phase-rest: #1d5fa8; --phase-paused: #6a6355; --phase-amber: #a35f00; --phase-red: #c12b1e;
   --danger: #b3261e; --error-text: #b3261e; --modified: #8a5a00;
   --notice-bg: #fff3df; --notice-border: #e0a84a66; --notice-text: #6d4200;
@@ -37,6 +33,8 @@
 :root { --ease: cubic-bezier(.2, .7, .2, 1); --t-fast: 120ms; --t-slow: 420ms; }
 /* Family names directly: a local() alias binds Firefox to one face, so bold weights fell back to regular there. */
 :root { font-family: 'Avenir Next', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: var(--ink); background: var(--bg); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+/* iOS Safari may enlarge text on its own when the screen is turned; every size here is set on purpose, most of all in the training view. */
+:root { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 * { box-sizing: border-box; }
 html { scrollbar-gutter: stable; }
 body { margin: 0; min-width: 320px; background: var(--bg); }

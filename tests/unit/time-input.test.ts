@@ -8,6 +8,17 @@ describe('time fields', () => {
     expect(cleanTimeText('1:2:3')).toBe('1:23');
   });
 
+  it('take a point or a comma as the colon, for a number pad without one', () => {
+    expect(cleanTimeText('1.30')).toBe('1:30');
+    expect(cleanTimeText('1,30')).toBe('1:30');
+    expect(cleanTimeText('.45')).toBe(':45');
+    expect(cleanTimeText('1.2,3:4')).toBe('1:234');
+    expect(parseTimeText(cleanTimeText('1.30'))).toBe(90_000);
+    expect(parseTimeText(cleanTimeText('12,05'))).toBe(725_000);
+    // Plain digits still mean seconds.
+    expect(parseTimeText(cleanTimeText('130'))).toBe(130_000);
+  });
+
   it('read m:ss, mm:ss and plain seconds, and reject what is not a time yet', () => {
     expect(parseTimeText('01:30')).toBe(90_000);
     expect(parseTimeText('1:05')).toBe(65_000);

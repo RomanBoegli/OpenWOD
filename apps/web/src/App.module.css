@@ -71,9 +71,6 @@
 .overallSegment { flex: 1 1 0; min-width: 3px; border-radius: 999px; background: var(--accent-track); overflow: hidden; }
 .overallFill { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--phase-color); transition: width 300ms linear, background-color var(--t-slow) var(--ease); }
 .overallText { font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-3); font-variant-numeric: tabular-nums; text-align: right; }
-.player[data-clock-weight=light] .timer { font-weight: 300; letter-spacing: -4px; }
-.player[data-clock-size=compact] .timer { font-size: clamp(84px, 9vw, 112px); }
-.player[data-clock-size=compact] .clockBlock { padding: 18px 0 16px; }
 /* The state of the session (Work, Rest, Get ready) reads from across the room, just above the clock. */
 .phase { color: var(--phase-color); font-size: clamp(15px, 1.7vw, 22px); letter-spacing: .2em; text-transform: uppercase; font-weight: 800; line-height: 1.2; }
 /* The optional percentage sits on the clock's baseline, small and dimmed: secondary information beside the time. */
@@ -86,11 +83,10 @@
 .laneHeading { display: flex; justify-content: space-between; color: var(--ink-3); font-size: 9px; font-weight: 600; letter-spacing: 1.7px; margin-bottom: 12px; }
 .laneHeading > span { color: var(--ink-3); letter-spacing: 1.5px; }
 .lanes { display: grid; grid-template-columns: repeat(var(--lane-count), minmax(0, 1fr)); gap: 16px; }
-.lane { --athlete: var(--lane-a); padding: 23px 24px 22px; min-height: 193px; border: 1px solid var(--lane-a-border); border-radius: 14px; background: var(--lane-a-bg); animation: laneIn 560ms var(--ease) 150ms backwards, laneGlow 1300ms ease-out 420ms; }
-.lane[data-athlete=B] { --athlete: var(--lane-b); background: var(--lane-b-bg); border-color: var(--lane-b-border); }
-.athleteLabel { display: flex; align-items: center; color: var(--athlete); font-size: 13px; font-weight: 600; gap: 11px; }
-.athleteBadge { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--athlete) 30%, transparent); border-radius: 9px; font-weight: 700; background: color-mix(in srgb, var(--athlete) 8%, transparent); }
-.athleteLabel small { display: block; font-size: 8px; font-weight: 500; margin-top: 4px; color: var(--ink-3); letter-spacing: 1.2px; }
+/* The station cards are neutral glass: they hold no colour of their own, so the phase wash and the ring show through, and the badge, the name and the side tell the athletes apart (UI-04). */
+.lane { padding: 23px 24px 22px; min-height: 193px; border: 1px solid var(--line-2); border-radius: 14px; background: color-mix(in srgb, var(--surface-5) 45%, transparent); animation: laneIn 560ms var(--ease) 150ms backwards, laneGlow 1300ms ease-out 420ms; }
+.athleteLabel { display: flex; align-items: center; color: var(--ink-2); font-size: 13px; font-weight: 600; gap: 11px; }
+.athleteBadge { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: 9px; font-weight: 700; background: var(--hover); }
 .laneTime { margin-left: auto; color: var(--ink-3); font-size: 12px; font-weight: 400; }
 .lane h2 { animation: slideIn 520ms var(--ease) 260ms backwards; margin: 21px 0 10px; font-size: clamp(40px, 3.5vw, 48px); letter-spacing: -1.1px; line-height: 1.08; font-weight: 600; overflow-wrap: anywhere; }
 .lane p { color: var(--ink-3); font-size: 12px; line-height: 1.6; margin: 0; }
@@ -130,7 +126,8 @@
 .footerMode { position: relative; padding: 2px 9px; border: 1px solid var(--line-2); border-radius: 999px; color: var(--ink); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 10px; line-height: 1.6; cursor: help; outline-offset: 3px; }
 .footerMode::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); right: 0; width: max-content; max-width: min(280px, 80vw); padding: 8px 11px; border-radius: 9px; background: var(--surface-3); border: 1px solid var(--line-2); color: var(--ink); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; line-height: 1.45; text-align: left; box-shadow: 0 8px 24px rgb(0 0 0 / .18); opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity .15s, transform .15s, visibility .15s; pointer-events: none; z-index: 5; }
 .footerMode:hover::after, .footerMode:focus::after { opacity: 1; visibility: visible; transform: none; }
-.contextSection { margin-top: 27px; padding: 25px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 17px; }
+/* Glass like the station cards (.lane): the phase wash shows through the game plan too. */
+.contextSection { margin-top: 27px; padding: 25px; background: color-mix(in srgb, var(--surface-5) 45%, transparent); border: 1px solid var(--line-2); border-radius: 17px; }
 .contextHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
 .contextHeading h2 { font-size: 22px; font-weight: 500; margin: 6px 0 0; letter-spacing: -.5px; }
 .contextHeading .quietButton { font-size: 11px; }
@@ -179,6 +176,8 @@
 .chipToggle:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
 .dialog input:not([type=range]):not([type=radio]), .dialog select { width: 100%; min-width: 0; background: var(--input-bg); border: 1px solid var(--line-2); color: var(--ink); border-radius: 8px; padding: 13px 11px; min-height: 48px; }
 .dialog input[type=range] { accent-color: var(--accent-fill); width: 100%; min-height: 35px; }
+/* Phones: every form control at 16 px. Below that iOS Safari zooms the page when a field takes the focus. */
+@media (max-width: 620px) { .dialog input:not([type=range]):not([type=radio]), .dialog select { font-size: 16px; } }
 .nameFields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-3); }
 .segmented[data-two] { grid-template-columns: 1fr 1fr; }
@@ -210,7 +209,7 @@
 .finishMessage p { font-size: 14px; color: var(--ink-2); }
 @media (min-width: 1500px) { .main { padding-top: 46px; } .player { --pad-top: 30px; --pad-x: 38px; --pad-bottom: 24px; } .clockBlock { padding: 32px 0; } }
 @media (max-width: 900px) { .header { height: 75px; padding: 0 25px; gap: 18px; } .main { padding: 27px 24px 22px; } .headerNote { display: none; } .workoutHeading { align-items: start; gap: 16px; } .description { max-width: 500px; } .viewSwitch { margin-top: 32px; } .viewSwitch button { padding: 8px; font-size: 11px; } .viewSwitch svg { display: none; } .player { --pad-top: 24px; --pad-x: 25px; --pad-bottom: 20px; } .lane { padding: 20px; } .lane h2 { font-size: 40px; } .bottomBar { flex-wrap: wrap; } .footer { font-size: 11px; } }
-@media (max-width: 620px) { .header { height: 70px; padding: 0 18px; gap: 8px; } .headerActions { gap: 3px; } .headerActions .quietButton { font-size: 11px; } .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 44px; padding: 8px; } .backLink span { display: none; } .brand { font-size: 21px; gap: 8px; letter-spacing: -.8px; } .brandVersion { margin-top: 2px; font-size: 9px; letter-spacing: .3px; } .brandMark { width: 32px; height: 32px; border-radius: 9px; } .brandMark svg { width: 25px; height: 25px; } .main { padding: 24px 15px 20px; } .workoutHeading { display: block; margin-bottom: 20px; } .workoutHeading h1 { font-size: 30px; } .eyebrow { font-size: 8px; letter-spacing: 1.5px; } .description { font-size: 12px; } .metadata { gap: 12px; font-size: 10px; } .equipment { border: 0; padding: 0; } .viewSwitch { margin-top: 18px; width: fit-content; } .viewSwitch button { padding: 7px 14px; } .viewSwitch svg { display: block; } .player { --pad-top: 22px; --pad-x: 20px; --pad-bottom: 20px; border-radius: 20px; } .playerTop { font-size: 10px; } .playerTop > span:last-child { font-size: 9px; letter-spacing: 1px; } .clockBlock { padding: 27px 0 24px; } .timer { font-size: 112px; letter-spacing: -6px; } .phase { font-size: 14px; } .lanes { grid-template-columns: minmax(0, 1fr); gap: 12px; } .lane { min-height: 0; padding: 17px 18px; } .lane h2 { margin-top: 16px; font-size: 40px; } .lane p { font-size: 11px; } .athleteLabel small { display: none; } .athleteLabel { font-size: 12px; } .athleteBadge { width: 30px; height: 30px; } .nextStrip { align-items: start; padding: 21px 0; text-align: left; font-size: 12px; line-height: 1.6; gap: 12px; } .nextLabel { font-size: 8px; margin-top: 3px; gap: 6px; } .controls { grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 16px; } .controls > .primaryButton { grid-row: 1; grid-column: 1/-1; width: 100%; min-height: 58px; } .secondaryControls { grid-row: 2; } .stopButton { grid-row: 2; } .sessionLine { margin-top: 11px; font-size: 9px; align-items: start; line-height: 1.5; } .sessionLine > span:last-child { text-align: right; max-width: 155px; } .bottomBar { padding-top: 17px; gap: 8px; } .readiness { width: 100%; font-size: 9px; } .sharing { margin-left: -10px; } .footer { flex-direction: column; gap: 10px; padding-top: 20px; } .footerLinks { justify-content: center; } .footerLinks { position: relative; } .footerMode { position: static; } .footerMode::after { left: 50%; right: auto; transform: translate(-50%, 4px); } .footerMode:hover::after, .footerMode:focus::after { transform: translateX(-50%); } .contextSection { padding: 20px 12px; } .contextHeading { padding: 0 5px; } .contextHeading h2 { font-size: 20px; } .contextHeading .quietButton { max-width: 140px; font-size: 10px; } .contextColumns, .contextRow { grid-template-columns: 20px 1fr 1fr 28px; gap: 10px; padding: 14px 8px; } .contextColumns { font-size: 8px; } .contextRow { font-size: 12px; overflow-wrap: anywhere; } .contextRow > span:first-child, .contextRow > span:last-child { font-size: 10px; } .contextFootnote { padding: 0 5px; line-height: 1.7; } .dialog { padding: 23px; } .dialogActions > button, .dialogActions > a { flex: 1 1 auto; } .nameFields { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 620px) { .header { height: 70px; padding: 0 18px; gap: 8px; } .headerActions { gap: 3px; } .headerActions .quietButton { font-size: 11px; } .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 44px; padding: 8px; } .backLink span { display: none; } .brand { font-size: 21px; gap: 8px; letter-spacing: -.8px; } .brandVersion { margin-top: 2px; font-size: 9px; letter-spacing: .3px; } .brandMark { width: 32px; height: 32px; border-radius: 9px; } .brandMark svg { width: 25px; height: 25px; } .main { padding: 24px 15px 20px; } .workoutHeading { display: block; margin-bottom: 20px; } .workoutHeading h1 { font-size: 30px; } .eyebrow { font-size: 8px; letter-spacing: 1.5px; } .description { font-size: 12px; } .metadata { gap: 12px; font-size: 10px; } .equipment { border: 0; padding: 0; } .viewSwitch { margin-top: 18px; width: fit-content; } .viewSwitch button { padding: 7px 14px; } .viewSwitch svg { display: block; } .player { --pad-top: 22px; --pad-x: 20px; --pad-bottom: 20px; border-radius: 20px; } .playerTop { font-size: 10px; } .playerTop > span:last-child { font-size: 9px; letter-spacing: 1px; } .clockBlock { padding: 27px 0 24px; } .timer { font-size: 112px; letter-spacing: -6px; } .phase { font-size: 14px; } .lanes { grid-template-columns: minmax(0, 1fr); gap: 12px; } .lane { min-height: 0; padding: 17px 18px; } .lane h2 { margin-top: 16px; font-size: 40px; } .lane p { font-size: 11px; } .athleteLabel { font-size: 12px; } .athleteBadge { width: 30px; height: 30px; } .nextStrip { align-items: start; padding: 21px 0; text-align: left; font-size: 12px; line-height: 1.6; gap: 12px; } .nextLabel { font-size: 8px; margin-top: 3px; gap: 6px; } .controls { grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 16px; } .controls > .primaryButton { grid-row: 1; grid-column: 1/-1; width: 100%; min-height: 58px; } .secondaryControls { grid-row: 2; } .stopButton { grid-row: 2; } .sessionLine { margin-top: 11px; font-size: 9px; align-items: start; line-height: 1.5; } .sessionLine > span:last-child { text-align: right; max-width: 155px; } .bottomBar { padding-top: 17px; gap: 8px; } .readiness { width: 100%; font-size: 9px; } .sharing { margin-left: -10px; } .footer { flex-direction: column; gap: 10px; padding-top: 20px; } .footerLinks { justify-content: center; } .footerLinks { position: relative; } .footerMode { position: static; } .footerMode::after { left: 50%; right: auto; transform: translate(-50%, 4px); } .footerMode:hover::after, .footerMode:focus::after { transform: translateX(-50%); } .contextSection { padding: 20px 12px; } .contextHeading { padding: 0 5px; } .contextHeading h2 { font-size: 20px; } .contextHeading .quietButton { max-width: 140px; font-size: 10px; } .contextColumns, .contextRow { grid-template-columns: 20px 1fr 1fr 28px; gap: 10px; padding: 14px 8px; } .contextColumns { font-size: 8px; } .contextRow { font-size: 12px; overflow-wrap: anywhere; } .contextRow > span:first-child, .contextRow > span:last-child { font-size: 10px; } .contextFootnote { padding: 0 5px; line-height: 1.7; } .dialog { padding: 23px; } .dialogActions > button, .dialogActions > a { flex: 1 1 auto; } .nameFields { grid-template-columns: 1fr; gap: 0; } }
 @media (max-width: 360px) { .headerActions .quietButton span { display: none; } .headerActions .quietButton, .headerActions .iconButton { min-width: 40px; padding: 8px; } .pill { display: none; } .backLink { display: none; } .timer { font-size: 96px; } .lane h2 { font-size: 36px; } .player { --pad-top: 20px; --pad-x: 17px; --pad-bottom: 20px; } }
 
 /* During training, the player owns the usable viewport; controls stay in view. */
@@ -219,13 +218,43 @@
 .app[data-performing=true] .main { padding: 0; }
 .screen[data-performing=true] .workoutHeading, .screen[data-performing=true] .bottomBar { display: none; }
 .screen[data-performing=true] .player { position: fixed; inset: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); display: flex; flex-direction: column; padding: calc(18px + var(--ring-extra)) calc(30px + var(--ring-extra)); overflow-y: auto; }
-.screen[data-performing=true] .playerTop { min-height: 40px; flex-shrink: 0; }
-.screen[data-performing=true] .playerTop .iconButton { margin: -8px -6px -8px 8px; }
-/* The clock block takes a fixed share of the frame, and Up next and the controls sit at the bottom: a taller or shorter
-   station card only changes the gap above Up next, so the clock never moves from one slot to the next. */
-.screen[data-performing=true] .clockBlock { flex: 0 0 auto; min-height: 36svh; display: flex; flex-direction: column; justify-content: center; padding: 12px 0 20px; }
+/* Wider than a phone, no row gives way: a frame too short for its rows scrolls and shows it, where a row that shrinks lays
+   Up next over Done without a sign. The game plan of the context view is the one row that takes what is left. The stations'
+   row is sized by its content outright: with a minimum set on the cards, WebKit keeps the row at its old height when a
+   resize changes nothing but the width and a movement name wraps anew, and the name runs out of its card. */
+@media (min-width: 621px) {
+  .screen[data-performing=true] .player > * { flex-shrink: 0; }
+  .screen[data-performing=true] .lanes { grid-auto-rows: max-content; }
+}
+/* The top row is as tall as its view switch and hands the difference back as margin, so it takes 40 px of the column. */
+.screen[data-performing=true] .playerTop { min-height: 48px; margin: -4px 0; flex-shrink: 0; }
+.screen[data-performing=true] .playerTop .iconButton { margin: 0 -6px 0 8px; }
+.screen[data-performing=true] .clockBlock { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 12px 0 20px; }
+.screen[data-performing=true] .timer { font-size: clamp(112px, 19svh, 180px); }
+/* The focus view (UI-27): the clock takes the room this workout leaves. Every other row has a height of its own, and the
+   stage keeps the room of the plan's tallest station (Player.module.css .stage), so the clock block is the one row that
+   flexes: it is as tall for the first slot as for the last, and the clock neither moves nor changes size within a session.
+   The line of the digits takes what the block has, never less than --clock-min, below which the frame scrolls, and never
+   more than --clock-wide or 320 px. --clock-wide is what the frame's width (cqw: the frame is the container) allows for
+   the digits and what stands beside them: the donut and the percentage each take their share of it where they are switched
+   on and give it back where they are off, and the digits stay in the middle either way. The digits, the donut and the
+   percentage are sized from that line (cqh), so they grow and shrink as one. A block whose clock is as large as it may get
+   takes no more (--clock-rest is what the block holds besides the digits: its padding, the phase, the caption, and the CAP
+   or TURN line as its fourth child), and what is then left of the frame stays above Up next, under the action bar. */
+.screen[data-performing=true] .player { container-type: inline-size; }
+.screen[data-performing=true][data-view=focus] .player { --clock-min: 84px; --clock-wide: 24cqw; --clock-pad: 11px; --clock-rest: 72px; --clock-line: 25px; }
+.screen[data-performing=true][data-view=focus] .player[data-clock-percent=true] { --clock-wide: 21cqw; }
+.screen[data-performing=true][data-view=focus] .player[data-donut=false] { --clock-wide: 30cqw; }
+.screen[data-performing=true][data-view=focus] .player[data-donut=false][data-clock-percent=true] { --clock-wide: 22cqw; }
+.screen[data-performing=true][data-view=focus] .clockBlock { flex: 1 1 0; min-height: auto; max-height: calc(min(var(--clock-wide), 320px) + var(--clock-pad) + var(--clock-rest)); }
+.screen[data-performing=true][data-view=focus] .clockBlock:has(> :nth-child(4)) { max-height: calc(min(var(--clock-wide), 320px) + var(--clock-pad) + var(--clock-rest) + var(--clock-line)); }
 .screen[data-performing=true][data-view=focus] .nextStrip, .screen[data-performing=true][data-view=focus] .nextStrip[data-empty=true] + .controls { margin-top: auto; }
-.screen[data-performing=true] .timer { font-size: clamp(112px, 19vh, 180px); }
+.screen[data-performing=true][data-view=focus] .clockLine { flex: 1 1 0; min-height: calc(var(--clock-min) + var(--clock-pad)); max-height: calc(min(var(--clock-wide), 320px) + var(--clock-pad)); padding: 4px 0 7px; container-type: size; align-content: center; }
+.screen[data-performing=true][data-view=focus] .clockLine > * { font-size: 100cqh; }
+.screen[data-performing=true][data-view=focus] .clockLine > .timer { font-size: 100cqh; line-height: 1; letter-spacing: -.045em; margin: 0; }
+.screen[data-performing=true][data-view=focus] .clockLine > .clockPercent { font-size: 29.5cqh; }
+/* Up next keeps one line, whatever comes, so its row keeps its height: a long one is cut. */
+.screen[data-performing=true][data-view=focus] .nextStrip > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .screen[data-performing=true] .lane { min-height: 155px; padding: 18px 22px; }
 .screen[data-performing=true] .lane h2 { margin-top: 17px; }
 .screen[data-performing=true] .athleteLabel { font-size: 28px; }
@@ -243,16 +272,28 @@
 .screen[data-performing=true][data-view=context] .contextList { flex: 1; max-height: none; }
 .screen[data-performing=true][data-view=context] .contextRow { font-size: 21px; }
 .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 28px; font-weight: 600; }
+@media (min-width: 621px) {
+  /* A recovered session waits paused under the transport row: its note lies beside its two buttons, so it costs the frame one row and not three. */
+  .screen[data-performing=true] .recovery { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; }
+  .screen[data-performing=true] .recovery .dialogActions { margin-top: 0; flex-wrap: nowrap; }
+}
 @media (max-width: 620px) {
   /* Performing on a phone: a session fits the screen without scrolling, so everything sits tighter and nothing is said twice. */
   /* A wider timer ring (Settings → Training view) widens the padding with it, so the ring never covers the content. */
   .screen[data-performing=true] .player { padding: calc(12px + var(--ring-extra)) calc(18px + var(--ring-extra)) calc(12px + var(--ring-extra)); }
-  .screen[data-performing=true] .playerTop { min-height: 36px; }
+  .screen[data-performing=true] .playerTop { min-height: 36px; margin: 0; }
   /* The overall line already names the section and the round, so the header keeps the title and the view switch. */
-  .screen[data-performing=true] .player[data-progress=detail] .position, .screen[data-performing=true] .player[data-progress=percent] .position { display: none; }
+  .screen[data-performing=true] .player[data-bar-percent=true] .position, .screen[data-performing=true] .player[data-clock-percent=true] .position { display: none; }
   .screen[data-performing=true] .overall { margin-top: 4px; gap: 3px; }
   .screen[data-performing=true] .clockBlock { min-height: 0; padding: 4px 0 6px; }
-  .screen[data-performing=true] .timer { font-size: clamp(72px, 11vh, 112px); line-height: 1; margin: 4px 0 5px; }
+  /* On a phone the width is what usually limits the digits; the clock may go down to 60 px before a row has to give way. */
+  .screen[data-performing=true][data-view=focus] .player { --clock-min: 60px; --clock-wide: 27.5cqw; --clock-pad: 9px; --clock-rest: 40px; --clock-line: 19px; }
+  .screen[data-performing=true][data-view=focus] .player[data-clock-percent=true] { --clock-wide: 24cqw; }
+  .screen[data-performing=true][data-view=focus] .player[data-donut=false] { --clock-wide: 30cqw; }
+  .screen[data-performing=true][data-view=focus] .player[data-donut=false][data-clock-percent=true] { --clock-wide: 23.5cqw; }
+  .screen[data-performing=true][data-view=focus] .clockLine { padding: 4px 0 5px; }
+  .screen[data-performing=true][data-view=focus] .clockLine > .timer { letter-spacing: -.065em; }
+  .screen[data-performing=true] .timer { font-size: clamp(72px, 11svh, 112px); line-height: 1; margin: 4px 0 5px; }
   .screen[data-performing=true] .laneHeading { margin-bottom: 6px; }
   .screen[data-performing=true] .lanes { gap: 8px; }
   .screen[data-performing=true] .lane { min-height: 0; padding: 8px 12px 9px; }
@@ -261,6 +302,8 @@
   .screen[data-performing=true] .athleteBadge { min-width: 26px; height: 26px; font-size: 15px; }
   .screen[data-performing=true] .nextStrip { font-size: 12px; min-height: 0; padding: 8px 0; }
   .screen[data-performing=true] .nextStrip[data-empty=true] { display: none; }
+  /* After the last slot of a session that had an Up next, the row stays, empty, so the clock does not move at the end. */
+  .screen[data-performing=true][data-view=focus] .nextStrip[data-empty=true][data-kept] { display: flex; visibility: hidden; }
   .screen[data-performing=true] .controls { padding-top: 10px; }
   /* On a phone the transport row goes under the centre pair: three buttons on each side still fit beside each other. */
   .controls { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -282,23 +325,43 @@
   .screen[data-performing=true][data-view=context] .contextRow[data-active=true] { font-size: 22px; }
 }
 
-/* Performing on a wide but short screen (an iPad or a laptop in landscape): sizes follow the height, so the transport controls stay inside the frame. */
-@media (min-width: 621px) and (max-height: 960px) {
+/* Performing on a screen wider than a phone and at most 1200 px tall (every iPad but the 13-inch held upright, a laptop, a
+   1080p monitor): sizes follow the height, so the transport controls stay inside the frame. The full sizes above need 1130 px
+   of height at the very least, and the tallest iPad after the 13-inch has 1186. */
+@media (min-width: 621px) and (max-height: 1200px) {
   .screen[data-performing=true] .player { padding: calc(12px + var(--ring-extra)) calc(24px + var(--ring-extra)) calc(14px + var(--ring-extra)); }
-  .screen[data-performing=true] .playerTop { min-height: 36px; }
+  .screen[data-performing=true] .playerTop { min-height: 36px; margin: 0; }
   .screen[data-performing=true] .playerTop .iconButton { min-width: 38px; min-height: 38px; padding: 6px; margin: 0 0 0 8px; }
   .screen[data-performing=true] .overall { margin-top: 6px; }
-  .screen[data-performing=true] .clockBlock { min-height: 25svh; padding: 2px 0 8px; }
-  .screen[data-performing=true] .timer { font-size: clamp(84px, 15vh, 156px); line-height: 1; }
-  .screen[data-performing=true] .phase { font-size: clamp(14px, 2.2vh, 20px); line-height: 1; }
+  .screen[data-performing=true] .clockBlock { padding: 2px 0 8px; }
+  .screen[data-performing=true][data-view=focus] .player { --clock-rest: 43px; }
+  .screen[data-performing=true] .timer { font-size: clamp(84px, 15svh, 156px); line-height: 1; }
+  .screen[data-performing=true] .phase { font-size: clamp(14px, 2.2svh, 20px); line-height: 1; }
   .screen[data-performing=true] .laneHeading { margin-bottom: 8px; }
-  .screen[data-performing=true] .lane { min-height: 0; padding: 12px 18px; }
-  .screen[data-performing=true] .lane h2 { font-size: clamp(30px, 4.6vh, 44px); margin: 6px 0 4px; }
+  .screen[data-performing=true] .lane { min-height: auto; padding: 12px 18px; }
+  .screen[data-performing=true] .lane h2 { font-size: clamp(30px, 4.6svh, 44px); margin: 6px 0 4px; }
   .screen[data-performing=true] .athleteLabel { font-size: 22px; }
   .screen[data-performing=true] .athleteBadge { min-width: 34px; height: 34px; font-size: 22px; }
-  .screen[data-performing=true] .nextStrip { font-size: clamp(16px, 2.6vh, 24px); min-height: 0; padding: 8px 0; }
+  .screen[data-performing=true] .nextStrip { font-size: clamp(16px, 2.6svh, 24px); min-height: 0; padding: 8px 0; }
   .screen[data-performing=true] .controls { padding-top: 10px; }
   .screen[data-performing=true] .sessionLine { margin-top: 8px; }
+  /* The context view's clock follows the height too, where it used to stay at its 112 px. */
+  .screen[data-performing=true][data-view=context] .timer { font-size: clamp(84px, 13svh, 112px); }
+  .screen[data-performing=true] .recovery { margin-top: 8px; padding: 10px 16px; }
+  .screen[data-performing=true] .recovery .primaryButton { min-height: 48px; }
+}
+/* The shortest frames (an iPad in landscape, most of all inside Safari; a small laptop window): the rows sit tighter, and the
+   percentage under the bar goes where the bar is there to show the same. */
+@media (min-width: 621px) and (max-height: 760px) {
+  .screen[data-performing=true] .player[data-bar=true] .overallText { display: none; }
+  .screen[data-performing=true] .laneHeading { margin-bottom: 4px; }
+  .screen[data-performing=true] .lane { padding: 8px 16px; }
+  .screen[data-performing=true] .nextStrip { padding: 4px 0; }
+  .screen[data-performing=true] .controls { padding-top: 8px; }
+  .screen[data-performing=true] .transportCentre .primaryButton { min-height: 48px; }
+  .screen[data-performing=true] .recovery { margin-top: 6px; padding: 6px 14px; }
+  .screen[data-performing=true] .recovery .primaryButton, .screen[data-performing=true] .recovery .quietButton { min-height: 44px; }
+  .screen[data-performing=true] .sessionLine { margin-top: 2px; }
 }
 
 /* Open-ended work: a neutral, full border and no warning colours (UI-14). */
@@ -322,7 +385,7 @@
   .player { --pad-top: 16px; --pad-x: 16px; --pad-bottom: 14px; }
   .clockBlock { padding: 14px 0 10px; }
   .timer { margin: 2px 0 4px; }
-  .screen .player[data-progress=percent] .timer { font-size: min(112px, 21vw); letter-spacing: -4px; }
+  .screen .player[data-clock-percent=true] .timer { font-size: min(112px, 21vw); letter-spacing: -4px; }
   .clockPercent { font-size: clamp(18px, 5.5vw, 24px); }
   .lane { padding: 14px 16px; }
   .lane h2 { margin: 10px 0 4px; font-size: 32px; }

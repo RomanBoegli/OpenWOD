@@ -2,17 +2,25 @@ import { dirname, join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import type { MasterData } from '../../../packages/domain/src/master-data';
 import type { Workout } from '../../../packages/domain/src/schema';
-import type { SectionResult } from '../../../packages/engine/src';
+import type { SectionResult, Status } from '../../../packages/engine/src';
 import type { SessionCorrection, SessionRecord } from '../../../packages/engine/src/records';
 import { Household, type HouseholdTables } from '../../../packages/household/src/core';
 import { EXPORT_VERSION, parseExportDocument } from '../../../packages/household/src/export';
-import type { DeviceImport, DeviceImportReport, ExportDocument, MasterRow, PackImport, PackImportReport, RestoreReport, SessionListItem, StoredSession, StoredWorkout } from '../../../packages/household/src/types';
+import type { DeviceImport, DeviceImportReport, ExportDocument, LiveCheckpoint, LiveProgress, LiveSession, LiveSessionAck, LiveSessionClaim, LiveSessionItem, LiveSessionList, LiveSessionPut, MasterRow, PackImport, PackImportReport, RestoreReport, SessionListItem, StoredSession, StoredWorkout } from '../../../packages/household/src/types';
 import { backupTo, isMemory, migrate, openDatabase, schemaVersion } from './db';
+import { ApiError, NotFoundError } from './errors';
 
-export type { DeviceImport, DeviceImportReport, PackDecision, PackImport, PackImportReport, RestoreReport, SessionListItem, StoredWorkout } from '../../../packages/household/src/types';
+export type { DeviceImport, DeviceImportReport, LiveSession, LiveSessionAck, LiveSessionClaim, LiveSessionItem, LiveSessionList, LiveSessionPut, PackDecision, PackImport, PackImportReport, RestoreReport, SessionListItem, StoredWorkout } from '../../../packages/household/src/types';
 
 interface WorkoutRow { id: string; revision: number; sharing_origin: 'local' | 'imported'; document: string; created_at: string; updated_at: string; archived_at: string | null }
 interface SessionRow { id: string; workout_id: string; workout_revision: number; title: string; workout_document: string; started_at: string; finished_at: string; outcome: SessionRecord['outcome']; interrupted: number; modified: number; completion: number; active_ms: number; results: string; events: string; device_id: string; received_at: string; revision: number }
+/** A live session without its checkpoint, which is only read when a device asks for the bodies. */
+interface LiveRow { id: string; workout_id: string; title: string; status: Status; active_ms: number; device_id: string; device_label: string; generation: number; revision: number; progress: string | null; saved_at: string; updated_at: string }
+const LIVE_COLUMNS = 'id, workout_id, title, status, active_ms, device_id, device_label, generation, revision, progress, saved_at, updated_at';
+/** A live session nobody has written to for this long is forgotten (ENG-15): its device is gone or the session was abandoned. */
+export const LIVE_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+/** Whole milliseconds for the list; the snapshot is the player's own and is never trusted to hold a number. */
+const wholeMs = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
 
 /** The household tables over SQLite (DAT-01). Only ever called inside Store.transaction. */
 class SqliteTables implements HouseholdTables {
@@ -175,12 +183,122 @@ export class Store {
     });
   }
 
-  putSession(record: SessionRecord & { workout: Workout }): 'created' | 'existing' { return this.transaction(() => this.core.putSession(record)); }
+  /**
+   * Stores a finished session and ends its live row (ENG-15). An aborted record from a device that no longer controls
+   * the live row is acknowledged but not stored: a device that was taken over and then ends its stale copy must not put
+   * that where the continuing device's result will go (the id is stored once, DAT-03). A completed or capped record is
+   * a workout somebody did finish, typically offline before another device took a stale copy over, and is kept.
+   */
+  putSession(record: SessionRecord & { workout: Workout }): 'created' | 'existing' {
+    return this.transaction(() => {
+      const live = this.liveRow(record.id);
+      if (live && live.device_id !== record.deviceId && record.outcome === 'aborted') return 'existing';
+      const stored = this.core.putSession(record);
+      if (live) this.dropLive(record.id);
+      return stored;
+    });
+  }
   listSessions(query: { limit?: number; before?: string; workoutId?: string } = {}): SessionListItem[] { return this.transaction(() => this.core.listSessions(query)); }
   getSession(id: string): StoredSession | undefined { return this.transaction(() => this.core.getSession(id)); }
   correctSession(id: string, results: SectionResult[], note: string | undefined, expectedRevision: number | undefined): { revision: number } { return this.transaction(() => this.core.correctSession(id, results, note, expectedRevision)); }
-  /** Deletes a session with its corrections and keeps a tombstone of the id (DAT-14). */
-  deleteSession(id: string): 'deleted' | 'absent' { return this.transaction(() => this.core.deleteSession(id)); }
+  /** Deletes a session with its corrections and keeps a tombstone of the id (DAT-14); a live row of that id goes with it. */
+  deleteSession(id: string): 'deleted' | 'absent' { return this.transaction(() => { const result = this.core.deleteSession(id); this.dropLive(id); return result; }); }
+
+  // ---- Live sessions (ENG-15) ------------------------------------------------------------------------------
+  // Hand-over between devices, server shape only: like the settings these rows are plain SQL here and not part of the
+  // household core, an export or a restore. One device controls a session; only it may write, any device may claim.
+
+  private liveItem(row: LiveRow): LiveSessionItem {
+    return { id: row.id, workoutId: row.workout_id, title: row.title, status: row.status, activeMs: row.active_ms, deviceId: row.device_id, deviceLabel: row.device_label, generation: row.generation, revision: row.revision, savedAt: row.saved_at, updatedAt: row.updated_at };
+  }
+  /** Forgets the rows no device has written to for 12 hours. Every live-session read runs it first, so no timer is needed. */
+  private pruneLive(): void { this.db.prepare('DELETE FROM live_sessions WHERE updated_at < ?').run(new Date(this.now().getTime() - LIVE_SESSION_TTL_MS).toISOString()); }
+  private liveRow(id: string): LiveRow | undefined {
+    this.pruneLive();
+    return this.db.prepare(`SELECT ${LIVE_COLUMNS} FROM live_sessions WHERE id = ?`).get(id) as unknown as LiveRow | undefined;
+  }
+  private dropLive(id: string): void { this.db.prepare('DELETE FROM live_sessions WHERE id = ?').run(id); }
+  /** A session that was uploaded or deleted is over for good: no checkpoint of it is taken any more. */
+  private refuseFinished(id: string): void {
+    if (this.db.prepare('SELECT 1 FROM sessions WHERE id = ? UNION ALL SELECT 1 FROM deleted_sessions WHERE id = ?').get(id, id)) throw new ApiError(409, 'SESSION_FINISHED', 'This session is already finished.');
+  }
+
+  /** Every live session without its bodies, the one written to last first, with the server's clock to tell their age by. */
+  listLiveSessions(): LiveSessionList {
+    return this.transaction(() => {
+      this.pruneLive();
+      const rows = this.db.prepare(`SELECT ${LIVE_COLUMNS} FROM live_sessions ORDER BY updated_at DESC, id`).all() as unknown as LiveRow[];
+      return { now: this.now().toISOString(), sessions: rows.map(row => this.liveItem(row)) };
+    });
+  }
+
+  /** One live session with its checkpoint and, when one extends that checkpoint, its progress record. */
+  getLiveSession(id: string): LiveSession | undefined {
+    return this.transaction(() => {
+      const row = this.liveRow(id);
+      if (!row) return undefined;
+      const { checkpoint } = this.db.prepare('SELECT checkpoint FROM live_sessions WHERE id = ?').get(id) as { checkpoint: string };
+      return { ...this.liveItem(row), checkpoint: JSON.parse(checkpoint) as LiveCheckpoint, ...(row.progress ? { progress: JSON.parse(row.progress) as LiveProgress } : {}) };
+    });
+  }
+
+  /**
+   * Takes what the controlling device sends. The first checkpoint creates the row with its sender as the controller;
+   * afterwards any other device gets SESSION_TAKEN_OVER with the controller's name, and a finished or deleted id gets
+   * SESSION_FINISHED. A checkpoint saved before the stored one is ignored (requests may arrive out of order), unless
+   * it carries a higher revision: after a hand-over the new controller's clock may be behind the old one's. A
+   * progress record is kept only while it names the stored checkpoint revision, so the two are never combined wrongly.
+   */
+  putLiveSession(id: string, { deviceId, deviceLabel, checkpoint, progress }: LiveSessionPut): LiveSessionAck & { created: boolean } {
+    return this.transaction(() => {
+      this.refuseFinished(id);
+      const stamp = this.now().toISOString();
+      const row = this.liveRow(id);
+      if (!row) {
+        if (!checkpoint) throw new NotFoundError(`Live session "${id}"`);
+        const kept = progress?.checkpointRevision === checkpoint.revision ? progress : undefined;
+        this.db.prepare('INSERT INTO live_sessions (id, workout_id, title, status, active_ms, device_id, device_label, generation, revision, checkpoint, progress, saved_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)').run(
+          id, checkpoint.workoutId, checkpoint.workout.title, checkpoint.status, Math.max(wholeMs(checkpoint.snapshot.activeMs), wholeMs(kept?.activeMs)), deviceId, deviceLabel, checkpoint.revision, JSON.stringify(checkpoint), kept ? JSON.stringify(kept) : null, checkpoint.savedAt, stamp,
+        );
+        return { id, generation: 1, revision: checkpoint.revision, savedAt: checkpoint.savedAt, created: true };
+      }
+      if (row.device_id !== deviceId) throw new ApiError(409, 'SESSION_TAKEN_OVER', `This session continues on ${row.device_label}.`, undefined, { controller: { deviceId: row.device_id, deviceLabel: row.device_label, generation: row.generation } });
+      const fresh = checkpoint && !(checkpoint.savedAt < row.saved_at && checkpoint.revision <= row.revision) ? checkpoint : undefined;
+      const revision = fresh?.revision ?? row.revision;
+      const naming = (record?: LiveProgress) => record?.checkpointRevision === revision ? record : undefined;
+      // The stored record extended the checkpoint it came with: a new checkpoint starts over, even at the same revision.
+      const held = fresh || !row.progress ? undefined : naming(JSON.parse(row.progress) as LiveProgress);
+      const sent = naming(progress);
+      const kept = sent && held && sent.savedAt < held.savedAt ? held : sent ?? held;
+      if (fresh) this.db.prepare('UPDATE live_sessions SET workout_id = ?, title = ?, status = ?, revision = ?, checkpoint = ?, saved_at = ? WHERE id = ?').run(fresh.workoutId, fresh.workout.title, fresh.status, fresh.revision, JSON.stringify(fresh), fresh.savedAt, id);
+      this.db.prepare('UPDATE live_sessions SET active_ms = ?, device_label = ?, progress = ?, updated_at = ? WHERE id = ?').run(Math.max(fresh ? wholeMs(fresh.snapshot.activeMs) : row.active_ms, wholeMs(kept?.activeMs)), deviceLabel, kept ? JSON.stringify(kept) : null, stamp, id);
+      return { id, generation: row.generation, revision, savedAt: fresh?.savedAt ?? row.saved_at, created: false };
+    });
+  }
+
+  /**
+   * Hands the session to the calling device: it becomes the controller, the generation goes up by one, and the stored
+   * checkpoint and progress come back for it to continue from. The previous controller learns of it from its next
+   * write. A device claiming what it already controls (a repeated request) changes nothing.
+   */
+  claimLiveSession(id: string, { deviceId, deviceLabel }: LiveSessionClaim): LiveSession {
+    return this.transaction(() => {
+      this.refuseFinished(id);
+      const row = this.liveRow(id);
+      if (!row) throw new NotFoundError(`Live session "${id}"`);
+      this.db.prepare('UPDATE live_sessions SET device_id = ?, device_label = ?, generation = ?, updated_at = ? WHERE id = ?').run(deviceId, deviceLabel, row.device_id === deviceId ? row.generation : row.generation + 1, this.now().toISOString(), id);
+      return this.getLiveSession(id)!;
+    });
+  }
+
+  /**
+   * Discards a live session. Idempotent; a session that still runs somewhere appears again with its next checkpoint.
+   * Any device may discard. With `deviceId` the row goes only while that device controls it: a device ending its own
+   * session without a record to upload must not remove the row of the device that has since taken it over.
+   */
+  deleteLiveSession(id: string, deviceId?: string): void {
+    this.transaction(() => { if (deviceId === undefined) this.dropLive(id); else this.db.prepare('DELETE FROM live_sessions WHERE id = ? AND device_id = ?').run(id, deviceId); });
+  }
 
   importDevice(payload: DeviceImport): DeviceImportReport { return this.transaction(() => this.core.importDevice(payload)); }
   importPack(payload: PackImport): PackImportReport { return this.transaction(() => this.core.importPack(payload)); }
@@ -191,6 +309,7 @@ export class Store {
   /**
    * Replaces the household with a backup (DAT-11). The value is validated first; a file-backed database is then
    * copied to `pre-restore-<timestamp>.sqlite` under the backup directory before one transaction replaces everything.
+   * The live sessions go too (ENG-15): they belong to the household that was replaced.
    */
   async restore(value: unknown): Promise<RestoreReport & { backup?: string }> {
     const document = parseExportDocument(value, EXPORT_VERSION);
@@ -199,7 +318,7 @@ export class Store {
       backup = join(this.backupDir, `pre-restore-${this.now().toISOString().replace(/[:.]/g, '-')}.sqlite`);
       await this.backupTo(backup);
     }
-    const report = this.transaction(() => this.core.restore(document));
+    const report = this.transaction(() => { const restored = this.core.restore(document); this.db.exec('DELETE FROM live_sessions'); return restored; });
     return { ...report, ...(backup ? { backup } : {}) };
   }
 

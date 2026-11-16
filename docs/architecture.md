@@ -135,6 +135,26 @@ A session ended from that prompt is recorded as aborted and interrupted.
 When checkpoint writes fail, the player says so and never claims a recovery (AT-16).
 One tab controls a session (ENG-14): a Web Lock named by the session id, a BroadcastChannel for the takeover, and a ping that distinguishes a live holder from a document on its way out.
 
+Hand-over between devices (ENG-15) exists in the server shape only and follows the settings: direct calls gated by the build's shape, outside the `Backend` interface and the `Household` core.
+The checkpoint on the device stays the source of truth for the running player, and the server gets a copy that another device can pick up.
+The device running a session sends every checkpoint and, in between, a progress record to `PUT /api/v1/live-sessions/:id` through an uplink (`apps/web/src/data/live-sessions.ts`) that the clock never waits for.
+The uplink sends the whole checkpoint only when its revision is new to the server and the progress record alone otherwise.
+A last send when the page is hidden is marked keepalive when its body fits the browsers' 64 KB limit, and takes the ordinary way when it does not.
+The server keeps one row per running session in `live_sessions` (migration 4): the last checkpoint, the progress record that extends it, and the controlling device with a generation that counts the hand-overs.
+Only the controlling device may write.
+Any other device is answered `409 SESSION_TAKEN_OVER` with the controller's name, which the uplink reports once before it stops, and a session already uploaded or deleted is answered `409 SESSION_FINISHED`.
+A checkpoint saved before the stored one is ignored unless it carries a higher revision, because requests can arrive out of order and two devices' clocks can differ.
+A progress record is kept only while it names the stored checkpoint revision.
+`POST /api/v1/live-sessions/:id/claim` makes the caller the controller and returns both records.
+`adoptSession` writes them into the device's IndexedDB in one transaction, and from there the ordinary recovery restores the session paused (ENG-12).
+`useLiveSessions` lists the sessions that other devices control, read at start, on focus, on reconnect and every ten seconds while the page is visible.
+Uploading the finished session removes the live row, and a session that ends without a record removes its own row with a delete that names its device.
+An aborted final record from a device that no longer controls the row is acknowledged and not stored, so one session leaves one logbook entry.
+A completed or capped one is kept, because that workout was finished, typically offline before another device took a stale copy over.
+The device that was taken over steps aside at its next save or list read: it pauses, writes nothing more and drops its checkpoint.
+Leaving the player mid-session pauses it and saves, and the play route decides once, on entry, whether it restores a session.
+A live row is forgotten 12 hours after its device last wrote to it, a restore clears the table, and the export never carries it.
+
 ## Two deployment shapes
 
 The same sources build two shapes, chosen by the Vite mode at build time.
@@ -187,8 +207,10 @@ An imported workout file can open as an unsaved draft (`#/draft/<id>`) with its 
 A pack of several workouts imports from the preview dialog.
 Housekeeping (merge, rename, remove, restore the bundled set) is on the settings page, which is split into sections behind `#/settings/<section>`: General, Training view, Equipment, Movements and Collections.
 General holds appearance, athletes, and the difficulty calibration: the full-effort and long marks, the three weights and the three thresholds of `rateDifficulty`, with reference workouts re-rated live, stored as a device preference that is passed into every summary.
-Training view holds the load unit, sound and voices, and a Look & feel tile with the default view, timer ring width, pulse intensity and two milestone markers, each a time before the end and a colour, around a live miniature of the player that can run a preview.
-The miniature is painted by the player's own wash overlay (the shared `.wash` rules in `App.module.css`, fed the same custom properties), so the pulse looks the same in both, and the marker colours override the player's amber and red tokens as inline custom properties.
+Training view holds the load unit, sound and voices, and a Look & feel tile with the default view, the parts of the overall progress as four checkboxes, timer ring width, pulse intensity, the two milestone markers and a grid of the phase colours per theme, around a live miniature of the player that can run a preview.
+Every colour is chosen with the same compact well (`settings/ColorField.tsx`), which carries the platform's own picker.
+The miniature is painted by the player's own wash overlay (the shared `.wash` rules in `App.module.css`, fed the same custom properties), so the pulse looks the same in both, and the milestone and paused colours of the theme in effect override the player's amber, red and paused tokens as inline custom properties, on the player and the miniature only.
+In the player's focus view the clock is sized from the room the workout leaves: unseen copies of every distinct station of the plan are measured at the frame's width, their tallest reserves the stations' room, and the clock block takes the rest (UI-27).
 The three master-data pages share one flow (`apps/web/src/settings/`): a searchable dense list with a New button, Create and Edit in the same modal form, Remove behind a confirmation that names the consequence, and multi-select with a merge bar.
 A merge stays listed with Undo until it is committed.
 Fields that draw on a repertoire (equipment, today) use `TagPicker`: ranked suggestions while typing, Enter or a comma takes one, and an unknown name is offered as "Add …" so new entries are created in place, with a nudge when the new name is within a typo of a known one.

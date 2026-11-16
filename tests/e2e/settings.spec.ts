@@ -1,3 +1,4 @@
+import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { BUNDLED, partnerCircuit, bundledCount, PLAYER, ready, openFilters } from './helpers';
 import { serialiseWorkoutFile } from '../../packages/domain/src';
@@ -188,6 +189,15 @@ test.describe('movements and search', () => {
   });
 });
 
+/** What the platform's picker returns for a ready-made choice: the value of its entry in the list the picker offers. */
+const offered = (well: Locator, name: string) => well.evaluate((input, label) => [...document.getElementById(input.getAttribute('list')!)!.querySelectorAll('option')].find(option => option.label === label)!.value, name);
+/** The well a colour picker lies over: the part that shows the colour. */
+const shown = (well: Locator) => well.locator('xpath=..');
+const back = (page: Page, name: string) => page.getByRole('button', { name: `${name} back to the built-in colour` });
+const rootToken = (page: Page, name: string) => page.evaluate(token => getComputedStyle(document.documentElement).getPropertyValue(token).trim(), name);
+const rgb = (hex: string) => `rgb(${[1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16)).join(', ')})`;
+const settingsAt = async (page: Page, path: string) => { await page.goto(path); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor(); };
+
 test.describe('workout view settings', () => {
   test('the difficulty calibration re-rates the reference workouts, the library and the editor', async ({ page }) => {
     await page.goto('/#/settings');
@@ -206,27 +216,34 @@ test.describe('workout view settings', () => {
   });
 
   test('ring width, pulse intensity and colour marks reach the player', async ({ page }) => {
-    await page.goto('/#/settings/player'); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
+    await settingsAt(page, '/#/settings/player');
     await page.getByRole('slider', { name: /Timer ring width/ }).fill('10');
     await page.getByRole('slider', { name: /Skip buttons/ }).fill('15');
-    await page.getByRole('radio', { name: 'Bar + info + %' }).check();
-    await page.getByRole('radio', { name: 'Light' }).check();
-    await page.getByRole('radio', { name: 'Compact' }).check();
+    await page.getByRole('checkbox', { name: 'Percentage beside the clock' }).check();
     await page.getByRole('slider', { name: /Pulse intensity/ }).fill('60');
     await page.getByRole('slider', { name: 'First milestone marker' }).fill('20');
-    await page.getByLabel('First milestone colour').fill('#ff00ff');
-    await page.getByRole('group', { name: 'Rest colour in the dark theme' }).getByRole('button', { name: 'Pink' }).click();
-    await page.getByLabel('Custom rest colour for the light theme').fill('#ff2299');
+    // Every phase colour is chosen per theme: the theme this browser is in gets the colours looked for below, the other theme others.
+    const theme = await page.evaluate(() => document.documentElement.dataset.theme!), other = theme === 'dark' ? 'light' : 'dark';
+    for (const [name, mine, theirs] of [['First milestone', '#ff00ff', '#00aa00'], ['Second milestone', '#00c2ff', '#aa5500'], ['Paused', '#8844ff', '#445566']]) {
+      await page.getByLabel(`${name} colour in the ${theme} theme`, { exact: true }).fill(mine);
+      await page.getByLabel(`${name} colour in the ${other} theme`, { exact: true }).fill(theirs);
+    }
+    // A ready-made choice comes back from the picker as the shade it is offered in: Pink for the dark theme, any colour for the light.
+    const restDark = page.getByLabel('Rest colour in the dark theme', { exact: true });
+    await restDark.fill(await offered(restDark, 'Pink'));
+    await page.getByLabel('Rest colour in the light theme', { exact: true }).fill('#ff2299');
     await page.getByRole('radio', { name: 'Pounds' }).check();
     const preview = page.locator('[data-view]');
     await expect(preview).toHaveAttribute('data-view', 'focus');
-    await page.getByLabel('Default view').selectOption('context');
+    const view = page.getByRole('radiogroup', { name: 'Default view' });
+    await expect(view.getByRole('radio', { name: 'Focus' })).toBeChecked();
+    await view.getByRole('radio', { name: 'Context' }).check();
     await expect(preview).toHaveAttribute('data-view', 'context');
     await page.getByRole('button', { name: 'Preview' }).click();
     await expect(preview).toHaveAttribute('data-warning', 'amber', { timeout: 10_000 });
     await expect(preview).toHaveAttribute('data-warning', 'red', { timeout: 10_000 });
     await expect(preview).toHaveAttribute('data-phase', 'complete', { timeout: 10_000 });
-    await page.getByLabel('Default view').selectOption('focus');
+    await view.getByRole('radio', { name: 'Focus' }).check();
     await page.goto('/#/wod/fran/play'); await ready(page);
     await expect(page.locator('svg[data-perimeter] path').first()).toHaveCSS('stroke-width', '10px');
     await expect(page.locator('[data-wash]').locator('.overallTrack, [class*=overallTrack]').first()).toHaveCSS('height', '10px'); // As thick as the ring.
@@ -234,7 +251,11 @@ test.describe('workout view settings', () => {
     await expect(page.getByLabel('Progress beside the clock')).toHaveText(/^\d+ %$/);
     const player = page.locator('[data-wash]');
     expect(await player.evaluate(element => element.style.getPropertyValue('--wash-gain'))).toBe('0.6');
-    expect(await player.evaluate(element => element.style.getPropertyValue('--phase-amber'))).toBe('#ff00ff');
+    // The milestone and paused colours of this theme are on the player alone: elsewhere those tokens colour warnings.
+    for (const [token, mine] of [['--phase-amber', '#ff00ff'], ['--phase-red', '#00c2ff'], ['--phase-paused', '#8844ff']]) {
+      expect(await player.evaluate((element, name) => element.style.getPropertyValue(name), token)).toBe(mine);
+      expect(await page.evaluate(name => document.documentElement.style.getPropertyValue(name), token)).toBe('');
+    }
     // The rest colour is a root token tinted per theme: whichever theme the browser picked, its pink choice reads as pink.
     const rest = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--phase-rest').trim());
     expect(rest).toMatch(/^#[0-9a-f]{6}$/);
@@ -248,8 +269,170 @@ test.describe('workout view settings', () => {
     await expect.poll(async () => Number(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--drained')))).toBeGreaterThan(0.3);
     const overall = page.getByTestId('overall-progress');
     await expect(overall.locator('[data-segment]')).toHaveCount(1); // The bar has one segment per block.
-    await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-weight', 'light');
-    await expect(page.locator('[data-wash]')).toHaveAttribute('data-clock-size', 'compact');
     await expect(overall.locator('[data-segment] span')).toHaveAttribute('style', /width/);
+    // A paused session takes the paused colour chosen for this theme.
+    await page.getByRole('button', { name: 'Pause workout', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Workout paused');
+    expect(await page.locator('[data-wash]').evaluate(element => element.style.getPropertyValue('--phase-paused'))).toBe('#8844ff');
+  });
+
+  test('the overall progress is put together from four parts, each on its own in the player', async ({ page }) => {
+    const names = { bar: 'Overall bar', barPercent: 'Percentage under the bar', clockPercent: 'Percentage beside the clock', donut: 'Round donut' } as const;
+    const parts = Object.keys(names) as (keyof typeof names)[];
+    const boxes = page.getByRole('group', { name: 'Overall progress' });
+    /** Ticks exactly these boxes in the settings, then looks at the player: each part is there when its box is ticked and gone when it is not. */
+    const expectParts = async (on: Record<keyof typeof names, boolean>) => {
+      await settingsAt(page, '/#/settings/player');
+      for (const part of parts) await boxes.getByRole('checkbox', { name: names[part] }).setChecked(on[part]);
+      await page.goto(PLAYER); await ready(page);
+      const found = { bar: page.getByTestId('overall-progress'), barPercent: page.getByText(/^\d+ % DONE$/), clockPercent: page.getByLabel('Progress beside the clock'), donut: page.getByTestId('round-donut') };
+      for (const part of parts) { if (on[part]) await expect(found[part], names[part]).toBeVisible(); else await expect(found[part], names[part]).toHaveCount(0); }
+    };
+    await settingsAt(page, '/#/settings/player');
+    await expect(boxes.getByRole('checkbox')).toHaveCount(4);
+    // The look of a fresh install: the bar with its percentage, and the donut.
+    for (const part of parts) await expect(boxes.getByRole('checkbox', { name: names[part] })).toBeChecked({ checked: part !== 'clockPercent' });
+    const none = { bar: false, barPercent: false, clockPercent: false, donut: false };
+    await expectParts({ bar: true, barPercent: true, clockPercent: true, donut: true });
+    // Every part alone, the percentage under the bar without its bar included: no part needs another.
+    for (const part of parts) await expectParts({ ...none, [part]: true });
+    await expectParts(none);
+  });
+
+  test('sound and voice are toggles: three sound modes and one cell per voice, all the same size', async ({ page }) => {
+    // The recorded voices are rendered into the image, so a checkout may have none: the list is given here.
+    const packs = ['British male (Alan)', 'American female (Amy)', 'Scottish female (Alba)', 'Northern English male', 'American male (Ryan)'].map((label, index) => ({ id: `voice-${index + 1}`, label }));
+    await page.route('**/cues/packs.json', route => route.fulfill({ json: packs }));
+    const stored = () => page.evaluate(() => { const { soundMode, cueSource, cuePack } = JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as Record<string, unknown>; return { soundMode, cueSource, cuePack }; });
+    await settingsAt(page, '/#/settings/player');
+    const sound = page.getByRole('radiogroup', { name: 'Sound', exact: true }), voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
+    const test = page.getByRole('region', { name: 'Sound and voice' }).getByRole('button', { name: 'Test sound' });
+    await expect(sound.getByRole('radio')).toHaveCount(3);
+    await expect(sound.getByRole('radio', { name: 'Voice + beeps' })).toBeChecked();
+    await sound.getByRole('radio', { name: 'Beeps only' }).check();
+    await expect.poll(stored).toMatchObject({ soundMode: 'beeps' });
+    await expect(test).toBeEnabled();
+    await sound.getByRole('radio', { name: 'Silent' }).check();
+    await expect.poll(stored).toMatchObject({ soundMode: 'silent' });
+    await expect(test).toBeDisabled();
+    // Every installed voice and the device's own; the first pack speaks until one is chosen.
+    await expect(voice.getByRole('radio')).toHaveCount(packs.length + 1);
+    await expect(voice.getByRole('radio', { name: packs[0].label })).toBeChecked();
+    await voice.getByRole('radio', { name: 'Device voice only' }).check();
+    await expect.poll(stored).toMatchObject({ cueSource: 'device' });
+    await voice.getByRole('radio', { name: packs[3].label }).check();
+    await expect.poll(stored).toMatchObject({ cueSource: 'clips', cuePack: packs[3].id });
+    await expect(voice.getByRole('radio', { name: 'Device voice only' })).not.toBeChecked();
+    // Three cells to a row, two on a phone, and every cell as large as the others whatever its name needs.
+    for (const [width, columns] of [[1280, 3], [390, 2]]) {
+      await page.setViewportSize({ width, height: 844 });
+      const cells = await voice.locator('label').evaluateAll(labels => labels.map(label => { const box = label.getBoundingClientRect(); return { x: Math.round(box.x), size: `${Math.round(box.width)} x ${Math.round(box.height)}` }; }));
+      expect(new Set(cells.map(cell => cell.size)).size).toBe(1);
+      expect(new Set(cells.map(cell => cell.x)).size).toBe(columns);
+    }
+  });
+
+  test('a few voices fill their row: one recorded voice and the device voice share it in halves', async ({ page }) => {
+    await page.route('**/cues/packs.json', route => route.fulfill({ json: [{ id: 'british', label: 'British male (Alan)' }] }));
+    await settingsAt(page, '/#/settings/player');
+    const voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
+    await expect(voice.getByRole('radio')).toHaveCount(2);
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      // No empty slot: the last cell ends where the control's inner edge is.
+      const { inner, last, sizes } = await voice.evaluate(group => { const labels = [...group.querySelectorAll('label')].map(label => label.getBoundingClientRect()); const box = group.getBoundingClientRect(), style = getComputedStyle(group); return { inner: Math.round(box.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth)), last: Math.round(labels[labels.length - 1].right), sizes: labels.map(label => Math.round(label.width)) }; });
+      expect(Math.abs(inner - last)).toBeLessThanOrEqual(1);
+      expect(Math.abs(sizes[0] - sizes[1])).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('without recorded voices the Voice toggle says so in a cell that cannot be chosen', async ({ page }) => {
+    await page.route('**/cues/packs.json', route => route.fulfill({ json: [] }));
+    await settingsAt(page, '/#/settings/player');
+    const voice = page.getByRole('radiogroup', { name: 'Voice', exact: true });
+    await expect(voice.getByRole('radio')).toHaveCount(2);
+    const missing = voice.getByRole('radio', { name: 'Recorded voices (not installed in this build)' });
+    await expect(missing).toBeDisabled();
+    await expect(missing).toBeChecked();
+    await voice.getByRole('radio', { name: 'Device voice only' }).check();
+    await expect(missing).not.toBeChecked();
+    await expect.poll(() => page.evaluate(() => (JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as { cueSource?: string }).cueSource)).toBe('device');
+  });
+
+  test('each theme keeps its own colour across a reload, and its well shows the shade that theme uses', async ({ page }) => {
+    const stored = () => page.evaluate(() => (JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as { accent?: unknown }).accent);
+    const theme = () => page.evaluate(() => document.documentElement.dataset.theme);
+    const dark = page.getByLabel('Accent in the dark theme', { exact: true }), light = page.getByLabel('Accent in the light theme', { exact: true });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await settingsAt(page, '/#/settings');
+    // Each theme has one row with its accent well and its background; the ready-made colours are inside the picker, not on the page.
+    for (const name of ['dark', 'light']) {
+      const row = page.getByRole('group', { name: `${name} theme` });
+      await expect(row.locator('input[type=color]')).toHaveCount(1);
+      await expect(row.getByRole('radiogroup', { name: `Background in the ${name} theme` }).getByRole('radio')).toHaveCount(3);
+    }
+    await expect(page.getByRole('button', { name: 'Blue', exact: true })).toHaveCount(0);
+    // A ready-made choice comes back from the picker as the shade it is offered in, and is kept as its own value.
+    const blue = await offered(dark, 'Blue');
+    await dark.fill(blue);
+    await light.fill('#ff6600');
+    await expect.poll(stored).toEqual({ dark: '#3b82f6', light: '#ff6600' });
+    await page.reload(); await page.getByRole('heading', { level: 1, name: 'Make it yours' }).waitFor();
+    await expect.poll(stored).toEqual({ dark: '#3b82f6', light: '#ff6600' });
+    // The dark theme shows its blue, in the very shade the picker offered and the well shows.
+    await expect.poll(() => rootToken(page, '--accent')).toBe(blue);
+    await expect(shown(dark)).toHaveCSS('background-color', rgb(blue));
+    // The light theme shows its orange, deepened for the light page: the well has that shade, not the colour as picked.
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect.poll(theme).toBe('light');
+    const fill = await rootToken(page, '--accent-fill');
+    const [red, green, blueChannel] = [1, 3, 5].map(at => parseInt(fill.slice(at, at + 2), 16));
+    expect(red).toBeGreaterThan(green); expect(green).toBeGreaterThan(blueChannel);
+    expect(fill).not.toBe('#ff6600');
+    await expect(shown(light)).toHaveCSS('background-color', rgb(fill));
+    await expect(shown(dark)).toHaveCSS('background-color', rgb(blue));
+  });
+
+  test('a chosen colour goes back to the built-in one with its reset button, which then leaves', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await settingsAt(page, '/#/settings');
+    const builtIn = await rootToken(page, '--accent');
+    const accent = page.getByLabel('Accent in the dark theme', { exact: true });
+    await expect(shown(accent)).toHaveCSS('background-color', rgb(builtIn));
+    await expect(back(page, 'Accent in the dark theme')).toHaveCount(0);
+    await accent.fill('#ff2299');
+    await expect.poll(() => rootToken(page, '--accent')).not.toBe(builtIn);
+    await expect(back(page, 'Accent in the light theme')).toHaveCount(0); // Only the theme that has a choice.
+    await back(page, 'Accent in the dark theme').click();
+    await expect(back(page, 'Accent in the dark theme')).toHaveCount(0);
+    await expect.poll(() => rootToken(page, '--accent')).toBe(builtIn);
+    await expect(shown(accent)).toHaveCSS('background-color', rgb(builtIn));
+    await expect(accent).toBeFocused(); // The button left, the focus stays on the control.
+    // The built-in colour picked from the picker's own list is no choice either.
+    await accent.fill('#ff2299');
+    await expect(back(page, 'Accent in the dark theme')).toBeVisible();
+    await accent.fill(await offered(accent, 'Green'));
+    await expect(back(page, 'Accent in the dark theme')).toHaveCount(0);
+    await expect.poll(() => rootToken(page, '--accent')).toBe(builtIn);
+    // The same control for every phase colour of either theme: a well shows that theme's own colour until one is chosen, and again after the reset.
+    await settingsAt(page, '/#/settings/player');
+    const phases = [['Rest colour', '--phase-rest'], ['Paused colour', '--phase-paused'], ['First milestone colour', '--phase-amber'], ['Second milestone colour', '--phase-red']] as const;
+    await expect(page.getByRole('group', { name: 'Phase colours' }).locator('input[type=color]')).toHaveCount(8);
+    for (const theme of ['dark', 'light'] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe(theme);
+      for (const [phase, token] of phases) {
+        const name = `${phase} in the ${theme} theme`, well = page.getByLabel(name, { exact: true }), own = await rootToken(page, token);
+        await expect(shown(well)).toHaveCSS('background-color', rgb(own));
+        await expect(back(page, name)).toHaveCount(0);
+        await well.fill('#ff00ff');
+        await expect(shown(well)).not.toHaveCSS('background-color', rgb(own));
+        await back(page, name).click();
+        await expect(back(page, name)).toHaveCount(0);
+        await expect(shown(well)).toHaveCSS('background-color', rgb(own));
+      }
+    }
+    const none = { dark: '', light: '' };
+    await expect.poll(() => page.evaluate(() => { const { restColor, markColors, pauseColor } = JSON.parse(localStorage.getItem('openwod.preferences.v1') ?? '{}') as Record<string, unknown>; return { restColor, markColors, pauseColor }; })).toEqual({ restColor: none, markColors: { first: none, second: none }, pauseColor: none });
   });
 });

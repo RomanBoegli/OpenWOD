@@ -6,8 +6,10 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { afterAll, describe, expect, it } from 'vitest';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
+import { compileWorkout } from '../../packages/domain/src/compiler';
 import { emptyMasterData } from '../../packages/domain/src/master-data';
 import type { Workout } from '../../packages/domain/src/schema';
+import { WorkoutEngine } from '../../packages/engine/src';
 import { createServer } from '../../apps/server/src/app';
 import { Store } from '../../apps/server/src/store';
 import { playedSession } from './helpers/session';
@@ -72,7 +74,7 @@ describe('server', () => {
     const server = await createServer({ webRoot: '/does-not-exist', store });
     const put = (path: string, payload: object, ifMatch?: number) => server.inject({ method: 'PUT', url: path, payload, headers: ifMatch === undefined ? {} : { 'if-match': `"${ifMatch}"` } });
     try {
-      expect((await server.inject('/api/v1/health/ready')).json()).toMatchObject({ persistence: true, schemaVersion: 3 });
+      expect((await server.inject('/api/v1/health/ready')).json()).toMatchObject({ persistence: true, schemaVersion: 4 });
       // Workouts
       expect((await put('/api/v1/workouts/a', { document: own('a') })).statusCode).toBe(201);
       expect((await put('/api/v1/workouts/a', { document: own('a', 2) })).statusCode).toBe(409);
@@ -111,7 +113,7 @@ describe('server', () => {
       // Export and backup
       const exported = await server.inject('/api/v1/export');
       expect(exported.headers['content-disposition']).toContain('openwod-export-');
-      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 3 });
+      expect(exported.json()).toMatchObject({ format: 'openwod.export', formatVersion: 1, schemaVersion: 4 });
       const backup = await server.inject('/api/v1/backup');
       expect(backup.statusCode).toBe(200);
       expect(backup.headers['content-type']).toContain('application/vnd.sqlite3');
@@ -131,6 +133,103 @@ describe('server', () => {
       expect((await server.inject('/api/v1/sessions')).json().sessions).toEqual([]);
       expect((await server.inject({ method: 'DELETE', url: `/api/v1/sessions/${'x'.repeat(121)}` })).statusCode).toBeGreaterThanOrEqual(400);
     } finally { await server.close(); store.close(); }
+  });
+
+  it('hands a running session from one device to another through the live-session routes (ENG-15, AT-34)', async () => {
+    const { store } = await Store.open(':memory:');
+    const server = await createServer({ webRoot: '/does-not-exist', store });
+    const call = (method: 'GET' | 'PUT' | 'POST' | 'DELETE', path: string, payload?: object) => server.inject({ method, url: `/api/v1${path}`, ...(payload ? { payload } : {}) });
+    const ipad = { deviceId: 'device-ipad', deviceLabel: 'iPad · home screen' };
+    const mac = { deviceId: 'device-mac', deviceLabel: 'Mac · Safari' };
+    // A checkpoint as the player writes it: the engine twelve seconds into Fran, with its whole snapshot.
+    const fran = bundledWorkout('fran');
+    let now = 0;
+    const engine = new WorkoutEngine(compileWorkout(fran), () => now, 'live-1');
+    engine.command({ type: 'play', id: 'live-1:1', occurrenceId: engine.occurrenceId });
+    now = 12_000; engine.tick();
+    const checkpoint = { sessionId: 'live-1', workoutId: fran.id, workoutRevision: fran.revision, workout: fran, snapshot: engine.toJSON(), revision: engine.revision, status: engine.project().status, savedAt: '2026-11-16T10:00:12.000Z', startedAt: '2026-11-16T10:00:00.000Z' };
+    const progress = { sessionId: 'live-1', checkpointRevision: checkpoint.revision, ...engine.offsets(15_250.5), savedAt: '2026-11-16T10:00:15.000Z' };
+    try {
+      const empty = await call('GET', '/live-sessions');
+      expect(empty.statusCode).toBe(200);
+      expect(empty.json()).toEqual({ now: expect.stringMatching(/^\d{4}-\d\d-\d\dT/), sessions: [] });
+      expect((await call('GET', '/live-sessions/live-1')).json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+      const orphan = await call('PUT', '/live-sessions/live-1', { ...ipad, progress });
+      expect(orphan.statusCode).toBe(404);
+      expect(orphan.json()).toMatchObject({ error: { code: 'NOT_FOUND' } });
+      // The first checkpoint makes its sender the controller.
+      const created = await call('PUT', '/live-sessions/live-1', { ...ipad, checkpoint });
+      expect(created.statusCode).toBe(201);
+      expect(created.json()).toEqual({ id: 'live-1', generation: 1, revision: checkpoint.revision, savedAt: checkpoint.savedAt });
+      const extended = await call('PUT', '/live-sessions/live-1', { ...ipad, progress });
+      expect(extended.statusCode).toBe(200);
+      expect(extended.json()).toEqual({ id: 'live-1', generation: 1, revision: checkpoint.revision, savedAt: checkpoint.savedAt });
+      const listed = (await call('GET', '/live-sessions')).json().sessions;
+      expect(listed).toEqual([{ id: 'live-1', workoutId: 'fran', title: fran.title, status: checkpoint.status, activeMs: Math.round(progress.activeMs), ...ipad, generation: 1, revision: checkpoint.revision, savedAt: checkpoint.savedAt, updatedAt: expect.stringMatching(/^\d{4}-/) }]);
+      // The bodies come back as they were sent: the snapshot is opaque to the server.
+      const full = (await call('GET', '/live-sessions/live-1')).json();
+      expect(full).toMatchObject(listed[0]);
+      expect(full.checkpoint).toEqual(JSON.parse(JSON.stringify(checkpoint)));
+      expect(full.progress).toEqual(progress);
+      // Validation: the workout like a session upload's, the ids against the path, the shapes strictly.
+      const invalid = await call('PUT', '/live-sessions/live-2', { ...ipad, checkpoint: { ...checkpoint, sessionId: 'live-2', workout: { nonsense: true } } });
+      expect(invalid.statusCode).toBe(400);
+      expect(invalid.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+      expect((await call('PUT', '/live-sessions/live-2', { ...ipad, checkpoint })).json()).toMatchObject({ error: { code: 'ID_MISMATCH', path: '/checkpoint/sessionId' } });
+      expect((await call('PUT', '/live-sessions/live-1', { ...ipad, progress: { ...progress, sessionId: 'live-2' } })).json()).toMatchObject({ error: { code: 'ID_MISMATCH', path: '/progress/sessionId' } });
+      for (const body of [{ deviceId: 'device-ipad', checkpoint }, { ...ipad, checkpoint: { ...checkpoint, status: 'completed' } }, { ...ipad, checkpoint: { ...checkpoint, snapshot: 'text' } }, { ...ipad, checkpoint, extra: 1 }, { ...ipad, progress: { ...progress, activeMs: -1 } }]) {
+        const refused = await call('PUT', '/live-sessions/live-1', body);
+        expect(refused.statusCode).toBe(400);
+        expect(refused.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+      }
+      expect((await call('GET', '/live-sessions')).json().sessions).toHaveLength(1);
+      // A long session's checkpoint is larger than the default body limit; the route takes what a session upload takes.
+      const long = await call('PUT', '/live-sessions/live-long', { ...ipad, checkpoint: { ...checkpoint, sessionId: 'live-long', snapshot: { ...checkpoint.snapshot, padding: 'x'.repeat(1_200_000) } } });
+      expect(long.statusCode).toBe(201);
+      expect((await call('DELETE', '/live-sessions/live-long')).statusCode).toBe(204);
+      expect((await call('DELETE', '/live-sessions/live-long')).statusCode).toBe(204);
+      expect((await call('DELETE', `/live-sessions/${'x'.repeat(121)}`)).statusCode).toBeGreaterThanOrEqual(400);
+      // Another device may not write, but it may claim: then it is the controller and the first device is told so.
+      const stranger = await call('PUT', '/live-sessions/live-1', { ...mac, checkpoint: { ...checkpoint, revision: checkpoint.revision + 1 } });
+      expect(stranger.statusCode).toBe(409);
+      expect(stranger.json()).toMatchObject({ error: { code: 'SESSION_TAKEN_OVER', message: expect.stringContaining('iPad · home screen'), controller: { ...ipad, generation: 1 } } });
+      expect((await call('POST', '/live-sessions/live-1/claim', { deviceId: 'device-mac' })).statusCode).toBe(400);
+      expect((await call('POST', '/live-sessions/missing/claim', mac)).statusCode).toBe(404);
+      const claimed = await call('POST', '/live-sessions/live-1/claim', mac);
+      expect(claimed.statusCode).toBe(200);
+      expect(claimed.json()).toMatchObject({ id: 'live-1', ...mac, generation: 2, revision: checkpoint.revision, checkpoint: { sessionId: 'live-1', revision: checkpoint.revision, workout: { id: 'fran' } }, progress });
+      const superseded = await call('PUT', '/live-sessions/live-1', { ...ipad, checkpoint: { ...checkpoint, revision: checkpoint.revision + 1, savedAt: '2026-11-16T10:00:20.000Z' } });
+      expect(superseded.statusCode).toBe(409);
+      expect(superseded.json()).toMatchObject({ error: { code: 'SESSION_TAKEN_OVER', controller: { ...mac, generation: 2 } } });
+      expect((await call('PUT', '/live-sessions/live-1', { ...mac, checkpoint: { ...checkpoint, revision: checkpoint.revision + 1, status: 'paused', savedAt: '2026-11-16T10:00:30.000Z' } })).statusCode).toBe(200);
+      expect((await call('GET', '/live-sessions')).json().sessions).toMatchObject([{ id: 'live-1', status: 'paused', ...mac, generation: 2, revision: checkpoint.revision + 1 }]);
+      // The first device ends its stale copy: acknowledged, not stored. The controller's record is the one kept (AT-34).
+      const stale = await call('PUT', '/sessions/live-1', { ...playedSession('live-1', fran, 'device-ipad'), outcome: 'aborted' });
+      expect(stale.statusCode).toBe(200);
+      expect(stale.json()).toEqual({ id: 'live-1', stored: 'existing' });
+      // Nor does its "ended without a record" remove the row of the device that continues: that delete names its sender.
+      expect((await call('DELETE', '/live-sessions/live-1?deviceId=device-ipad')).statusCode).toBe(204);
+      expect((await call('DELETE', '/live-sessions/live-1?deviceId=')).statusCode).toBe(400);
+      expect((await call('GET', '/sessions')).json().sessions).toEqual([]);
+      expect((await call('GET', '/live-sessions')).json().sessions).toHaveLength(1);
+      expect((await call('PUT', '/sessions/live-1', playedSession('live-1', fran, 'device-mac'))).statusCode).toBe(201);
+      expect((await call('GET', '/sessions')).json().sessions.map((item: { id: string; deviceId: string }) => [item.id, item.deviceId])).toEqual([['live-1', 'device-mac']]);
+      expect((await call('GET', '/live-sessions')).json().sessions).toEqual([]);
+      // A finished session takes no more checkpoints and cannot be claimed.
+      for (const late of [await call('PUT', '/live-sessions/live-1', { ...mac, checkpoint }), await call('PUT', '/live-sessions/live-1', { ...ipad, progress }), await call('POST', '/live-sessions/live-1/claim', ipad)]) {
+        expect(late.statusCode).toBe(409);
+        expect(late.json()).toMatchObject({ error: { code: 'SESSION_FINISHED' } });
+      }
+      expect((await call('GET', '/live-sessions')).json().sessions).toEqual([]);
+      // A workout the first device did finish (offline, say) is kept even after another device took its stale copy over.
+      expect((await call('PUT', '/live-sessions/live-3', { ...ipad, checkpoint: { ...checkpoint, sessionId: 'live-3' } })).statusCode).toBe(201);
+      expect((await call('POST', '/live-sessions/live-3/claim', mac)).statusCode).toBe(200);
+      expect((await call('PUT', '/sessions/live-3', playedSession('live-3', fran, 'device-ipad'))).statusCode).toBe(201);
+      expect((await call('GET', '/live-sessions')).json().sessions).toEqual([]);
+      expect((await call('PUT', '/live-sessions/live-3', { ...mac, checkpoint: { ...checkpoint, sessionId: 'live-3' } })).json()).toMatchObject({ error: { code: 'SESSION_FINISHED' } });
+    } finally { await server.close(); store.close(); }
+    const down = await createServer({ webRoot: '/does-not-exist' });
+    try { expect((await down.inject('/api/v1/live-sessions')).statusCode).toBe(503); } finally { await down.close(); }
   });
 
   it('restores a JSON export over the household, refusing an invalid or newer one (DAT-11)', async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledWorkout } from '../../packages/domain/src/bundled';
-import { outlineWorkout, roundProgress } from '../../packages/domain/src/outline';
+import { outlineWorkout, restMs, roundProgress } from '../../packages/domain/src/outline';
 const fullBodyPartner = bundledWorkout('full-body-partner');
 const partnerCircuit = bundledWorkout('partner-circuit');
 
@@ -79,5 +79,14 @@ describe('round progress (UI-24)', () => {
     expect(positions('partner-emom-16').slice(0, 3)).toEqual([{ position: 1, size: 2, round: 1, rounds: 8 }, { position: 2, size: 2, round: 1, rounds: 8 }, { position: 1, size: 2, round: 2, rounds: 8 }]);
     expect(positions('fran').map(item => item?.position)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(positions('cindy')).toEqual([undefined]);
+  });
+});
+
+describe('rest of a workout', () => {
+  it('adds up every transition, round rest and block rest, and is nothing for a block the athletes pace', () => {
+    // 19:50 of the partner circuit: 2:30 of transitions and 4:00 between rounds.
+    expect(restMs(compileWorkout(partnerCircuit))).toBe(390_000);
+    expect(restMs(compileWorkout(fullBodyPartner))).toBe(1_040_000);
+    expect(restMs(compileWorkout(bundledWorkout('cindy')))).toBe(0);
   });
 });

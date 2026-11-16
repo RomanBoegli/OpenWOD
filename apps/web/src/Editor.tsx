@@ -2,7 +2,8 @@ import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from '
 import { builderToWorkout, emptyGroup, emptyRest, emptySection, emptySlot, isSlot, LIST_FORMATS, MANUAL_FORMATS, mapSlots, slotsOf, TIMED_MOVEMENT_FORMATS, validateDraft, type BuilderDraft, type BuilderGroup, type BuilderItem, type BuilderRest, type BuilderSection, type BuilderSlot } from '../../../packages/domain/src/builder';
 import { compileWorkout, type ExecutionPlan } from '../../../packages/domain/src/compiler';
 import { rateDifficulty, type DifficultyCalibration } from '../../../packages/domain/src/difficulty';
-import { FORMAT_HELP, FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type LoadValue, type Prescription, type SectionFormat, type Workout } from '../../../packages/domain/src/schema';
+import { restMs } from '../../../packages/domain/src/outline';
+import { FORMAT_HELP, FORMAT_LABELS, LOAD_LEVELS, SECTION_FORMATS, type LoadLevel, type Prescription, type SectionFormat, type Workout } from '../../../packages/domain/src/schema';
 import type { SaveResult } from './data/use-library-data';
 import { workoutHref } from './router';
 import { displayTime } from '../../../packages/engine/src';
@@ -15,7 +16,10 @@ import { DifficultyChip } from './DifficultyChip';
 import { Icon } from './Icon';
 import { NamePicker } from './NamePicker';
 import { Chip } from './Chip';
+import { spanLabel } from './Library';
 import { LEVEL_LABELS, LEVEL_LETTERS } from './LevelChip';
+import { LOAD_AMOUNT, TARGET_AMOUNTS, TARGET_LABELS, levelledOf, loadModeOf, loadValueOf, targetAmountOf, targetKindOf, withLoad, withTarget, withWomen, womenOf, type LoadMode, type TargetKind } from './lane';
+import { NumberInput } from './NumberInput';
 import styles from './Editor.module.css';
 import shared from './App.module.css';
 import { TimeInput } from './TimeInput';
@@ -26,45 +30,13 @@ function DurationField({ value, onChange, label, min = 0, id, allowEmpty = false
   return <label className={className ? `${styles.field} ${className}` : styles.field}>{label}<TimeInput id={id} value={value} min={min} allowEmpty={allowEmpty} placeholder={allowEmpty ? 'none' : undefined} onChange={onChange} /></label>;
 }
 
+/** A whole number of rounds, intervals or repeats (NumberInput): an emptied field stays empty while typing, and the model only ever receives a count within the bounds. */
+function CountField({ value, onChange, label, min = 1, invalid, 'aria-label': ariaLabel }: { value: number; onChange: (count: number) => void; label: string; min?: number; invalid?: boolean; 'aria-label'?: string }) {
+  return <label className={styles.field}>{label}<NumberInput value={value} min={min} max={999} aria-label={ariaLabel} aria-invalid={invalid || undefined} onChange={count => { if (count !== '') onChange(count); }} /></label>;
+}
+
 type AfterSection = 'ready' | 'rest' | 'straight' | 'restReady';
 const AFTER_LABELS: Record<AfterSection, string> = { ready: 'Wait for Ready', rest: 'Rest, then continue', straight: 'Continue straight away', restReady: 'Rest, then wait for Ready' };
-
-type TargetKind = 'none' | 'reps' | 'calories' | 'm' | 'km' | 'time';
-const TARGET_LABELS: Record<TargetKind, string> = { none: 'No target', reps: 'Reps', calories: 'Calories', m: 'Metres', km: 'Kilometres', time: 'Seconds' };
-const targetKindOf = (value: Prescription): TargetKind => value.reps ? 'reps' : value.calories ? 'calories' : value.distance ? value.distance.unit : value.timeMs ? 'time' : 'none';
-const targetAmountOf = (value: Prescription): number | '' => value.reps ?? value.calories ?? (value.distance ? value.distance.value : value.timeMs ? value.timeMs / 1000 : '');
-function withTarget(value: Prescription, kind: TargetKind, amount: number | ''): Prescription {
-  const { reps: _r, calories: _c, distance: _d, timeMs: _t, ...rest } = value;
-  if (kind === 'none' || amount === '' || !(amount > 0)) return rest;
-  if (kind === 'reps') return { ...rest, reps: Math.round(amount) };
-  if (kind === 'calories') return { ...rest, calories: Math.round(amount) };
-  if (kind === 'time') return { ...rest, timeMs: Math.round(amount * 1000) };
-  return { ...rest, distance: { value: amount, unit: kind } };
-}
-
-type LoadMode = 'none' | 'kg' | 'lb' | 'percent';
-const loadModeOf = (value: Prescription): LoadMode => { const load = value.load; if (!load) return 'none'; const first = 'value' in load ? load : load.medium ?? load.light ?? load.heavy; return first?.unit ?? 'none'; };
-const levelledOf = (value: Prescription) => Boolean(value.load && !('value' in value.load));
-const loadValueOf = (value: Prescription, level?: LoadLevel): number | '' => { const load = value.load; if (!load) return ''; if ('value' in load) return load.value; const picked = level ? load[level] : load.medium; return picked ? picked.value : ''; };
-const womenOf = (value: Prescription, level?: LoadLevel): number | '' => { const load = value.load; if (!load) return ''; const picked = 'value' in load ? load : level ? load[level] : load.medium; return picked?.women ?? ''; };
-/** Sets or clears the women's amount on one load value (the single value, or the given level). */
-function withWomen(value: Prescription, level: LoadLevel | undefined, amount: number | ''): Prescription {
-  const load = value.load;
-  if (!load) return value;
-  const patch = (item: LoadValue): LoadValue => { const { women: _w, ...rest } = item; return amount === '' ? rest : { ...rest, women: amount }; };
-  if ('value' in load) return { ...value, load: patch(load) };
-  if (!level || !load[level]) return value;
-  return { ...value, load: { ...load, [level]: patch(load[level]!) } };
-}
-function withLoad(value: Prescription, mode: LoadMode, levelled: boolean, amounts: Partial<Record<LoadLevel, number | ''>> & { single?: number | '' }): Prescription {
-  const { load: _l, ...rest } = value;
-  if (mode === 'none') return rest;
-  const unit = mode;
-  if (!levelled) { const amount = amounts.single ?? loadValueOf(value); return amount === '' ? rest : { ...rest, load: { value: amount, unit } }; }
-  const levels: Partial<Record<LoadLevel, LoadValue>> = {};
-  for (const level of LOAD_LEVELS) { const amount = amounts[level] ?? loadValueOf(value, level); if (amount !== '') levels[level] = { value: amount, unit }; }
-  return Object.keys(levels).length ? { ...rest, load: levels } : rest;
-}
 
 interface EditorProps {
   mode: 'create' | 'replace';
@@ -86,21 +58,22 @@ interface EditorProps {
   onDiscard: () => void;
 }
 
-const lanesOf = (draft: BuilderDraft) => draft.sections.flatMap(section => slotsOf(section.slots).flatMap(slot => [slot.A, slot.B])).filter((lane): lane is Prescription => Boolean(lane?.name.trim()));
+/** The named lanes that count: a solo draft keeps athlete B's lanes unused (see setParticipants). */
+const lanesOf = (draft: BuilderDraft) => draft.sections.flatMap(section => slotsOf(section.slots).flatMap(slot => draft.participants === 2 ? [slot.A, slot.B] : [slot.A])).filter((lane): lane is Prescription => Boolean(lane?.name.trim()));
 /** The list at `path` (group positions, from the block's own list down) changed by `change`. */
 const editList = (items: BuilderItem[], path: number[], change: (list: BuilderItem[]) => BuilderItem[]): BuilderItem[] => path.length
   ? items.map((item, i) => i === path[0] && item.kind === 'group' ? { ...item, slots: editList(item.slots, path.slice(1), change) } : item)
   : change(items);
-/** A list for one or two athletes: B lanes added or dropped, and group swaps only for pairs. */
-const forAthletes = (items: BuilderItem[], participants: 1 | 2): BuilderItem[] => items.map(item => item.kind === 'group'
-  ? { ...item, alternate: participants === 2 && item.alternate, slots: forAthletes(item.slots, participants) }
-  : item.kind === 'rest' ? item : participants === 2 ? { ...item, B: item.B ?? { name: '' } } : { A: item.A, durationMs: item.durationMs, ...(item.timed ? { timed: true } : {}) });
 const derivedEquipment = (lanes: Prescription[], catalogue: Catalogue) => [...lanes.flatMap(lane => catalogue.equipmentOf(lane)), ...inferEquipment(lanes.filter(lane => !catalogue.resolve(lane)).map(lane => lane.name))];
 
 export function Editor({ mode, workoutId, initial, importedFrom, catalogue, difficulty: calibration, onAddMovement, authors, authorSpelling, savedAt, onAutosave, onSave, onDiscard }: EditorProps) {
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState<{ revision: number; document?: Workout }>();
-  const save = async (overwrite?: number) => { setSaving(true); try { const result = await onSave(effective, overwrite); if (typeof result === 'object') setConflict(result.conflict); else setConflict(undefined); } finally { setSaving(false); } };
+  const [failed, setFailed] = useState(false);
+  /** Set once the draft is saved or discarded: the parent has removed it by then, and an autosave after that would bring it back. */
+  const closed = useRef(false);
+  const save = async (overwrite?: number) => { setSaving(true); setFailed(false); try { const result = await onSave(effective, overwrite); if (result === 'saved' || result === 'queued') closed.current = true; setFailed(result === 'failed'); setConflict(typeof result === 'object' ? result.conflict : undefined); } finally { setSaving(false); } };
+  const discard = () => { closed.current = true; onDiscard(); };
   // A merged author opens in its kept spelling, so saving the workout stores that one.
   const [draft, setDraft] = useState(() => initial.attribution?.author ? { ...initial, attribution: { ...initial.attribution, author: authorSpelling(initial.attribution.author) } } : initial);
   const [dirty, setDirty] = useState(false);
@@ -108,6 +81,13 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
   const first = useRef(true);
   const autosave = useRef(onAutosave);
   autosave.current = onAutosave; // The latest callback without re-arming the debounce on every parent render.
+  /** The draft the debounce has not handed over yet. */
+  const pending = useRef<BuilderDraft | undefined>(undefined);
+  const flush = () => { if (pending.current && !closed.current) autosave.current(pending.current); pending.current = undefined; };
+  /** The block whose "Rest at the end of the workout" field is shown: once shown it stays, so emptying it to retype does not take it away under the cursor. */
+  const endRest = useRef<number | undefined>(undefined);
+  /** The women's amount of a load level whose field was emptied to retype it; see setLevel. */
+  const parkedWomen = useRef<{ at: string; amount: number } | undefined>(undefined);
   // Equipment is derived, never typed: the catalogue records of the movements in the lanes, keyword inference for
   // names no record knows, plus whatever the opened workout declared that no movement accounts for (a wall, a
   // running route, a squat rack), which is carried as it was.
@@ -133,9 +113,12 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
   useEffect(() => {
     if (first.current) { first.current = false; return; }
     setDirty(true);
-    const timer = setTimeout(() => { autosave.current(effective); setDirty(false); }, 500);
+    pending.current = effective;
+    const timer = setTimeout(() => { flush(); setDirty(false); }, 500);
     return () => clearTimeout(timer);
   }, [effective]);
+  // Leaving the editor within the debounce would drop the last edit, so it is handed over on the way out: on leaving the page (a reload, a closed tab) as on leaving the route.
+  useEffect(() => { window.addEventListener('pagehide', flush); return () => { window.removeEventListener('pagehide', flush); flush(); }; }, []);
 
   const update = (patch: Partial<BuilderDraft>) => setDraft(value => ({ ...value, ...patch }));
   const updateSection = (index: number, patch: Partial<BuilderSection>) => setDraft(value => ({ ...value, sections: value.sections.map((section, i) => i === index ? { ...section, ...patch } : section) }));
@@ -155,7 +138,11 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
     return { ...section, ...(spread ? { slotRepeats: 1 } : {}), slots: editList(slots, path, list => [...list, item]) };
   }) }));
   const move = <T,>(list: T[], from: number, to: number) => { if (to < 0 || to >= list.length) return list; const copy = [...list]; const [item] = copy.splice(from, 1); copy.splice(to, 0, item); return copy; };
-  const setParticipants = (participants: 1 | 2) => setDraft(value => ({ ...value, participants, sections: value.sections.map(section => ({ ...section, alternate: participants === 2 && section.alternate, slots: forAthletes(section.slots, participants) })) }));
+  /**
+   * Solo hides athlete B and deletes nothing: B's lanes, the swaps and the Done rules stay in the draft unused (the
+   * builder ignores them for one athlete), so switching back to Pair restores them. A pair gets a B lane wherever one is missing.
+   */
+  const setParticipants = (participants: 1 | 2) => setDraft(value => ({ ...value, participants, sections: participants === 1 ? value.sections : value.sections.map(section => ({ ...section, slots: mapSlots(section.slots, slot => ({ ...slot, B: slot.B ?? { name: '' } })) })) }));
   const setFormat = (s: number, format: SectionFormat) => updateSection(s, { format, ...(LIST_FORMATS.includes(format) ? { rounds: 1, betweenSlotsRestMs: 0, trailingRestMs: 0, slotRepeats: 1 } : {}), ...(format === 'amrap' && !draft.sections[s].capMs ? { capMs: 600_000 } : {}), ...(format !== 'timedCircuit' ? { slotRepeats: 1 } : {}) });
   /** What happens after a section (BLD-14): the Ready gate, a timed rest that then continues, or straight on. */
   const afterOf = (section: BuilderSection): AfterSection => section.transitionAfter === 'manualReady' ? section.blockRestMs > 0 ? 'restReady' : 'ready' : section.blockRestMs > 0 ? 'rest' : 'straight';
@@ -182,14 +169,26 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
     const kind = targetKindOf(value);
     const loadMode = loadModeOf(value);
     const levelled = levelledOf(value);
+    /**
+     * One level's amount. An emptied field removes its level, and with it the level's women's amount: that amount is
+     * parked while the field keeps the focus and comes back with the retyped number.
+     */
+    const setLevel = (level: LoadLevel, amount: number | '') => {
+      const at = `${pathOf(s, path, i)}.${role}.${level}`;
+      const before = womenOf(value, level);
+      if (amount === '' && before !== '') parkedWomen.current = { at, amount: before };
+      const women = amount !== '' && parkedWomen.current?.at === at ? parkedWomen.current.amount : '';
+      updateLane(s, path, i, role, current => { const next = withLoad(current, loadMode, true, { [level]: amount }); return women === '' ? next : withWomen(next, level, women); });
+    };
     return <td key={role} className={styles.laneCell}>
       <MovementPicker value={value} label={label} catalogue={catalogue} invalid={Boolean(issueFor(`${pathOf(s, path, i)}.${role}`))} onChange={change => updateLane(s, path, i, role, change)} onAdd={name => addToCatalogue([name])[0]} />
       <div className={styles.laneGrid}>
         <div className={styles.group}>
           <span className={styles.caption}>Target</span>
           <div className={styles.pairRow}>
-            <select aria-label={`${label} target kind`} value={kind} onChange={event => updateLane(s, path, i, role, current => withTarget(current, event.target.value as TargetKind, targetAmountOf(current) || (event.target.value === 'none' ? '' : 10)))}>{(Object.keys(TARGET_LABELS) as TargetKind[]).map(item => <option key={item} value={item}>{TARGET_LABELS[item]}</option>)}</select>
-            {kind !== 'none' && <input type="number" inputMode="decimal" min={0} step={kind === 'km' ? 0.1 : 1} aria-label={`${label} target amount`} value={targetAmountOf(value)} onChange={event => updateLane(s, path, i, role, current => withTarget(current, kind, event.target.value === '' ? '' : Number(event.target.value)))} />}
+            <select aria-label={`${label} target kind`} value={kind} onChange={event => updateLane(s, path, i, role, current => withTarget(current, event.target.value as TargetKind, targetAmountOf(current) || 10))}>{(Object.keys(TARGET_LABELS) as TargetKind[]).map(item => <option key={item} value={item}>{TARGET_LABELS[item]}</option>)}</select>
+            {/* The amount never reports an empty field, so the kind and the field stay while a number is retyped; "No target" is the way to remove one. */}
+            {kind !== 'none' && <NumberInput {...TARGET_AMOUNTS[kind]} aria-label={`${label} target amount`} value={targetAmountOf(value)} onChange={amount => { if (amount !== '') updateLane(s, path, i, role, current => withTarget(current, kind, amount)); }} />}
           </div>
         </div>
         <div className={styles.group}>
@@ -203,17 +202,18 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
           <span />
           {levelled ? LOAD_LEVELS.map(level => <span key={level} className={styles.levelHead} data-level={level}><span>{LEVEL_LETTERS[level]}</span>{LEVEL_LABELS[level]}</span>) : <span className={styles.levelHead}>{loadMode === 'percent' ? 'Of 1RM' : 'Amount'}</span>}
           <span className={styles.rowLabel}>{loadMode === 'percent' ? 'All' : 'Men'}</span>
-          {levelled ? LOAD_LEVELS.map(level => <input key={level} type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={event => updateLane(s, path, i, role, current => withLoad(current, loadMode, true, { [level]: event.target.value === '' ? '' : Number(event.target.value) }))} />)
-            : <input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} load`} value={loadValueOf(value)} onChange={event => updateLane(s, path, i, role, current => withLoad(current, loadMode, false, { single: event.target.value === '' ? '' : Number(event.target.value) }))} />}
+          {/* A single amount is never empty ("No load" removes it); a level may be emptied while another level still has an amount. */}
+          {levelled ? LOAD_LEVELS.map(level => <NumberInput key={level} {...LOAD_AMOUNT} allowEmpty={LOAD_LEVELS.some(other => other !== level && loadValueOf(value, other) !== '')} aria-label={`${label} ${level} load`} value={loadValueOf(value, level)} onChange={amount => setLevel(level, amount)} onBlur={() => { parkedWomen.current = undefined; }} />)
+            : <NumberInput {...LOAD_AMOUNT} aria-label={`${label} load`} value={loadValueOf(value)} onChange={single => { if (single !== '') updateLane(s, path, i, role, current => withLoad(current, loadMode, false, { single })); }} />}
           {loadMode !== 'percent' && <>
             <span className={styles.rowLabel}>Women</span>
-            {levelled ? LOAD_LEVELS.map(level => <input key={level} type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} ${level} women’s load`} value={womenOf(value, level)} disabled={loadValueOf(value, level) === ''} onChange={event => updateLane(s, path, i, role, current => withWomen(current, level, event.target.value === '' ? '' : Number(event.target.value)))} />)
-              : <input type="number" inputMode="decimal" min={0} step="any" aria-label={`${label} women’s load`} value={womenOf(value)} onChange={event => updateLane(s, path, i, role, current => withWomen(current, undefined, event.target.value === '' ? '' : Number(event.target.value)))} />}
+            {levelled ? LOAD_LEVELS.map(level => <NumberInput key={level} {...LOAD_AMOUNT} allowEmpty aria-label={`${label} ${level} women’s load`} value={womenOf(value, level)} disabled={loadValueOf(value, level) === ''} onChange={amount => updateLane(s, path, i, role, current => withWomen(current, level, amount))} />)
+              : <NumberInput {...LOAD_AMOUNT} allowEmpty aria-label={`${label} women’s load`} value={womenOf(value)} onChange={amount => updateLane(s, path, i, role, current => withWomen(current, undefined, amount))} />}
           </>}
         </div>}
         <div className={`${styles.group} ${styles.full}`}>
           <span className={styles.caption}>Notes</span>
-          <input className={styles.notes} aria-label={`${label} notes`} value={value.notes ?? ''} maxLength={500} placeholder="Tempo, scaling, standards" onChange={event => updateLane(s, path, i, role, current => ({ ...current, notes: event.target.value }))} />
+          <input className={styles.notes} aria-label={`${label} notes`} value={value.notes ?? ''} maxLength={500} onChange={event => updateLane(s, path, i, role, current => ({ ...current, notes: event.target.value }))} />
         </div>
       </div>
     </td>;
@@ -252,7 +252,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
           <td colSpan={span}><div className={styles.nested} role="group" aria-label={`${label} group ${i + 1}`}>
             <span className={styles.caption}>Group</span>
             <div className={styles.row}>
-              <label className={styles.field}>{roundsWord === 'sets' ? 'Sets' : 'Rounds'}<input type="number" min={1} max={999} value={item.rounds} aria-label={`${label} group ${i + 1} ${roundsWord}`} aria-invalid={issueFor(`${pathOf(s, path, i)}.rounds`) ? true : undefined} onChange={event => group({ rounds: Number(event.target.value) })} /></label>
+              <CountField label={roundsWord === 'sets' ? 'Sets' : 'Rounds'} value={item.rounds} aria-label={`${label} group ${i + 1} ${roundsWord}`} invalid={Boolean(issueFor(`${pathOf(s, path, i)}.rounds`))} onChange={rounds => group({ rounds })} />
               {item.rounds > 1 && <DurationField label={`Rest between ${roundsWord}`} value={item.betweenRoundsRestMs} onChange={betweenRoundsRestMs => group({ betweenRoundsRestMs })} />}
               <DurationField label={manual ? 'Rest between movements' : 'Transition between movements'} value={item.betweenSlotsRestMs} onChange={betweenSlotsRestMs => group({ betweenSlotsRestMs })} />
               {item.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={item.alternate} onChange={event => group({ alternate: event.target.checked })} />Swap A/B tasks each round</label>}
@@ -300,7 +300,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
       <div className={styles.form}>
         <section className={styles.card} aria-label="Workout details">
           <label className={styles.field}>Title<input value={draft.title} maxLength={160} onChange={event => update({ title: event.target.value })} aria-invalid={issueFor('title') ? true : undefined} /></label>
-          <label className={styles.field}>Author<NamePicker label="Author" value={draft.attribution?.author ?? ''} options={authors} placeholder="Who wrote or published it" onChange={author => update({ attribution: { ...draft.attribution, author } })} /></label>
+          <label className={styles.field}>Author<NamePicker label="Author" value={draft.attribution?.author ?? ''} options={authors} onChange={author => update({ attribution: { ...draft.attribution, author } })} /></label>
           <label className={styles.field}>Description<textarea rows={2} maxLength={2000} value={draft.description} onChange={event => update({ description: event.target.value })} /></label>
           <div className={styles.row}>
             <fieldset className={styles.choice}><legend>Athletes</legend><div className={styles.choiceBox}>{([1, 2] as const).map(count => <label key={count} data-checked={draft.participants === count}><input type="radio" name="participants" checked={draft.participants === count} onChange={() => setParticipants(count)} /><Icon name={count === 2 ? 'users' : 'user'} size={15} />{count === 2 ? 'Pair' : 'Solo'}</label>)}</div></fieldset>
@@ -323,6 +323,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
             const roundsWord = section.format === 'strength' ? 'Sets' : 'Rounds';
             const last = s === draft.sections.length - 1;
             const after = afterOf(section);
+            if (last && section.blockRestMs > 0) endRest.current = s;
             return <Fragment key={s}><li className={styles.card}>
               <div className={styles.sectionTop}>
                 <span className={shared.eyebrow}>BLOCK {s + 1} OF {draft.sections.length}</span>
@@ -337,25 +338,25 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
                 <label className={styles.field}>Block title<input value={section.title} maxLength={160} onChange={event => updateSection(s, { title: event.target.value })} aria-invalid={issueFor(`sections.${s}.title`) ? true : undefined} /></label>
                 <label className={styles.field}>Format<select value={section.format} aria-label={`Block ${s + 1} format`} onChange={event => setFormat(s, event.target.value as SectionFormat)}>{SECTION_FORMATS.map(format => <option key={format} value={format} disabled={format === 'youGoIGo' && !pair}>{FORMAT_LABELS[format]}</option>)}</select></label>
                 {/* The final section has no tile after it: a rest left there by an older workout stays editable here. */}
-                {last && section.blockRestMs > 0 && <DurationField label="Rest at the end of the workout" value={section.blockRestMs} onChange={blockRestMs => updateSection(s, { blockRestMs })} />}
+                {last && (section.blockRestMs > 0 || endRest.current === s) && <DurationField label="Rest at the end of the workout" value={section.blockRestMs} min={1000} allowEmpty onChange={blockRestMs => updateSection(s, { blockRestMs })} />}
               </div>
               <p className={styles.formatHelp}>{FORMAT_HELP[section.format]}</p>
               {(section.format !== 'timedCircuit' && section.format !== 'strength') && <div className={styles.row}>
                 {(section.format === 'amrap' || section.format === 'forTime' || ygig) && <DurationField label={section.format === 'forTime' || ygig ? 'Time cap (optional)' : 'Time cap'} value={section.capMs} allowEmpty={section.format !== 'amrap'} onChange={capMs => updateSection(s, { capMs })} />}
                 {section.format === 'amrap' && <label className={styles.field}>Counter<select value={section.counter} onChange={event => updateSection(s, { counter: event.target.value as BuilderSection['counter'] })}><option value="roundsAndReps">Rounds and reps</option><option value="rounds">Rounds only</option><option value="none">No counter</option></select></label>}
-                {section.format === 'emom' && <><DurationField label="Every" value={section.intervalMs} min={1000} onChange={intervalMs => updateSection(s, { intervalMs })} /><label className={styles.field}>Intervals<input type="number" min={1} max={999} value={section.intervals} onChange={event => updateSection(s, { intervals: Number(event.target.value) })} /></label></>}
-                {ygig && <><label className={styles.field}>Team rounds (0 = by cap)<input type="number" min={0} max={999} value={section.teamRounds} onChange={event => updateSection(s, { teamRounds: Number(event.target.value) })} /></label><DurationField label="Fixed turn (optional)" value={section.turnMs} allowEmpty onChange={turnMs => updateSection(s, { turnMs })} /></>}
+                {section.format === 'emom' && <><DurationField label="Every" value={section.intervalMs} min={1000} onChange={intervalMs => updateSection(s, { intervalMs })} /><CountField label="Intervals" value={section.intervals} onChange={intervals => updateSection(s, { intervals })} /></>}
+                {ygig && <><CountField label="Team rounds (0 = by cap)" min={0} value={section.teamRounds} onChange={teamRounds => updateSection(s, { teamRounds })} /><DurationField label="Fixed turn (optional)" value={section.turnMs} allowEmpty onChange={turnMs => updateSection(s, { turnMs })} /></>}
               </div>}
               {/* Slot level first, then round level. What happens at the section's edges is the tile between sections (BLD-14). */}
               {!list && <div className={styles.row} role="group" aria-label={`Block ${s + 1} movement settings`}>
                 {/* Per-movement repeats apply to the block's own movements, so the field shows while those are all it lists. */}
-                {section.format === 'timedCircuit' && (section.slotRepeats > 1 || section.slots.every(isSlot)) && <label className={styles.field}>Repeat each movement<input type="number" min={1} max={999} value={section.slotRepeats} onChange={event => updateSection(s, { slotRepeats: Number(event.target.value) })} /></label>}
+                {section.format === 'timedCircuit' && (section.slotRepeats > 1 || section.slots.every(isSlot)) && <CountField label="Repeat each movement" value={section.slotRepeats} onChange={slotRepeats => updateSection(s, { slotRepeats })} />}
                 {section.format === 'timedCircuit' && section.slotRepeats > 1 && <DurationField label="Rest within repeats" value={section.slotRepeatRestMs} onChange={slotRepeatRestMs => updateSection(s, { slotRepeatRestMs })} />}
                 <DurationField label={manual ? 'Rest between movements' : 'Transition between movements'} value={section.betweenSlotsRestMs} onChange={betweenSlotsRestMs => updateSection(s, { betweenSlotsRestMs })} />
                 {/* Older workouts can end every round with a transition after the last slot. It is kept and shown only while it is set. */}
               </div>}
               {!list && <div className={styles.row} role="group" aria-label={`Block ${s + 1} ${section.format === 'strength' ? 'set' : 'round'} settings`}>
-                <label className={styles.field}>{roundsWord}<input type="number" min={1} max={999} value={section.rounds} aria-label={`Block ${s + 1} ${roundsWord.toLowerCase()}`} onChange={event => updateSection(s, { rounds: Number(event.target.value) })} /></label>
+                <CountField label={roundsWord} value={section.rounds} aria-label={`Block ${s + 1} ${roundsWord.toLowerCase()}`} onChange={rounds => updateSection(s, { rounds })} />
                 {section.rounds > 1 && <DurationField label={`Rest between ${roundsWord.toLowerCase()}`} value={section.betweenRoundsRestMs} onChange={betweenRoundsRestMs => updateSection(s, { betweenRoundsRestMs })} />}
                 {section.rounds > 1 && pair && <label className={styles.check}><input type="checkbox" checked={section.alternate} onChange={event => updateSection(s, { alternate: event.target.checked })} />Swap A/B tasks each round</label>}
               </div>}
@@ -373,8 +374,10 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
         <div className={styles.summaryCard}>
           <span className={shared.eyebrow}>LIVE SUMMARY</span>
           <dl className={styles.facts}>
-            <div><dt>{compiled.plan?.durationKind === 'open' ? 'Timed parts' : compiled.plan?.durationKind === 'capped' ? 'Up to' : 'Active'}</dt><dd>{compiled.plan ? displayTime(compiled.plan.durationMs) : '—'}</dd></div>
-            <div><dt>With prep</dt><dd>{compiled.plan ? compiled.plan.durationKind === 'open' ? 'Open' : displayTime(compiled.plan.durationMs + draft.prepMs) : '—'}</dd></div>
+            {/* The same three times as the workout's page: total is active plus rest, without the prep countdown. */}
+            <div><dt>Total time</dt><dd>{compiled.plan ? spanLabel(compiled.plan.durationKind, compiled.plan.durationMs) : '—'}</dd></div>
+            <div><dt>Active time</dt><dd>{compiled.plan ? spanLabel(compiled.plan.durationKind, compiled.plan.durationMs - restMs(compiled.plan)) : '—'}</dd></div>
+            <div><dt>Rest time</dt><dd>{compiled.plan ? displayTime(restMs(compiled.plan)) : '—'}</dd></div>
           </dl>
           {difficulty && <DifficultyChip difficulty={difficulty} detailed />}
           <div className={styles.board}>
@@ -388,7 +391,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
             <small>Add them as they are, or pick the matching movement in the form. You can tidy names later under Settings → Movements.</small>
             {unmatched.length > 1 && <button type="button" className={shared.quietButton} onClick={() => addToCatalogue(unmatched)}><Icon name="plus" size={14} />Add all {unmatched.length}</button>}
           </div>}
-          {(issues.length > 0 || compiled.error) && <ul className={styles.issues} role="alert">{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}
+          {(issues.length > 0 || compiled.error || failed) && <ul className={styles.issues} role="alert">{failed && <li>The workout was not saved. Your edits are still here: try again.</li>}{issues.map(issue => <li key={issue.path}>{issue.message}</li>)}{compiled.error && <li>{compiled.error}</li>}</ul>}
           <p className={styles.status} aria-live="polite">{dirty ? 'Unsaved changes…' : savedAt ? `Draft saved on this device · ${new Date(savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Drafts save automatically on this device.'}</p>
           <div className={styles.saveActions}>
             <button type="button" className={shared.primaryButton} disabled={!canSave || saving} onClick={() => void save()}><Icon name="check" />{saving ? 'Saving…' : mode === 'replace' ? 'Save changes' : 'Save to library'}</button>
@@ -399,9 +402,9 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
     </div>
 
     <ConfirmDialog open={Boolean(conflict)} title="Saved elsewhere since you opened it" confirmLabel="Overwrite with mine" cancelLabel="Keep editing" onClose={() => setConflict(undefined)} onConfirm={() => { const revision = conflict?.revision ?? 0; setConflict(undefined); void save(revision); }}>
-      <p>Revision {conflict?.revision}{conflict?.document ? ` (“${conflict.document.title}”)` : ''} of this workout was saved elsewhere while you were editing. Overwrite it with your version, or {workoutId ? <a href={workoutHref(workoutId)} onClick={() => onDiscard()}>open the newer version</a> : 'keep editing'} and copy your changes across.</p>
+      <p>Revision {conflict?.revision}{conflict?.document ? ` (“${conflict.document.title}”)` : ''} of this workout was saved elsewhere while you were editing. Overwrite it with your version, or {workoutId ? <a href={workoutHref(workoutId)} onClick={discard}>open the newer version</a> : 'keep editing'} and copy your changes across.</p>
     </ConfirmDialog>
-    <ConfirmDialog open={discarding} title="Discard this draft?" confirmLabel="Discard" cancelLabel="Keep editing" onClose={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); onDiscard(); }}>
+    <ConfirmDialog open={discarding} title="Discard this draft?" confirmLabel="Discard" cancelLabel="Keep editing" onClose={() => setDiscarding(false)} onConfirm={() => { setDiscarding(false); discard(); }}>
       <p>{mode === 'replace' ? 'The saved workout stays as it was. Your unsaved edits are removed from this device.' : 'The draft is removed from this device.'}</p>
     </ConfirmDialog>
   </div>;

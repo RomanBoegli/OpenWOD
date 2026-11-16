@@ -1,7 +1,8 @@
 import { expect, test } from '../fixtures';
 
 // The big clock stays in place from slot to slot: a station card of one line or three only moves the gap above Up next.
-for (const [width, height] of [[1440, 900], [1180, 820], [820, 1180], [390, 844]] as const) test(`the clock holds its place across slots at ${width} by ${height}`, async ({ page }) => {
+// A frame of full sizes (the 13-inch iPad held upright), three that follow the height, the shortest (an iPad mini in landscape inside Safari) and a phone.
+for (const [width, height] of [[1024, 1330], [1440, 900], [1180, 820], [820, 1180], [1133, 638], [390, 844]] as const) test(`the clock holds its place across slots at ${width} by ${height}`, async ({ page }) => {
   await page.setViewportSize({ width, height });
   await page.goto('./#/wod/full-body-partner/play');
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();

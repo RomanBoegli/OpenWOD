@@ -12,12 +12,16 @@ import { agoText, lastDone, timesDone } from './session-log';
 import type { Connection, LegacyData, SessionView } from './data/use-library-data';
 import type { DataMode } from './data/mode';
 import type { OutboxItem } from './data/outbox';
-import { elapsedText, type Recovery } from './data/checkpoints';
+import { elapsedText, lastSaved, type Recovery } from './data/checkpoints';
+import { sessionHeadline } from './data/live-sessions';
+import { probeSessionLock } from './data/session-lock';
+import type { LiveOffers } from './data/use-live-sessions';
 import { DifficultyChip, DifficultyFilterChip } from './DifficultyChip';
 import { AthletesChip, Chip } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { rankBySearch } from '../../../packages/domain/src/search';
 import { copyHref, draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
+import { requestStart } from './start';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
 import { copySource, freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
 import { Icon } from './Icon';
@@ -30,7 +34,7 @@ import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import styles from './Library.module.css';
 import shared from './App.module.css';
 
-export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean; /** Saved on this device, not yet on the household server. */ pending?: boolean; /** A saved edit of a bundled workout, under the same id. */ bundled?: boolean; origin?: 'local' | 'imported' }
+export interface LibraryEntry { workout: Workout; summary: WorkoutSummary; source: 'bundled' | 'saved'; editable: boolean; /** Saved on this device, not yet on the household server. */ pending?: boolean; /** A saved edit of a bundled workout, under the same id. */ bundled?: boolean; origin?: 'local' | 'imported'; /** When a saved workout joined the library; bundled ones carry no date. */ addedAt?: string }
 
 export function toEntry(workout: Workout, source: LibraryEntry['source'], options: SummaryOptions = {}): LibraryEntry {
   return { workout, summary: summariseWorkout(workout, options), source, editable: workoutToBuilder(workout) !== null };
@@ -59,6 +63,10 @@ interface LibraryProps {
   onDismissRejected: (item: OutboxItem) => Promise<void>;
   recoveries: Recovery[];
   onDiscardRecovery: (sessionId: string) => Promise<void>;
+  /** Sessions running on other devices of the household, offered to continue here (ENG-15); none in the static shape. */
+  live: LiveOffers;
+  /** Removes such a session from the server, for a device that is gone. */
+  onDiscardLive: (sessionId: string) => Promise<void>;
   drafts: StoredDraft[];
   onDiscardDraft: (id: string) => void;
   preferences: Preferences;
@@ -67,12 +75,18 @@ interface LibraryProps {
   catalogue: Catalogue;
 }
 
-type Sort = LibrarySort | 'longestAgo' | 'random';
+type Sort = LibrarySort | 'newest' | 'longestAgo' | 'random';
 /** The name a pasted answer goes by in the preview, the editor and the drafts list. */
 const PASTED_NAME = 'pasted answer';
 const DURATIONS: [DurationBucket, string][] = [['short', 'Up to 20 min'], ['medium', '20 to 40 min'], ['long', 'Over 40 min']];
-/** The timed content without the prep countdown: a tile says what the workout is, the overview adds the prep. */
-export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : `${summary.durationKind === 'capped' ? '≤ ' : ''}${displayTime(summary.activeMs)}`;
+/**
+ * A time among the facts of a workout's page and the editor's summary: the plain time, which for capped work is its cap.
+ * Where open-ended work comes on top of what the clock knows, the known part carries a plus, so an edit still moves the
+ * number by its exact time, and a workout the clock knows nothing of reads Open.
+ */
+export const spanLabel = (kind: WorkoutSummary['durationKind'], ms: number) => kind !== 'open' ? displayTime(ms) : ms ? `${displayTime(ms)}+` : 'Open';
+/** The duration on a card, without the prep countdown: the plain time, or Open where the athletes' pace decides. */
+export const durationLabel = (summary: WorkoutSummary) => summary.durationKind === 'open' ? 'Open' : displayTime(summary.activeMs);
 const toggle = <T,>(list: T[], item: T) => list.includes(item) ? list.filter(value => value !== item) : [...list, item];
 
 /** A seeded Fisher–Yates shuffle stays stable across renders and library navigation. */
@@ -105,7 +119,7 @@ function loadFilters(): StoredFilters {
       format: strings(stored.format).filter((item): item is SectionFormat => (SECTION_FORMATS as readonly string[]).includes(item)),
       collectionIds: strings(stored.collectionIds),
       authors: strings(stored.authors),
-      sort: typeof stored.sort === 'string' && ['title', 'shortest', 'longest', 'easiest', 'hardest', 'longestAgo', 'random'].includes(stored.sort) ? stored.sort as Sort : 'title',
+      sort: typeof stored.sort === 'string' && ['title', 'shortest', 'longest', 'easiest', 'hardest', 'newest', 'longestAgo', 'random'].includes(stored.sort) ? stored.sort as Sort : 'title',
       randomSeed: Number.isInteger(stored.randomSeed) && stored.randomSeed! >= 0 && stored.randomSeed! <= 0xffff_ffff ? stored.randomSeed! : 0,
     };
   } catch { return emptyFilters(); }
@@ -130,8 +144,19 @@ function useMasonry(grid: RefObject<HTMLUListElement | null>) {
   });
 }
 
-export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, drafts, onDiscardDraft, preferences, onPreferencesChange, catalogue, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery }: LibraryProps) {
+export function Library({ mode, entries, collections, sessions, onImportPack, onImportDraft, onExportLibrary, notice, onClearNotice, drafts, onDiscardDraft, preferences, onPreferencesChange, catalogue, connection, legacy, migrating, onMigrate, conflicts, rejected, onResolveConflict, onDismissRejected, recoveries, onDiscardRecovery, live, onDiscardLive }: LibraryProps) {
   const [migrationHidden, setMigrationHidden] = useState(false);
+  // A checkpoint on this device may belong to a session that is live in another tab (ENG-14). That one is not
+  // interrupted, and discarding it would delete the save of a running session, so each banner asks the lock first.
+  const [locks, setLocks] = useState<Record<string, 'free' | 'held'>>({});
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all(recoveries.map(async ({ checkpoint }) => [checkpoint.sessionId, await probeSessionLock(checkpoint.sessionId)] as const)).then(found => { if (!cancelled) setLocks(current => found.length || Object.keys(current).length ? Object.fromEntries(found) : current); });
+    return () => { cancelled = true; };
+  }, [recoveries]);
+  /** The session a Continue here is under way for: one claim at a time. */
+  const [continuing, setContinuing] = useState<string>();
+  const continueHere = (sessionId: string) => { setContinuing(sessionId); void live.onContinue(sessionId).finally(() => setContinuing(undefined)); };
   const grid = useRef<HTMLUListElement>(null);
   useMasonry(grid);
   const [migrationReport, setMigrationReport] = useState('');
@@ -167,7 +192,9 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     const matching = entries.filter(entry => matchesFilter(entry.summary, filter)).map(entry => ({ ...entry.summary, entry }));
     // Never done first (alphabetically), then the longest-ago session first.
     const stamp = (id: string) => lastDone(sessions, id)?.finishedAt ?? '';
-    const sorted = sort === 'random' ? matching : sort !== 'longestAgo' ? sortSummaries(matching, sort) : [...matching].sort((a, b) => (stamp(a.id) === stamp(b.id) ? a.title.localeCompare(b.title, 'en') : stamp(a.id).localeCompare(stamp(b.id))));
+    // Recently added first: a workout still waiting for the server counts as the newest, and bundled ones, which carry no date, follow by title.
+    const added = (item: typeof matching[number]) => item.entry.addedAt || (item.entry.pending ? '9' : '');
+    const sorted = sort === 'random' ? matching : sort === 'newest' ? [...matching].sort((a, b) => added(b).localeCompare(added(a)) || a.title.localeCompare(b.title, 'en')) : sort !== 'longestAgo' ? sortSummaries(matching, sort) : [...matching].sort((a, b) => (stamp(a.id) === stamp(b.id) ? a.title.localeCompare(b.title, 'en') : stamp(a.id).localeCompare(stamp(b.id))));
     // With a query the best match comes first; the chosen sort breaks ties.
     const ranked = rankBySearch(sorted, query, item => searchFields(item)).map(item => item.entry);
     return sort === 'random' ? shuffled(ranked, randomSeed) : ranked;
@@ -218,7 +245,11 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
     </div>
 
     {drafts.length > 0 && <section className={styles.drafts} aria-label="Drafts"><h2>Drafts</h2><ul>{drafts.map(draft => <li key={draft.id}><div><strong>{draft.draft.title.trim() || 'Untitled workout'}</strong><small>{draft.mode === 'replace' ? `Edits to “${entries.find(entry => entry.workout.id === draft.id)?.summary.title ?? draft.id}”` : draft.importedFrom ? `Imported from ${draft.importedFrom}, not saved yet` : draft.id === NEW_DRAFT_ID ? 'New workout' : `Copy of “${entries.find(entry => entry.workout.id === copySource(draft.id))?.summary.title ?? copySource(draft.id)}”`} · saved {new Date(draft.updatedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</small></div><div className={styles.draftActions}><a className={shared.primaryButton} href={draft.id === NEW_DRAFT_ID ? NEW_HREF : draft.importedFrom ? draftHref(draft.id) : draft.mode === 'create' ? copyHref(copySource(draft.id)) : editHref(draft.id)}>Continue editing</a><button className={shared.quietButton} onClick={() => setDiscarding(draft)} aria-label={`Discard draft ${draft.draft.title.trim() || 'Untitled workout'}`}><Icon name="trash" size={16} />Discard</button></div></li>)}</ul></section>}
-    {recoveries.map(({ checkpoint }) => <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Interrupted session"><div><strong>Interrupted session of “{checkpoint.workout.title}”</strong><p>Saved {elapsedText(Date.now() - new Date(checkpoint.savedAt).getTime())} on this device. Resume where it stopped, or discard it.</p></div><div className={styles.bannerActions}><a className={shared.primaryButton} href={playHref(checkpoint.workoutId)}><Icon name="play" size={16} />Resume</a><button type="button" className={shared.quietButton} onClick={() => void onDiscardRecovery(checkpoint.sessionId)}>Discard</button></div></section>)}
+    {/* A session another device has taken over is that device's now: this device's older save of it is not offered. */}
+    {recoveries.filter(({ checkpoint }) => !live.sessions.some(session => session.id === checkpoint.sessionId)).map(recovery => { const { checkpoint } = recovery; const lock = locks[checkpoint.sessionId]; return lock === 'held'
+      ? <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Session in another tab"><div><strong>Running in another tab</strong><p>“{checkpoint.workout.title}”</p></div><div className={styles.bannerActions}><a className={shared.quietButton} href={playHref(checkpoint.workoutId)}>Open here</a></div></section>
+      : <section key={checkpoint.sessionId} className={styles.banner} role="status" aria-label="Interrupted session"><div><strong>Interrupted session of “{checkpoint.workout.title}”</strong><p>Saved {elapsedText(Date.now() - new Date(lastSaved(recovery)).getTime())} on this device. Resume where it stopped, or discard it.</p></div><div className={styles.bannerActions}><a className={shared.primaryButton} href={playHref(checkpoint.workoutId)}><Icon name="play" size={16} />Resume</a>{lock === 'free' && <button type="button" className={shared.quietButton} onClick={() => void onDiscardRecovery(checkpoint.sessionId)}>Discard</button>}</div></section>; })}
+    {live.sessions.map(session => <section key={session.id} className={styles.banner} role="status" aria-label="Session on another device"><div><strong>{sessionHeadline(session)}</strong><p>“{session.title}” · updated {elapsedText(live.ageMs(session))}</p></div><div className={styles.bannerActions}><button type="button" className={shared.primaryButton} disabled={continuing !== undefined} onClick={() => continueHere(session.id)}><Icon name="play" size={16} />Continue here</button><button type="button" className={shared.quietButton} disabled={continuing !== undefined} onClick={() => void onDiscardLive(session.id)}>Discard</button></div></section>)}
     {notice && <p className={shared.notice} role="alert">{notice} <button type="button" className={styles.linkButton} onClick={onClearNotice}>Dismiss</button></p>}
     {mode === 'server' && connection === 'unreachable' && <p className={shared.notice} role="status">The household server cannot be reached. The library shows what this device last saw; anything you save waits here and uploads when the server is back.</p>}
     {mode === 'server' && legacy && !migrationHidden && <section className={styles.banner} role="status" aria-label="Move device data">
@@ -233,7 +264,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
       <div className={styles.filterTop}>
         <label className={styles.search}><Icon name="search" size={18} /><input type="search" placeholder="Search titles, movements, equipment, authors (typos welcome)" value={query} onChange={event => setQuery(event.target.value)} aria-label="Search workouts" /></label>
         {/* The sort sits in the bar only while the panel is open; its label lives inside the box, like the search hint. */}
-        <label className={styles.sort}><span aria-hidden="true">Sort</span><select aria-label="Sort" value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
+        <label className={styles.sort}><span aria-hidden="true">Sort</span><select aria-label="Sort" value={sort} onChange={event => event.target.value === 'random' ? randomise() : setSort(event.target.value as Sort)}><option value="title">Title</option><option value="shortest">Shortest first</option><option value="longest">Longest first</option><option value="easiest">Easiest first</option><option value="hardest">Hardest first</option><option value="newest">Recently added</option><option value="longestAgo">Not done for longest</option><option value="random">Random</option></select></label>
         {/* Sorting and the filter groups fold away behind this button, so the workouts start right under the search. */}
         <button type="button" className={styles.filterToggle} aria-expanded={filtersOpen} aria-controls="library-filters" onClick={() => setFiltersOpen(open => !open)}><Icon name="filter" size={17} />Filters{activeFilters > 0 && <span className={styles.filterCount} aria-label={`${activeFilters} active`}>{activeFilters}</span>}</button>
         <button type="button" className={styles.randomButton} aria-label="Shuffle workouts" title="Shuffle the filtered workouts" aria-pressed={sort === 'random'} disabled={visible.length < 2} onClick={randomise}><Icon name="dice" size={22} /></button>
@@ -274,7 +305,7 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
             {summary.equipmentNeeded.length > 0 ? summary.equipmentNeeded.map(item => <button type="button" key={item} className={styles.tag} aria-pressed={equipment.includes(item)} onClick={() => setEquipment(current => toggle(current, item))}>{item}</button>) : <span className={styles.tag} data-plain>Bodyweight only</span>}
           </div>
           <div className={styles.cardActions}>
-            <a className={shared.primaryButton} href={playHref(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
+            <a className={shared.primaryButton} href={playHref(workout.id)} onClick={() => requestStart(workout.id)} aria-label={`Start ${summary.title}`}><Icon name="play" size={18} />Start</a>
             <a className={shared.quietButton} href={workoutHref(workout.id)} aria-label={`Details of ${summary.title}`}><Icon name="list" size={17} />Details</a>
           </div>
         </li>;

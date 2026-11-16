@@ -24,3 +24,5 @@
 .form label { display: grid; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); }
 .form input { min-height: 40px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font-size: 14px; }
 .prior { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+/* Phones: 16 px, below which iOS Safari zooms the page when a field takes the focus. */
+@media (max-width: 620px) { .form input { font-size: 16px; } }

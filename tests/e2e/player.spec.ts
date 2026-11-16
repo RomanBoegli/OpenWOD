@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { PLAYER, ready, advance, openFilters } from './helpers';
 
@@ -150,7 +151,7 @@ test.describe('player', () => {
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.getByRole('textbox', { name: 'Athlete A' }).fill('Mia');
     await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Training view' }).click();
-    await page.getByRole('combobox', { name: 'Sound', exact: true }).selectOption('beeps');
+    await page.getByRole('radiogroup', { name: 'Sound' }).getByRole('radio', { name: 'Beeps only' }).check();
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Context', exact: true }).click();
     await page.reload(); await ready(page);
@@ -160,13 +161,22 @@ test.describe('player', () => {
   });
 });
 
+/** Nothing scrolls, no row is shorter than its content, no row overlaps the next. */
+const frame = (page: Page) => page.locator('[data-performing=true] [data-wash]').evaluate(player => {
+  const rows = ([...player.children] as HTMLElement[]).filter(row => getComputedStyle(row).position !== 'absolute' && row.getClientRects().length);
+  const boxes = rows.map(row => row.getBoundingClientRect());
+  return { scroll: Math.max(0, player.scrollHeight - player.clientHeight - 1), squeezed: rows.filter(row => row.scrollHeight > row.clientHeight + 1).length, overlap: boxes.slice(1).filter((box, index) => box.top < boxes[index].bottom - 1).length, lanes: [...player.querySelectorAll('section[data-athlete]')].filter(lane => lane.scrollHeight > lane.clientHeight + 1).length };
+});
+/** The ring's path against its panel: 5 px a side at the default ring width, whatever the frame was before the turn. */
+const ring = (page: Page) => page.locator('[data-perimeter]').evaluate(svg => { const box = svg.getBoundingClientRect(), path = svg.querySelector('path')!.getBBox(); return [Math.round(box.width - path.width), Math.round(box.height - path.height)]; });
+
 test.describe('player on a tablet', () => {
   // An iPad in landscape or portrait, or a laptop: the whole session, transport controls included, fits the frame without scrolling.
   for (const id of ['back-squat-5x5', 'cindy', 'fran']) test(`${id} fits at tablet sizes in both views`, async ({ page }) => {
     await page.goto(`/#/wod/${id}/play`); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 16_000);
-    const overflow = () => page.locator('[data-performing=true] [data-progress]').evaluate(player => player.scrollHeight - player.clientHeight);
+    const overflow = () => page.locator('[data-performing=true] [data-wash]').evaluate(player => player.scrollHeight - player.clientHeight);
     for (const [width, height] of [[1024, 680], [1180, 750], [768, 950], [820, 1110]]) {
       await page.setViewportSize({ width, height });
       await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
@@ -176,6 +186,155 @@ test.describe('player on a tablet', () => {
       expect(await overflow()).toBeLessThanOrEqual(1);
       await page.getByRole('button', { name: 'Switch to focus view' }).click();
     }
+  });
+});
+
+test.describe('player on an iPad that is turned', () => {
+  // Portrait and landscape of each iPad, as the installed app or inside Safari. A turn mid-session moves the frame from one to the other.
+  const TABLETS = [['mini in Safari', [744, 1028], [1133, 638]], ['9.7 installed', [768, 1004], [1024, 748]], ['10.2 in Safari', [810, 990], [1080, 720]], ['Air installed', [820, 1144], [1180, 784]], ['13 installed', [1024, 1330], [1366, 988]]] as const;
+  for (const id of ['fran', 'full-body-partner', 'synchro-snatch-chipper', 'row-burpee-dumbbell-sprints', 'fourteens-amrap-14']) for (const [name, portrait, landscape] of TABLETS) test(`${id} holds its frame on the ${name} iPad through a turn and back`, async ({ page }) => {
+    await page.setViewportSize({ width: portrait[0], height: portrait[1] });
+    await page.goto(`/#/wod/${id}/play`); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 16_000);
+    for (const [width, height] of [portrait, landscape, portrait]) {
+      await page.setViewportSize({ width, height });
+      await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(page.getByRole('button', { name: 'End session', exact: true })).toBeInViewport({ ratio: 1 });
+      for (const done of await page.getByRole('button', { name: /\bdone\b/i }).or(page.getByTestId('switch')).all()) await expect(done).toBeInViewport({ ratio: 1 });
+      await expect.poll(() => frame(page), `${width} by ${height}`).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+      await expect.poll(() => ring(page), `${width} by ${height}`).toEqual([10, 10]);
+    }
+  });
+
+  test('a station card follows its movement name when only the width changes', async ({ page }) => {
+    // Kettlebell Swings takes one line in a wide lane and two in a narrow one; no size of the type changes between these two frames.
+    await page.setViewportSize({ width: 1366, height: 1000 });
+    await page.goto(PLAYER); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 16_000);
+    for (const width of [810, 1366, 744]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expect.poll(() => frame(page), `${width} wide`).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+    }
+  });
+
+  test('the stations a new movement replaces slide out from where they stand after a turn', async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1156 });
+    await page.goto(PLAYER); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 11_000);
+    await page.setViewportSize({ width: 1180, height: 796 });
+    await expect.poll(() => ring(page)).toEqual([10, 10]);
+    // The exit layer follows the ring; the parked stations carry their place as inline styles.
+    await page.locator('[data-perimeter] + div').evaluate(layer => new MutationObserver(records => {
+      for (const record of records) for (const node of record.addedNodes) if (node instanceof HTMLElement) (window as unknown as { ghost?: number[] }).ghost = [node.style.top, node.style.left, node.style.width].map(parseFloat);
+    }).observe(layer, { childList: true }));
+    await advance(page, 40_000);
+    await expect(page.getByRole('status')).toHaveText('Transition');
+    const ghost = await (await page.waitForFunction(() => (window as unknown as { ghost?: number[] }).ghost)).jsonValue();
+    const live = await page.getByRole('region', { name: 'Athlete A station' }).evaluate(lane => { const lanes = lane.parentElement!.getBoundingClientRect(), layer = document.querySelector('[data-perimeter] + div')!.getBoundingClientRect(); return [lanes.top - layer.top, lanes.left - layer.left, lanes.width]; });
+    expect(ghost!.map(Math.round)).toEqual(live.map(Math.round));
+  });
+});
+
+test.describe('the clock takes the room a workout leaves (UI-27)', () => {
+  // A laptop, an iPad in landscape and upright, and two phones.
+  const FRAMES = [[1512, 854], [1180, 796], [820, 1156], [390, 844], [430, 932]] as const;
+  /** The clock's box and type, the room the stage keeps beyond the station in it (whole pixels, so at most one for the tallest), and what the frame scrolls. */
+  const clock = (page: Page) => page.getByTestId('primary-timer').evaluate(timer => {
+    const box = timer.getBoundingClientRect(), frame = timer.closest('[data-wash]')!;
+    const body = frame.querySelector('section[data-athlete]')?.parentElement?.parentElement, stage = body?.parentElement;
+    return { top: Math.round(box.top), height: Math.round(box.height), font: Math.round(parseFloat(getComputedStyle(timer).fontSize)), slack: stage && body ? Math.round(stage.getBoundingClientRect().height - body.getBoundingClientRect().height) : 0, scroll: Math.max(0, frame.scrollHeight - frame.clientHeight - 1) };
+  });
+  const start = async (page: Page, id: string, [width, height]: readonly [number, number]) => {
+    await page.setViewportSize({ width, height });
+    await page.goto(`/#/wod/${id}/play`); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 11_000);
+  };
+
+  // Fran's first station, Thrusters with their load, is its tallest: the stage keeps exactly its room, and the clock has the rest.
+  for (const [frame, floor] of [[FRAMES[0], 200], [FRAMES[1], 165], [FRAMES[2], 165], [FRAMES[3], 88], [FRAMES[4], 98]] as const) test(`Fran's clock is at least ${floor} px at ${frame[0]} by ${frame[1]}, and nothing scrolls`, async ({ page }) => {
+    await start(page, 'fran', frame);
+    await expect.poll(async () => { const now = await clock(page); return now.scroll + Math.max(0, now.slack - 1); }).toBe(0);
+    expect((await clock(page)).font).toBeGreaterThanOrEqual(floor);
+    await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByTestId('done')).toBeInViewport({ ratio: 1 });
+  });
+
+  for (const frame of FRAMES) test(`the clock keeps its box through Fran and through a block boundary at ${frame[0]} by ${frame[1]}`, async ({ page }) => {
+    await start(page, 'fran', frame);
+    const seen = [await clock(page)];
+    for (let slot = 1; slot < 6; slot++) { await page.getByTestId('done').click(); await advance(page, 1000); await expect(page.getByText(`MOVEMENT ${slot + 1} / 6`)).toBeVisible(); seen.push(await clock(page)); }
+    for (const now of seen) expect(now).toMatchObject({ top: seen[0].top, height: seen[0].height, font: seen[0].font, scroll: 0 });
+    // The partner workout: five stations of the warm-up, the wait for Ready at its end, then the next block's stations and their rest.
+    await page.getByRole('button', { name: 'End session', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'End session' }).click();
+    await start(page, 'full-body-partner', frame);
+    const partner = [await clock(page)];
+    for (let slot = 1; slot < 5; slot++) { await advance(page, 60_000); partner.push(await clock(page)); }
+    await advance(page, 60_000);
+    await expect(page.getByRole('button', { name: 'Start next block' })).toBeVisible();
+    partner.push(await clock(page));
+    await page.getByRole('button', { name: 'Start next block' }).click();
+    for (let slot = 0; slot < 4; slot++) { await advance(page, 25_000); partner.push(await clock(page)); }
+    for (const now of partner) expect(now).toMatchObject({ top: partner[0].top, height: partner[0].height, font: partner[0].font, scroll: 0 });
+  });
+
+  test('after a turn mid-session the clock fits the new frame and keeps that box too', async ({ page }) => {
+    await start(page, 'full-body-partner', [820, 1156]);
+    const upright = await clock(page);
+    await advance(page, 60_000);
+    await page.setViewportSize({ width: 1180, height: 796 });
+    await expect.poll(async () => (await clock(page)).font).not.toBe(upright.font);
+    const turned = [await clock(page)];
+    for (let slot = 0; slot < 3; slot++) { await advance(page, 60_000); turned.push(await clock(page)); }
+    for (const now of turned) expect(now).toMatchObject({ top: turned[0].top, height: turned[0].height, font: turned[0].font, scroll: 0 });
+    // Back upright it is the box it had before the turn.
+    await page.setViewportSize({ width: 820, height: 1156 });
+    await expect.poll(() => clock(page)).toMatchObject({ top: upright.top, height: upright.height, font: upright.font, scroll: 0 });
+  });
+
+  // The four parts of the progress are switched one by one in the settings; here all of them at once, and none.
+  for (const [width, height] of [[1180, 796], [390, 844]] as const) test(`the frame holds with every part of the progress on and with every part off at ${width} by ${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    const fonts: number[] = [];
+    for (const on of [true, false]) {
+      await page.goto(PLAYER); await ready(page);
+      await page.evaluate(value => localStorage.setItem('openwod.preferences.v1', value), JSON.stringify({ progress: { bar: on, barPercent: on, clockPercent: on, donut: on } }));
+      await page.reload(); await ready(page);
+      await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+      await advance(page, 11_000);
+      for (const part of [page.getByTestId('overall-progress'), page.getByText(/^\d+ % DONE$/), page.getByLabel('Progress beside the clock'), page.getByTestId('round-donut')]) await expect(part).toHaveCount(on ? 1 : 0);
+      await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(page.getByTestId('movement-B')).toBeInViewport({ ratio: 1 });
+      if (width > 620) await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+      await expect.poll(async () => (await clock(page)).scroll).toBe(0);
+      fonts.push((await clock(page)).font);
+      await page.getByRole('button', { name: 'End session', exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'End session' }).click();
+    }
+    // The donut and the percentage give their width back to the digits.
+    expect(fonts[1]).toBeGreaterThan(fonts[0]);
+  });
+
+  test('the ruler that measures the stations is seen by no one', async ({ page }) => {
+    await start(page, 'synchro-snatch-chipper', [1180, 796]);
+    const found = await page.locator('[data-performing=true] [data-wash]').evaluate(frame => {
+      const ruler = frame.querySelector(':scope > [inert][aria-hidden=true]:last-child')!;
+      const ids = [...frame.querySelectorAll('[data-testid]')].map(node => node.getAttribute('data-testid'));
+      return { copies: ruler.firstElementChild!.childElementCount, buttons: ruler.querySelectorAll('button').length, hidden: getComputedStyle(ruler).visibility, marked: ruler.querySelectorAll('[data-testid], [id]').length, twice: ids.filter((id, index) => ids.indexOf(id) !== index) };
+    });
+    // It is there, with a Done button in every copy that has one, and carries no test id and no id.
+    expect(found.copies).toBeGreaterThan(1);
+    expect(found.buttons).toBeGreaterThan(1);
+    expect(found).toMatchObject({ hidden: 'hidden', marked: 0, twice: [] });
+    await expect(page.getByTestId('movement-A')).toHaveCount(1);
+    await expect(page.getByRole('region', { name: 'Athlete A station' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Athlete A done' })).toHaveCount(1);
+    // Tab walks the frame's own buttons and never lands in the ruler.
+    for (let step = 0; step < 14; step++) { await page.keyboard.press('Tab'); expect(await page.evaluate(() => Boolean(document.activeElement?.closest('[inert]')))).toBe(false); }
   });
 });
 
@@ -203,9 +362,14 @@ test.describe('overview', () => {
     await page.getByRole('link', { name: 'Start workout' }).click();
     await ready(page);
     expect(page.url()).toContain('#/wod/partner-circuit/play');
-    await expect(page.getByRole('status')).toHaveText('Ready when you are');
+    // Start on the workout's page begins the session with that tap; the ready screen is for a reload or a bookmark.
+    await expect(page.getByRole('status')).toHaveText('Get ready');
+    await page.getByRole('button', { name: 'End session' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'End session' }).click();
     await page.getByRole('link', { name: 'Back to workout overview' }).click();
     await expect(page.getByRole('list', { name: 'Blocks' })).toBeVisible();
+    await page.goto(PLAYER); await ready(page);
+    await expect(page.getByRole('status')).toHaveText('Ready when you are');
   });
 });
 
@@ -246,7 +410,7 @@ test.describe('formats', () => {
     await expect(page.getByTestId('movement-A')).toHaveText('Row');
     await advance(page, 20_000);
     await page.getByTestId('done').click();
-    await expect(page.getByText('DONE · REST').first()).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Athlete A station' }).getByText('DONE · REST')).toBeVisible();
     await expect(page.getByTestId('done')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Next interval' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Restart interval' })).toBeDisabled();

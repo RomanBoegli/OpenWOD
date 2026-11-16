@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type InputHTMLAttributes } from 'react';
 
-/** What a time field keeps while typing: digits and at most one colon, so letters never land in it. */
+/**
+ * What a time field keeps while typing: digits and at most one colon, so letters never land in it. A point or a comma
+ * counts as the colon: the number pad of a phone has no colon key, so 1:30 is typed there as 1.30.
+ */
 export function cleanTimeText(text: string): string {
-  const kept = text.replace(/[^\d:]/g, '');
+  const kept = text.replace(/[.,]/g, ':').replace(/[^\d:]/g, '');
   const colon = kept.indexOf(':');
   return colon < 0 ? kept : `${kept.slice(0, colon + 1)}${kept.slice(colon + 1).replace(/:/g, '')}`;
 }
@@ -39,8 +42,9 @@ type TimeInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onC
 };
 
 /**
- * A time field in mm:ss. It takes digits and one colon only, reports a value only when the text is a valid time, and
- * tidies the text to mm:ss when it loses focus. While focused, the wheel and the arrow keys step it.
+ * A time field in mm:ss. It takes digits and one colon only (a point or comma from a number pad becomes the colon),
+ * reports a value only when the text is a valid time, and tidies the text to mm:ss when it loses focus. While focused,
+ * the wheel and the arrow keys step it.
  */
 export function TimeInput({ value, onChange, min = 0, max = 999 * 60_000 + 59_000, stepMs = 5000, allowEmpty = false, onBlur, onKeyDown, ...rest }: TimeInputProps) {
   const shown = (ms: number) => allowEmpty && !ms ? '' : formatTimeText(ms);
@@ -72,7 +76,7 @@ export function TimeInput({ value, onChange, min = 0, max = 999 * 60_000 + 59_00
     return () => element.removeEventListener('wheel', wheel);
   }, []);
 
-  return <input {...rest} ref={input} inputMode="numeric" autoComplete="off" value={text} aria-invalid={invalid || undefined}
+  return <input {...rest} ref={input} inputMode="decimal" autoComplete="off" value={text} aria-invalid={invalid || undefined}
     onChange={event => {
       const clean = cleanTimeText(event.target.value);
       setText(clean);

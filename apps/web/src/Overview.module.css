@@ -2,6 +2,10 @@
 /* The heading: title across, then the description beside a compact action box, then the chips on one row. */
 .head { margin-bottom: 28px; }
 .head h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 12px 0 6px; }
+/* A session of this workout running on another device, offered above the description and the actions (ENG-15). */
+.live { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 14px; margin: 10px 0 16px; padding: 12px 16px; border: 1px solid var(--accent-border); border-radius: 14px; background: var(--accent-soft); font-size: 14px; }
+.live strong { font-weight: 600; }
+.live button { min-height: 40px; padding: 6px 16px; font-size: 13px; }
 .lead { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 28px; }
 .leadText > :last-child { margin-bottom: 14px; }
 /* Start across the top of the box, then Edit and Duplicate, then Export and Remove. */
@@ -16,11 +20,15 @@
 .chips > * { flex-shrink: 0; }
 .attribution { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; color: var(--ink-3); font-size: 12px; }
 .attribution a { color: var(--accent-text); text-underline-offset: 3px; }
-.facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 0 0 26px; padding: 18px 22px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; }
+.facts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin: 0 0 26px; padding: 18px 22px; background: var(--surface-1); border: 1px solid var(--line); border-radius: 16px; }
 .facts dt { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); }
 .facts dd { margin: 5px 0 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.4px; }
 .sections { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .section { padding: 22px 24px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border: 1px solid var(--line); border-radius: 20px; }
+/* The feel of the library's cards: a drop shadow on hover and a light pointer tilt (feel.ts sets --tilt-x/--tilt-y on fine pointers only).
+   A block is much larger than a card, so it turns by less than half the angle, and nothing happens on a click: no pointer cursor, no ripple. */
+.section { transform: perspective(1600px) rotateX(calc(var(--tilt-x, 0deg) * .4)) rotateY(calc(var(--tilt-y, 0deg) * .4)); transition: transform 160ms var(--ease), box-shadow var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.section:hover { box-shadow: 0 14px 34px var(--shadow); border-color: var(--line-2); }
 .sectionHeading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 14px; }
 .sectionHeading h2 { font-size: 24px; font-weight: 600; letter-spacing: -.6px; margin: 0; }
 .blockTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: 6px; }

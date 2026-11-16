@@ -30,10 +30,10 @@ export function linkWorkout(workout: Workout, catalogue: Catalogue): Workout {
   return { ...workout, sections: workout.sections.map(section => ({ ...section, body: walk(section.body) })) };
 }
 
-/** Movement names in a draft that no record knows, each once, in authored order. */
+/** Movement names in a draft that no record knows, each once, in authored order. A solo draft keeps athlete B's lanes unused; those do not count. */
 export function unmatchedMovements(draft: BuilderDraft, catalogue: Catalogue): string[] {
   const names: string[] = [];
-  for (const section of draft.sections) for (const slot of slotsOf(section.slots)) for (const prescription of [slot.A, slot.B]) {
+  for (const section of draft.sections) for (const slot of slotsOf(section.slots)) for (const prescription of draft.participants === 2 ? [slot.A, slot.B] : [slot.A]) {
     if (!prescription || !prescription.name.trim() || catalogue.resolve(prescription)) continue;
     if (!names.some(name => name.toLowerCase() === prescription.name.trim().toLowerCase())) names.push(prescription.name.trim());
   }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { Preferences, ThemePreference } from './preferences';
 
 export type Theme = 'light' | 'dark';
@@ -7,6 +7,26 @@ const THEME_COLOR: Record<Theme, string> = { dark: '#101613', light: '#f3f5ee' }
 export function resolveTheme(preference: ThemePreference, prefersDark: boolean): Theme {
   return preference === 'auto' ? (prefersDark ? 'dark' : 'light') : preference;
 }
+
+const PREFERS_DARK = '(prefers-color-scheme: dark)';
+const onSystemTheme = (notify: () => void) => { const media = window.matchMedia(PREFERS_DARK); media.addEventListener('change', notify); return () => media.removeEventListener('change', notify); };
+
+/** The theme in effect: the explicit choice, or the operating system's while the preference is Auto, followed live. */
+export function useResolvedTheme(preference: ThemePreference): Theme {
+  return resolveTheme(preference, useSyncExternalStore(onSystemTheme, () => window.matchMedia(PREFERS_DARK).matches));
+}
+
+/**
+ * The stylesheet's own colours per theme, mirrored from global.css: a setting shows the built-in colour of either theme,
+ * and only the one in effect can be read from the page.
+ */
+export const BUILT_IN_COLORS = {
+  accent: { dark: '#c8ee91', light: '#3f8313' },
+  rest: { dark: '#a3cbf0', light: '#1d5fa8' },
+  paused: { dark: '#d1ccb8', light: '#6a6355' },
+  amber: { dark: '#f4ca80', light: '#a35f00' },
+  red: { dark: '#ff998c', light: '#c12b1e' },
+} satisfies Record<string, Record<Theme, string>>;
 
 export function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;

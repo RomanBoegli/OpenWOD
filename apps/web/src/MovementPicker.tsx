@@ -3,6 +3,7 @@ import type { Catalogue, Movement } from '../../../packages/domain/src/catalogue
 import { rankBySearch } from '../../../packages/domain/src/search';
 import type { Prescription } from '../../../packages/domain/src/schema';
 import { Icon } from './Icon';
+import { keepFocus } from './suggestions';
 import styles from './MovementPicker.module.css';
 
 /** Ranked fields for the movement picker and the settings search: the name first, then aliases, the family head, equipment. */
@@ -53,24 +54,28 @@ export function MovementPicker({ value, label, catalogue, invalid, onChange, onP
     setOpen(false);
   };
   const add = () => { const created = onAdd(query); pick(created); };
+  /**
+   * A retyped name is another movement: the link goes, and with it the short and spoken names of the picked record. Any
+   * change of the text opens the list; Android keyboards, dictation, swipe typing and a paste send no printable key.
+   */
+  const rename = (name: string) => { setOpen(true); onChange(current => { const { movement: _m, shortName: _s, spokenName: _v, ...rest } = current; return { ...rest, name }; }); };
 
   return <div ref={root} className={styles.picker} data-unmatched={unmatched || undefined}>
     <input
       role="combobox" aria-label={label} aria-autocomplete="list" aria-expanded={open && options.length > 0} aria-controls={listId} aria-activedescendant={open && options[active] ? `${listId}-${active}` : undefined}
-      value={value.name} maxLength={160} placeholder="Movement" autoComplete="off" aria-invalid={invalid || undefined}
-      onChange={event => { const name = event.target.value; onChange(current => { const { movement: _m, ...rest } = current; return { ...rest, name }; }); }}
+      value={value.name} maxLength={160} placeholder="Movement" autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false} aria-invalid={invalid || undefined}
+      onChange={event => rename(event.target.value)}
       onBlur={() => setOpen(false)}
       onKeyDown={event => {
-        if (event.key.length === 1 || event.key === 'Backspace') setOpen(true);
         if (event.key === 'ArrowDown') { event.preventDefault(); setOpen(true); setActive(index => Math.min(index + 1, Math.max(options.length - 1, 0))); }
         else if (event.key === 'ArrowUp') { event.preventDefault(); setActive(index => Math.max(index - 1, 0)); }
         else if (event.key === 'Enter' && open && options[active]) { event.preventDefault(); pick(options[active]); }
         else if (event.key === 'Escape') setOpen(false);
       }} />
-    {open && options.length > 0 && <ul id={listId} role="listbox" className={styles.list} aria-label={`Movements matching ${query}`}>
+    {open && options.length > 0 && <ul id={listId} role="listbox" className={styles.list} aria-label={`Movements matching ${query}`} {...keepFocus}>
       {options.map((option, index) => {
         const head = option.family ? catalogue.head(option) : undefined;
-        return <li key={option.id} id={`${listId}-${index}`} role="option" aria-selected={index === active} data-active={index === active} onPointerDown={event => event.preventDefault()} onClick={() => pick(option)} onPointerEnter={() => setActive(index)}>
+        return <li key={option.id} id={`${listId}-${index}`} role="option" aria-selected={index === active} data-active={index === active} onClick={() => pick(option)} onPointerEnter={() => setActive(index)}>
           <span className={styles.optionName}>{option.name}</span>
           <small>{[head && head.id !== option.id ? `${head.name} variant` : '', ...(option.equipment ?? [])].filter(Boolean).join(' · ') || 'Bodyweight'}</small>
         </li>;

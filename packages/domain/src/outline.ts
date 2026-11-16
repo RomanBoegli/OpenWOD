@@ -47,6 +47,9 @@ export interface OutlineSection {
 
 const pathKey = (rounds: RoundContext[]) => rounds.map(round => `${round.nodeId}:${round.iteration}`).join('.');
 
+/** All authored rest of a workout: every transition, round rest and block rest the plan plays, so "up to 60:00" can say how much of it is rest. */
+export const restMs = (plan: ExecutionPlan): number => plan.occurrences.reduce((sum, item) => item.phase === 'work' ? sum : sum + item.durationMs, 0);
+
 /** Where a work occurrence stands in its round, for the player's round donut (UI-24). */
 export interface RoundProgress {
   /** 1-based position among the work of the same round of the same block, and how much work that round holds. */

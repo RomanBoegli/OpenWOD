@@ -73,6 +73,23 @@ describe('editor builder model', () => {
     (draft.sections[0].slots[1] as BuilderSlot).durationMs = 500;
     expect(validateDraft(draft).map(issue => issue.path)).toEqual(['sections.0.slots.1.durationMs']);
   });
+
+  it('ignores the athlete B lanes, swaps and Done rules a solo draft still carries', () => {
+    // The editor hides athlete B for Solo and deletes nothing, so switching back to Pair restores it.
+    const pair = emptyDraft(2);
+    pair.title = 'Kept Lanes';
+    pair.sections[0] = { ...pair.sections[0], rounds: 2, alternate: true, slots: [
+      { A: { name: 'Row' }, B: { name: '' }, durationMs: 40_000 },
+      { kind: 'group', rounds: 2, betweenRoundsRestMs: 0, alternate: true, betweenSlotsRestMs: 0, slots: [{ A: { name: 'Burpees' }, B: { name: 'Air Squats', reps: 0 }, durationMs: 30_000 }] },
+    ] };
+    pair.sections.push({ ...emptySection(2, 'forTime'), title: 'Finisher', slots: [{ A: { name: 'Thrusters', reps: 21 }, B: { name: 'Pull-Ups', reps: 21 }, durationMs: 0, completion: 'both' }] });
+    expect(validateDraft(pair).map(issue => issue.path)).toEqual(['sections.0.slots.0.B', 'sections.0.slots.1.slots.0.B.reps']);
+    const solo = { ...pair, participants: 1 as const };
+    expect(validateDraft(solo)).toEqual([]);
+    const workout = builderToWorkout(solo, { id: 'kept-lanes', revision: 1 });
+    expect(JSON.stringify(workout)).not.toMatch(/"B"|assignmentPolicy|completion|Air Squats|Pull-Ups/);
+    expect(compileWorkout(workout).occurrences.every(item => !item.assignments?.B)).toBe(true);
+  });
 });
 
 /** What a workout does, IDs aside: each work in order, the time between it and the work before, and its rounds. */

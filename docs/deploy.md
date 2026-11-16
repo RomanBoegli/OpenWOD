@@ -115,7 +115,11 @@ The installed app still loads from the server on every start and keeps the devic
 
 Workouts, collections, the movement catalogue's edits and the session log of the household live in the database.
 Each device keeps a cache of them for an instant start and for reading while the server is away, and an outbox of changes that could not be uploaded yet.
-A running session is checkpointed on the device, never on the server, so a server restart or redeploy during a workout changes nothing in the player.
+A running session is checkpointed on its device first, and the player never waits for the server, so a server restart or redeploy during a workout changes nothing in the player.
+In the background the device also sends each checkpoint and, every few seconds, a small progress record to the server, so that another device can continue the session (hand-over).
+The table `live_sessions` holds the last of each per running session.
+That copy is removed when the session is finished or discarded, and 12 hours after its device last wrote to it.
+It is working state: the JSON export does not carry it and a restore clears it.
 Preferences such as names, theme and sound stay on each device.
 
 ## Backup
@@ -168,6 +172,7 @@ Select a newer tested image, re-pull and redeploy the same stack.
 The `/data` volume stays attached.
 If the new version carries a schema migration, the server first writes the pre-migration backup under `/data/backups/`, then migrates inside a transaction, then starts serving.
 Watch the container logs for the line `Database migrated.` and the health check turning healthy.
+Schema version 4 adds the table `live_sessions` for the hand-over between devices and changes no existing table.
 A running player is not interrupted by a redeploy: its assets are content-hashed and already loaded, and the session is checkpointed on the device.
 Still, finish the session first when you can.
 
@@ -177,6 +182,8 @@ Rolling back is choosing the previous image.
 If the previous image understands the current schema, nothing else is needed.
 If the schema is newer than that image supports, the old image refuses to start and says so in its log, because it would otherwise misread the data.
 Then restore the matching pre-migration backup from `/data/backups/` as above.
+Schema version 4 is such a case: a 1.5.x image supports schema version 3 at most and refuses a database that a newer image has migrated.
+Going back to 1.5.x therefore needs the backup the server wrote by itself before that migration, `/data/backups/pre-migration-v3-to-v4-<timestamp>.sqlite`.
 Anything written after that migration is lost by that restore, so decide knowingly.
 
 Stopping or recreating a stack keeps its named volume.

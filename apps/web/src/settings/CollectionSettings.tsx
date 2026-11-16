@@ -60,9 +60,9 @@ export function CollectionSettings({ masterData, onMasterDataChange, entries, ho
     <FormDialog open={Boolean(form)} wide title={form?.id ? `Edit ${collections.find(item => item.id === form.id)?.title ?? 'collection'}` : 'New collection'} submitLabel={form?.id ? 'Save collection' : 'Create collection'} disabled={!form?.title.trim()} onSubmit={save} onClose={() => setForm(undefined)}>
       {form && <>
         <div className={styles.formGrid}>
-          <label className={styles.field}>Title<input value={form.title} maxLength={120} placeholder="Tuesday favourites" onChange={event => setForm({ ...form, title: event.target.value })} /></label>
-          <label className={styles.field}>Description<input value={form.description} maxLength={500} placeholder="Optional, shown under the title" onChange={event => setForm({ ...form, description: event.target.value })} /></label>
-          <label className={`${styles.field} ${styles.wide}`}>Find workouts<input type="search" value={search} placeholder="Filter by title" onChange={event => setSearch(event.target.value)} /></label>
+          <label className={styles.field}>Title<input value={form.title} maxLength={120} onChange={event => setForm({ ...form, title: event.target.value })} /></label>
+          <label className={styles.field}>Description<input value={form.description} maxLength={500} onChange={event => setForm({ ...form, description: event.target.value })} /></label>
+          <label className={`${styles.field} ${styles.wide}`}>Find workouts<input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
         </div>
         <div className={styles.chipRow} role="group" aria-label="Workouts in this collection">{visibleWorkouts.map(entry => <Chip key={entry.workout.id} kind="neutral" pressed={form.workoutIds.includes(entry.workout.id)} onClick={() => setForm({ ...form, workoutIds: form.workoutIds.includes(entry.workout.id) ? form.workoutIds.filter(id => id !== entry.workout.id) : [...form.workoutIds, entry.workout.id] })}>{entry.summary.title}</Chip>)}</div>
         <p className={shared.fieldNote}>{plural(form.workoutIds.length, 'workout')} selected</p>

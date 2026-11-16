@@ -8,3 +8,5 @@
 .guide { margin: 10px 0 0; max-height: 40vh; overflow: auto; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--input-bg); color: var(--ink); font: 12px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 .answer textarea { width: 100%; min-width: 0; min-height: 160px; resize: vertical; padding: 11px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--input-bg); color: var(--ink); font: 12px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 .step .answer { margin-bottom: 0; }
+/* Phones: every form control at 16 px. Below that iOS Safari zooms the page when a field takes the focus. */
+@media (max-width: 620px) { .answer textarea { font-size: 16px; } }

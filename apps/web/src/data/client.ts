@@ -15,9 +15,13 @@ export class NetworkError extends Error {
   constructor(message = 'The household server is not reachable.') { super(message); this.name = 'NetworkError'; }
 }
 
-export interface RequestOptions { body?: unknown; ifMatch?: number; timeoutMs?: number; signal?: AbortSignal }
+export interface RequestOptions {
+  body?: unknown; ifMatch?: number; timeoutMs?: number; signal?: AbortSignal;
+  /** Lets the browser finish the request after the page is hidden or closed (a last save on the way out). Browsers cap such bodies at about 64 KB in all. */
+  keepalive?: boolean;
+}
 
-export async function request<T>(method: 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE', path: string, { body, ifMatch, timeoutMs = 10_000, signal }: RequestOptions = {}): Promise<T> {
+export async function request<T>(method: 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE', path: string, { body, ifMatch, timeoutMs = 10_000, signal, keepalive = false }: RequestOptions = {}): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   signal?.addEventListener('abort', () => controller.abort(), { once: true });
@@ -27,7 +31,7 @@ export async function request<T>(method: 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DEL
   if (__OPENWOD_TEST__ && window.__openwodScope) headers['x-openwod-scope'] = window.__openwodScope;
   let response: Response;
   try {
-    response = await fetch(`/api/v1${path}`, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: controller.signal, cache: 'no-store' });
+    response = await fetch(`/api/v1${path}`, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: controller.signal, cache: 'no-store', ...(keepalive ? { keepalive } : {}) });
   } catch (error) {
     throw new NetworkError(error instanceof DOMException && error.name === 'AbortError' ? 'The household server did not answer in time.' : undefined);
   } finally { clearTimeout(timer); }

@@ -13,3 +13,18 @@ test('a time field takes digits and one colon, tidies to mm:ss, and steps with t
   await field.press('Shift+ArrowDown');
   await expect(field).toHaveValue('02:00');
 });
+
+test('a time field takes a point or a comma as the colon, for a phone keypad without one', async ({ page }) => {
+  await page.goto('./#/wod/partner-circuit/edit'); await page.getByRole('heading', { level: 1 }).waitFor();
+  const field = page.getByLabel('Rest between rounds');
+  await field.fill('');
+  await field.pressSequentially('1.30');
+  await expect(field).toHaveValue('1:30');
+  await field.blur();
+  await expect(field).toHaveValue('01:30');
+  await field.fill('');
+  await field.pressSequentially('2,05');
+  await field.blur();
+  await expect(field).toHaveValue('02:05');
+  await expect(field).toHaveAttribute('inputmode', 'decimal');
+});

@@ -18,17 +18,20 @@ import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } fro
 import { copyDraftId, copySource, freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
 import { allCollections, authorRepertoire, authorSpelling, canonicalAuthor, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
-import { draftHref, editHref, LOGBOOK_HREF, SETTINGS_HREF, useRoute, workoutHref } from './router';
+import { draftHref, editHref, LOGBOOK_HREF, playHref, SETTINGS_HREF, useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
 import { Icon } from './Icon';
 import { BrandMark } from './BrandMark';
 import { installFeel } from './feel';
 import { useLibraryData, type SaveResult } from './data/use-library-data';
 import { useSharedPreferences } from './data/shared-preferences';
+import { useLiveSessions } from './data/use-live-sessions';
 import { probeSessionLock, takeOverSession } from './data/session-lock';
+import { listRecoveries, type Recovery } from './data/checkpoints';
 import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
 import { newId } from './ids';
+import { onStartUnlock } from './start';
 
 /** The deployment shape in the footer, with a one-line explainer on hover or focus. */
 const BUNDLED_IDS = new Set(bundledWorkouts.map(workout => workout.id));
@@ -47,6 +50,8 @@ export default function App() {
   const [clipsReady, setClipsReady] = useState<boolean>();
   const [packs, setPacks] = useState<{ id: string; label: string }[]>([]);
   const data = useLibraryData();
+  // Sessions running on other devices of the household, which this one may continue (ENG-15). Empty in the static shape.
+  const live = useLiveSessions();
   const { saved, masterData, sessions, updateMasterData } = data;
   const recordSession = useCallback((record: SessionRecord) => { void data.recordSession(record).catch(() => undefined); }, [data]);
   const clearSession = useCallback((sessionId: string) => { void data.clearRecovery(sessionId); }, [data]);
@@ -65,8 +70,18 @@ export default function App() {
 
   useTheme(preferences.theme, preferences.accent, preferences.restColor, preferences.background);
   useEffect(() => { void audio.listPacks(); }, [audio]);
+  // A Start link's tap is the gesture that unlocks the sound; the player it opens begins at once (start.ts).
+  useEffect(() => onStartUnlock(() => { if (!__OPENWOD_TEST__) void audio.unlock(); }), [audio]);
   useEffect(() => installFeel(), []);
   useEffect(() => { if (route.name !== 'play' && route.name !== 'historyPlay') window.scrollTo(0, 0); }, [route]);
+  // The interrupted-session banners follow this device's checkpoints: read again on every route change (a player just left
+  // has paused and saved) and when the page comes back into view. The play route's own choice is made once, further down.
+  useEffect(() => { void data.refreshRecoveries(); }, [route, data.refreshRecoveries]);
+  useEffect(() => {
+    const visible = () => { if (document.visibilityState === 'visible') void data.refreshRecoveries(); };
+    document.addEventListener('visibilitychange', visible);
+    return () => document.removeEventListener('visibilitychange', visible);
+  }, [data.refreshRecoveries]);
 
   const collections = useMemo(() => allCollections(masterData), [masterData]);
   const catalogue = useMemo(() => effectiveCatalogue(masterData), [masterData]);
@@ -75,7 +90,7 @@ export default function App() {
   // A bundled workout you edited is a saved workout with its id and takes its place; one you removed is listed in master data.
   const hiddenWorkouts = useMemo(() => new Set(masterData.hiddenWorkouts), [masterData.hiddenWorkouts]);
   const bundledEntries = useMemo(() => bundledWorkouts.filter(workout => !hiddenWorkouts.has(workout.id) && !saved.some(item => item.id === workout.id)).map(workout => toEntry(workout, 'bundled', summaryOptions(workout.id))), [summaryOptions, hiddenWorkouts, saved]);
-  const savedEntries = useMemo(() => saved.filter(item => !hiddenWorkouts.has(item.id)).map(item => ({ ...toEntry(item.document, 'saved', summaryOptions(item.id)), pending: data.pendingIds.has(item.id), origin: item.origin, ...(BUNDLED_IDS.has(item.id) ? { bundled: true } : {}) })), [saved, summaryOptions, data.pendingIds, hiddenWorkouts]);
+  const savedEntries = useMemo(() => saved.filter(item => !hiddenWorkouts.has(item.id)).map(item => ({ ...toEntry(item.document, 'saved', summaryOptions(item.id)), pending: data.pendingIds.has(item.id), origin: item.origin, addedAt: item.createdAt, ...(BUNDLED_IDS.has(item.id) ? { bundled: true } : {}) })), [saved, summaryOptions, data.pendingIds, hiddenWorkouts]);
   const entries = useMemo<LibraryEntry[]>(() => [...bundledEntries, ...savedEntries], [bundledEntries, savedEntries]);
   const authors = useMemo(() => authorRepertoire(masterData, authorOptions(entries.map(entry => entry.summary))), [masterData, entries]);
   /** Applies an import preview's decisions; a single imported workout opens its overview, or the editor for a workout file the editor can represent. */
@@ -173,8 +188,37 @@ export default function App() {
   }, [saved, entries, catalogue, data, updateDrafts]);
 
   // A session interrupted on this device: the player restores it instead of starting fresh (ENG-12); it survives an edit or removal of the workout.
-  const recovery = route.name === 'play' ? data.recoveries.find(item => item.checkpoint.workoutId === route.id) : undefined;
-  useEffect(() => { if (route.name === 'play') void data.refreshRecoveries(); }, [route, data.refreshRecoveries]);
+  // The play route decides once, on entry, what it plays: the interrupted session it finds then, or a fresh one. A later read of the
+  // list never swaps the player under a live session, whose own checkpoint joins that list within a second of Start, and the
+  // finish screen stays when the checkpoint and the workout are both gone.
+  const playId = route.name === 'play' ? route.id : undefined;
+  // `turn` counts the sessions taken over from another device (ENG-15): each one mounts a new player, even for the same workout.
+  const [played, setPlayed] = useState<{ id: string; recovery?: Recovery; turn: number }>();
+  /** The workout whose handed-over session was latched just before its route opens, so the route's own look-up leaves it alone. */
+  const adopted = useRef<string>(undefined);
+  const findRecovery = useCallback(async (id: string) => { try { return (await listRecoveries()).find(item => item.checkpoint.workoutId === id); } catch { return undefined; } }, []);
+  useEffect(() => {
+    if (playId === undefined) { setPlayed(undefined); return; }
+    if (adopted.current === playId) { adopted.current = undefined; return; }
+    let cancelled = false;
+    void findRecovery(playId).then(found => { if (!cancelled) setPlayed({ id: playId, recovery: found, turn: 0 }); });
+    return () => { cancelled = true; };
+  }, [playId, findRecovery]);
+  const recovery = played && played.id === playId ? played.recovery : undefined;
+  /**
+   * Continue here (ENG-15): claims a session another device runs and opens its player with it. The session arrives in
+   * this device's checkpoints first, so from there it is an ordinary recovery: restored paused, asking before it goes on.
+   */
+  const continueSession = useCallback(async (sessionId: string) => {
+    const taken = await live.continueHere(sessionId);
+    if (!taken) return;
+    void data.refreshRecoveries();
+    const id = taken.checkpoint.workoutId;
+    adopted.current = playId === id ? undefined : id;
+    setPlayed(current => ({ id, recovery: taken, turn: (current?.turn ?? 0) + 1 }));
+    if (playId !== id) window.location.hash = playHref(id);
+  }, [live.continueHere, data.refreshRecoveries, playId]);
+  const elsewhere = useMemo(() => ({ sessions: live.sessions, ageMs: live.ageMs, onContinue: continueSession }), [live.sessions, live.ageMs, continueSession]);
   // Another tab may be controlling the checkpointed session (ENG-14): ask before restoring it here.
   const [lockState, setLockState] = useState<{ sessionId: string; state: 'checking' | 'free' | 'held' }>();
   useEffect(() => {
@@ -187,7 +231,8 @@ export default function App() {
   }, [recovery?.checkpoint.sessionId]);
   // Until the probe for this checkpoint has answered, the lock is unknown and the player must not mount (it would take the lock itself).
   const lockKnown = recovery ? (lockState?.sessionId === recovery.checkpoint.sessionId ? lockState.state : 'checking') : 'free';
-  const takeOver = async () => { if (!recovery) return; await takeOverSession(recovery.checkpoint.sessionId); await data.refreshRecoveries(); setLockState({ sessionId: recovery.checkpoint.sessionId, state: 'free' }); };
+  // The tab that handed over wrote its last checkpoint on the way out: read it again before restoring here.
+  const takeOver = async () => { if (!recovery || playId === undefined) return; await takeOverSession(recovery.checkpoint.sessionId); const found = await findRecovery(playId); setPlayed({ id: playId, recovery: found, turn: 0 }); void data.refreshRecoveries(); setLockState({ sessionId: recovery.checkpoint.sessionId, state: 'free' }); };
   const current = route.name === 'copy' ? entries.find(entry => entry.workout.id === route.id) : route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
   const importedDraft = route.name === 'draft' ? drafts.find(draft => draft.id === route.id) : undefined;
   // Editor inputs: a resumed draft wins; otherwise the workout itself, or a titled copy for Duplicate.
@@ -205,7 +250,7 @@ export default function App() {
       return initial ? { id: stored?.id ?? copyDraftId(current.workout.id), mode: 'create' as const, initial } : undefined;
     })() : undefined;
   const editingDraft = editing && drafts.find(draft => draft.id === editing.id);
-  const notice = [data.notice, storageError, importReport].filter(Boolean).join(' ');
+  const notice = [data.notice, storageError, importReport, live.notice].filter(Boolean).join(' ');
   const pendingCount = data.pendingIds.size;
   // The running server's version when known (that is what is deployed), else the version this bundle was built from.
   const appVersion = data.serverVersion ?? __OPENWOD_VERSION__;
@@ -227,19 +272,20 @@ export default function App() {
 
     <main className={styles.main}>
       {audioNotice && route.name !== 'play' && <div className={styles.notice} role="status" style={{ marginBottom: 18 }}>{audioNotice} <button type="button" className={styles.quietButton} onClick={() => setAudioNotice('')}>Dismiss</button></div>}
-      {route.name === 'play' && (!data.recoveriesReady || lockKnown === 'checking') ? <p className={styles.headerNote}>Checking for an interrupted session…</p>
+      {live.notice && route.name !== 'library' && <div className={styles.notice} role="alert" style={{ marginBottom: 18 }}>{live.notice} <button type="button" className={styles.quietButton} onClick={live.clearNotice}>Dismiss</button></div>}
+      {route.name === 'play' && (played?.id !== route.id || lockKnown === 'checking') ? <p className={styles.headerNote}>Checking for an interrupted session…</p>
         : route.name === 'play' && recovery && lockKnown === 'held' ? <section className={styles.recovery} role="region" aria-label="Session in another tab"><div><strong>“{recovery.checkpoint.workout.title}” is running in another tab.</strong><p>Only one tab controls a session. Take it over here and the other tab pauses and hands over, or go back and use that tab.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href={workoutHref(recovery.checkpoint.workoutId)}>Back to overview</a><button className={styles.primaryButton} onClick={() => void takeOver()}><Icon name="play" />Take over here</button></div></section>
-        : route.name === 'play' && (recovery || current) ? <Player key={route.id} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
-        : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
+        : route.name === 'play' && (recovery || current) ? <Player key={`${route.id}:${played?.turn ?? 0}`} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
+        : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} logbook={{ sessions, onCorrect: data.correctSession, onDelete: data.deleteSession, onLoadMore: data.loadMoreSessions, fetchSession: data.fetchSession }} />
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} authors={authors} authorSpelling={authorSpelling(masterData)} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>
         : (route.name === 'edit' || route.name === 'copy') && current ? <div className={styles.notice} role="status">“{current.summary.title}” uses a structure the editor cannot change yet. You can still export it or read through it. <a href={workoutHref(current.workout.id)}>Back to the overview</a>.</div>
-        : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} onExport={workout => { void exportOne(workout); }} />
+        : current ? <Overview key={current.workout.id} entry={current} names={preferences.names} collections={collections.filter(collection => collection.workoutIds.includes(current.workout.id))} sessions={sessions.filter(session => session.workoutId === current.workout.id)} live={elsewhere} loadsFor={preferences.loadsFor} loadUnit={preferences.loadUnit} onRemove={removeWorkout} onExport={workout => { void exportOne(workout); }} />
         : route.name === 'notFound' ? <NotFound />
         : route.name !== 'library' && !data.loaded ? <p className={styles.headerNote}>Loading the library…</p>
         : route.name !== 'library' ? <NotFound missingId={'id' in route ? route.id : undefined} />
-        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); }} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} catalogue={catalogue} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} />}
+        : <Library mode={data.mode} entries={entries} collections={collections} sessions={sessions} onImportPack={importPack} onImportDraft={importDraft} onExportLibrary={exportLibrary} notice={notice} onClearNotice={() => { data.clearNotice(); setStorageError(''); setImportReport(''); live.clearNotice(); }} drafts={drafts} onDiscardDraft={discardDraft} preferences={preferences} onPreferencesChange={setPreferences} catalogue={catalogue} connection={data.connection} legacy={data.legacy} migrating={data.migrating} onMigrate={data.migrateDevice} conflicts={data.conflicts} rejected={data.rejected} onResolveConflict={data.resolveConflict} onDismissRejected={data.dismissRejected} recoveries={data.recoveries} onDiscardRecovery={data.clearRecovery} live={elsewhere} onDiscardLive={live.discard} />}
       <ConfirmDialog open={Boolean(exportRequest)} title={`Export “${exportRequest?.title ?? ''}” as a pack?`} confirmLabel={`Export ${exportRequest?.workouts.length ?? 0} ${exportRequest?.workouts.length === 1 ? 'workout' : 'workouts'}`} cancelLabel="Cancel" onClose={() => setExportRequest(undefined)} onConfirm={() => void confirmPackExport()}>
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>

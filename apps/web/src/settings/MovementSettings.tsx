@@ -83,7 +83,7 @@ export function MovementSettings({ masterData, onMasterDataChange, catalogue, en
       <div className={styles.cardHeading}><h2 id="movements-title">Movements</h2><span className={styles.hint}>{catalogue.records.length} records{customised ? ` · ${plural(customised, 'change')} of yours` : ''}</span></div>
       <p className={styles.hint}>Variants sit under their family (Hang power cleans under Cleans). Tick two or more to merge them; every merged name keeps resolving to the one you keep.</p>
       <div className={styles.listTop}>
-        <label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} placeholder="thruster, clean, kettlebell…" aria-label="Find movements" onChange={event => setQuery(event.target.value)} /></label>
+        <label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} aria-label="Find movements" onChange={event => setQuery(event.target.value)} /></label>
         <button type="button" className={shared.primaryButton} onClick={() => setForm(emptyForm())}><Icon name="plus" size={16} />New movement</button>
       </div>
       {selection.length >= 2 && <div className={styles.mergeBar} role="group" aria-label="Merge selected movements">
@@ -113,14 +113,14 @@ export function MovementSettings({ masterData, onMasterDataChange, catalogue, en
 
     <FormDialog open={Boolean(form)} wide title={form?.id ? `Edit ${catalogue.get(form.id)?.name ?? 'movement'}` : 'New movement'} submitLabel={form?.id ? 'Save movement' : 'Add movement'} disabled={!form?.name.trim()} onSubmit={save} onClose={() => setForm(undefined)}>
       {form && <div className={styles.formGrid}>
-        <label className={styles.field}>Name<input value={form.name} maxLength={160} placeholder="Hang power cleans" onChange={event => setForm({ ...form, name: event.target.value })} /></label>
+        <label className={styles.field}>Name<input value={form.name} maxLength={160} onChange={event => setForm({ ...form, name: event.target.value })} /></label>
         <label className={styles.field}>Family<select value={form.family} onChange={event => setForm({ ...form, family: event.target.value })}><option value="">None (stands alone)</option>{heads.filter(head => head.id !== form.id).map(head => <option key={head.id} value={head.id}>{head.name}</option>)}</select></label>
-        <label className={styles.field}>Short name<input value={form.shortName} maxLength={60} placeholder="HPC" onChange={event => setForm({ ...form, shortName: event.target.value })} /></label>
-        <label className={styles.field}>Spoken name<input value={form.spokenName} maxLength={160} placeholder="hang power cleans" onChange={event => setForm({ ...form, spokenName: event.target.value })} /></label>
-        <label className={styles.field}>Also known as<input value={form.aliases} maxLength={500} placeholder="HPC, hang power clean" onChange={event => setForm({ ...form, aliases: event.target.value })} /></label>
+        <label className={styles.field}>Short name<input value={form.shortName} maxLength={60} onChange={event => setForm({ ...form, shortName: event.target.value })} /></label>
+        <label className={styles.field}>Spoken name<input value={form.spokenName} maxLength={160} onChange={event => setForm({ ...form, spokenName: event.target.value })} /></label>
+        <label className={styles.field}>Also known as<input value={form.aliases} maxLength={500} onChange={event => setForm({ ...form, aliases: event.target.value })} /></label>
         <label className={styles.field}>Category<select value={form.category} onChange={event => setForm({ ...form, category: event.target.value as MovementForm['category'] })}><option value="">Unset</option>{MOVEMENT_CATEGORIES.map(category => <option key={category} value={category}>{CATEGORY_LABELS[category]}</option>)}</select></label>
-        <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={form.equipment} options={equipmentChoices} placeholder="Barbell, Pull-up bar…" onChange={equipment => setForm({ ...form, equipment })} /></div>
-        <label className={`${styles.field} ${styles.wide}`}>Notes<input value={form.notes} maxLength={500} placeholder="Standards, scaling, cues" onChange={event => setForm({ ...form, notes: event.target.value })} /></label>
+        <div className={styles.field}><span>Equipment</span><TagPicker label="Equipment" value={form.equipment} options={equipmentChoices} onChange={equipment => setForm({ ...form, equipment })} /></div>
+        <label className={`${styles.field} ${styles.wide}`}>Notes<input value={form.notes} maxLength={500} onChange={event => setForm({ ...form, notes: event.target.value })} /></label>
       </div>}
     </FormDialog>
     <ConfirmDialog open={Boolean(removing)} title={`Remove ${removing?.name ?? ''}?`} confirmLabel="Remove" cancelLabel="Keep it" onConfirm={() => { if (removing) onMasterDataChange(data => removeMovement(data, removing.id)); setRemoving(undefined); }} onClose={() => setRemoving(undefined)}>

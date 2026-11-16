@@ -7,13 +7,16 @@ import type { WorkoutAudio } from './audio';
 import { Chip } from './Chip';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from './Icon';
+import { NumberInput } from './NumberInput';
 import { TimeInput } from './TimeInput';
 import type { LibraryEntry } from './Library';
 import { Player } from './Player';
 import { sessionScore } from './session-log';
 import type { Preferences } from './preferences';
 import { LOGBOOK_HREF, playHref, snapshotPlayHref, workoutHref } from './router';
+import { requestStart } from './start';
 import type { SessionView } from './data/use-library-data';
+import type { LiveOffers } from './data/use-live-sessions';
 import type { DataMode } from './data/mode';
 import styles from './History.module.css';
 import settings from './Settings.module.css';
@@ -72,7 +75,7 @@ export function Logbook({ mode, sessions, entries, onCorrect, onDelete, onLoadMo
             <p className={styles.meta}><time dateTime={session.finishedAt}>{shortWhen(session.finishedAt)}</time> · {displayTime(session.activeMs, 'floor')}{score ? ` · ${score}` : ''}</p>
           </div>
           <div className={styles.actions}>
-            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} aria-label="Repeat" title={entry ? 'Repeat' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name="play" size={16} /></a>
+            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} onClick={() => requestStart(session.workoutId)} aria-label="Repeat" title={entry ? 'Repeat' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name="play" size={16} /></a>
             {!session.pending && session.results.length > 0 && <button type="button" className={shared.iconButton} aria-label="Correct score" title="Correct score" onClick={() => setCorrecting(session)}><Icon name="edit" size={16} /></button>}
             <button type="button" className={shared.iconButton} aria-label="Delete" title="Delete" onClick={() => setDeleting(session)}><Icon name="trash" size={16} /></button>
           </div>
@@ -99,16 +102,16 @@ function CorrectionDialog({ session, fetchSession, onClose, onSave }: { session:
       {results.map((result, index) => <fieldset key={result.sectionId} className={styles.section}>
         <legend>{result.sectionId}</legend>
         {result.counter && <div className={styles.pair}>
-          <label>Rounds<input type="number" min={0} value={result.counter.rounds} onChange={event => update(index, { counter: { rounds: Math.max(0, Number(event.target.value) || 0), reps: result.counter!.reps } })} /></label>
-          <label>Reps<input type="number" min={0} value={result.counter.reps} onChange={event => update(index, { counter: { rounds: result.counter!.rounds, reps: Math.max(0, Number(event.target.value) || 0) } })} /></label>
+          <label>Rounds<NumberInput value={result.counter.rounds} onChange={rounds => { if (rounds !== '') update(index, { counter: { rounds, reps: result.counter!.reps } }); }} /></label>
+          <label>Reps<NumberInput value={result.counter.reps} onChange={reps => { if (reps !== '') update(index, { counter: { rounds: result.counter!.rounds, reps } }); }} /></label>
         </div>}
         {(result.format === 'forTime' || result.format === 'strength') && <label>Time (mm:ss)<TimeInput value={times[index]} stepMs={1000} onChange={ms => setTimes(current => current.map((time, at) => at === index ? ms : time))} /></label>}
         {result.teamRounds !== undefined && <div className={styles.pair}>
-          <label>Team rounds<input type="number" min={0} value={result.teamRounds} onChange={event => update(index, { teamRounds: Math.max(0, Number(event.target.value) || 0) })} /></label>
-          <label>Turns<input type="number" min={0} value={result.turns ?? 0} onChange={event => update(index, { turns: Math.max(0, Number(event.target.value) || 0) })} /></label>
+          <label>Team rounds<NumberInput value={result.teamRounds} onChange={teamRounds => { if (teamRounds !== '') update(index, { teamRounds }); }} /></label>
+          <label>Turns<NumberInput value={result.turns ?? 0} onChange={turns => { if (turns !== '') update(index, { turns }); }} /></label>
         </div>}
       </fieldset>)}
-      <label>Note<input value={note} maxLength={500} placeholder="Why the score changes" onChange={event => setNote(event.target.value)} /></label>
+      <label>Note<input value={note} maxLength={500} onChange={event => setNote(event.target.value)} /></label>
       <p className={styles.prior}>Current: {sessionScore({ activeMs: -1, results: session.results }) || 'no score'}</p>
       {history?.map((item, index) => <p key={index} className={styles.prior}>Before {when(item.correctedAt)}: {sessionScore({ activeMs: -1, results: item.previousResults }) || 'no score'}{item.note ? ` (${item.note})` : ''}</p>)}
     </div>
@@ -125,6 +128,8 @@ interface SnapshotPlayerProps {
   onPerformingChange: (performing: boolean) => void;
   onSessionEnd: (record: SessionRecord) => void;
   onSessionClear?: (sessionId: string) => void;
+  /** Sessions on other devices (ENG-15), for the player's take-over and offer. */
+  live?: LiveOffers;
 }
 
 /** Plays the workout exactly as it was saved with a past session, for workouts that have since left the library (DAT-05/09). */

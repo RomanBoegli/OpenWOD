@@ -11,7 +11,7 @@ import { compileSchema, issuesOf, parseWorkout, WorkoutValidationError } from '.
 import { SectionResultSchema, SessionRecordSchema, type SessionRecord } from '../../../packages/engine/src/records';
 import { MAX_RESTORE_BYTES } from '../../../packages/household/src/export';
 import { ApiError, NotFoundError } from './errors';
-import type { PackDecision, Store } from './store';
+import type { LiveSessionClaim, LiveSessionPut, PackDecision, Store } from './store';
 
 const LARGE_BODY = 4 * 1_048_576;
 const STAMP = Type.String({ minLength: 10, maxLength: 40 });
@@ -39,6 +39,19 @@ const PackImportBody = Type.Object({
   collections: Type.Array(Type.Object({ title: Type.String({ minLength: 1, maxLength: 120 }), description: Type.Optional(Type.String({ maxLength: 500 })), workoutIds: Type.Array(Type.String({ maxLength: 120 }), { maxItems: 500 }) }, { additionalProperties: false }), { maxItems: 50 }),
   decisions: Type.Record(Type.String({ maxLength: 120 }), PackDecisionSchema),
 }, { additionalProperties: false });
+/**
+ * Hand-over (ENG-15). A checkpoint is the player's own record: its workout is validated like a session upload's, its
+ * engine snapshot is opaque here and only has to be an object. Only a session still under way has a live row.
+ */
+const LIVE_ID = Type.String({ minLength: 1, maxLength: SESSION_ID_MAX });
+const LiveDevice = { deviceId: Type.String({ minLength: 1, maxLength: 80 }), deviceLabel: Type.String({ minLength: 1, maxLength: 60 }) };
+const LiveCheckpointSchema = Type.Object({
+  sessionId: LIVE_ID, workoutId: Type.String({ minLength: 1, maxLength: 120 }), workoutRevision: Type.Integer({ minimum: 1 }), workout: Type.Unknown(), snapshot: Type.Object({}, { additionalProperties: true }),
+  revision: Type.Integer({ minimum: 0 }), status: Type.Union([Type.Literal('preparing'), Type.Literal('running'), Type.Literal('paused'), Type.Literal('awaitingReady')]), savedAt: STAMP, startedAt: Type.Optional(STAMP),
+}, { additionalProperties: false });
+const LiveProgressSchema = Type.Object({ sessionId: LIVE_ID, checkpointRevision: Type.Integer({ minimum: 0 }), phaseMs: Type.Number({ minimum: 0 }), activeMs: Type.Number({ minimum: 0 }), sectionMs: Type.Number({ minimum: 0 }), savedAt: STAMP }, { additionalProperties: false });
+const LiveSessionBody = Type.Object({ ...LiveDevice, checkpoint: Type.Optional(LiveCheckpointSchema), progress: Type.Optional(LiveProgressSchema) }, { additionalProperties: false });
+const LiveClaimBody = Type.Object(LiveDevice, { additionalProperties: false });
 
 const validators = {
   document: compileSchema<{ document: unknown }>(DocumentBody),
@@ -48,6 +61,8 @@ const validators = {
   correction: compileSchema<{ results: SessionRecord['results']; note?: string }>(CorrectionBody),
   deviceImport: compileSchema<{ deviceId: string; workouts: unknown[]; masterData: unknown; sessions: (Partial<SessionRecord> & { id: string; workoutId: string; title: string; startedAt: string; finishedAt: string; outcome: SessionRecord['outcome']; completion: number; activeMs: number; results: SessionRecord['results'] })[] }>(DeviceImportBody),
   packImport: compileSchema<{ workouts: unknown[]; collections: { title: string; description?: string; workoutIds: string[] }[]; decisions: Record<string, PackDecision> }>(PackImportBody),
+  liveSession: compileSchema<LiveSessionPut>(LiveSessionBody),
+  liveClaim: compileSchema<LiveSessionClaim>(LiveClaimBody),
 };
 
 function body<T>(validate: (value: unknown) => value is T, value: unknown, what: string): T {
@@ -147,6 +162,42 @@ export function registerRoutes(app: FastifyInstance, { storeOf, version }: Route
   app.patch<{ Params: { id: string } }>('/api/v1/sessions/:id/results', async request => {
     const { results, note } = body(validators.correction, request.body, 'correction');
     return need(request).correctSession(request.params.id, results, note, expectedRevision(request));
+  });
+
+  /**
+   * Hand-over between devices (ENG-15): the device running a session keeps its last checkpoint and progress record
+   * here, and another device claims them to continue. The list carries no bodies and the server's clock; a write from
+   * a device that no longer controls the session answers 409 SESSION_TAKEN_OVER with the controller, one for a
+   * session already uploaded or deleted 409 SESSION_FINISHED.
+   */
+  const liveId = (id: string): string => {
+    if (!id || id.length > SESSION_ID_MAX) throw new ApiError(400, 'VALIDATION_FAILED', `A session id has 1 to ${SESSION_ID_MAX} characters.`, '/id');
+    return id;
+  };
+  app.get('/api/v1/live-sessions', async request => need(request).listLiveSessions());
+  app.get<{ Params: { id: string } }>('/api/v1/live-sessions/:id', async request => {
+    const session = need(request).getLiveSession(liveId(request.params.id));
+    if (!session) throw new NotFoundError(`Live session "${request.params.id}"`);
+    return session;
+  });
+  app.put<{ Params: { id: string } }>('/api/v1/live-sessions/:id', { bodyLimit: LARGE_BODY }, async (request, reply) => {
+    const id = liveId(request.params.id);
+    const { deviceId, deviceLabel, checkpoint, progress } = body(validators.liveSession, request.body, 'live session');
+    if (checkpoint && checkpoint.sessionId !== id) throw new ApiError(400, 'ID_MISMATCH', 'The checkpoint must be of the session in the path.', '/checkpoint/sessionId');
+    if (progress && progress.sessionId !== id) throw new ApiError(400, 'ID_MISMATCH', 'The progress record must be of the session in the path.', '/progress/sessionId');
+    const { created, ...stored } = need(request).putLiveSession(id, { deviceId, deviceLabel, ...(checkpoint ? { checkpoint: { ...checkpoint, workout: workoutDocument(checkpoint.workout) } } : {}), ...(progress ? { progress } : {}) });
+    return reply.code(created ? 201 : 200).send(stored);
+  });
+  app.post<{ Params: { id: string } }>('/api/v1/live-sessions/:id/claim', async request => need(request).claimLiveSession(liveId(request.params.id), body(validators.liveClaim, request.body, 'claim')));
+  /**
+   * Discards a live session. Idempotent: a repeat, or an id that has no live row, also answers 204. With `?deviceId=`
+   * the row goes only while that device controls it, which is how a device ends its own session without a record.
+   */
+  app.delete<{ Params: { id: string }; Querystring: { deviceId?: string } }>('/api/v1/live-sessions/:id', async (request, reply) => {
+    const { deviceId } = request.query;
+    if (deviceId !== undefined && (!deviceId || deviceId.length > 80)) throw new ApiError(400, 'VALIDATION_FAILED', 'A device id has 1 to 80 characters.', '/deviceId');
+    need(request).deleteLiveSession(liveId(request.params.id), deviceId);
+    return reply.code(204).send();
   });
 
   app.post('/api/v1/import/device', { bodyLimit: LARGE_BODY }, async request => {

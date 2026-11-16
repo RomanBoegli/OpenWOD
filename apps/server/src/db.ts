@@ -85,6 +85,29 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 4,
+    name: 'live sessions',
+    // Additive: the running session of each device with its last checkpoint and progress record (ENG-15), so another
+    // device can continue it. Rows are short-lived: gone when the session is finished, discarded or 12 hours stale.
+    up: `
+      CREATE TABLE live_sessions (
+        id TEXT PRIMARY KEY,
+        workout_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        active_ms INTEGER NOT NULL,
+        device_id TEXT NOT NULL,
+        device_label TEXT NOT NULL,
+        generation INTEGER NOT NULL,
+        revision INTEGER NOT NULL,
+        checkpoint TEXT NOT NULL,
+        progress TEXT,
+        saved_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 export const latestSchemaVersion = () => MIGRATIONS[MIGRATIONS.length - 1].version;
 

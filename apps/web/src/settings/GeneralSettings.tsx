@@ -6,22 +6,21 @@ import { downloadUrl } from '../data/client';
 import { downloadBlob } from '../download';
 import { IDB_VERSION } from '../data/idb';
 import { Icon } from '../Icon';
-import { accentTokens, DARK_BACKGROUNDS, LIGHT_BACKGROUNDS, neutralTokens, type DarkBackground, type LightBackground, type Theme } from '../theme';
+import { accentTokens, BUILT_IN_COLORS, DARK_BACKGROUNDS, LIGHT_BACKGROUNDS, neutralTokens, type DarkBackground, type LightBackground, type Theme } from '../theme';
 import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { plural, type HouseholdStatus, type SettingsProps } from './shared';
 import { RestoreFromBackup, type RestoreMessage } from './RestoreDialog';
-import { ColorChoice } from './ColorChoice';
+import { ColorField, type ColorOptions } from './ColorField';
 
 const BACKGROUND_LABELS: Record<DarkBackground | LightBackground, string> = { black: 'Black', deep: 'Deep', grey: 'Grey', white: 'White', paper: 'Paper' };
 const BACKGROUND_TIPS: Record<DarkBackground | LightBackground, string> = { black: 'Nearly black, the most contrast', deep: 'The built-in dark tone', grey: 'A softer grey, less contrast', white: 'Plain white, the most contrast', paper: 'The built-in paper tone' };
 
 /** Ready-made accents; the first is the built-in green. Any other colour comes from the picker. */
-const ACCENTS: [string, string][] = [['', 'Green'], ['#2a9d8f', 'Teal'], ['#3b82f6', 'Blue'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f97316', 'Orange']];
-const BUILT_IN_GREEN: Record<Theme, string> = { dark: '#c8ee91', light: '#3f8313' };
+const ACCENTS: ColorOptions = [['', 'Green'], ['#2a9d8f', 'Teal'], ['#3b82f6', 'Blue'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f97316', 'Orange']];
 
-/** The shade a theme will actually show for a choice, so the swatch matches the result. */
-const shadeOf = (value: string, theme: Theme) => value ? accentTokens(value, theme)[theme === 'dark' ? '--accent' : '--accent-fill'] : BUILT_IN_GREEN[theme];
+/** The shade a theme will actually show for a choice, so the well matches the result. */
+const shadeOf = (value: string, theme: Theme) => value ? accentTokens(value, theme)[theme === 'dark' ? '--accent' : '--accent-fill'] : BUILT_IN_COLORS.accent[theme];
 
 /** Bundled sessions that span the scale, so a change to the knobs is visible at once. */
 const REFERENCE_IDS = ['tabata-this', 'cindy', 'fran', 'fight-gone-bad', 'murph', 'hyrox-engine-emom-24'];
@@ -36,12 +35,11 @@ export function GeneralSettings({ preferences, onPreferencesChange, entries, hou
     <section className={styles.card} aria-labelledby="appearance-title">
       <h2 id="appearance-title">Appearance</h2>
       <div className={styles.field}><span id="theme-label">Theme</span><div className={shared.segmented} role="radiogroup" aria-labelledby="theme-label">{([['auto', 'Auto', 'auto'], ['light', 'Light', 'sun'], ['dark', 'Dark', 'moon']] as const).map(([value, label, icon]) => <label key={value} data-checked={preferences.theme === value}><input type="radio" name="theme" value={value} checked={preferences.theme === value} onChange={() => update({ theme: value })} /><Icon name={icon} size={16} />{label}</label>)}</div></div>
-      <ColorChoice id="accent" label="Accent" options={ACCENTS} value={preferences.accent} shade={shadeOf} onChange={accent => update({ accent })} />
       {(['dark', 'light'] as const).map(theme => {
         const options: readonly (DarkBackground | LightBackground)[] = theme === 'dark' ? DARK_BACKGROUNDS : LIGHT_BACKGROUNDS;
-        return <div key={theme} className={styles.field}><span id={`background-${theme}-label`}>Background in the {theme} theme</span><div className={shared.segmented} role="radiogroup" aria-labelledby={`background-${theme}-label`}>{options.map(option => <label key={option} data-checked={preferences.background[theme] === option} title={BACKGROUND_TIPS[option]}><input type="radio" name={`background-${theme}`} value={option} checked={preferences.background[theme] === option} onChange={() => update({ background: { ...preferences.background, [theme]: option } })} /><span className={styles.depthDot} style={{ background: neutralTokens(preferences.accent[theme], option, theme)['--bg'] }} aria-hidden="true" />{BACKGROUND_LABELS[option]}</label>)}</div></div>;
+        return <div key={theme} className={styles.field}><span id={`${theme}-theme-label`}>{theme === 'dark' ? 'Dark' : 'Light'} theme</span><div className={styles.themeRow} role="group" aria-labelledby={`${theme}-theme-label`}><ColorField label={`Accent in the ${theme} theme`} options={ACCENTS} value={preferences.accent[theme]} shade={value => shadeOf(value, theme)} onChange={value => update({ accent: { ...preferences.accent, [theme]: value } })} /><div className={shared.segmented} role="radiogroup" aria-label={`Background in the ${theme} theme`}>{options.map(option => <label key={option} data-checked={preferences.background[theme] === option} title={BACKGROUND_TIPS[option]}><input type="radio" name={`background-${theme}`} value={option} checked={preferences.background[theme] === option} onChange={() => update({ background: { ...preferences.background, [theme]: option } })} /><span className={styles.depthDot} style={{ background: neutralTokens(preferences.accent[theme], option, theme)['--bg'] }} aria-hidden="true" />{BACKGROUND_LABELS[option]}</label>)}</div></div></div>;
       })}
-      <p className={styles.hint}>Buttons, links, the work-phase ring and the highlights follow the accent, and the background, the cards and the text greys take a faint tint of it. Background sets how deep the dark theme and how bright the light theme are. Each theme keeps its own choices, shown here in the shades it will use. The colour of rest and transitions is under Training view.</p>
+      <p className={styles.hint}>Each theme has its own row: its accent, shown in the shade that theme will use, and its background, which sets how deep the dark theme and how bright the light theme is. Buttons, links, the work-phase ring and the highlights follow the accent, and the background, the cards and the text greys take a faint tint of it. The colours of the other phases are under Training view.</p>
     </section>
     <section className={styles.card} aria-labelledby="athletes-title">
       <h2 id="athletes-title">Athletes</h2>

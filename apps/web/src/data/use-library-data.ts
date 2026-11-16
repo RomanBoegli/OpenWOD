@@ -15,6 +15,7 @@ import { backend, type BackendCounts } from './backend';
 import { DATA_MODE, type DataMode } from './mode';
 import { clearOutbox, deleteSessionItemId, enqueue, flush, listOutbox, MASTER_ITEM_ID, outboxEvents, removeOutboxItem, requeue, sessionItemId, type OutboxItem } from './outbox';
 import { clearSession, finishSession, listRecoveries, type Recovery } from './checkpoints';
+import { liveSessions } from './live-sessions';
 import type { DeviceImportReport, PackDecision, PackImportReport, SessionListItem, StoredWorkout } from './remote';
 
 /**
@@ -77,6 +78,8 @@ export interface LibraryData {
 
 interface Cache { workouts: StoredWorkout[]; master: { revision: number; document: MasterData }; sessions: SessionListItem[]; fetchedAt: string }
 const SESSION_PAGE = 50;
+/** Coming back to the app reads the household again, but a focus, a visibility change and a reconnect often arrive together. */
+const REFETCH_MIN_MS = 5000;
 const LEGACY_KEYS = ['openwod.library.v1', 'openwod.master.v1', 'openwod.sessions.v1'];
 const MIGRATION_KEY = 'migration';
 const STATIC = DATA_MODE === 'static';
@@ -103,7 +106,13 @@ export function useLibraryData(): LibraryData {
   const [recoveries, setRecoveries] = useState<Recovery[]>([]);
   const [recoveriesReady, setRecoveriesReady] = useState(false);
   const refreshRecoveries = useCallback(async () => { try { setRecoveries(await listRecoveries()); } catch { setRecoveries([]); } finally { setRecoveriesReady(true); } }, []);
-  const clearRecovery = useCallback(async (sessionId: string) => { try { await clearSession(sessionId); } catch { /* nothing to clear */ } await refreshRecoveries(); }, [refreshRecoveries]);
+  // A session dropped on this device is over: its live row on the server goes too, so no other device keeps offering it,
+  // unless another device controls it by now (ENG-15). The static shape has no such row and the call does nothing.
+  const clearRecovery = useCallback(async (sessionId: string) => {
+    try { await clearSession(sessionId); } catch { /* nothing to clear */ }
+    void liveSessions.remove(sessionId, { own: true }).catch(() => undefined);
+    await refreshRecoveries();
+  }, [refreshRecoveries]);
   const masterRef = useRef({ document: masterData, revision: masterRevision });
   masterRef.current = { document: masterData, revision: masterRevision };
 
@@ -121,7 +130,9 @@ export function useLibraryData(): LibraryData {
     if (backend.counts) void backend.counts().then(setStats, () => undefined);
   }, [writeCache]);
 
+  const lastRefresh = useRef(0);
   const refresh = useCallback(async () => {
+    lastRefresh.current = Date.now();
     if (STATIC) {
       // Nothing to reach: the library is always "online"; only the browser's storage can fail.
       setConnection('online');
@@ -185,11 +196,14 @@ export function useLibraryData(): LibraryData {
     outboxEvents.addEventListener('change', onChange);
     const online = () => { setConnection('starting'); void refresh(); };
     const offline = () => setConnection('offline');
-    const visible = () => { if (document.visibilityState === 'visible') void flush().then(result => { if (result.uploaded.length) void fetchAll().catch(() => undefined); }); };
+    // Another device may have changed the household while this one sat open: coming back reads it again, at most once in
+    // five seconds. It is the same refresh as at boot, so queued changes of this device stay on top of what the server says.
+    const comeBack = () => { if (!STATIC && Date.now() - lastRefresh.current >= REFETCH_MIN_MS) void refresh(); };
+    const visible = () => { if (document.visibilityState !== 'visible') return; void flush().then(result => { if (result.uploaded.length) void fetchAll().catch(() => undefined); }); comeBack(); };
     // The static shape never goes offline: the network does not matter to it.
-    if (!STATIC) { window.addEventListener('online', online); window.addEventListener('offline', offline); }
+    if (!STATIC) { window.addEventListener('online', online); window.addEventListener('offline', offline); window.addEventListener('focus', comeBack); }
     document.addEventListener('visibilitychange', visible);
-    return () => { outboxEvents.removeEventListener('change', onChange); window.removeEventListener('online', online); window.removeEventListener('offline', offline); document.removeEventListener('visibilitychange', visible); };
+    return () => { outboxEvents.removeEventListener('change', onChange); window.removeEventListener('online', online); window.removeEventListener('offline', offline); window.removeEventListener('focus', comeBack); document.removeEventListener('visibilitychange', visible); };
   }, [readOutbox, refresh, fetchAll]);
   const pendingCount = outbox.filter(item => item.state === 'pending').length;
   useEffect(() => {

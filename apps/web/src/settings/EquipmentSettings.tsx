@@ -46,7 +46,7 @@ export function EquipmentSettings({ preferences, onPreferencesChange, masterData
     <section className={styles.card} aria-labelledby="equipment-title">
       <div className={styles.cardHeading}><h2 id="equipment-title">Equipment</h2><span className={styles.hint}>{names.length} items · {preferences.myEquipment.length} at home</span></div>
       <p className={styles.hint}>Tick what you have at home; the library’s “Only my equipment” filter then shows workouts that need nothing more. Rename an item, or tick two or more and merge them into one spelling used on every card, overview and filter.</p>
-      <div className={styles.listTop}><label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} placeholder="ball, bar, rower…" aria-label="Find equipment" onChange={event => setQuery(event.target.value)} /></label></div>
+      <div className={styles.listTop}><label className={`${styles.field} ${styles.search}`}>Find<input type="search" value={query} aria-label="Find equipment" onChange={event => setQuery(event.target.value)} /></label></div>
       {selection.length >= 2 && <div className={styles.mergeBar} role="group" aria-label="Merge selected equipment">
         <span>{selection.length} selected</span>
         <label className={styles.field}>Keep as<input value={mergeTarget} placeholder={selection[0]} list="equipment-names" aria-label="Keep as" onChange={event => setMergeTarget(event.target.value)} /></label>

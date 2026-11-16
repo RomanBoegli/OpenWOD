@@ -6,6 +6,24 @@
 .loadLine { animation: rise var(--t-slow) var(--ease) 270ms backwards; display: flex; align-items: center; gap: 9px; margin-top: 8px; color: var(--ink-2); font-size: 15px; font-weight: 600; }
 .secondaryClock { display: flex; justify-content: center; gap: 24px; margin-top: 10px; color: var(--ink-3); font-size: 11px; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; }
 .secondaryClock strong { color: var(--ink-2); font-weight: 600; margin-left: 6px; }
+/* The line keeps its row through a session whose plan shows a cap or a turn clock in any block (Player.tsx); the context view has no use for the empty one. */
+.secondaryClock[data-idle] { visibility: hidden; }
+[data-view=context] .secondaryClock[data-idle] { display: none; }
+/* The stage (UI-27): the stations or a block's list, and the action bar under them, in two wrappers that outside a session
+   are not there for the layout. During one they are columns like the frame, so every margin stays what it was. In the focus
+   view the stage keeps the room of the plan's tallest station (--stage-room, which Player.tsx measures on the ruler), so no
+   station moves the rows around it and the clock above keeps its place; what a shorter station leaves stays under its
+   action bar. */
+.stage, .stageBody { display: contents; }
+[data-performing=true] .stage, [data-performing=true] .stageBody { display: flex; flex-direction: column; }
+[data-performing=true] .stageBody { flex: none; }
+[data-performing=true][data-view=focus] .stage { flex-basis: var(--stage-room, auto); }
+/* The ruler (Player.tsx): every station of the plan, unseen, one on top of the other at the stage's own width (the frame's
+   padding is inherited), so the stack is as tall as the tallest of them. It never adds to what the frame can scroll. */
+div.ruler { position: absolute; inset: 0; z-index: 0; padding: 0; padding-inline: inherit; overflow: hidden; visibility: hidden; pointer-events: none; }
+.rulerStack { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.rulerStack > * { grid-area: 1 / 1; }
+.ruler * { animation: none !important; transition: none !important; }
 .laneState { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 6px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); font-size: 12px; font-weight: 700; letter-spacing: 1.2px; }
 .laneState[data-state=waiting] { background: color-mix(in srgb, var(--phase-rest) 15%, transparent); color: var(--phase-rest); }
 .laneState[data-state=rest] { background: color-mix(in srgb, var(--phase-rest) 15%, transparent); color: var(--phase-rest); }
@@ -16,11 +34,10 @@
 .lane[data-active=false] { opacity: .55; }
 .actionBar { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: stretch; margin: 6px 0 18px; }
 .bigAction { display: inline-flex; align-items: center; justify-content: center; gap: 12px; flex: 1 1 260px; min-height: 72px; padding: 14px 28px; border-radius: 14px; border: 1px solid var(--accent-border); background: var(--accent-fill); color: var(--accent-ink); font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
-.bigAction[data-role=A] { background: var(--lane-a-bg); color: var(--lane-a); border-color: var(--lane-a-border); }
-.bigAction[data-role=B] { background: var(--lane-b-bg); color: var(--lane-b); border-color: var(--lane-b-border); }
 .bigAction:hover:not(:disabled) { filter: brightness(1.05); }
 .counter { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
-.counterValue { display: flex; align-items: baseline; gap: 6px; min-width: 110px; font-variant-numeric: tabular-nums; }
+/* The count's line is as tall as its digits; the font's own box is taller, and Firefox counts that as overflow of the whole row. */
+.counterValue { display: flex; align-items: baseline; gap: 6px; min-width: 110px; font-variant-numeric: tabular-nums; overflow-y: clip; }
 .counterValue strong { font-size: 44px; font-weight: 700; letter-spacing: -2px; line-height: 1; }
 .counterValue small { font-size: 11px; color: var(--ink-3); letter-spacing: 1.2px; text-transform: uppercase; }
 .counterButton { min-height: 56px; min-width: 56px; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface-5); color: var(--ink); font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
@@ -48,6 +65,9 @@
 .resultList li span:last-child { color: var(--ink-3); font-variant-numeric: tabular-nums; text-align: right; }
 .keyHint { color: var(--ink-4); font-size: 9px; letter-spacing: 1px; }
 @media (max-width: 620px) {
+  /* On a phone a frame too short for its rows still presses the stations together, as before the stage held them. */
+  [data-performing=true] .stage, [data-performing=true] .stageBody { min-height: 0; }
+  [data-performing=true] .stageBody { flex: 0 1 auto; }
   .target { margin-top: 10px; }
   .target strong { font-size: 44px; letter-spacing: -2px; }
   .target small { font-size: 13px; }
@@ -114,23 +134,51 @@
   :global([data-performing=true]) .actionBar[data-counter=true] .secondaryAction { grid-area: finish; }
 }
 /* Performing on a wide but short screen: the target follows the height, like the clock (App.module.css). */
-@media (min-width: 621px) and (max-height: 960px) {
+@media (min-width: 621px) and (max-height: 1200px) {
   [data-performing=true] .target { margin: 6px 0 2px; }
-  [data-performing=true] .target strong { font-size: clamp(44px, 7vh, 72px); }
+  [data-performing=true] .target strong { font-size: clamp(44px, 7svh, 72px); }
+  /* A lane's own Done button, and the state that takes its place once the athlete has reported in, share the label row as on a
+     phone: two athletes' buttons cost the frame no row, and a station keeps its height through the slot. A name too long for
+     what is left of the row is cut. */
+  [data-performing=true] .lane { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: start; }
+  [data-performing=true] .lane > * { grid-column: 1 / -1; min-width: 0; }
+  [data-performing=true] .lane > :first-child { grid-area: 1 / 1; }
+  [data-performing=true] .lane > .laneState, [data-performing=true] .laneDone { grid-area: 1 / 2; margin: 0 0 0 12px; }
+  [data-performing=true] .laneDone { width: auto; min-height: 44px; padding: 6px 12px; gap: 8px; font-size: 14px; }
+  /* Rows of a grid keep every margin, where the block they were let two neighbours share the larger one. */
+  [data-performing=true] .lane > .target { margin-bottom: 0; }
+  [data-performing=true] .lane > .loadLine { margin-top: 4px; }
+  /* You-go-I-go: the unit list follows the height as well as the width. The lane state and the line above the clock say whose
+     turn it is, so the heading that says it a third time steps aside, as on a phone. */
+  [data-performing=true] .lane > .unit { margin-top: 8px; gap: 3px; }
+  [data-performing=true] .unit li { font-size: max(17px, min(2.9svh, clamp(22px, 2.4vw, 30px))); }
+  [data-performing=true] .lane[data-block=turns] > h2 { display: none; }
   /* Done and its neighbours stay big targets, just not 72 px tall. */
   [data-performing=true] .actionBar { margin: 6px 0 8px; }
-  [data-performing=true] .bigAction { min-height: clamp(52px, 8vh, 72px); padding: 8px 24px; }
-  [data-performing=true] .secondaryAction { min-height: clamp(48px, 7vh, 56px); }
+  [data-performing=true] .bigAction { min-height: clamp(52px, 8svh, 72px); padding: 8px 24px; }
+  [data-performing=true] .secondaryAction { min-height: clamp(48px, 7svh, 56px); }
   /* The AMRAP block: shorter rows and a smaller counter, and the tap hint goes. */
   [data-performing=true] .taskList { gap: 4px; margin-bottom: 0; }
   [data-performing=true] .taskRow { padding: 6px 14px; }
   [data-performing=true] .taskIndex { width: 28px; height: 28px; }
-  [data-performing=true] .taskCell strong { font-size: clamp(20px, 3.4vh, 30px); }
+  [data-performing=true] .taskCell strong { font-size: clamp(20px, 3.4svh, 30px); }
   [data-performing=true] .taskHint { display: none; }
   [data-performing=true] .counterValue strong { font-size: 34px; }
   [data-performing=true] .counterButton { min-height: 46px; padding: 6px 14px; }
   /* The context view's game plan lists the same movements, so the block steps aside like the stations do. */
   [data-performing=true][data-view=context] .taskList { display: none; }
+}
+/* An iPad held upright (954 px of height at the least) has the height for a row of its own and not the width for a name and a
+   button side by side: Done and the lane state go back under the station, where no name has to give way. */
+@media (min-width: 621px) and (max-width: 900px) and (min-height: 941px) and (max-height: 1200px) {
+  [data-performing=true] .lane > .laneState { grid-area: auto / 1 / auto / -1; justify-self: start; margin: 12px 0 0; }
+  [data-performing=true] .laneDone { grid-area: auto / 1 / auto / -1; margin: 12px 0 0; min-height: 52px; font-size: 16px; }
+}
+/* The shortest frames (App.module.css). */
+@media (min-width: 621px) and (max-height: 760px) {
+  [data-performing=true] .laneDone { min-height: 40px; }
+  [data-performing=true] .actionBar { margin: 4px 0 6px; }
+  [data-performing=true] .secondaryAction { min-height: 44px; }
 }
 /* Block boundaries (UI-24): a card names the block as it starts and fades by itself; at the end it stays until Ready.
    It floats over the top rows, so neither the clock nor the stations move. */

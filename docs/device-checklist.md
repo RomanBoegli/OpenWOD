@@ -20,14 +20,23 @@ Record the device, OS version, browser and the result of each line in the releas
 ## Screen and layout
 
 - [ ] The player fills the screen in portrait and landscape without clipping, at the device's default text size and one size larger.
+- [ ] Turn the tablet mid-slot, both ways, in the browser and in the installed app: the layout follows at once, nothing scrolls, and the transport controls stay inside the ring.
 - [ ] Screen wake lock keeps the display on for a whole 20-minute session ("Screen stays awake" in the player).
 - [ ] Added to the home screen (iOS and Android): the app opens, plays audio after one tap, and keeps its data.
+
+## Editor on a touch screen
+
+- [ ] Type a movement name and tap a suggestion: it is picked, and the keyboard stays up.
+- [ ] Choose Metres, delete the amount and type another: the kind stays and the field keeps the focus (AT-35).
+- [ ] Focus a field on a phone: the page does not zoom.
 
 ## Interruptions and recovery
 
 - [ ] Switch to another app mid-session and come back: the player is paused with "Paused · app was hidden" and resumes on Resume.
 - [ ] Kill the browser mid-session and reopen the player: the recovery prompt shows the saved age, Resume restores the lane, round and clock.
-- [ ] Open the same session in a second tab or device: the second one offers Take over, the first one stops controlling.
+- [ ] Open the same session in a second tab: the second one offers Take over, the first one stops controlling.
+- [ ] Start a session on one device and open the app on another: the second one shows the running session with Continue here, and after Continue here and Resume the first one steps aside and names the device that continued (AT-34).
+- [ ] Finish the session on the second device: it appears in the logbook exactly once, and neither device offers it any more.
 - [ ] Turn off Wi-Fi mid-session, finish, turn it on: the session appears in History exactly once and the "changes waiting" pill clears.
 - [ ] Put the phone in a pocket with the screen locked for two minutes: on unlock the session is paused or still running, never jumped ahead.
 

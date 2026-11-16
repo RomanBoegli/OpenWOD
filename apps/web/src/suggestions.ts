@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react';
+import { useLayoutEffect, useState, type CSSProperties, type RefObject, type SyntheticEvent } from 'react';
 import { normalise } from '../../../packages/domain/src/library';
 import { editDistance, rankBySearch } from '../../../packages/domain/src/search';
 
@@ -17,6 +17,14 @@ export const suggest = (options: string[], query: string, limit = 7): string[] =
 /** A known name within a typo of a new one, so the repertoire does not fill with near-duplicate spellings. */
 export const nearName = (options: string[], query: string): string | undefined =>
   query.trim().length >= 4 ? options.find(option => nameKey(option) !== nameKey(query) && editDistance(nameKey(option), nameKey(query), 2) <= 2) : undefined;
+
+const prevent = (event: SyntheticEvent) => event.preventDefault();
+/**
+ * Spread on a suggestion list (or a chip's button), so a tap or click on it leaves the focus in the field: the field's
+ * blur would close the list before the click lands. Both events are needed. A mouse moves the focus on mousedown, and
+ * iOS sends a late mousedown with its synthetic click that a cancelled touch pointerdown does not hold back.
+ */
+export const keepFocus = { onPointerDown: prevent, onMouseDown: prevent };
 
 /**
  * Places a suggestion list just below its field, fixed to the viewport rather than absolute inside a dialog, so an

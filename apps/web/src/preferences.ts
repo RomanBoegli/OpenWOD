@@ -30,19 +30,18 @@ export interface Preferences {
   /** The remaining time at which the colour turns amber, then red (both still capped to the slot length). */
   amberMs: number;
   redMs: number;
-  /** Colours of the two milestone markers as #rrggbb, or '' for the theme's amber and red. */
-  markColors: { first: string; second: string };
+  /** Colours of the two milestone markers per theme as #rrggbb, or '' for the theme's amber and red. */
+  markColors: { first: { dark: string; light: string }; second: { dark: string; light: string } };
+  /** The colour of a paused session per theme as #rrggbb, or '' for the theme's own. */
+  pauseColor: { dark: string; light: string };
   /** The accent colour per theme as #rrggbb, or '' for the built-in green. Each theme derives its tints from its own choice. */
   accent: { dark: string; light: string };
   /** The colour of rest and transition phases per theme as #rrggbb, or '' for the built-in blue. */
   restColor: { dark: string; light: string };
   /** How deep the dark theme's background is and how bright the light theme's: the neutrals take the accent's hue at this depth. */
   background: BackgroundChoice;
-  /** The overall progress line across every section and round: hidden, a bar, a bar with the numbers, or those plus a percentage beside the clock. */
-  progress: 'off' | 'bar' | 'detail' | 'percent';
-  /** The big clock's digits. */
-  clockWeight: 'bold' | 'light';
-  clockSize: 'large' | 'compact';
+  /** What the player shows of the session's progress, each part on its own: the bar across every section and round, the percentage under it, the percentage beside the clock and the round donut. */
+  progress: { bar: boolean; barPercent: boolean; clockPercent: boolean; donut: boolean };
   /** How far the skip buttons and the J and L keys move the clock, in seconds. */
   nudgeSeconds: number;
   /** Equipment available at home; the library can hide anything that needs more. */
@@ -52,7 +51,7 @@ export interface Preferences {
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: '', second: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: 'detail', clockWeight: 'bold', clockSize: 'large', nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', rate: 1, volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: { dark: '', light: '' }, second: { dark: '', light: '' } }, pauseColor: { dark: '', light: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: { bar: true, barPercent: true, clockPercent: false, donut: true }, nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -61,7 +60,23 @@ export const THEME_KEY = 'openwod.theme';
 const clamp = (value: unknown, min: number, max: number, fallback: number) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 const text = (value: unknown, fallback: string, max = 30) => typeof value === 'string' && value.trim() ? value.slice(0, max) : fallback;
 const color = (value: unknown) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '';
+/** A colour per theme. A single stored colour is the shape from before each theme had its own, and carries over to both. */
+const perTheme = (value: unknown) => { const stored = (value && typeof value === 'object' ? value : {}) as { dark?: unknown; light?: unknown }; return typeof value === 'string' ? { dark: color(value), light: color(value) } : { dark: color(stored.dark), light: color(stored.light) }; };
 const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback: T): T => (options as readonly string[]).includes(value as string) ? value as T : fallback;
+/** Before 1.6.0 the progress was one of four looks: each as the parts the player showed for it, the donut always among them. */
+const PROGRESS_LOOKS: Record<'off' | 'bar' | 'detail' | 'percent', Preferences['progress']> = {
+  off: { bar: false, barPercent: false, clockPercent: false, donut: true },
+  bar: { bar: true, barPercent: false, clockPercent: false, donut: true },
+  detail: { bar: true, barPercent: true, clockPercent: false, donut: true },
+  percent: { bar: true, barPercent: false, clockPercent: true, donut: true },
+};
+/** The parts of the progress: an old look by its name (an unknown one is the default look), otherwise part by part, each falling back to its default alone. */
+const progressParts = (value: unknown): Preferences['progress'] => {
+  if (typeof value === 'string') return { ...PROGRESS_LOOKS[oneOf(value, ['off', 'bar', 'detail', 'percent'], 'detail')] };
+  const stored = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const part = (key: keyof Preferences['progress']) => { const on = stored[key]; return typeof on === 'boolean' ? on : defaultPreferences.progress[key]; };
+  return { bar: part('bar'), barPercent: part('barPercent'), clockPercent: part('clockPercent'), donut: part('donut') };
+};
 
 /** Browser storage is a convenience: every read is validated and any failure yields the defaults. */
 export function loadPreferences(): Preferences {
@@ -74,7 +89,7 @@ export function loadPreferences(): Preferences {
 /** Validates stored preferences field by field, from this browser or from the household server: anything unknown falls back to its default. */
 export function normalisePreferences(value: unknown): Preferences {
   try {
-    const stored = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: Partial<Preferences['markColors']>; accent?: string | Partial<Preferences['accent']>; restColor?: Partial<Preferences['restColor']>; background?: Partial<BackgroundChoice> };
+    const stored = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Partial<Preferences> & { names?: Partial<Preferences['names']>; loadsFor?: Partial<Preferences['loadsFor']>; markColors?: { first?: unknown; second?: unknown }; pauseColor?: unknown; accent?: unknown; restColor?: unknown; background?: Partial<BackgroundChoice> };
     return {
       theme: oneOf(stored.theme, ['auto', 'light', 'dark'], defaultPreferences.theme),
       names: { A: text(stored.names?.A, defaultPreferences.names.A), B: text(stored.names?.B, defaultPreferences.names.B) },
@@ -94,14 +109,14 @@ export function normalisePreferences(value: unknown): Preferences {
       washGain: Math.round(clamp(stored.washGain, 10, 60, defaultPreferences.washGain)),
       amberMs: Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs)),
       redMs: Math.min(Math.round(clamp(stored.redMs, 1000, 10_000, defaultPreferences.redMs)), Math.round(clamp(stored.amberMs, 5000, 30_000, defaultPreferences.amberMs))),
-      markColors: { first: color(stored.markColors?.first), second: color(stored.markColors?.second) },
+      // Before 1.6.0 one colour per marker served both themes; that choice carries over to each.
+      markColors: { first: perTheme(stored.markColors?.first), second: perTheme(stored.markColors?.second) },
+      pauseColor: perTheme(stored.pauseColor),
       // Before 1.1.0 one accent served both themes; that choice carries over to each.
-      accent: typeof stored.accent === 'string' ? { dark: color(stored.accent), light: color(stored.accent) } : { dark: color(stored.accent?.dark), light: color(stored.accent?.light) },
-      restColor: { dark: color(stored.restColor?.dark), light: color(stored.restColor?.light) },
+      accent: perTheme(stored.accent),
+      restColor: perTheme(stored.restColor),
       background: { dark: oneOf(stored.background?.dark, DARK_BACKGROUNDS, DEFAULT_BACKGROUND.dark), light: oneOf(stored.background?.light, LIGHT_BACKGROUNDS, DEFAULT_BACKGROUND.light) },
-      progress: oneOf(stored.progress, ['off', 'bar', 'detail', 'percent'], 'detail'),
-      clockWeight: oneOf(stored.clockWeight, ['bold', 'light'], 'bold'),
-      clockSize: oneOf(stored.clockSize, ['large', 'compact'], 'large'),
+      progress: progressParts(stored.progress),
       nudgeSeconds: Math.round(clamp(stored.nudgeSeconds, 1, 60, defaultPreferences.nudgeSeconds)),
       myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => item.slice(0, 80)) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,

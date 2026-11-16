@@ -16,16 +16,26 @@
 .overallTrack { display: block; height: max(2px, calc(var(--ring) / 2)); border-radius: 999px; background: var(--accent-track); overflow: hidden; }
 .overallFill { display: block; height: 100%; border-radius: inherit; background: var(--color); transition: width 200ms linear; }
 .overallText { font-size: 5.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); text-align: right; }
-.panel[data-clock-weight=light] .time { font-weight: 300; letter-spacing: -1px; }
-.panel[data-clock-size=compact] .time { font-size: 26px; }
-.panel[data-view=context][data-clock-size=compact] .time { font-size: 18px; }
-.time { text-align: center; font-size: 34px; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
-.percent { margin-left: 3px; font-size: 12px; font-weight: 600; letter-spacing: 0; opacity: .45; }
+.time { font-size: 34px; font-weight: 700; letter-spacing: -2px; line-height: 1; font-variant-numeric: tabular-nums; }
+/* The clock's line as in the player: the donut and the percentage stand on the digits' baseline, left and right of them, and the digits stay in the middle whichever of the two shows. */
+.clock { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: baseline; }
+.clock > .time { grid-column: 2; }
+/* The round donut at miniature size, drawn like RoundDonut.tsx: a segment per movement, the count inside, a dot per round hanging under the ring. */
+.donut { grid-column: 1; justify-self: end; position: relative; width: 28px; margin-right: 5px; }
+.donut svg { display: block; width: 100%; aspect-ratio: 60 / 42; fill: none; stroke-width: 6; overflow: visible; }
+.donut text { fill: var(--ink); stroke: none; font-size: 15px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.donutSegment { stroke: color-mix(in srgb, var(--ink-3) 24%, transparent); }
+.donutSegment[data-state=done] { stroke: var(--color); }
+.donutSegment[data-state=now] { stroke: var(--color); opacity: .55; }
+.donutDots { position: absolute; top: calc(100% + 2px); left: 50%; translate: -50% 0; display: flex; gap: 1.5px; }
+.donutDots i { width: 3px; height: 3px; border-radius: 50%; border: .75px solid color-mix(in srgb, var(--ink-3) 40%, transparent); }
+.donutDots i[data-state=current] { border-color: var(--color); }
+.percent { grid-column: 3; justify-self: start; margin-left: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0; opacity: .45; font-variant-numeric: tabular-nums; }
+.panel[data-view=context] .donut { width: 19px; margin-right: 4px; }
 .panel[data-view=context] .time { font-size: 22px; letter-spacing: -1px; }
 .lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .lane { display: flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 7px; background: color-mix(in srgb, var(--surface-5) 70%, transparent); font-size: 9px; font-weight: 600; }
-.lane b { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 4px; background: var(--lane-a-bg); color: var(--lane-a); font-size: 8px; }
-.lane:last-child b { background: var(--lane-b-bg); color: var(--lane-b); }
+.lane b { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--ink-2) 12%, transparent); color: var(--ink-2); font-size: 8px; }
 .rows { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: 8.5px; }
 .rows li { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; padding: 3px 6px; border-radius: 5px; color: var(--ink-2); }
 .rows li[data-active] { background: var(--accent-soft); color: var(--ink); box-shadow: inset 2px 0 var(--accent); font-weight: 600; }

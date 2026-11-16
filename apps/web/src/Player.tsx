@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { FILE_EXTENSION, serialiseWorkoutFile, type Workout } from '../../../packages/domain/src';
 import { bundledWorkouts } from '../../../packages/domain/src/bundled';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
-import type { Occurrence, TaskItem } from '../../../packages/domain/src/compiler';
-import { FORMAT_LABELS, type Prescription } from '../../../packages/domain/src/schema';
+import type { Assignments, ExecutionPlan, Occurrence, TaskItem, Timing } from '../../../packages/domain/src/compiler';
+import { FORMAT_LABELS, type Prescription, type SectionFormat } from '../../../packages/domain/src/schema';
 import { displayTime, overallProgress, warningLevel, washDrain, washMorph, type ClockScope, type ClockValues, type Control, type SectionResult } from '../../../packages/engine/src';
 import { useWorkout } from './use-workout';
 import type { WorkoutAudio } from './audio';
@@ -23,11 +23,15 @@ import { roundSessionTimes, sessionOutcome } from '../../../packages/engine/src/
 import { deviceId } from './data/device';
 import { DATA_MODE } from './data/mode';
 import { PACK_EXTENSION, serialisePackFile, type WorkoutPack } from '../../../packages/domain/src/pack';
-import { elapsedText, type Recovery } from './data/checkpoints';
+import { elapsedText, lastSaved, type Recovery } from './data/checkpoints';
+import { sessionHeadline } from './data/live-sessions';
 import { holdSessionLock } from './data/session-lock';
+import type { LiveOffers } from './data/use-live-sessions';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import { roundProgress, type RoundProgress } from '../../../packages/domain/src/outline';
 import { RoundDonut, type RoundView } from './RoundDonut';
+import { takeStart } from './start';
+import { useResolvedTheme } from './theme';
 import styles from './App.module.css';
 import own from './Player.module.css';
 
@@ -35,8 +39,14 @@ function Perimeter({ progress, width }: { progress: RefObject<SVGPathElement | n
   const svg = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 1000, height: 700 });
   useLayoutEffect(() => {
-    const observer = new ResizeObserver(([entry]) => setSize({ width: entry.contentRect.width, height: entry.contentRect.height }));
-    if (svg.current) observer.observe(svg.current);
+    const node = svg.current;
+    if (!node) return;
+    // Measured here, before the first paint, so the ring is never drawn for a frame of a made-up size; the observer follows every resize and turn.
+    const measure = (width: number, height: number) => setSize(last => last.width === width && last.height === height ? last : { width, height });
+    const box = node.getBoundingClientRect();
+    measure(box.width, box.height);
+    const observer = new ResizeObserver(([entry]) => measure(entry.contentRect.width, entry.contentRect.height));
+    observer.observe(node);
     return () => observer.disconnect();
   }, []);
   const { width: w, height: h } = size;
@@ -79,6 +89,142 @@ export function resultText(result: SectionResult): string {
   return parts.join(' · ');
 }
 
+type Role = 'A' | 'B';
+interface LaneState { state: 'done' | 'waiting' | 'rest' | 'active'; label: string }
+/**
+ * One station as the stage draws it: the lanes or a block's list, and the action bar under them. The live one is read from
+ * the session; the ruler's come from the plan, each with all the furniture its block can show at once (UI-27).
+ */
+interface Station {
+  key: string;
+  format: SectionFormat;
+  timing: Timing;
+  /** The lanes' movements; none once the work is over. */
+  assignments?: Assignments;
+  /** A block's whole list (AMRAP, you-go-I-go). */
+  tasks?: TaskItem[];
+  /** The slot's length beside the athlete's name, where the clock and not a tap ends the work. */
+  seconds?: number;
+  state: Partial<Record<Role, LaneState>>;
+  /** You-go-I-go: the lane that waits, and who takes over on Switch. */
+  resting?: Role;
+  switchTo?: Role;
+  controls: readonly Control[];
+  counter?: { rounds: number; reps: number };
+}
+/** What every station of a session is drawn with: the athletes' names and how loads read. */
+interface StageLook { names: Record<Role, string>; loadUnit: Preferences['loadUnit']; loadsFor?: Preferences['loadsFor']; pair: boolean }
+/** What only the live station has: the taps, the row marked in a block, the key of its entrance and the nodes the player measures. */
+interface StageLive {
+  lanesKey: string;
+  lanes: RefObject<HTMLDivElement | null>;
+  body: RefObject<HTMLDivElement | null>;
+  highlight?: string;
+  onHighlight: (nodeId: string) => void;
+  act: (type: 'done' | 'switch' | 'skipTurn' | 'finish' | 'count' | 'undoCount', extra?: { athlete?: Role; unit?: 'round' | 'rep' }) => void;
+}
+
+/** Where a node stands inside the layer that floats over the frame. */
+const placeIn = (layer: HTMLElement, node: HTMLElement) => { const box = node.getBoundingClientRect(), frame = layer.getBoundingClientRect(); return { top: box.top - frame.top, left: box.left - frame.left, width: box.width }; };
+/** The engine's own list of the formats a block of which can be finished early. */
+const FINISHABLE: SectionFormat[] = ['amrap', 'forTime', 'youGoIGo', 'strength'];
+const TURN_STATES = { A: { state: 'active', label: 'YOUR TURN' }, B: { state: 'rest', label: 'REST · NEXT UP' } } as const;
+const reportedIn = (timing: Timing, both: boolean): LaneState => timing === 'interval' ? { state: 'rest', label: 'DONE · REST' } : { state: 'waiting', label: both ? 'DONE · WAITING' : 'DONE' };
+
+/**
+ * Every distinct station of the plan, for the ruler (UI-27). A station whose furniture changes while it shows comes once
+ * per state, so the tallest of them is found whatever the layout does with a button or a lane state: before anyone has
+ * reported in, with one athlete done, and with the interval's rest after Done.
+ */
+function planStations(plan: ExecutionPlan): Station[] {
+  const found = new Map<string, Station>();
+  const add = (station: Omit<Station, 'key'>) => { const key = JSON.stringify(station); if (!found.has(key)) found.set(key, { ...station, key }); };
+  for (const occurrence of plan.occurrences) {
+    if (occurrence.phase !== 'work') continue;
+    const section = plan.sections[occurrence.sectionIndex];
+    const { format } = section, { timing, tasks } = occurrence;
+    const finish: Control[] = FINISHABLE.includes(format) ? ['finish'] : [];
+    const base = { format, timing, seconds: timing === 'manual' ? undefined : Math.round(occurrence.durationMs / 1000), state: {} };
+    if (tasks) {
+      if (format === 'youGoIGo') add({ ...base, tasks, state: TURN_STATES, resting: 'B', switchTo: 'B', controls: ['switch', 'skipTurn', ...finish] });
+      else add({ ...base, tasks, controls: section.amrap?.counter === 'none' ? finish : ['count:round', ...(section.amrap?.counter === 'roundsAndReps' ? ['count:rep' as const] : []), 'undoCount', ...finish], counter: { rounds: 88, reps: 88 } });
+      continue;
+    }
+    const lanes = { ...base, assignments: occurrence.assignments };
+    if (timing === 'timed') { add({ ...lanes, controls: finish }); continue; }
+    const both = occurrence.completion === 'both', done = reportedIn(timing, both);
+    if (both) {
+      add({ ...lanes, controls: ['done:A', 'done:B', ...finish] });
+      add({ ...lanes, state: { A: done }, controls: ['done:B', ...finish] });
+    } else add({ ...lanes, controls: ['done', ...finish] });
+    if (timing === 'interval') add({ ...lanes, state: { A: done, B: done }, controls: finish });
+  }
+  return [...found.values()];
+}
+
+/**
+ * The stations and their action bar, for the live station and for the ruler's copies alike, so the room the ruler measures
+ * is the room the stage takes. Without `live` it is such a copy: no test id, no name for a screen reader, no handler, no ref.
+ */
+function StageBody({ station, look, live }: { station: Station; look: StageLook; live?: StageLive }) {
+  const { names, loadUnit, pair } = look;
+  const sex = (role: Role) => look.loadsFor?.[role];
+  const has = (control: Control) => station.controls.includes(control);
+  const unit = station.tasks ?? [];
+  const turns = Boolean(station.tasks) && station.format === 'youGoIGo';
+  const roles = (['A', 'B'] as const).filter(role => role === 'A' || pair);
+  const lane = (role: Role) => {
+    const item = station.assignments?.[role];
+    const target = item && primaryTarget(item);
+    const state = station.state[role];
+    return <section className={`${styles.lane} ${own.lane}`} data-athlete={live && role} data-active={station.resting !== role} data-block={turns ? 'turns' : undefined} key={role} aria-label={live && `Athlete ${role} station`}>
+      <div className={styles.athleteLabel}><span className={styles.athleteBadge}>{role}</span><span>{names[role]}</span>{station.seconds !== undefined && <span className={styles.laneTime}>{station.seconds}s</span>}</div>
+      {turns ? <>
+        <h2 data-testid={live && `movement-${role}`}>{station.resting === role ? 'Rest' : 'Your turn'}</h2>
+        <ul className={own.unit}>{unit.map(task => { const lanePrescription = task.assignments[role] ?? task.assignments.A; const amount = primaryTarget(lanePrescription); return <li key={task.nodeId}>{amount && <>{amount.amount}<small>{amount.unit}</small></>}<span>{lanePrescription.shortName ?? lanePrescription.name}</span><LoadLevels load={lanePrescription.load} unit={loadUnit} sex={sex(role)} /></li>; })}</ul>
+      </> : <>
+        {target && <div className={own.target}><strong>{target.amount}</strong><small>{target.unit}</small></div>}
+        <h2 data-testid={live && `movement-${role}`}>{item?.shortName ?? item?.name ?? 'All done'}</h2>
+        {item?.load ? <span className={own.loadLine}><LoadLevels load={item.load} unit={loadUnit} sex={sex(role)} /></span> : null}
+        <p>{item ? target || item.load ? item.notes ?? '' : prescriptionText(item) : 'You’re at the finish.'}</p>
+      </>}
+      {state && <span className={own.laneState} data-state={state.state}>{state.state === 'done' || state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
+      {has(`done:${role}`) && <button className={`${styles.primaryButton} ${own.laneDone}`} onClick={() => live?.act('done', { athlete: role })}><Icon name="check" />{names[role]} done</button>}
+    </section>;
+  };
+  return <div className={own.stageBody} ref={live?.body}>
+    {station.tasks && station.format === 'amrap' ? <>
+      {unit.length > 8 && <p className={own.fitWarning}>Long block: {unit.length} movements may not all fit on a small screen. Use the Context view to scroll.</p>}
+      <ul className={own.taskList} aria-label={live && 'AMRAP block'}>{unit.map((task, index) => <li key={task.nodeId} className={own.taskRow} data-pair={pair} data-highlight={live?.highlight === task.nodeId} onClick={() => live?.onHighlight(task.nodeId)}>
+        <span className={own.taskIndex}>{index + 1}</span>
+        {roles.map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLevels load={item.load} unit={loadUnit} sex={sex(role)} /></span>; })}
+      </li>)}</ul>
+      <p className={own.taskHint}>Tap a row to mark where you are. It never changes the clock.</p>
+    </> : <div key={live?.lanesKey} ref={live?.lanes} className={styles.lanes} style={{ '--lane-count': pair ? 2 : 1 } as CSSProperties}>{roles.map(lane)}</div>}
+    {(has('done') || has('switch') || has('finish') || has('count:round')) && <div className={own.actionBar} data-counter={Boolean(has('count:round') && station.counter)}>
+      {has('done') && <button className={own.bigAction} data-testid={live && 'done'} onClick={() => live?.act('done')}><Icon name="check" size={26} />{station.timing === 'interval' ? 'Done · rest until next' : station.format === 'strength' ? 'Set done' : 'Done'}</button>}
+      {has('switch') && <button className={own.bigAction} data-testid={live && 'switch'} onClick={() => live?.act('switch')}><Icon name="switch" size={26} />Switch to {names[station.switchTo ?? 'A']}</button>}
+      {has('count:round') && station.counter && <div className={own.counter} aria-label={live && 'Round counter'}>
+        <span className={own.counterValue}><strong data-testid={live && 'rounds'}>{station.counter.rounds}</strong><small>rounds</small></span>
+        {has('count:rep') && <span className={own.counterValue}><strong data-testid={live && 'reps'}>{station.counter.reps}</strong><small>reps</small></span>}
+        <button className={own.counterButton} onClick={() => live?.act('count', { unit: 'round' })}><Icon name="plus" size={18} />Round</button>
+        {has('count:rep') && <button className={own.counterButton} onClick={() => live?.act('count', { unit: 'rep' })}><Icon name="plus" size={18} />Rep</button>}
+        <button className={own.counterButton} disabled={!has('undoCount')} aria-label={live && 'Undo last count'} onClick={() => live?.act('undoCount')}><Icon name="undo" size={18} /></button>
+      </div>}
+      {has('skipTurn') && <button className={own.secondaryAction} onClick={() => live?.act('skipTurn')}><Icon name="skip" size={18} />Skip turn</button>}
+      {has('finish') && <button className={own.secondaryAction} data-testid={live && 'finish'} onClick={() => live?.act('finish')}><Icon name="flag" size={18} />Finish block</button>}
+    </div>}
+  </div>;
+}
+
+/**
+ * The ruler (UI-27): every station of the plan laid out unseen, one on top of the other at the stage's own width, so its
+ * height is the tallest station's. Inert and hidden from every reader; it renders again only when the plan or the look changes.
+ */
+const StageRuler = memo(function StageRuler({ stations, look, stack }: { stations: Station[]; look: StageLook; stack: RefObject<HTMLDivElement | null> }) {
+  return <div className={own.ruler} aria-hidden="true" inert><div ref={stack} className={own.rulerStack}>{stations.map(station => <StageBody key={station.key} station={station} look={look} />)}</div></div>;
+});
+
 interface PlayerProps {
   workout: Workout;
   audio: WorkoutAudio;
@@ -91,13 +237,18 @@ interface PlayerProps {
   onSessionClear?: (sessionId: string) => void;
   /** Restore this checkpoint instead of starting fresh (ENG-12). */
   recovery?: Recovery;
+  /** Sessions running on other devices of the household (ENG-15): this one steps aside when it is among them, and before Start one of this workout is offered. */
+  live?: LiveOffers;
 }
 
-export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery }: PlayerProps) {
+export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery, live }: PlayerProps) {
   // The session plays the workout it started with; an edit in the library never changes a running session (AT-14).
   const [workout] = useState(workoutProp);
-  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, progress, clockWeight, clockSize, nudgeSeconds } = preferences;
-  const clockPercent = progress === 'percent';
+  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, pauseColor, nudgeSeconds } = preferences;
+  /** The milestone and paused colours are chosen per theme; the one in effect goes on the frame below. */
+  const theme = useResolvedTheme(preferences.theme);
+  /** What of the session's progress shows, each part on its own: the bar across the top, the percentage under it, the percentage beside the clock, and the round donut. */
+  const shown = preferences.progress;
   /** The clock nudge of the skip buttons and the J and L keys, as on a video player. */
   const nudgeMs = nudgeSeconds * 1000;
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
@@ -121,13 +272,21 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const player = useRef<HTMLDivElement>(null);
   const donutFill = useRef<SVGPathElement>(null);
   const lanesRef = useRef<HTMLDivElement>(null);
+  const stageBody = useRef<HTMLDivElement>(null);
+  const rulerStack = useRef<HTMLDivElement>(null);
   const exitLayer = useRef<HTMLDivElement>(null);
   const lastLanes = useRef<{ key: string; node: HTMLDivElement; top: number; left: number; width: number }>(undefined);
   /** The block whose start card shows (UI-24), and the last block one was shown for. */
   const [intro, setIntro] = useState<number>();
   const introShown = useRef<number>(undefined);
-  const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, flushCheckpoints } = useWorkout(workout, audio, { recovery });
-  const [takenOver, setTakenOver] = useState(false);
+  const { engine, plan, projection, send, subscribeClock, soundError, wakeStatus, restart, checkpointStatus, startedAt, detach, pristine, elsewhere } = useWorkout(workout, audio, { recovery });
+  /** Who controls the session instead of this player: another tab (ENG-14), another device, or nobody because it was finished there (ENG-15). */
+  const [takenOver, setTakenOver] = useState<{ by: 'tab' } | { by: 'device'; label: string } | { by: 'finished' }>();
+  /** A claim of a session from another device is under way: one at a time. */
+  const [claiming, setClaiming] = useState(false);
+  const claim = (sessionId: string) => { if (!live) return; setClaiming(true); void live.onContinue(sessionId).finally(() => setClaiming(false)); };
+  /** The note of a session taken over from another device, until it is resumed here. */
+  const handover = pristine ? recovery?.checkpoint.handover : undefined;
   const { status, current, nextWork, section, format, timing, clockScope, controls, acks, tasks, counter, turn, interval } = projection;
   const isBlock = Boolean(tasks);
   const isPrep = status === 'preparing' || (status === 'paused' && projection.occurrenceId === 'prep');
@@ -169,7 +328,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     const at = focus && focus.sectionIndex === current.sectionIndex ? progressById.get(focus.id) : undefined;
     return at && { ...at, done: at.position - 1, active: !isRest && !isPrep && status !== 'ready' };
   })();
-  const showDonut = Boolean(roundView && (roundView.size > 1 || roundView.rounds > 1));
+  const showDonut = Boolean(shown.donut && roundView && (roundView.size > 1 || roundView.rounds > 1));
   const donut = showDonut && roundView ? <RoundDonut view={roundView} timed={timing !== 'manual'} fill={donutFill} /> : null;
   // A new movement takes over (UI-24): the stations shown before slide out to the left while the new ones slide in
   // from the right. React has just removed the old element; it is parked, inert and without test ids, in an overlay at
@@ -179,18 +338,54 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     const last = lastLanes.current, layer = exitLayer.current;
     if (!last || last.key === lanesKey || !layer || !last.width || last.node.isConnected || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const node = last.node;
+    // The new stations stand where the old ones stood, so they give the place as it is now: a resize or a turn of the screen since the last commit renders nothing here and leaves the record behind.
+    const here = lanesRef.current?.offsetWidth ? placeIn(layer, lanesRef.current) : undefined;
+    const place = here ?? last;
     for (const element of [node, ...node.querySelectorAll<HTMLElement>('*')]) { element.removeAttribute('data-testid'); element.removeAttribute('id'); element.style.animation = 'none'; }
     node.setAttribute('inert', '');
-    Object.assign(node.style, { position: 'absolute', top: `${last.top}px`, left: `${last.left}px`, width: `${last.width}px`, margin: '0' });
+    Object.assign(node.style, { position: 'absolute', top: `${place.top}px`, left: `${place.left}px`, width: `${place.width}px`, margin: '0' });
     layer.replaceChildren(node);
     const exit = node.animate([{ opacity: 1, transform: 'none', filter: 'blur(0)' }, { opacity: 0, transform: 'translateX(-96px) scale(.94)', filter: 'blur(6px)' }], { duration: 260, easing: 'cubic-bezier(.5, 0, .9, .4)', fill: 'forwards' });
     exit.onfinish = () => node.remove();
     return () => { exit.cancel(); node.remove(); };
   }, [lanesKey]);
   useLayoutEffect(() => {
-    const node = lanesRef.current;
-    lastLanes.current = node ? { key: lanesKey, node, top: node.offsetTop, left: node.offsetLeft, width: node.offsetWidth } : undefined;
+    const node = lanesRef.current, layer = exitLayer.current;
+    lastLanes.current = node && layer ? { key: lanesKey, node, ...placeIn(layer, node) } : undefined;
   });
+  // The room the stage keeps (UI-27): the tallest station of the plan as the ruler measures it at this frame's width, written
+  // straight to the frame, so no render waits on it and a resize or a turn measures again by itself. Should a live station
+  // ever stand taller than the ruler said, the room grows to it and stays there for as long as the frame keeps its size.
+  const stations = useMemo(() => planStations(plan), [plan]);
+  /** The session has more than one slot of work, so Up next has something to say before the last of them. */
+  const several = useMemo(() => plan.occurrences.filter(item => item.phase === 'work').length > 1, [plan]);
+  const look = useMemo<StageLook>(() => ({ names, loadUnit, loadsFor: workout.participants === 2 ? loadsFor : undefined, pair: workout.participants === 2 }), [names, loadUnit, loadsFor, workout.participants]);
+  const ruled = !editable && view === 'focus';
+  useLayoutEffect(() => {
+    const frame = player.current, stack = rulerStack.current;
+    if (!ruled || !frame || !stack) return;
+    let seen = 0, size = '';
+    const measure = () => {
+      const now = `${window.innerWidth}x${window.innerHeight}`;
+      if (now !== size) { size = now; seen = 0; }
+      seen = Math.max(seen, stageBody.current?.getBoundingClientRect().height ?? 0);
+      const room = `${Math.ceil(Math.max(stack.getBoundingClientRect().height, seen))}px`;
+      if (frame.style.getPropertyValue('--stage-room') !== room) frame.style.setProperty('--stage-room', room);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stack);
+    if (stageBody.current) observer.observe(stageBody.current);
+    return () => { observer.disconnect(); frame.style.removeProperty('--stage-room'); };
+  }, [ruled]);
+  // The CAP or TURN line under the clock keeps its row for the whole session once any block of the plan shows one, so its coming and going between blocks never moves the digits.
+  const secondaryLine = useMemo(() => plan.occurrences.some(item => {
+    if (item.phase !== 'work') return false;
+    const part = plan.sections[item.sectionIndex];
+    const turns = Boolean(item.tasks) && part.format === 'youGoIGo';
+    const counted = (part.format === 'forTime' || part.format === 'strength') && item.timing === 'manual' && !item.tasks;
+    return turns || (part.capMs !== undefined && (item.timing !== 'manual' || counted));
+  }), [plan]);
   // A card names each block as its work begins; it fades on its own and never moves the layout.
   useEffect(() => {
     if (status !== 'running' || isPrep || introShown.current === current.sectionIndex) return;
@@ -203,6 +398,9 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     return () => clearTimeout(hide);
   }, [intro]);
 
+  // Start was pressed on the card or the workout's page (start.ts): the session begins with that tap, not with a second Start here.
+  // An interrupted session never starts by itself; it asks first (ENG-12).
+  useEffect(() => { if (takeStart(workout.id) && !recovery) send('play', engine.occurrenceId); }, []);
   useEffect(() => { onPerformingChange(!editable); }, [editable, onPerformingChange]);
 
   // This tab controls the session (ENG-14). When another tab claims it: pause, write the last checkpoint, let go.
@@ -213,12 +411,20 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       onClaim: () => {
         if (released) return;
         released = true;
-        send('pause', engine.occurrenceId);
-        void flushCheckpoints().finally(() => { held.release(); setTakenOver(true); });
+        void detach().finally(() => { held.release(); setTakenOver({ by: 'tab' }); });
       },
     });
     return () => { released = true; held.release(); };
-  }, [engine, editable, takenOver, flushCheckpoints, send]);
+  }, [engine, editable, takenOver, detach]);
+  // Another device continues this session (ENG-15): the uplink was told so, or the household's list names another
+  // controller. Pause, write what is pending, then drop this device's checkpoint so nothing here offers the session as
+  // interrupted, and step aside. The lock above goes with it. No label means the session was finished there already.
+  const continuedOn = elsewhere ? elsewhere.controller?.deviceLabel ?? '' : live?.sessions.find(item => item.id === engine.sessionId)?.deviceLabel;
+  useEffect(() => {
+    if (continuedOn === undefined || editable || takenOver) return;
+    setTakenOver(continuedOn ? { by: 'device', label: continuedOn } : { by: 'finished' });
+    void detach().then(() => onSessionClear?.(engine.sessionId));
+  }, [continuedOn, editable, takenOver, detach, engine, onSessionClear]);
   // Clips and this workout's recorded movement names are decoded before Play so a session never waits on the network.
   useEffect(() => { void audio.preload(); void audio.prepareNames(collectPrescriptions(workout).map(item => audio.nameKey(item))); }, [audio, workout, catalogue]);
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
@@ -246,6 +452,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
 
   // Keyboard: Space pauses/resumes, Enter is Done or Switch, arrows navigate (NFR-08).
   useEffect(() => {
+    // A player that handed its session over is inert: no key reaches an engine that holds no lock (AT-21).
+    if (takenOver) return;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'A'].includes(target.tagName)) return;
@@ -264,7 +472,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine, send, nudgeMs]);
+  }, [engine, send, nudgeMs, takenOver]);
 
   // For time and strength count up in the big clock (UI-04); a cap stays secondary and drives the perimeter.
   const countUp = (format === 'forTime' || format === 'strength') && timing === 'manual' && !isBlock;
@@ -326,6 +534,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     return () => observer.disconnect();
   }, [projection.occurrenceId, highlight, following, view]);
 
+  const capLine = projection.capMs !== undefined && (clockScope !== 'cap' || countUp);
+  const turnLine = isBlock && format === 'youGoIGo' && clockScope !== 'turn';
   const restLabel = current.phase === 'roundRest' ? 'Round rest' : current.phase === 'transition' ? 'Transition' : 'Block rest';
   const phaseLabel = status === 'ready' ? 'Ready when you are' : status === 'paused' ? projection.pauseReason === 'hidden' ? 'Paused · app was hidden' : projection.pauseReason === 'recovered' ? 'Recovered · paused' : 'Workout paused' : status === 'awaitingReady' ? 'Next block · ready?' : status === 'completed' ? 'Workout complete' : status === 'aborted' ? 'Workout ended' : isPrep ? 'Get ready' : isRest ? restLabel : format === 'amrap' ? 'AMRAP' : format === 'emom' ? 'Interval' : format === 'youGoIGo' ? `${turn?.athlete === 'B' ? names.B : names.A} works` : format === 'strength' ? 'Set' : timing === 'manual' ? 'Work · tap Done' : 'Work';
   const playerPhase = terminal ? 'complete' : status === 'paused' ? 'paused' : isRest ? 'rest' : isPrep ? 'prep' : status === 'ready' ? 'ready' : 'work';
@@ -334,42 +544,27 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const positionLabel = format === 'emom' && interval ? `INTERVAL ${interval.index} / ${interval.count}` : format === 'youGoIGo' && turn ? `TEAM ROUND ${turn.teamRound + 1}${turn.roundsTarget ? ` / ${turn.roundsTarget}` : ''} · TURN ${turn.number}` : round && !showDonut ? `${format === 'strength' ? 'SET' : 'ROUND'} ${roundNumber} / ${round.count}` : blockLabel;
   const caption = terminal ? 'ACTIVE SESSION TIME' : status === 'ready' || isPrep ? 'PREP COUNTDOWN' : status === 'awaitingReady' ? countUp ? section.capMs ? 'NEXT BLOCK · COUNTS UP TO THE CAP' : 'NEXT BLOCK · NO CAP' : clockScope === 'cap' ? 'NEXT BLOCK · TIME CAP' : clockScope === 'elapsed' ? 'NEXT BLOCK · NO CAP' : 'FIRST WORK INTERVAL' : isRest ? 'REST REMAINING' : countUp ? section.capMs ? 'ELAPSED · CAP BELOW' : 'ELAPSED · NO CAP' : CAPTIONS[clockScope];
   const laneHeading = isRest ? 'COMING UP AFTER REST' : status === 'awaitingReady' ? 'YOUR NEXT BLOCK' : isBlock && format === 'amrap' ? 'ONE ROUND · REPEAT UNTIL THE CAP' : isBlock ? 'THE WORK UNIT' : 'YOUR STATIONS';
-  const unitTasks = (tasks ?? []) as TaskItem[];
-  const fitWarning = isBlock && format === 'amrap' && unitTasks.length > 8;
 
-  const laneState = (role: 'A' | 'B'): { state: 'done' | 'waiting' | 'rest' | 'active'; label: string } | undefined => {
+  const laneState = (role: Role): LaneState | undefined => {
     if (!active && status !== 'paused') return undefined;
-    if (format === 'youGoIGo' && turn) return turn.athlete === role ? { state: 'active', label: 'YOUR TURN' } : { state: 'rest', label: 'REST · NEXT UP' };
-    const completion = current.completion ?? 'team';
-    const done = completion === 'team' ? acks.team : acks[role];
-    if (!done) return undefined;
-    if (timing === 'interval') return { state: 'rest', label: 'DONE · REST' };
-    return { state: 'waiting', label: completion === 'both' ? 'DONE · WAITING' : 'DONE' };
+    if (format === 'youGoIGo' && turn) return turn.athlete === role ? TURN_STATES.A : TURN_STATES.B;
+    const both = current.completion === 'both';
+    return (both ? acks[role] : acks.team) ? reportedIn(timing, both) : undefined;
   };
-
-  const lane = (role: 'A' | 'B') => {
-    const item = showing?.[role];
-    const target = item && primaryTarget(item);
-    const state = laneState(role);
-    const activeLane = format !== 'youGoIGo' || !turn || turn.athlete === role || isRest;
-    return <section className={`${styles.lane} ${own.lane}`} data-athlete={role} data-active={activeLane} data-block={isBlock && format === 'youGoIGo' ? 'turns' : undefined} key={role} aria-label={`Athlete ${role} station`}>
-      <div className={styles.athleteLabel}><span className={styles.athleteBadge}>{role}</span><span>{names[role]}<small>{role === 'A' ? 'LEFT LANE' : 'RIGHT LANE'}</small></span>{timing !== 'manual' && <span className={styles.laneTime}>{Math.round((isRest ? nextWork?.durationMs ?? 0 : current.durationMs) / 1000)}s</span>}</div>
-      {isBlock && format === 'youGoIGo' ? <>
-        <h2 data-testid={`movement-${role}`}>{activeLane ? 'Your turn' : 'Rest'}</h2>
-        <ul className={own.unit}>{unitTasks.map(task => { const lanePrescription = task.assignments[role] ?? task.assignments.A; const amount = primaryTarget(lanePrescription); return <li key={task.nodeId}>{amount && <>{amount.amount}<small>{amount.unit}</small></>}<span>{lanePrescription.shortName ?? lanePrescription.name}</span><LoadLevels load={lanePrescription.load} unit={loadUnit} sex={loadSex(role)} /></li>; })}</ul>
-      </> : <>
-        {target && <div className={own.target}><strong>{target.amount}</strong><small>{target.unit}</small></div>}
-        <h2 data-testid={`movement-${role}`}>{item?.shortName ?? item?.name ?? 'All done'}</h2>
-        {item?.load ? <span className={own.loadLine}><LoadLevels load={item.load} unit={loadUnit} sex={loadSex(role)} /></span> : null}
-        <p>{item ? target || item.load ? item.notes ?? '' : prescriptionText(item) : 'You’re at the finish.'}</p>
-      </>}
-      {state && <span className={own.laneState} data-state={state.state}>{state.state === 'done' || state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
-      {can(`done:${role}`) && <button className={`${styles.primaryButton} ${own.laneDone}`} onClick={() => send('done', projection.occurrenceId, { athlete: role })}><Icon name="check" />{names[role]} done</button>}
-    </section>;
+  // The station in view, as the stage draws it: what the session shows now, where the ruler's copies show what the plan can.
+  const station: Station = {
+    key: 'live', format, timing, assignments: showing, tasks, controls, counter,
+    seconds: timing === 'manual' ? undefined : Math.round((isRest ? nextWork?.durationMs ?? 0 : current.durationMs) / 1000),
+    state: { A: laneState('A'), B: laneState('B') },
+    resting: format === 'youGoIGo' && turn && !isRest ? turn.athlete === 'A' ? 'B' : 'A' : undefined,
+    switchTo: turn?.athlete === 'A' ? 'B' : 'A',
   };
+  const stageLive: StageLive = { lanesKey, lanes: lanesRef, body: stageBody, highlight, onHighlight: nodeId => setHighlight(value => value === nodeId ? undefined : nodeId), act: (type, extra) => send(type, projection.occurrenceId, extra) };
 
   if (takenOver) return <div className={styles.screen}>
-    <section className={styles.recovery} role="region" aria-label="Taken over"><div><strong>Another tab took over this session.</strong><p>“{workout.title}” continues there; this tab no longer controls the clock. Close it, or reopen the session here.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href="#/">Back to library</a><button className={styles.primaryButton} onClick={() => window.location.reload()}><Icon name="play" />Reopen here</button></div></section>
+    {takenOver.by === 'tab'
+      ? <section className={styles.recovery} role="region" aria-label="Taken over"><div><strong>Another tab took over this session.</strong><p>“{workout.title}” continues there; this tab no longer controls the clock. Close it, or reopen the session here.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href="#/">Back to library</a><button className={styles.primaryButton} onClick={() => window.location.reload()}><Icon name="play" />Reopen here</button></div></section>
+      : <section className={styles.recovery} role="region" aria-label="Continued on another device"><div><strong>{takenOver.by === 'device' ? `Continued on ${takenOver.label}.` : 'Finished on another device.'}</strong></div><div className={styles.dialogActions}><a className={styles.quietButton} href="#/">Back to library</a>{takenOver.by === 'device' && live && <button className={styles.primaryButton} disabled={claiming} onClick={() => claim(engine.sessionId)}><Icon name="play" />Take it back here</button>}</div></section>}
   </div>;
 
   return <div className={styles.screen} data-performing={!editable} data-view={view}>
@@ -383,7 +578,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
     </div>
 
-    <div className={styles.player} ref={player} data-boundary={status === 'awaitingReady' ? 'end' : intro !== undefined && intro === current.sectionIndex ? 'start' : undefined} data-phase={playerPhase} data-scope={clockScope} data-progress={progress} data-warning="normal" data-wash={preferences.wash} data-clock-weight={clockWeight} data-clock-size={clockSize} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first ? { '--phase-amber': markColors.first } : {}), ...(markColors.second ? { '--phase-red': markColors.second } : {}) } as CSSProperties}>
+    <div className={styles.player} ref={player} data-boundary={status === 'awaitingReady' ? 'end' : intro !== undefined && intro === current.sectionIndex ? 'start' : undefined} data-phase={playerPhase} data-scope={clockScope} data-bar={shown.bar} data-bar-percent={shown.barPercent} data-clock-percent={shown.clockPercent} data-donut={shown.donut} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first[theme] ? { '--phase-amber': markColors.first[theme] } : {}), ...(markColors.second[theme] ? { '--phase-red': markColors.second[theme] } : {}), ...(pauseColor[theme] ? { '--phase-paused': pauseColor[theme] } : {}) } as CSSProperties}>
       <Perimeter progress={border} width={perimeterWidth} />
       <div ref={exitLayer} className={own.exitLayer} aria-hidden="true" />
       {status === 'awaitingReady' && current.sectionIndex > 0 ? (() => {
@@ -394,14 +589,15 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         <span>BLOCK {intro + 1} OF {plan.sections.length}</span><strong>{section.title}</strong><small>{[FORMAT_LABELS[format], roundView && roundView.rounds > 1 ? `${roundView.rounds} rounds` : '', section.capMs ? `cap ${displayTime(section.capMs)}` : ''].filter(Boolean).join(' · ')}</small>
       </div> : null}
       <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span><span className={styles.position}>{positionLabel}</span>{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
-      {progress !== 'off' && <div className={styles.overall} data-testid="overall-progress" aria-label="Overall progress"><span className={styles.overallTrack}>{plan.sections.map((item, index) => <span key={item.id} className={styles.overallSegment} data-segment={index} style={{ flexGrow: item.endIndex - item.startIndex + 1 }}><span ref={element => { segmentFills.current[index] = element; }} className={styles.overallFill} /></span>)}</span>{progress === 'detail' && <span ref={overallText} className={styles.overallText}>0 % DONE</span>}</div>}
+      {(shown.bar || shown.barPercent) && <div className={styles.overall} aria-label="Overall progress">{shown.bar && <span className={styles.overallTrack} data-testid="overall-progress">{plan.sections.map((item, index) => <span key={item.id} className={styles.overallSegment} data-segment={index} style={{ flexGrow: item.endIndex - item.startIndex + 1 }}><span ref={element => { segmentFills.current[index] = element; }} className={styles.overallFill} /></span>)}</span>}{shown.barPercent && <span ref={overallText} className={styles.overallText}>0 % DONE</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
-        <div className={styles.clockLine}>{donut}<div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>{clockPercent && <span ref={clockPercentRef} className={styles.clockPercent} aria-label="Progress beside the clock">0 %</span>}</div>
+        <div className={styles.clockLine}>{donut}<div ref={timer} className={styles.timer} data-testid="primary-timer" aria-label="Primary timer">{displayTime(workout.prepMs || firstDisplayMs)}</div>{shown.clockPercent && <span ref={clockPercentRef} className={styles.clockPercent} aria-label="Progress beside the clock">0 %</span>}</div>
         <div className={styles.clockCaption}>{caption}</div>
-        {!terminal && !editable && ((projection.capMs !== undefined && (clockScope !== 'cap' || countUp)) || clockScope === 'turn' || (isBlock && format === 'youGoIGo')) && <div className={own.secondaryClock}>
-          {projection.capMs !== undefined && (clockScope !== 'cap' || countUp) && <span>CAP<strong ref={capClock}>{displayTime(projection.capMs)}</strong></span>}
-          {isBlock && format === 'youGoIGo' && clockScope !== 'turn' && <span>TURN<strong ref={turnClock}>00:00</strong></span>}
+        {!terminal && !editable && (capLine || turnLine || secondaryLine) && <div className={own.secondaryClock} data-idle={!(capLine || turnLine) || undefined}>
+          {capLine && <span>CAP<strong ref={capClock}>{displayTime(projection.capMs!)}</strong></span>}
+          {turnLine && <span>TURN<strong ref={turnClock}>00:00</strong></span>}
+          {!(capLine || turnLine) && <span>&nbsp;</span>}
         </div>}
       </div>
 
@@ -409,29 +605,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         {projection.results.length > 0 && <ul className={own.resultList} aria-label="Block results">{projection.results.map(result => <li key={result.sectionId}><span>{plan.sections.find(item => item.id === result.sectionId)?.title ?? result.sectionId}</span><span>{resultText(result)}</span></li>)}</ul>}
       </div> : <>
         <div className={styles.laneHeading}>{laneHeading}<span>{roundView && roundView.size > 1 ? `MOVEMENT ${roundView.position} / ${roundView.size}` : ''}</span></div>
-        {isBlock && format === 'amrap' ? <>
-          {fitWarning && <p className={own.fitWarning}>Long block: {unitTasks.length} movements may not all fit on a small screen. Use the Context view to scroll.</p>}
-          <ul className={own.taskList} aria-label="AMRAP block">{unitTasks.map((task, index) => <li key={task.nodeId} className={own.taskRow} data-pair={pair} data-highlight={highlight === task.nodeId} onClick={() => setHighlight(value => value === task.nodeId ? undefined : task.nodeId)}>
-            <span className={own.taskIndex}>{index + 1}</span>
-            {(['A', 'B'] as const).filter(role => role === 'A' || pair).map(role => { const item = task.assignments[role]!; const amount = primaryTarget(item); return <span key={role} className={own.taskCell} data-role={role}>{amount && <strong>{amount.amount}<small>{amount.unit}</small></strong>}<span>{item.shortName ?? item.name}</span><LoadLevels load={item.load} unit={loadUnit} sex={loadSex(role)} /></span>; })}
-          </li>)}</ul>
-          <p className={own.taskHint}>Tap a row to mark where you are. It never changes the clock.</p>
-        </> : <div key={lanesKey} ref={lanesRef} className={styles.lanes} style={{ '--lane-count': workout.participants } as CSSProperties}>{(['A', 'B'] as const).filter(role => role === 'A' || pair).map(lane)}</div>}
-
-        {(can('done') || can('switch') || can('finish') || can('count:round')) && <div className={own.actionBar} data-counter={Boolean(can('count:round') && counter)}>
-          {can('done') && <button className={own.bigAction} data-testid="done" onClick={() => send('done', projection.occurrenceId)}><Icon name="check" size={26} />{timing === 'interval' ? 'Done · rest until next' : format === 'strength' ? 'Set done' : 'Done'}</button>}
-          {can('switch') && <button className={own.bigAction} data-testid="switch" onClick={() => send('switch', projection.occurrenceId)}><Icon name="switch" size={26} />Switch to {turn?.athlete === 'A' ? names.B : names.A}</button>}
-          {can('count:round') && counter && <div className={own.counter} aria-label="Round counter">
-            <span className={own.counterValue}><strong data-testid="rounds">{counter.rounds}</strong><small>rounds</small></span>
-            {can('count:rep') && <span className={own.counterValue}><strong data-testid="reps">{counter.reps}</strong><small>reps</small></span>}
-            <button className={own.counterButton} onClick={() => send('count', projection.occurrenceId, { unit: 'round' })}><Icon name="plus" size={18} />Round</button>
-            {can('count:rep') && <button className={own.counterButton} onClick={() => send('count', projection.occurrenceId, { unit: 'rep' })}><Icon name="plus" size={18} />Rep</button>}
-            <button className={own.counterButton} disabled={!can('undoCount')} aria-label="Undo last count" onClick={() => send('undoCount', projection.occurrenceId)}><Icon name="undo" size={18} /></button>
-          </div>}
-          {can('skipTurn') && <button className={own.secondaryAction} onClick={() => send('skipTurn', projection.occurrenceId)}><Icon name="skip" size={18} />Skip turn</button>}
-          {can('finish') && <button className={own.secondaryAction} data-testid="finish" onClick={() => send('finish', projection.occurrenceId)}><Icon name="flag" size={18} />Finish block</button>}
-        </div>}
-        <div className={styles.nextStrip} data-empty={!nextWork}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next block, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B && nextWork.assignments.B.name !== nextWork.assignments.A.name ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>
+        <div className={own.stage}><StageBody station={station} look={look} live={stageLive} /></div>
+        <div className={styles.nextStrip} data-empty={!nextWork} data-kept={several || undefined}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next block, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B && nextWork.assignments.B.name !== nextWork.assignments.A.name ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>
       </>}
 
       {view === 'context' && <section className={styles.contextSection} aria-label="Workout context">
@@ -470,12 +645,18 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
           {plan.sections.length > 1 && <button className={styles.iconButton} aria-label="Next block" disabled={!can('nextSection')} onClick={() => send('nextSection', projection.occurrenceId)}><Icon name="sectionNext" /></button>}
         </div>
       </div>
-      {status === 'paused' && projection.pauseReason === 'recovered' && recovery && <section className={styles.recovery} role="dialog" aria-label="Interrupted session">
-        <div><strong>Interrupted session · saved {elapsedText(Date.now() - new Date(recovery.checkpoint.savedAt).getTime())}</strong><p>{[`Block ${current.sectionIndex + 1} of ${plan.sections.length}`, turn ? `${turn.athlete === 'A' ? names.A : names.B}’s turn · team round ${turn.teamRound + 1}` : round ? `Round ${round.iteration}` : '', clockScope === 'elapsed' ? `${displayTime(engine.readClocks().activeMs, 'floor')} elapsed` : `${displayTime(engine.readClocks().remainingMs)} left`].filter(Boolean).join(' · ')}. Time since the save is not counted; nothing was marked done for you.</p></div>
-        <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send('resume', projection.occurrenceId)}><Icon name="play" />Resume</button></div>
+      {status === 'ready' && live && live.sessions.filter(item => item.workoutId === workout.id).map(item => <section key={item.id} className={styles.recovery} role="region" aria-label="Session on another device">
+        <div><strong>{sessionHeadline(item)} · updated {elapsedText(live.ageMs(item))}</strong></div>
+        <div className={styles.dialogActions}><button className={styles.primaryButton} disabled={claiming} onClick={() => claim(item.id)}><Icon name="play" />Continue here</button></div>
+      </section>)}
+      {/* A restored session asks before it goes on (ENG-12). One taken over from another device says where it comes from, also when it was paused there (ENG-15). */}
+      {recovery && ((status === 'paused' && projection.pauseReason === 'recovered') || (handover && (status === 'paused' || status === 'awaitingReady'))) && <section className={styles.recovery} role="dialog" aria-label={handover ? 'Continued session' : 'Interrupted session'}>
+        <div><strong>{handover ? `Continued from ${handover.from}` : 'Interrupted session'} · saved {elapsedText(Date.now() - new Date(handover?.savedAt ?? lastSaved(recovery)).getTime())}</strong><p>{[`Block ${current.sectionIndex + 1} of ${plan.sections.length}`, turn ? `${turn.athlete === 'A' ? names.A : names.B}’s turn · team round ${turn.teamRound + 1}` : round ? `Round ${round.iteration}` : '', clockScope === 'elapsed' ? `${displayTime(engine.readClocks().activeMs, 'floor')} elapsed` : `${displayTime(engine.readClocks().remainingMs)} left`].filter(Boolean).join(' · ')}. Time since the save is not counted; nothing was marked done for you.</p></div>
+        <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send(status === 'awaitingReady' ? 'ready' : 'resume', projection.occurrenceId)}><Icon name="play" />{status === 'awaitingReady' ? 'Start next block' : 'Resume'}</button></div>
       </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
       <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : ''}</span></div>
+      {ruled && <StageRuler stations={stations} look={look} stack={rulerStack} />}
     </div>
 
     <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Details</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>

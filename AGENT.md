@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.19 · 31 October 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.20 · 16 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -136,6 +136,8 @@ The interface calls a section a block, while the code and the file format keep `
 
 **LIB-06** Authors SHALL be master data like equipment and movements: Settings lists the authors library workouts name, with how many workouts each, and SHALL offer New, Rename, Merge and Delete, with Undo for merges and Restore for deletions. Renames and merges map every spelling to the one kept, and a deleted author is no longer shown. The library SHALL apply this in the workout pages, the search (typo-tolerant, like titles and movements), an Author filter and the editor, whose author field SHALL suggest known authors as the user types and nudge a near-duplicate spelling. Workout files SHALL keep their own text (LIB-02), and saving an edited workout stores the kept spelling.
 
+**LIB-07** The library SHALL offer the sort Recently added: saved workouts by the date they joined the library, newest first, a workout still waiting for the server counting as the newest, and bundled workouts, which carry no date, after them by title. An edit keeps the date.
+
 ## 5.2 Builder
 
 **BLD-01** The builder SHALL support add, edit, duplicate, delete, and reorder for sections, activities, and repeat blocks. Touch and keyboard buttons SHALL provide an alternative to drag-and-drop.
@@ -160,7 +162,7 @@ The interface calls a section a block, while the code and the file format keep `
 
 Validation includes missing IDs/references, duplicate node IDs, negative/nonfinite values, zero-duration automatic loops, invalid repeat counts, unsupported nesting, empty AMRAP work lists, absent manual termination rules, mismatched athlete assignments, and incompatible completion policies. Proposed P0 limits are 1–999 repeats per node, two repeat nesting levels, 10,000 resolved timed occurrences, and a 24-hour session cap. Limits SHALL be enforced on both client and server.
 
-**BLD-11** The builder SHALL autosave local drafts and clearly distinguish Saved, Unsaved locally, Sync pending, and Save failed. Explicit save to the server SHALL use revision conflict checking; a conflicting version SHALL NOT silently overwrite another edit.
+**BLD-11** The builder SHALL autosave local drafts and clearly distinguish Saved, Unsaved locally, Sync pending, and Save failed. Explicit save to the server SHALL use revision conflict checking; a conflicting version SHALL NOT silently overwrite another edit. An edit made just before leaving the editor or the page SHALL still reach the draft, a draft that was saved or discarded SHALL NOT reappear, and a save that fails SHALL say so in the editor's summary and leave the edits open.
 
 **BLD-12** Paired repeat blocks SHALL support an explicit assignment policy: fixed assignments or alternate the two task columns after each complete iteration. Alternation SHALL change prescriptions within stable A/B lanes, not athlete identity or lane order. The preview, spoken cues, checkpoints, and exported workout SHALL preserve the policy and resolve the correct assignments for each iteration. The first implementation MAY compile the policy into explicit per-round assignments; the shared model SHALL preserve its authored meaning. Nested repeats SHALL identify which repeat level triggers alternation.
 
@@ -176,6 +178,17 @@ A transition after the last slot of each round, from older workouts, stays store
 The overview shows the same tile between section cards, and the difficulty rating counts the rest without taking it from a cap.
 
 **BLD-15** Every workout the compiler accepts SHALL open in the editor, whether it was bundled, imported or written by hand, so Edit and Duplicate are never withheld from a valid workout.
+
+**BLD-16** A field of the editor SHALL never work against the person typing in it.
+Number fields in the editor and the score correction SHALL keep their own text while it is typed: an emptied field reads empty, never 0, the model receives only numbers within the field's bounds, and the field shows the stored value again when it loses focus.
+A decimal field SHALL take a point or a comma, and a time field SHALL take either as the colon, while plain digits remain seconds.
+Clearing an amount SHALL NOT remove a target or a load or change its kind or unit: "No target" and "No load" are the only ways to remove one, and one level of a levelled load is removed by emptying it while another level has an amount.
+Reps and calories are whole numbers from 1, and distances, seconds and loads are decimals above zero.
+Women's amounts SHALL survive an edit of the men's amount, including deleting and retyping it, a change between kg and lb, and the Levels switch, and a percentage carries none.
+A target the form does not show SHALL be kept.
+Suggestion lists (movements, authors, equipment) SHALL open on any change of the text, whatever the keyboard sends, and a tap or click on a suggestion SHALL pick it with the focus staying in the field.
+Retyping a movement's name SHALL drop the link to its catalogue record together with the record's short and spoken names.
+Switching a draft to Solo SHALL hide athlete B's lanes, swaps and Done rules without deleting them, so Pair restores them, and a saved solo workout carries none.
 Timed circuit, For time and strength lists SHALL hold, besides movements, rests of their own length at their place in the list and groups with their own rounds, rest between rounds, rest between movements and A/B swap, up to the two nested repeat levels of BLD-03.
 A movement in a For time or strength list SHALL be either until Done or timed.
 Saving an opened workout unchanged SHALL keep its movements, assignments, round structure and timing, except that a rest after the workout's very last movement is dropped and a rest after the last movement of each round joins the rest between rounds or sections.
@@ -365,7 +378,18 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **ENG-13** P0 SHALL not promise reliable background or lock-screen execution. If the OS suspends the app before a visibility checkpoint, recovery follows ENG-12. Network loss alone SHALL not pause the session. A hidden-app pause SHALL be distinguishable from user-requested pause.
 
-**ENG-14** Only one tab SHALL control a given session. A second tab SHALL show a read-only or explicit takeover state. Duplicate tab detection must work without a server round trip; cross-device live control is deferred. The suggested mechanism is a Web Locks API lock named by session ID, released by the browser when the controlling tab closes, with BroadcastChannel to announce takeover.
+**ENG-14** Only one tab SHALL control a given session. A second tab SHALL show an explicit takeover state, and a tab that handed its session over SHALL be inert: it takes no command and writes no checkpoint. Duplicate tab detection SHALL work without a server round trip: a Web Locks API lock named by session ID, released by the browser when the controlling tab closes, with BroadcastChannel to announce the takeover. A session that is live in another tab SHALL NOT be offered as interrupted and SHALL NOT be discardable from the library. Control across devices is ENG-15.
+
+**ENG-15** In the server shape a running session SHALL be continuable on another device of the household.
+The controlling device SHALL send every checkpoint and, while running, a progress record about every 3 seconds to the server, off the timing path. A failed send SHALL NOT raise the local-storage indicator, and a last send SHALL be attempted when the app is hidden or closed.
+One device controls a session: the server SHALL accept writes from it alone, answer any other device with the controller's name, ignore a checkpoint saved before the stored one unless its revision is higher, and keep a progress record only for the stored checkpoint revision.
+Other devices SHALL show such a session with the device's name and the age of its last write, without a reload (at start, on focus, on reconnect, and every 10 seconds while visible), in the library, on the workout's page and before Start. A device is never offered its own session.
+Continue here SHALL claim the session, write it into the device's checkpoints in one transaction and restore it paused (ENG-12), naming the device it comes from and asking before it continues, also when it was paused there.
+The previous device SHALL step aside at its next save or list read: pause, write nothing more, drop its checkpoint, release the tab lock, name the continuing device, and offer to take the session back.
+Exactly one result SHALL be stored: the finished record removes the live row, an aborted record from a device that no longer controls the session is acknowledged and not stored while a completed or capped one is kept, a session that ends without a record removes its own row, and a row expires 12 hours after its last write.
+Leaving the player mid-session SHALL pause it and save, so the library offers it at once.
+The play route SHALL decide once, on entry, whether it restores a session, so a later read of the checkpoints never swaps the player under a live session.
+The static shape has no hand-over.
 
 # 8 Workout player and visibility requirements
 
@@ -377,7 +401,7 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **UI-03** Context view SHALL automatically follow active anchors, including returning to the first row when a block repeats. User scrolling temporarily disables follow. A persistent Follow workout control restores it. Focus mode SHALL not move the main timer's position at each transition.
 
-**UI-04** A/B positions and labels SHALL remain stable. Task changes SHALL update content within the lanes, not swap the lanes. Participant colour SHALL be independent of work/rest colour. Labels remain understandable without colour.
+**UI-04** A/B positions and labels SHALL remain stable. Task changes SHALL update content within the lanes, not swap the lanes. The lanes SHALL carry no colour of their own and no side caption: they are neutral glass over the pulse, and position, badge and name tell the athletes apart. Labels remain understandable without colour.
 
 | Mode | Primary content | Next information and controls |
 | - | - | - |
@@ -429,20 +453,43 @@ With reduced motion the wash stays at its floor and the colours change at the ma
 
 **UI-19** An address the app does not know SHALL show a "Page not found" page, and a workout link whose workout is not in the library SHALL show a "Workout not found" page naming the ID, both with a way back to the library and a confused-Travolta loop. A workout link SHALL not be called missing before the library has loaded. The library SHALL show the same loop above "Nothing matches yet". The loop SHALL keep its transparency, load only where it is shown, and hold a still frame when the system asks for reduced motion.
 
-**UI-20** During a session on a screen wider than a phone but at most 960 px tall, such as a tablet or a laptop in landscape, the clock, the stations or the AMRAP block, the actions, Up next and the transport controls SHALL fit the frame without scrolling, in the focus and the context view. Sizes SHALL follow the height, and the corner view switch SHALL stay inside the frame.
+**UI-20** During a session the frame SHALL hold the clock, the stations or the AMRAP block, the actions, Up next and the transport controls without scrolling, in the focus and the context view, in either orientation of a tablet and after a turn from one to the other.
+Wider than a phone no row gives way: a frame too short for its rows scrolls, no row is laid over another, and the clock gives up its room first (UI-27).
+On a frame at most 1200 px tall the sizes of the stations, the actions and Up next follow the height, and at most 760 px tall the rows sit tighter and the percentage under the overall bar steps aside where the bar shows.
+In those sizes a lane's own Done button, and the lane state that takes its place, share the athlete's label row, except on a tablet held upright (at most 900 px wide, at least 941 px tall), where they stay under the station, and a you-go-I-go lane shows no turn heading there.
+The corner view switch SHALL stay inside the frame.
 In the focus view the big clock SHALL stay in the same place from one slot to the next, whatever the height of the station card.
 
 **UI-21** The header SHALL show the running version under the wordmark's lower right corner, on every screen size, so a device shows at a glance which release it has loaded.
 
 **UI-22** Settings SHALL have a Logbook section at `#/settings/logbook` listing every session played, newest first, with paging: the workout title linked to the workout while it is in the library, the date, the active time and the score, the outcome once and only when it is not Completed, the Interrupted, Modified and Corrected flags, and small icon actions to Repeat (the snapshot when the workout is gone), Correct score (DAT-05) and Delete (DAT-14). The header's clock icon SHALL open it, `#/history` SHALL lead to it, and the per-workout past sessions SHALL reflect deletions.
 
-**UI-23** A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove).
+**UI-23** A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove). Its facts at a glance SHALL be the total time, the active time, the rest time (every transition, round rest and block rest added up, so total is active plus rest), the blocks, the movements and the pieces of equipment. The editor's summary shows the same three times. A time is written plainly, which for capped work is its cap. Where open-ended work comes on top of what the clock knows, total and active carry a plus, and a workout the clock knows nothing of reads Open, as its library card does.
 
 **UI-24** The training view SHALL show where a block stands without repeating itself. A round donut beside the clock, opposite the percentage and standing on the same baseline, SHALL have one segment per movement of the round that fills movement by movement (a timed slot with its clock, manual work as a pulse), and one dot per round of the block below it. It never moves or pushes the clock (UI-20), steps aside where a narrow screen leaves no room, and leaves AMRAP and you-go-I-go blocks to the athletes (UI-06). The overall bar SHALL be split into one segment per block. The top line names the block, the stations heading counts the movement ("MOVEMENT 2 / 4"), and the state above the clock (Work, Rest, Get ready) SHALL be large enough to read across the room. A card SHALL name each block as its work begins and fade by itself, and a block that waits for Ready SHALL say it is done, with its result, in the frame's accent. When the next movement appears, the stations shown before SHALL slide out and the new ones slide in, which reduced motion suppresses (UI-10). The context view SHALL keep the movement under way in the middle of its list while its Stick to movement switch is on.
 Chips on a workout card and a workout's page SHALL state what holds for the whole workout: athletes, collection, difficulty and, once done, when it was last done.
 A format belongs to a block, so it SHALL show as a chip on each block of the workout's page and never among the workout's chips, and the library's format filter SHALL read "Block format".
 A library card SHALL show, in this order, those chips, the title, the description cut to two lines, the duration, blocks and movements, the equipment, and Start and Details.
 The library's filters SHALL come in this order: athletes, collection, difficulty with the same chips as the cards, duration, block format, equipment.
+
+**UI-25** Start SHALL begin the session with that tap: on a library card, on a workout's page and on Repeat in the logbook the tap unlocks the sound (AUD-08) and the player opens in the prep countdown, with no second Start. The ready screen remains for a reload, a bookmark and the back button, which have no tap to unlock the sound with, and an interrupted or handed-over session SHALL never start by itself (ENG-12, ENG-15).
+
+**UI-26** At 620 px or less every form control SHALL use a font of at least 16 px, so iOS Safari does not zoom the page when a field takes the focus.
+
+**UI-27** In the focus view the clock SHALL take the room the workout leaves, at every width.
+The stations and their action bar SHALL keep the height of the plan's tallest station for the whole session, measured on unseen, inert copies of every distinct station drawn with the same markup at the frame's width, each with all the furniture its block can show, and never less than the tallest station actually shown. Up next keeps one line.
+The clock block is the one flexible row: its digits are as large as the block allows, limited by the frame's width (the digits with the donut and the percentage beside them, where those are on) and by 320 px, and never smaller than 84 px (60 px on a phone), below which the frame scrolls.
+The clock's box SHALL be the same for every slot of a session, across block boundaries, and SHALL be fitted anew after a resize or a turn.
+The donut and the percentage beside the clock are sized from the clock, and where the clock is at its limit the remaining room stays above Up next.
+A CAP or TURN line keeps its row for the whole session once any block shows one, and the context view keeps its fixed clock.
+The clock is always bold and has no weight or size option.
+
+**UI-28** The settings SHALL keep their controls few and of one kind.
+Every colour is chosen with one compact well that shows the colour as it will appear, opens the platform's own picker with the ready-made choices in it, and brings a reset to the built-in colour while a custom one is set.
+Appearance has one row per theme with that theme's accent and background, and every phase colour but work (rest, paused, first and second milestone) has a choice per theme, applied inside the player and its miniature only.
+The parts of the overall progress (the bar, the percentage under it, the percentage beside the clock and the round donut) are switched independently with checkboxes: every combination fits, a part that is off leaves no gap, the clock takes the width the donut and the percentage give back, and the miniature shows the chosen parts.
+A choice between a few named options (default view, sound, voice) is a toggle, not a dropdown, and a stored setting of an older shape is carried over, also when it arrives from another device.
+A field with a visible label carries no example or hint inside it.
 
 # 9 Audio and spoken cues
 
@@ -709,11 +756,13 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-31 | Rename an author, merge two others, undo one merge, delete an author and restore it. The library pages, search and Author filter follow each change, the files are unchanged, and the editor suggests the kept spelling while typing and nudges a near-duplicate. | LIB-02/04/06 |
 | AT-32 | Play the partner circuit in the context view at tablet and phone widths: the donut reads movement 4 of 4 with 4 rounds left at the fourth station, the active row lies inside the visible list, and round 2 begins at movement 1 of 4. Play full-body-partner: a card names block 1 and fades, block 1 done shows while waiting for Ready, and block 2 is named with its rounds. A lane written "Plank rows" is announced as written, never with the Renegade rows clip. | UI-06/10/20/24, AUD-10 |
 | AT-33 | Import a workout whose Tabata block has a 10 s rest of its own after each movement and whose For time block has a timed stretch: its overview offers Edit and Duplicate, the editor shows the rests as rows and the stretch as timed, a changed rest and an added two-round group change the live summary by their exact time, and the saved workout reopens with both. Every bundled workout and 300 generated trees reopen and save with the same work, rounds and rests between works. | BLD-03/15, MOD-01 |
+| AT-34 | Start a session on device A and play into round 1. Device B, already on the library, shows "Session running on A" after a focus event without a reload. Continue here on B: the player opens paused with "Continued from A", the block, round and clock of A, and Resume continues at that clock. A's next save makes it show "Continued on B." and ignore Space. B finishes: exactly one session in the logbook, no live row, and A offers nothing after a reload. Hide the app mid-session: the other devices read it as paused. End a session too short to count: no live row remains. Take a session back on A: it asks first and B steps aside. | ENG-15, ENG-12, ENG-14, DAT-03 |
+| AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-11 |
 
 # 15 Where things stand
 
-Recorded 31 October 2026, plan version 1.19.
-All P0 requirements and the 33 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+Recorded 16 November 2026, plan version 1.20.
+All P0 requirements and the 35 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -729,21 +778,26 @@ The detailed change history lives in the git log, the release notes under `docs/
 - 1.5.0: the tag exists but its workflow stopped in the production smoke test before an image was pushed, because the test still pressed Save to library. 1.5.1 publishes its changes.
 - 1.5.1: everything of 1.5.0, that is Create with AI (SHR-07), authors as master data (LIB-06), the round donut and block cards (UI-24) and cues that say the written name (AUD-10), plus 66 more movements and the usual shorthand, with no database or browser-storage migration.
 - 1.5.2: Title Case workout titles and movement names, a catalogue without redundant aliases, Dumbbell Full Body Crunch, Squat Snatch Battery and the favicon on Firefox bookmarks, with no database or browser-storage migration.
-- 1.5.3, prepared: the changes below, with no database migration. Notes in `docs/releases/v1.5.3.md`.
+- 1.5.3: every valid workout opens in the editor (BLD-15) with rests, timed movements and groups as rows, block titles in Title Case, Full Body Fatburn Hour and four more movements, with no database migration and drafts moved to `openwod.drafts.v2`.
+- 1.6.0, prepared: the changes below, with the SQLite migration 4. Notes in `docs/releases/v1.6.0.md`.
 
-**In 1.5.3** (since `v1.5.2`):
+**In 1.6.0** (since `v1.5.3`):
 
-- Every valid workout opens in the editor (BLD-15). Rests of their own length, timed movements in For time and strength, and groups with their own rounds are rows of the list, so Pull and Press Ladder, the Squat Snatch Battery's cardio block and imported files with rests of their own are editable. Drafts move to the browser-storage key `openwod.drafts.v2`, which a 1.5.2 build does not read.
-- Block titles are in Title Case too ("Warm-Up", "Metcon: 3 Rounds"), in all bundled workouts and in the authoring guide, and the Title Case test covers them. A word after a number stays lower-case only when it is a unit ("Every 10 s for 3 min").
-- New in Default: Full Body Fatburn Hour, about an hour with a warm-up, a dumbbell circuit, a Tabata, a core finisher and a cool-down, written so that 1.5.2 can import and edit it too. The catalogue has 272 records with Reverse Crunches, Lying Leg Raises, Supine Spinal Twist and Cobra Stretch.
+- Hand-over between devices (ENG-15, AT-34): the server keeps the running session in `live_sessions`, other devices offer Continue here, and the previous device steps aside. Same-device recovery is tightened with it: a taken-over tab is inert, leaving the player pauses and saves, and the play route decides once whether it restores (ENG-14).
+- Start begins the session with that tap (UI-25), from a card, a workout's page and the logbook.
+- The station cards and the game plan are neutral glass, the Pair and Solo chips take the accent, and the lane colour tokens and the lane caption are gone (UI-04).
+- The session layout fits an iPad in portrait and landscape and follows a turn (UI-20), and the clock takes the room the workout leaves at every width, sized from the plan's tallest station (UI-27).
+- Settings (UI-28): one compact colour well everywhere, each phase colour per theme including a paused colour, the overall progress as four checkboxes, toggles for default view, sound and voice, and no clock weight or size option. `progress`, `markColors` and `pauseColor` changed shape, with the old values carried over.
+- Editor fields never work against the typing (BLD-16, AT-35): buffered number fields (`NumberInput`), lane helpers that keep sibling data (`lane.ts`), suggestion lists that keep the focus on a tap, and 16 px controls on phones (UI-26).
+- The library sorts by Recently added (LIB-07), and a workout's page and the editor's summary state total, active and rest time (UI-23).
 
 **Schema and storage versions today.**
 
 - Workout model `schemaVersion` 2, workout file `formatVersion` 3 (`openwod.workout`), pack `formatVersion` 1, JSON export `formatVersion` 1.
-- SQLite schema version 3: migration 2 added household settings, migration 3 (`deleted sessions`) adds the `deleted_sessions` tombstone table.
+- SQLite schema version 4: migration 2 added household settings, migration 3 (`deleted sessions`) the `deleted_sessions` tombstone table, and migration 4 (`live sessions`) the `live_sessions` table of ENG-15.
 - IndexedDB version 3, which adds the `deletedSessions` store to version 2's `workouts`, `master` and `sessions`.
 - Editor drafts live in `localStorage` under `openwod.drafts.v2` since 1.5.3, moved once from `openwod.drafts.v1`.
-- An image of 1.3.x or older refuses a database migrated to version 3, so going back needs the pre-migration backup the server writes under `/data/backups/`.
+- An image of 1.5.x or older refuses a database migrated to version 4, so going back needs the pre-migration backup the server writes under `/data/backups/`.
 
 **Open gates on the user's side.**
 
@@ -751,7 +805,7 @@ The detailed change history lives in the git log, the release notes under `docs/
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for the release after 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 
@@ -761,7 +815,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Release images are built by the GitHub release workflow, and a local multi-architecture push is an emergency exit only. The workflow also creates the GitHub Release and never overwrites an existing one.
 - No runtime cloud service, no analytics and no cloud AI (NFR-11).
 - Login stays deferred (NFR-09): the server shape is for a trusted home network.
-- The server is authoritative and each device is a cache with an outbox. Session events ride along with the finished session rather than streaming.
+- The server is authoritative and each device is a cache with an outbox. Session events ride along with the finished session rather than streaming, and only the running session's checkpoint is mirrored to the server for a hand-over (ENG-15).
 - Local browser tests run with `--project=firefox --project=webkit`, since headless Chromium fails locally while CI uses Chromium. Temporary specs go in `tests/e2e/zz-*.spec.ts` and are deleted afterwards.
 - Timing is verified under the injected clock and by the production smoke, and the real-duration 60-minute run is no release gate.
 - Bundled workouts stay at revision 1. They wait for Ready unless they prescribe a rest or a straight continuation, and never have both a rest and a Ready gate (`workouts/README.md`).
@@ -771,7 +825,7 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-16 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-15, LIB-07, MOD-06, NFR-15, SHR-08, UI-25 and AT-34.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-17 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-08, MOD-06, NFR-15, SHR-08, UI-29 and AT-36.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 
@@ -786,6 +840,9 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 | Independent athlete progress is requested later | Athlete and completion policies stay explicit, and truly independent timelines stay deferred. |
 | A database migration breaks rollback | A consistent pre-migration backup and the documented image and database rollback (DEP-12). |
 | The browser evicts the static shape's library | Keep data on this device (`navigator.storage.persist()`) and the JSON backup with restore (DAT-10, DAT-11). |
+| A long block does not fit a short frame | Rack & Run AMRAP 25, a seven-row AMRAP block, still scrolls on a short landscape frame (52 px at 1180×796) with the clock at its minimum. A two-column list for long blocks is the likely fix. Open since 1.6.0. |
+| Pair workouts are tight on small phones | At 375×667 and below, rows still press together for pair workouts where each athlete has a Done button. Open since 1.6.0. |
+| A hand-over copy outlives its session | A session too short to count that ends offline keeps its row on the server until it expires after 12 hours, so other devices offer it meanwhile. Discard in the library removes it. |
 
 # 17 Source references
 

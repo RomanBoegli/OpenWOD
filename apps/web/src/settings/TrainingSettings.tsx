@@ -1,3 +1,4 @@
+import { Fragment, type CSSProperties } from 'react';
 import { TimerPreview } from './TimerPreview';
 import type { Preferences } from '../preferences';
 import { Switch } from '../Switch';
@@ -6,20 +7,28 @@ import { BEEP_TONES } from '../audio';
 import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { type SettingsProps } from './shared';
-import { ColorChoice } from './ColorChoice';
-import { restTokens, type Theme } from '../theme';
+import { ColorField, type ColorOptions } from './ColorField';
+import { BUILT_IN_COLORS, restTokens, useResolvedTheme, type Theme } from '../theme';
 
 /** Ready-made rest colours; the first is the built-in blue. Any other colour comes from the picker. */
-const REST_COLORS: [string, string][] = [['', 'Blue'], ['#06b6d4', 'Cyan'], ['#2a9d8f', 'Teal'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f59e0b', 'Amber']];
-const BUILT_IN_BLUE: Record<Theme, string> = { dark: '#a3cbf0', light: '#1d5fa8' };
-const restShade = (value: string, theme: Theme) => value ? restTokens(value, theme)['--phase-rest'] : BUILT_IN_BLUE[theme];
+const REST_COLORS: ColorOptions = [['', 'Blue'], ['#06b6d4', 'Cyan'], ['#2a9d8f', 'Teal'], ['#8b5cf6', 'Violet'], ['#ec4899', 'Pink'], ['#f59e0b', 'Amber']];
+const restShade = (value: string, theme: Theme) => value ? restTokens(value, theme)['--phase-rest'] : BUILT_IN_COLORS.rest[theme];
+/** A colour the player shows exactly as picked, or the theme's own while there is none. */
+const asPicked = (builtIn: Record<Theme, string>) => (value: string, theme: Theme) => value || builtIn[theme];
 
 export function TrainingSettings(props: SettingsProps) {
   const { preferences, onPreferencesChange } = props;
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
   const seconds = (ms: number) => `${Math.round(ms / 1000)} s`;
-  /** The theme's own marker colour, as the colour input needs a concrete value. */
-  const themeColor = (token: string) => { const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim(); return /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000'; };
+  const theme = useResolvedTheme(preferences.theme);
+  const { markColors } = preferences;
+  /** Every phase colour but the work phase's, which is the accent: each theme has its own choice of each. */
+  const phases: { name: string; value: Record<Theme, string>; shade: (value: string, theme: Theme) => string; options?: ColorOptions; set: (value: Record<Theme, string>) => void }[] = [
+    { name: 'Rest', value: preferences.restColor, shade: restShade, options: REST_COLORS, set: restColor => update({ restColor }) },
+    { name: 'Paused', value: preferences.pauseColor, shade: asPicked(BUILT_IN_COLORS.paused), set: pauseColor => update({ pauseColor }) },
+    { name: 'First milestone', value: markColors.first, shade: asPicked(BUILT_IN_COLORS.amber), set: first => update({ markColors: { ...markColors, first } }) },
+    { name: 'Second milestone', value: markColors.second, shade: asPicked(BUILT_IN_COLORS.red), set: second => update({ markColors: { ...markColors, second } }) },
+  ];
   return <>
     <section className={styles.card} aria-labelledby="units-title">
       <h2 id="units-title">Loads</h2>
@@ -29,27 +38,26 @@ export function TrainingSettings(props: SettingsProps) {
     <section className={styles.card} aria-labelledby="player-title">
       <h2 id="player-title">Look &amp; feel</h2>
       <div className={styles.previewRow}>
-        <TimerPreview view={preferences.view} ringWidth={preferences.perimeterWidth} washGain={preferences.wash ? preferences.washGain : 0} amberMs={preferences.amberMs} redMs={preferences.redMs} colors={preferences.markColors} progress={preferences.progress} clockWeight={preferences.clockWeight} clockSize={preferences.clockSize} />
+        <TimerPreview view={preferences.view} ringWidth={preferences.perimeterWidth} washGain={preferences.wash ? preferences.washGain : 0} amberMs={preferences.amberMs} redMs={preferences.redMs} colors={{ first: markColors.first[theme], second: markColors.second[theme] }} progress={preferences.progress} />
         <div className={styles.previewFields}>
-          <label className={styles.field}>Default view<select value={preferences.view} onChange={event => update({ view: event.target.value as Preferences['view'] })}><option value="focus">Focus</option><option value="context">Context</option></select></label>
-          <div className={styles.field}><span id="progress-label">Overall progress</span><div className={shared.segmented} data-fit role="radiogroup" aria-labelledby="progress-label">{([['off', 'Off'], ['bar', 'Bar'], ['detail', 'Bar + info'], ['percent', 'Bar + info + %']] as const).map(([value, label]) => <label key={value} data-checked={preferences.progress === value}><input type="radio" name="progress" value={value} checked={preferences.progress === value} onChange={() => update({ progress: value })} />{label}</label>)}</div></div>
-          <div className={styles.twoUp}>
-            <div className={styles.field}><span id="clock-weight-label">Clock digits</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby="clock-weight-label">{([['bold', 'Bold'], ['light', 'Light']] as const).map(([value, label]) => <label key={value} data-checked={preferences.clockWeight === value}><input type="radio" name="clock-weight" value={value} checked={preferences.clockWeight === value} onChange={() => update({ clockWeight: value })} />{label}</label>)}</div></div>
-            <div className={styles.field}><span id="clock-size-label">Clock size</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby="clock-size-label">{([['large', 'Large'], ['compact', 'Compact']] as const).map(([value, label]) => <label key={value} data-checked={preferences.clockSize === value}><input type="radio" name="clock-size" value={value} checked={preferences.clockSize === value} onChange={() => update({ clockSize: value })} />{label}</label>)}</div></div>
-          </div>
+          <div className={styles.field}><span id="view-label">Default view</span><div className={shared.segmented} data-two role="radiogroup" aria-labelledby="view-label">{([['focus', 'Focus', 'focus'], ['context', 'Context', 'list']] as const).map(([value, label, icon]) => <label key={value} data-checked={preferences.view === value}><input type="radio" name="view" value={value} checked={preferences.view === value} onChange={() => update({ view: value })} /><Icon name={icon} size={16} />{label}</label>)}</div></div>
+          <div className={styles.field}><span id="progress-label">Overall progress</span><div className={styles.checkGrid} role="group" aria-labelledby="progress-label">{([['bar', 'Overall bar'], ['barPercent', 'Percentage under the bar'], ['clockPercent', 'Percentage beside the clock'], ['donut', 'Round donut']] as const).map(([part, label]) => <label key={part}><input type="checkbox" checked={preferences.progress[part]} onChange={event => update({ progress: { ...preferences.progress, [part]: event.target.checked } })} />{label}</label>)}</div></div>
           <div className={styles.twoUp}>
             <label className={styles.field}>Timer ring width · {preferences.perimeterWidth} px<input type="range" min="3" max="12" step="1" value={preferences.perimeterWidth} onChange={event => update({ perimeterWidth: Number(event.target.value) })} /></label>
             <label className={styles.field}>Skip buttons · {preferences.nudgeSeconds} s<input type="range" min="1" max="60" step="1" value={preferences.nudgeSeconds} onChange={event => update({ nudgeSeconds: Number(event.target.value) })} /></label>
           </div>
           <div className={styles.twoUp}>
-            <div className={styles.field}><span>First milestone marker · {seconds(preferences.amberMs)}</span><div className={styles.markerRow}><input type="range" min="5" max="30" step="1" aria-label="First milestone marker" value={preferences.amberMs / 1000} onChange={event => { const amberMs = Number(event.target.value) * 1000; update({ amberMs, redMs: Math.min(preferences.redMs, amberMs) }); }} /><input type="color" aria-label="First milestone colour" value={preferences.markColors.first || themeColor('--phase-amber')} onChange={event => update({ markColors: { ...preferences.markColors, first: event.target.value } })} />{preferences.markColors.first && <button type="button" className={shared.iconButton} aria-label="First milestone colour back to the theme" title="Theme colour" onClick={() => update({ markColors: { ...preferences.markColors, first: '' } })}><Icon name="undo" size={14} /></button>}</div></div>
-            <div className={styles.field}><span>Second milestone marker · {seconds(preferences.redMs)}</span><div className={styles.markerRow}><input type="range" min="1" max={Math.min(10, preferences.amberMs / 1000)} step="1" aria-label="Second milestone marker" value={preferences.redMs / 1000} onChange={event => update({ redMs: Number(event.target.value) * 1000 })} /><input type="color" aria-label="Second milestone colour" value={preferences.markColors.second || themeColor('--phase-red')} onChange={event => update({ markColors: { ...preferences.markColors, second: event.target.value } })} />{preferences.markColors.second && <button type="button" className={shared.iconButton} aria-label="Second milestone colour back to the theme" title="Theme colour" onClick={() => update({ markColors: { ...preferences.markColors, second: '' } })}><Icon name="undo" size={14} /></button>}</div></div>
+            <label className={styles.field}><span>First milestone marker · {seconds(preferences.amberMs)}</span><input type="range" min="5" max="30" step="1" aria-label="First milestone marker" value={preferences.amberMs / 1000} onChange={event => { const amberMs = Number(event.target.value) * 1000; update({ amberMs, redMs: Math.min(preferences.redMs, amberMs) }); }} /></label>
+            <label className={styles.field}><span>Second milestone marker · {seconds(preferences.redMs)}</span><input type="range" min="1" max={Math.min(10, preferences.amberMs / 1000)} step="1" aria-label="Second milestone marker" value={preferences.redMs / 1000} onChange={event => update({ redMs: Number(event.target.value) * 1000 })} /></label>
           </div>
-          <p className={styles.hint}>Work changes colour at each marker this long before a slot ends; the markers sit on the ring above, in the colours you pick (the theme’s amber and red unless changed). Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds. The skip buttons and the J and L keys move the clock by the chosen seconds. The last progress option also puts the overall percentage beside the time, as in 00:39 · 4 %, dimmer than the digits.</p>
+          <div className={`${styles.field} ${styles.phaseColors}`} role="group" aria-label="Phase colours">
+            <span /><span className={styles.themeName}>Dark</span><span className={styles.themeName}>Light</span>
+            {phases.map(phase => <Fragment key={phase.name}><span>{phase.name}</span>{(['dark', 'light'] as const).map(name => <ColorField key={name} label={`${phase.name} colour in the ${name} theme`} options={phase.options} value={phase.value[name]} shade={value => phase.shade(value, name)} onChange={value => phase.set({ ...phase.value, [name]: value })} />)}</Fragment>)}
+          </div>
+          <p className={styles.hint}>Work changes colour at each marker this long before a slot ends; the markers sit on the ring above. Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds. The skip buttons and the J and L keys move the clock by the chosen seconds. The percentage beside the clock reads as in 00:39 · 4 %, dimmer than the digits; the round donut counts the movements of a round and the rounds of a block.</p>
+          <p className={styles.hint}>Each theme keeps its own colours. Rest also covers transitions and the lane that waits for its partner, and is shown in the shade that theme will use. The work phase follows the accent under General.</p>
         </div>
       </div>
-      <ColorChoice id="rest" label="Rest colour" options={REST_COLORS} value={preferences.restColor} shade={restShade} onChange={restColor => update({ restColor })} />
-      <p className={styles.hint}>Rest and transition phases, the ring and the pulse during them, and the lane that waits for its partner use the rest colour. The work phase follows the accent under General. Each theme keeps its own choice, shown here in the shade it will use.</p>
       <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player, climbing to full strength just before each milestone and morphing into the next colour." />
       {preferences.wash && <label className={styles.field}>Pulse intensity · {preferences.washGain} %<input type="range" min="10" max="60" step="5" value={preferences.washGain} onChange={event => update({ washGain: Number(event.target.value) })} /></label>}
     </section>
@@ -59,13 +67,23 @@ export function TrainingSettings(props: SettingsProps) {
 
 export function SoundSettings({ preferences, onPreferencesChange, clipsReady, packs, audio }: SettingsProps) {
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
+  /** The voice in use: the device's, the chosen pack, or the first pack while none was chosen ('' when no pack is installed). */
+  const voice = preferences.cueSource === 'device' ? 'device' : preferences.cuePack || (packs[0]?.id ?? '');
+  /** The cells of the Voice toggle to a row, so that no slot stays empty where the count allows it: two or three cells share one row, six make two rows of three, four two rows of two. */
+  const cells = Math.max(packs.length, 1) + 1;
+  const voiceColumns = cells <= 3 ? cells : cells % 3 === 0 ? 3 : cells % 2 === 0 ? 2 : 3;
   return <section className={styles.card} aria-labelledby="sound-title">
     <h2 id="sound-title">Sound and voice</h2>
-    <label className={styles.field}>Sound<select value={preferences.soundMode} onChange={event => update({ soundMode: event.target.value as Preferences['soundMode'] })}><option value="voice">Voice + beeps</option><option value="beeps">Beeps only</option><option value="silent">Silent</option></select></label>
-    <label className={styles.field}>Voice<select value={preferences.cueSource === 'device' ? 'device' : preferences.cuePack || (packs[0]?.id ?? '')} onChange={event => update(event.target.value === 'device' ? { cueSource: 'device' } : { cueSource: 'clips', cuePack: event.target.value })}>{packs.map(pack => <option key={pack.id} value={pack.id}>{pack.label}</option>)}{packs.length === 0 && <option value="">Recorded voices (not installed in this build)</option>}<option value="device">Device voice only</option></select></label>
+    <div className={styles.field}><span id="sound-label">Sound</span><div className={shared.segmented} role="radiogroup" aria-labelledby="sound-label">{([['voice', 'Voice + beeps'], ['beeps', 'Beeps only'], ['silent', 'Silent']] as const).map(([value, label]) => <label key={value} data-checked={preferences.soundMode === value}><input type="radio" name="sound-mode" value={value} checked={preferences.soundMode === value} onChange={() => update({ soundMode: value })} />{label}</label>)}</div></div>
+    <div className={styles.field}><span id="voice-label">Voice</span><div className={`${shared.segmented} ${styles.voices}`} style={{ '--voice-columns': voiceColumns } as CSSProperties} role="radiogroup" aria-labelledby="voice-label">
+      {packs.map(pack => <label key={pack.id} data-checked={voice === pack.id}><input type="radio" name="voice" value={pack.id} checked={voice === pack.id} onChange={() => update({ cueSource: 'clips', cuePack: pack.id })} />{pack.label}</label>)}
+      {packs.length === 0 && <label data-checked={voice === ''}><input type="radio" name="voice" value="" checked={voice === ''} disabled />Recorded voices (not installed in this build)</label>}
+      <label data-checked={voice === 'device'}><input type="radio" name="voice" value="device" checked={voice === 'device'} onChange={() => update({ cueSource: 'device' })} />Device voice only</label>
+    </div></div>
     <div className={styles.notes}>
       {preferences.cueSource === 'clips' && clipsReady === false && <small className={shared.fieldNote}>The recorded voices are not installed in this build, so the device voice is used. The Docker image renders them; locally run `npm run cues:generate`.</small>}
-      <small className={shared.fieldNote}>Five English voices, three men and two women with British, Scottish, Northern English and American accents, rendered offline with Piper and shipped inside the image. The chosen voice says Go, Rest, the countdown, who is up and every bundled movement. Your own movements are read by the device’s best English voice.</small>
+      {/* The toggle above lists the voices this build carries, so the note names none and counts none. */}
+      <small className={shared.fieldNote}>The recorded voices are rendered offline with Piper and ship with the app. The chosen voice says Go, Rest, the countdown, who is up and every bundled movement. Your own movements are read by the device’s best English voice.</small>
     </div>
     <div className={styles.twoUp}>
       <label className={styles.field}>Device voice speed<input type="range" min="0.7" max="1.3" step="0.1" value={preferences.rate} onChange={event => update({ rate: Number(event.target.value) })} /></label>
