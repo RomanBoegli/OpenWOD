@@ -747,6 +747,8 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 The workout generator, planned for the release after 1.6.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
+A faster browser suite is planned and not started: quick runs in WebKit alone, runs by area and by changed files, more local workers, and four parallel jobs in the Check workflow.
+Its design is in [docs/plans/faster-browser-suite.md](docs/plans/faster-browser-suite.md).
 Every other idea is a GitHub issue with the `enhancement` label (`gh issue list --label enhancement`).
 `apps/web/src/assets/dj-airhorn.m4a` and `just-do-it.webm` with `just-do-it.mov` wait for the buttons of issues #14 and #15: no code plays them yet, so a dead-code sweep leaves them, and the clip's licence is to settle before it ships.
 
