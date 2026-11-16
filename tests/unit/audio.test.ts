@@ -324,6 +324,21 @@ it('holds the first cues of a Start until the audio context has resumed, so Get 
   expect(sources.filter(source => source.kind === 'beep').map(source => source.at)).toEqual([100, 107, 108, 109, 110]);
 });
 
+it('loads the clips and the chosen horn while the output is still asked for, so a resume that never answers holds nothing back', async () => {
+  const { audio, sources, fetchedHorns, context } = setup({ clips: true, horn: true });
+  audio.tone = 'ship';
+  // A browser without an audio output: the context stays suspended and its resume stays pending.
+  context.state = 'suspended';
+  context.resume = () => new Promise<void>(() => {});
+  void audio.unlock();
+  for (let turn = 0; turn < 100 && !(audio.clipsReady && audio.boundaryHoldMs); turn++) await Promise.resolve();
+  expect(audio.clipsReady).toBe(true);
+  expect(fetchedHorns).toEqual(['ship']);
+  expect(audio.boundaryHoldMs).toBe(1400);
+  // Nothing sounds, the unlock click included: there is no output to play it.
+  expect(sources).toEqual([]);
+});
+
 it('AUD-10: a name written as an alias is announced as written, never with its record’s clip', () => {
   const { audio } = setup();
   audio.resolveMovement = lane => ({ 'Plank Rows': 'renegade-row', 'Renegade Rows': 'renegade-row', 'renegade row': 'renegade-row', 'AbMat Sit-Ups': 'abmat-sit-up', 'Pogo hops': 'pogo-hop' } as Record<string, string>)[lane.name];

@@ -193,11 +193,14 @@ export class WorkoutAudio {
     try {
       const context = this.ensureContext();
       if (context.state !== 'running') this.unlockingSince = performance.now();
-      try { await context.resume(); } finally { this.unlockingSince = 0; }
-      // A local oscillator unlocks the output from the user's explicit gesture, in the chosen tone (a horn's stand-in is classic).
-      this.synth(context.currentTime, .035, 660, .05, TONES[isRecorded(this.tone) ? 'classic' : this.tone]);
+      // The output is asked for first, within the gesture, and the recordings load meanwhile: decoding needs no running
+      // context, and a browser that finds no audio output (Firefox on such a machine) never answers the resume.
+      const resumed = context.resume();
       void this.preload();
       void this.loadHorn();
+      try { await resumed; } finally { this.unlockingSince = 0; }
+      // A local oscillator unlocks the output from the user's explicit gesture, in the chosen tone (a horn's stand-in is classic).
+      this.synth(context.currentTime, .035, 660, .05, TONES[isRecorded(this.tone) ? 'classic' : this.tone]);
     } catch { this.onError?.('Sound unavailable. The workout will continue visually.'); }
   }
 
