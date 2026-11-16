@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledCollections, bundledWorkout, bundledWorkouts } from '../../packages/domain/src/bundled';
 import { Catalogue } from '../../packages/domain/src/catalogue';
-import { collectPrescriptions, summariseWorkout } from '../../packages/domain/src/library';
+import { collectPrescriptions, equipmentName, summariseWorkout } from '../../packages/domain/src/library';
 import { seedMovements } from '../../packages/domain/src/movements';
 import { parseWorkoutFile, SECTION_FORMATS, serialiseWorkoutFile, type SectionFormat } from '../../packages/domain/src';
 
@@ -98,5 +98,17 @@ describe('the workout registry (workouts/**)', () => {
     const second = plan.occurrences.find(item => item.anchor === 'doubles-1-skierg' && item.rounds[0]?.iteration === 2)!;
     expect(first.assignments?.A.name).toBe('SkiErg');
     expect(second.assignments?.A.name).toBe('Sled Push');
+  });
+});
+
+describe('the example files in the documentation', () => {
+  it.each(['README.md', 'docs/formats.md'])('%s shows a workout file that imports as it stands', file => {
+    const blocks = [...readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8').matchAll(/```yaml\n(format: openwod\.workout\n[\s\S]*?)```/g)].map(match => match[1]!);
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const block of blocks) {
+      const workout = parseWorkoutFile(block);
+      expect(compileWorkout(workout).occurrences.length).toBeGreaterThan(0);
+      expect(workout.equipment.filter(name => equipmentName(name) !== name)).toEqual([]);
+    }
   });
 });

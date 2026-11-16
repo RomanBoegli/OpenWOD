@@ -18,16 +18,16 @@ It runs as a static site straight from GitHub Pages, or as a single container on
   </br>
 
 [![Check](https://github.com/RomanBoegli/OpenWOD/actions/workflows/check.yml/badge.svg)](https://github.com/RomanBoegli/OpenWOD/actions/workflows/check.yml)
-[![Release image](https://github.com/RomanBoegli/OpenWOD/actions/workflows/release.yml/badge.svg)](https://github.com/RomanBoegli/OpenWOD/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/RomanBoegli/OpenWOD?label=release&color=2f7a0f)](https://github.com/RomanBoegli/OpenWOD/releases/latest)
 [![Licence: GPL v3](https://img.shields.io/badge/licence-GPLv3-2f7a0f.svg)](LICENSE)
 
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React_19-20232A?logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
-![Fastify](https://img.shields.io/badge/Fastify-000000?logo=fastify&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node_24-5FA04E?logo=nodedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/github/package-json/dependency-version/RomanBoegli/OpenWOD/dev/typescript?label=TypeScript&logo=typescript&logoColor=white&labelColor=3178C6&color=555)
+![React](https://img.shields.io/github/package-json/dependency-version/RomanBoegli/OpenWOD/react?label=React&logo=react&logoColor=61DAFB&labelColor=20232A&color=555)
+![Vite](https://img.shields.io/github/package-json/dependency-version/RomanBoegli/OpenWOD/dev/vite?label=Vite&logo=vite&logoColor=white&labelColor=646CFF&color=555)
+![Fastify](https://img.shields.io/github/package-json/dependency-version/RomanBoegli/OpenWOD/fastify?label=Fastify&logo=fastify&logoColor=white&labelColor=000000&color=555)
+![Node.js](https://img.shields.io/github/package-json/dependency-version/RomanBoegli/OpenWOD/dev/node?label=Node.js&logo=nodedotjs&logoColor=white&labelColor=5FA04E&color=555)
+![Playwright](https://img.shields.io/github/package-json/dependency-version/RomanBoegli/OpenWOD/dev/@playwright/test?label=Playwright&logo=playwright&logoColor=white&labelColor=2EAD33&color=555)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
 
 </div>
 
@@ -151,41 +151,53 @@ Each section has a format, which defines how the clock behaves, and a body of no
 | `repeat` | A body repeated a number of times, optionally swapping the A and B assignments every round. |
 
 Each piece of work assigns a prescription to lane A, and in pair workouts to lane B.
-A prescription names the movement and carries its targets, an optional load as one value or as light, medium and heavy levels with a women's amount, and free-text notes that are never executed.
-Durations are written as `40s`, `1m30s` or `10m`.
+A prescription names the movement and carries its target: reps, calories, a distance or a time.
+A weighted movement carries its load, as one value or as light, medium and heavy levels, each with a women's amount, in `kg` or `lb` (the app converts between them on display).
+A note is optional and a few words at most, such as a scaling, and is never executed.
+Titles, movement names and equipment names are written in Title Case, and durations as `40s`, `1m30s` or `10m`.
+
+A complete file, as the importer takes it:
 
 ```yaml
 format: openwod.workout
 formatVersion: 3
 workout:
   schemaVersion: 2
-  id: fran
+  id: jackie
   revision: 1
-  title: Fran
+  title: Jackie
+  description: A thousand metres on the rower, fifty thrusters with an empty bar, thirty pull-ups.
+  equipment: [Rowing Machine, Barbell, Pull-Up Bar]
   participants: 1
   prep: 10s
   sections:
-    - id: fran-for-time
-      title: 21-15-9
+    - id: jackie-for-time
+      title: Row, Thrusters, Pull-Ups
       format: forTime
       transitionAfter: manualReady
-      cap: 10m
+      cap: 15m
       body:
-        id: fran-ladder
+        id: jackie-chipper
         type: sequence
         children:
-          - id: thrusters-21
+          - id: row
+            type: task
+            assignments:
+              A: { name: Row, distance: { value: 1000, unit: m } }
+          - id: thrusters
             type: task
             assignments:
               A:
                 name: Thrusters
-                reps: 21
+                reps: 50
                 load:
-                  heavy: { value: 43, women: 29, unit: kg }
-          - id: pull-ups-21
+                  light: { value: 10, women: 8, unit: kg }
+                  medium: { value: 15, women: 12, unit: kg }
+                  heavy: { value: 20, women: 16, unit: kg }
+          - id: pull-ups
             type: task
             assignments:
-              A: { name: Pull-Ups, reps: 21 }
+              A: { name: Pull-Ups, reps: 30 }
 ```
 
 Workouts are imported and exported in the library, one file at a time or as a `.wods.yaml` pack with collections.
