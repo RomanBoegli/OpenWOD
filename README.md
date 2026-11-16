@@ -52,15 +52,16 @@ Pick a session from the library, press Start, and put the phone down.
 
 - [x] Proper **CrossFit and HYROX timers** with voice cues and beeps for work, rest and the countdown
 - [x] Train **alone or with a partner**, with the timer telling each of you who is up
-- [x] **54 ready-made workouts**, from Fran and Murph to HYROX sessions and partner circuits, each with a **difficulty rating**
+- [x] **More than 50 ready-made workouts**, from Fran and Murph to HYROX sessions and partner circuits, each with a **difficulty rating**
 - [x] **Scaled loads** for every weighted movement: light, medium and heavy, with women's weights alongside
 - [x] **Find a workout** that fits the time you have, the gear you own and how hard you want to go
 - [x] **Write your own workouts** or share them with friends as a single file
 - [x] **Let your AI assistant write one**: copy the guide into ChatGPT, Claude or any other assistant, describe the workout and paste its answer back
 - [x] See **what you trained** and when, and repeat a session with one tap
-- [x] **Make it yours**: pick one of five offline voices, show weights in kg or lb, tune the difficulty scale to your fitness, and choose your theme and accent colour
+- [x] **Make it yours**: pick one of five offline voices, show weights in kg or lb, tune the difficulty scale to your fitness, and choose your theme, your colours and what the training view shows
 - [x] Open it in the browser or add it to your **phone's home screen**, no install needed
 - [x] Optionally **self-host** it, so every device at home shares the same library and settings
+- [x] **Carry on on another device**: with the household server, a session started on the tablet continues on the laptop with one tap
 - [x] **No account, no cloud, no tracking**
 
 > [!NOTE]
@@ -71,7 +72,7 @@ Pick a session from the library, press Start, and put the phone down.
 
 OpenWOD runs in one of two shapes built from the same code.
 The static site needs nothing but a browser and keeps the library in that browser.
-The container adds a household server, so every device in the home shares one library and one session log.
+The container adds a household server, so every device in the home shares one library and one session log, and a running session can move from one device to another.
 
 ### Static site
 
@@ -88,8 +89,8 @@ Serve it over HTTPS (or `localhost`), because the screen wake lock and persisten
 No rewrites or server configuration are needed.
 
 > [!TIP]
-> Press **Test sound** once after opening the app.
-> Browsers only play audio after a user gesture, and that tap unlocks the beeps and voices for the session.
+> Press **Test sound** once after opening the app, to hear that the device is not muted.
+> Browsers only play audio after a tap. Start is such a tap, so a session started from a card or a workout's page has its beeps and voices.
 
 ### Self-hosting with Docker
 
@@ -187,7 +188,7 @@ workout:
           - id: pull-ups-21
             type: task
             assignments:
-              A: { name: Pull-ups, reps: 21 }
+              A: { name: Pull-Ups, reps: 21 }
 ```
 
 Workouts are imported and exported in the library, one file at a time or as a `.wods.yaml` pack with collections.
