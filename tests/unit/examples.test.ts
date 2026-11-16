@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { compileWorkout } from '../../packages/domain/src/compiler';
 import { bundledCollections, bundledWorkout, bundledWorkouts } from '../../packages/domain/src/bundled';
 import { Catalogue } from '../../packages/domain/src/catalogue';
@@ -102,7 +102,10 @@ describe('the workout registry (workouts/**)', () => {
 });
 
 describe('the example files in the documentation', () => {
+  // The image build runs these tests without docs/ (.dockerignore), so there the format reference is skipped. With docs/ in place a missing file fails.
+  const withoutDocs = !existsSync(new URL('../../docs/', import.meta.url));
   it.each(['README.md', 'docs/formats.md'])('%s shows a workout file that imports as it stands', file => {
+    if (withoutDocs && file.startsWith('docs/')) return;
     const blocks = [...readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8').matchAll(/```yaml\n(format: openwod\.workout\n[\s\S]*?)```/g)].map(match => match[1]!);
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
