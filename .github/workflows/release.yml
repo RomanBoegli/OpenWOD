@@ -157,7 +157,11 @@ jobs:
             echo "Refusing to overwrite an existing release tag: $version"
             exit 1
           fi
-          docker buildx imagetools create --tag "$image:$version" "$image:candidate-$REVISION-amd64" "$image:candidate-$REVISION-arm64"
+          tags=(--tag "$image:$version")
+          # A release also moves `latest`, for a stack that follows the newest release (DEP-19). A pre-release tag such as
+          # v1.2.3-rc.1 leaves it where it is, and so does a dispatch.
+          if [ "$REF_TYPE" = tag ] && [[ "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then tags+=(--tag "$image:latest"); fi
+          docker buildx imagetools create "${tags[@]}" "$image:candidate-$REVISION-amd64" "$image:candidate-$REVISION-arm64"
           digest="$(docker buildx imagetools inspect "$image:$version" --format '{{json .Manifest.Digest}}' | tr -d '"')"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "image=$image:$version" >> "$GITHUB_OUTPUT"
@@ -167,6 +171,7 @@ jobs:
             echo "Digest: \`$digest\`"
             echo
             echo "Pin it in the stack: \`APP_IMAGE=$image@$digest\`"
+            if [ "${#tags[@]}" -gt 2 ]; then echo; echo "\`$image:latest\` now points at this release."; fi
           } >> "$GITHUB_STEP_SUMMARY"
   # The static site: built with the recorded voices, tested in three engines against vite preview, zipped and handed to Pages.
   # Runs for a manual dispatch too (build and smoke only); the release and pages jobs below publish for tags alone.

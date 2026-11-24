@@ -102,6 +102,7 @@ APP_IMAGE=ghcr.io/romanboegli/openwod:v1.6.1 HTTP_PORT=8080 docker compose up -d
 
 Open `http://<host>:8080`.
 In Portainer, create a stack from this repository with the Compose path `compose.yaml` and set `APP_IMAGE` as a stack variable.
+The tag `latest` follows the newest release, for a stack that upgrades by re-pulling.
 The settings, HTTPS with your own certificate, backup and restore, upgrades and rollback are described in [docs/deploy.md](docs/deploy.md).
 
 > [!IMPORTANT]

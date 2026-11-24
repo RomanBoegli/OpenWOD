@@ -678,6 +678,8 @@ The exact environment names are documented in `.env.example` and `docs/deploy.md
 
 **DEP-18** The container SHALL serve HTTPS itself when `HTTPS_KEY` and `HTTPS_CERT` are set, each a PEM file path inside the container or the PEM text with newlines written as `\n`, SHALL refuse to start when only one of them is set, and SHALL serve plain HTTP for a reverse proxy when neither is. The health check SHALL follow the protocol in use.
 
+**DEP-19** A release SHALL publish its image under its version tag and also move the tag `latest` to it, so a stack may follow the newest release by re-pulling. A pre-release tag and a manual run of the workflow SHALL leave `latest` alone. Nothing updates by itself (DEP-11), and a version tag or a digest remains the recommended reference.
+
 ## 12.1 Portainer acceptance path
 
 1. Publish a tested version to the chosen registry.
@@ -774,6 +776,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - Solo sessions have a layout of their own (UI-29, issue #6): a one-row station without badge or name, a one-column game plan, and a solo movement's target and load side by side in the editor.
 - The quick timer (LIB-09, UI-30, issue #11): Tabata, EMOM, AMRAP or For Time from a few numbers, played as the clock alone and never saved to the library. It is the library's primary action, and New workout a quiet one. A quick AMRAP lists its rounds with their times.
 - The fun buttons (UI-31, UI-32, AUD-11, issues #14 and #15): a party horn and the Just do it clip in the training view, behind one switch that is off by default.
+- The release workflow also moves the image tag `latest` (DEP-19), from the next release on.
 
 **Schema and storage versions today.**
 
@@ -814,7 +817,7 @@ Every other idea is a GitHub issue with the `enhancement` label (`gh issue list 
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-12, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-33 and AT-40.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-12, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-20, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-33 and AT-40.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

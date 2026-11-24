@@ -169,6 +169,9 @@ Run it before a release.
 ## Upgrade
 
 Select a newer tested image, re-pull and redeploy the same stack.
+Every release also moves the tag `latest`, so a stack with `APP_IMAGE=ghcr.io/YOUR_GITHUB_OWNER/openwod:latest` upgrades by re-pulling the image and redeploying, with no variable to change.
+Nothing upgrades by itself: `latest` is fetched only when you re-pull.
+A version tag or a digest stays the way to know exactly what runs, and the way back (see Rollback) is to set `APP_IMAGE` to the previous version's tag.
 The `/data` volume stays attached.
 If the new version carries a schema migration, the server first writes the pre-migration backup under `/data/backups/`, then migrates inside a transaction, then starts serving.
 Watch the container logs for the line `Database migrated.` and the health check turning healthy.
