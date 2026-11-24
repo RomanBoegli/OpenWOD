@@ -284,10 +284,13 @@ test.describe('the clock takes the room a workout leaves (UI-27)', () => {
 
   test('after a turn mid-session the clock fits the new frame and keeps that box too', async ({ page }) => {
     await start(page, 'full-body-partner', [820, 1156]);
-    const upright = await clock(page);
+    const room = () => page.getByTestId('primary-timer').evaluate(timer => timer.closest<HTMLElement>('[data-wash]')!.style.getPropertyValue('--stage-room'));
+    const upright = await clock(page), uprightRoom = await room();
     await advance(page, 60_000);
     await page.setViewportSize({ width: 1180, height: 796 });
-    await expect.poll(async () => (await clock(page)).font).not.toBe(upright.font);
+    // The frame has its new size at once and the stage's room once the ruler has measured it, before the next paint: the
+    // clock is read only then, since a read in between finds the new frame with the room of the old one.
+    await expect.poll(room).not.toBe(uprightRoom);
     const turned = [await clock(page)];
     for (let slot = 0; slot < 3; slot++) { await advance(page, 60_000); turned.push(await clock(page)); }
     for (const now of turned) expect(now).toMatchObject({ top: turned[0].top, height: turned[0].height, font: turned[0].font, scroll: 0 });
