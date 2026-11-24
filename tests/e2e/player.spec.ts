@@ -97,7 +97,7 @@ test.describe('player', () => {
     for (const [width, height] of [[1440, 1000], [768, 900], [1024, 768], [390, 844], [320, 740]]) {
       await page.setViewportSize({ width, height });
       await expect(page.getByTestId('movement-A')).toBeVisible();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       const A = await page.getByRole('region', { name: 'Athlete A station' }).boundingBox();
       const B = await page.getByRole('region', { name: 'Athlete B station' }).boundingBox();
       if (width <= 620) expect(B!.y).toBeGreaterThan(A!.y);
@@ -180,10 +180,11 @@ test.describe('player on a tablet', () => {
     for (const [width, height] of [[1024, 680], [1180, 750], [768, 950], [820, 1110]]) {
       await page.setViewportSize({ width, height });
       await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
-      expect(await overflow()).toBeLessThanOrEqual(1);
+      // Polled: right after a resize the frame has its new size and the stage still the room of the old one, until the ruler has measured.
+      await expect.poll(overflow).toBeLessThanOrEqual(1);
       await page.getByRole('button', { name: 'Switch to context view' }).click();
       await expect(page.getByRole('region', { name: 'Workout context' })).toBeVisible();
-      expect(await overflow()).toBeLessThanOrEqual(1);
+      await expect.poll(overflow).toBeLessThanOrEqual(1);
       await page.getByRole('button', { name: 'Switch to focus view' }).click();
     }
   });
