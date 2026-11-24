@@ -338,6 +338,8 @@ test.describe('workout view settings', () => {
     // He stands over the frame and takes no tap: the button under him still works, and the clock went on as it was.
     await expect(timer).toHaveText('00:38');
     expect(await page.locator('[data-wash] video').evaluate(video => getComputedStyle(video.parentElement!).pointerEvents)).toBe('none');
+    // Nor does he add anything the frame or the page could scroll.
+    await expect.poll(() => page.locator('[data-wash]').evaluate(frame => [frame.scrollHeight - frame.clientHeight, frame.scrollWidth - frame.clientWidth, document.documentElement.scrollHeight - document.documentElement.clientHeight].map(extra => Math.max(0, extra - 1)))).toEqual([0, 0, 0]);
     await advance(page, 8_000);
     await expect(timer).toHaveText('00:30');
     await page.getByRole('button', { name: 'Pause workout', exact: true }).click();
