@@ -33,6 +33,21 @@ test.describe('static logbook', () => {
   });
 
   test('the header opens the Logbook, and a deleted session is gone for good, from the overview too', async ({ page }) => {
+    // The deletion is written slowly (the store keeps its transaction open with reads first), so the reload below
+    // would bring the session back if its row left before the write was in (DAT-14).
+    await page.addInitScript(() => {
+      const original = IDBObjectStore.prototype.delete;
+      IDBObjectStore.prototype.delete = function (this: IDBObjectStore, key: IDBValidKey | IDBKeyRange) {
+        if (this.name !== 'sessions') return original.call(this, key);
+        const until = Date.now() + 600;
+        const spin = (): IDBRequest => {
+          const request = this.count();
+          request.onsuccess = () => { if (Date.now() < until) spin(); else original.call(this, key); };
+          return request;
+        };
+        return spin() as IDBRequest<undefined>;
+      };
+    });
     for (let run = 0; run < 2; run++) {
       // A hash change alone would keep the finished player on screen.
       await page.goto('/#/wod/cindy/play'); if (run) await page.reload(); await ready(page);

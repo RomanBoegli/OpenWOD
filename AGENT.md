@@ -542,7 +542,7 @@ It is no cue: a pause, a new slot or a hidden page SHALL NOT cut it short, it ho
 Editing it saves a saved workout under the same id, which takes the bundled one's place in the library and keeps its session history.
 Removing it hides it, with any edits, through a list of removed workout ids in master data, and Settings → Collections lists the removed ones with a Restore button.
 
-**DAT-14** A user SHALL be able to delete a session for good, with its score corrections, in either shape and after a confirmation. The household SHALL keep a tombstone of every deleted session id, so a later upload of that id (an outbox retry, another device) is acknowledged as already stored and never stored again (DAT-03). A session still waiting for upload on this device SHALL leave the outbox with it. Deleting SHALL be idempotent and SHALL also tombstone an id not stored yet, so an upload still on its way never lands. The export SHALL not carry the tombstones, and a restore SHALL keep the target's tombstones and leave out the sessions they name, counting them.
+**DAT-14** A user SHALL be able to delete a session for good, with its score corrections, in either shape and after a confirmation. The household SHALL keep a tombstone of every deleted session id, so a later upload of that id (an outbox retry, another device) is acknowledged as already stored and never stored again (DAT-03). A session still waiting for upload on this device SHALL leave the outbox with it. In the static shape the session SHALL leave the Logbook only once its deletion is written, so a reload right after never brings it back. Deleting SHALL be idempotent and SHALL also tombstone an id not stored yet, so an upload still on its way never lands. The export SHALL not carry the tombstones, and a restore SHALL keep the target's tombstones and leave out the sessions they name, counting them.
 
 ## 10.1 Portable WOD sharing
 
@@ -777,6 +777,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - The quick timer (LIB-09, UI-30, issue #11): Tabata, EMOM, AMRAP or For Time from a few numbers, played as the clock alone and never saved to the library. It is the library's primary action, and New workout a quiet one. A quick AMRAP lists its rounds with their times.
 - The fun buttons (UI-31, UI-32, AUD-11, issues #14 and #15): a party horn and the Just do it clip in the training view, behind one switch that is off by default.
 - The release workflow also moves the image tag `latest` (DEP-19), from the next release on.
+- Fixed: in the static shape a deleted session came back when the page was reloaded before the deletion was written (DAT-14).
 
 **Schema and storage versions today.**
 

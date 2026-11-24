@@ -291,13 +291,17 @@ export function useLibraryData(): LibraryData {
   }, [serverSessions]);
 
   const deleteSession = useCallback(async (id: string) => {
-    setServerSessions(current => current.filter(item => item.id !== id));
+    const leave = () => setServerSessions(current => current.filter(item => item.id !== id));
+    // With a server the row leaves at once, and a deletion that cannot reach it waits in the outbox. In the static shape the
+    // deletion is one write in this browser, and the row leaves when it is in: a reload right after never brings the session back.
+    if (!STATIC) leave();
     // A session still waiting for its upload on this device goes with it, and so does its row in the read cache.
     try { await removeOutboxItem(sessionItemId(id)); } catch { /* no storage: nothing was queued */ }
     if (!STATIC) void idbGet<Cache & { key: string }>('cache', 'household').then(cache => cache ? idbPut('cache', { ...cache, sessions: cache.sessions.filter(item => item.id !== id) }) : undefined).catch(() => undefined);
     // The household is told even then: an upload that reached it without an answer is deleted, one still on its way meets the tombstone.
     try {
       await backend.deleteSession(id);
+      if (STATIC) leave();
       void fetchAll().catch(() => undefined);
       return true;
     } catch (error) {
