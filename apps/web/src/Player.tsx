@@ -18,6 +18,7 @@ import { LoadLevels } from './LevelChip';
 import { AthletesChip } from './Chip';
 import type { Catalogue } from '../../../packages/domain/src/catalogue';
 import { collectPrescriptions } from '../../../packages/domain/src/library';
+import { isQuickTimer } from '../../../packages/domain/src/quick-timer';
 import { countsAsDone, type SessionRecord } from './session-log';
 import { roundSessionTimes, sessionOutcome } from '../../../packages/engine/src/records';
 import { deviceId } from './data/device';
@@ -113,7 +114,7 @@ interface Station {
   counter?: { rounds: number; reps: number };
 }
 /** What every station of a session is drawn with: the athletes' names and how loads read. */
-interface StageLook { names: Record<Role, string>; loadUnit: Preferences['loadUnit']; loadsFor?: Preferences['loadsFor']; pair: boolean }
+interface StageLook { names: Record<Role, string>; loadUnit: Preferences['loadUnit']; loadsFor?: Preferences['loadsFor']; pair: boolean; /** A quick timer (UI-30): no station and no block list, only the actions that keep a score. */ plain?: boolean }
 /** What only the live station has: the taps, the row marked in a block, the key of its entrance and the nodes the player measures. */
 interface StageLive {
   lanesKey: string;
@@ -167,9 +168,10 @@ function planStations(plan: ExecutionPlan): Station[] {
  * is the room the stage takes. Without `live` it is such a copy: no test id, no name for a screen reader, no handler, no ref.
  */
 function StageBody({ station, look, live }: { station: Station; look: StageLook; live?: StageLive }) {
-  const { names, loadUnit, pair } = look;
+  const { names, loadUnit, pair, plain } = look;
   const sex = (role: Role) => look.loadsFor?.[role];
-  const has = (control: Control) => station.controls.includes(control);
+  // A quick timer keeps the round counter of an AMRAP and the Done that stops a For time clock; an interval's Done has nothing to report.
+  const has = (control: Control) => station.controls.includes(control) && !(plain && control === 'done' && station.format !== 'forTime');
   const unit = station.tasks ?? [];
   const turns = Boolean(station.tasks) && station.format === 'youGoIGo';
   const roles = (['A', 'B'] as const).filter(role => role === 'A' || pair);
@@ -207,7 +209,7 @@ function StageBody({ station, look, live }: { station: Station; look: StageLook;
     </section>;
   };
   return <div className={own.stageBody} ref={live?.body}>
-    {station.tasks && station.format === 'amrap' ? <>
+    {plain ? null : station.tasks && station.format === 'amrap' ? <>
       {unit.length > 8 && <p className={own.fitWarning}>Long block: {unit.length} movements may not all fit on a small screen. Use the Context view to scroll.</p>}
       <ul className={own.taskList} aria-label={live && 'AMRAP block'}>{unit.map((task, index) => <li key={task.nodeId} className={own.taskRow} data-pair={pair} data-highlight={live?.highlight === task.nodeId} onClick={() => live?.onHighlight(task.nodeId)}>
         <span className={own.taskIndex}>{index + 1}</span>
@@ -258,7 +260,10 @@ interface PlayerProps {
 export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery, live }: PlayerProps) {
   // The session plays the workout it started with; an edit in the library never changes a running session (AT-14).
   const [workout] = useState(workoutProp);
-  const { names, view, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, pauseColor, nudgeSeconds } = preferences;
+  const { names, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, pauseColor, nudgeSeconds } = preferences;
+  /** A quick timer (UI-30) is the clock alone: no station, no game plan and no Up next, in the focus view whatever the preference. */
+  const timerOnly = isQuickTimer(workout);
+  const view = timerOnly ? 'focus' : preferences.view;
   /** The milestone and paused colours are chosen per theme; the one in effect goes on the frame below. */
   const theme = useResolvedTheme(preferences.theme);
   /** What of the session's progress shows, each part on its own: the bar across the top, the percentage under it, the percentage beside the clock, and the round donut. */
@@ -343,7 +348,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     return at && { ...at, done: at.position - 1, active: !isRest && !isPrep && status !== 'ready' };
   })();
   const showDonut = Boolean(shown.donut && roundView && (roundView.size > 1 || roundView.rounds > 1));
-  const donut = showDonut && roundView ? <RoundDonut view={roundView} timed={timing !== 'manual'} fill={donutFill} /> : null;
+  const donut = showDonut && roundView ? <RoundDonut view={roundView} timed={timing !== 'manual'} fill={donutFill} counts={timerOnly ? 'rounds' : 'movements'} /> : null;
   // A new movement takes over (UI-24): the stations shown before slide out to the left while the new ones slide in
   // from the right. React has just removed the old element; it is parked, inert and without test ids, in an overlay at
   // its old place for the length of the animation. The first effect reads the last commit, the second records this one.
@@ -373,7 +378,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const stations = useMemo(() => planStations(plan), [plan]);
   /** The session has more than one slot of work, so Up next has something to say before the last of them. */
   const several = useMemo(() => plan.occurrences.filter(item => item.phase === 'work').length > 1, [plan]);
-  const look = useMemo<StageLook>(() => ({ names, loadUnit, loadsFor: workout.participants === 2 ? loadsFor : undefined, pair: workout.participants === 2 }), [names, loadUnit, loadsFor, workout.participants]);
+  const look = useMemo<StageLook>(() => ({ names, loadUnit, loadsFor: workout.participants === 2 ? loadsFor : undefined, pair: workout.participants === 2, plain: timerOnly }), [names, loadUnit, loadsFor, workout.participants, timerOnly]);
   const ruled = !editable && view === 'focus';
   useLayoutEffect(() => {
     const frame = player.current, stack = rulerStack.current;
@@ -440,7 +445,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     void detach().then(() => onSessionClear?.(engine.sessionId));
   }, [continuedOn, editable, takenOver, detach, engine, onSessionClear]);
   // Clips and this workout's recorded movement names are decoded before Play so a session never waits on the network.
-  useEffect(() => { void audio.preload(); void audio.prepareNames(collectPrescriptions(workout).map(item => audio.nameKey(item))); }, [audio, workout, catalogue]);
+  useEffect(() => { void audio.preload(); if (!timerOnly) void audio.prepareNames(collectPrescriptions(workout).map(item => audio.nameKey(item))); }, [audio, workout, catalogue, timerOnly]);
+  useEffect(() => { audio.nameless = timerOnly; return () => { audio.nameless = false; }; }, [audio, timerOnly]);
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
   // Log the session once when it ends: completed always, an ended session when it covered enough of the plan.
@@ -550,7 +556,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
 
   const capLine = projection.capMs !== undefined && (clockScope !== 'cap' || countUp);
   const turnLine = isBlock && format === 'youGoIGo' && clockScope !== 'turn';
-  const restLabel = current.phase === 'roundRest' ? 'Round rest' : current.phase === 'transition' ? 'Transition' : 'Block rest';
+  const restLabel = timerOnly ? 'Rest' : current.phase === 'roundRest' ? 'Round rest' : current.phase === 'transition' ? 'Transition' : 'Block rest';
   const phaseLabel = status === 'ready' ? 'Ready when you are' : status === 'paused' ? projection.pauseReason === 'hidden' ? 'Paused · app was hidden' : projection.pauseReason === 'recovered' ? 'Recovered · paused' : 'Workout paused' : status === 'awaitingReady' ? 'Next block · ready?' : status === 'completed' ? 'Workout complete' : status === 'aborted' ? 'Workout ended' : isPrep ? 'Get ready' : isRest ? restLabel : format === 'amrap' ? 'AMRAP' : format === 'emom' ? 'Interval' : format === 'youGoIGo' ? `${turn?.athlete === 'B' ? names.B : names.A} works` : format === 'strength' ? 'Set' : timing === 'manual' ? 'Work · tap Done' : 'Work';
   const playerPhase = terminal ? 'complete' : status === 'paused' ? 'paused' : isRest ? 'rest' : isPrep ? 'prep' : status === 'ready' ? 'ready' : 'work';
   // The top line names the block; rounds are the donut's dots, so a repeat is only spelled out where no donut shows.
@@ -584,15 +590,15 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   return <div className={styles.screen} data-performing={!editable} data-view={view}>
     <div className={styles.workoutHeading}>
       <div>
-        <div className={styles.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> <a href={workoutHref(workout.id)}>{pair ? 'PARTNER SESSION' : 'SOLO SESSION'}</a>{!bundled && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
+        <div className={styles.eyebrow}><a href="#/">YOUR LIBRARY</a> <span>/</span> <a href={workoutHref(workout.id)}>{timerOnly ? 'QUICK TIMER' : pair ? 'PARTNER SESSION' : 'SOLO SESSION'}</a>{!bundled && !timerOnly && <><span>/</span>{DATA_MODE === 'server' ? 'SAVED FOR THE HOUSEHOLD' : 'SAVED ON THIS DEVICE'}</>}</div>
         <h1>{workout.title}</h1>
         {workout.description && <p className={styles.description}>{workout.description}</p>}
-        <div className={styles.metadata}><span><Icon name="clock" size={16} />{plan.durationKind === 'open' ? 'Open-ended' : `${plan.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(plan.durationMs + workout.prepMs)} incl. prep`}</span><AthletesChip participants={workout.participants} /><DifficultyChip difficulty={difficulty} /></div>
+        <div className={styles.metadata}><span><Icon name="clock" size={16} />{plan.durationKind === 'open' ? 'Open-ended' : `${plan.durationKind === 'capped' ? 'Up to ' : ''}${displayTime(plan.durationMs + workout.prepMs)} incl. prep`}</span>{!timerOnly && <><AthletesChip participants={workout.participants} /><DifficultyChip difficulty={difficulty} /></>}</div>
       </div>
-      <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>
+      {!timerOnly && <div className={styles.viewSwitch} aria-label="Player view"><button aria-pressed={view === 'focus'} onClick={() => setView('focus')}><Icon name="focus" size={17} />Focus</button><button aria-pressed={view === 'context'} onClick={() => setView('context')}><Icon name="list" size={17} />Context</button></div>}
     </div>
 
-    <div className={styles.player} ref={player} data-boundary={status === 'awaitingReady' ? 'end' : intro !== undefined && intro === current.sectionIndex ? 'start' : undefined} data-phase={playerPhase} data-scope={clockScope} data-bar={shown.bar} data-bar-percent={shown.barPercent} data-clock-percent={shown.clockPercent} data-donut={shown.donut} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first[theme] ? { '--phase-amber': markColors.first[theme] } : {}), ...(markColors.second[theme] ? { '--phase-red': markColors.second[theme] } : {}), ...(pauseColor[theme] ? { '--phase-paused': pauseColor[theme] } : {}) } as CSSProperties}>
+    <div className={styles.player} ref={player} data-timer={timerOnly || undefined} data-boundary={status === 'awaitingReady' ? 'end' : intro !== undefined && intro === current.sectionIndex ? 'start' : undefined} data-phase={playerPhase} data-scope={clockScope} data-bar={shown.bar} data-bar-percent={shown.barPercent} data-clock-percent={shown.clockPercent} data-donut={shown.donut} data-warning="normal" data-wash={preferences.wash} style={{ '--perimeter-width': `${perimeterWidth}px`, '--wash-gain': String(washGain / 100), '--wash-min': String(washGain / 600), ...(markColors.first[theme] ? { '--phase-amber': markColors.first[theme] } : {}), ...(markColors.second[theme] ? { '--phase-red': markColors.second[theme] } : {}), ...(pauseColor[theme] ? { '--phase-paused': pauseColor[theme] } : {}) } as CSSProperties}>
       <Perimeter progress={border} width={perimeterWidth} />
       <div ref={exitLayer} className={own.exitLayer} aria-hidden="true" />
       {status === 'awaitingReady' && current.sectionIndex > 0 ? (() => {
@@ -602,7 +608,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       })() : intro !== undefined && intro === current.sectionIndex && !terminal ? <div key={`start-${intro}`} className={own.blockCard} data-kind="start" data-testid="block-card" aria-hidden="true">
         <span>BLOCK {intro + 1} OF {plan.sections.length}</span><strong>{section.title}</strong><small>{[FORMAT_LABELS[format], roundView && roundView.rounds > 1 ? `${roundView.rounds} rounds` : '', section.capMs ? `cap ${displayTime(section.capMs)}` : ''].filter(Boolean).join(' · ')}</small>
       </div> : null}
-      <div className={styles.playerTop}><span><span className={styles.liveDot} />{section.title}<span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span></span><span><span className={styles.position}>{positionLabel}</span>{!editable && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
+      <div className={styles.playerTop}><span><span className={styles.liveDot} />{timerOnly ? workout.title : section.title}{!timerOnly && <span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span>}</span><span><span className={styles.position}>{positionLabel}</span>{!editable && !timerOnly && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
       {(shown.bar || shown.barPercent) && <div className={styles.overall} aria-label="Overall progress">{shown.bar && <span className={styles.overallTrack} data-testid="overall-progress">{plan.sections.map((item, index) => <span key={item.id} className={styles.overallSegment} data-segment={index} style={{ flexGrow: item.endIndex - item.startIndex + 1 }}><span ref={element => { segmentFills.current[index] = element; }} className={styles.overallFill} /></span>)}</span>}{shown.barPercent && <span ref={overallText} className={styles.overallText}>0 % DONE</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
@@ -618,9 +624,15 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       {terminal ? <div className={styles.finishMessage}><span className={styles.finishIcon}><Icon name="check" size={28} /></span><h2>{status === 'completed' ? 'That’s a good session.' : 'Every bit of movement counts.'}</h2><p>{status === 'completed' ? 'Take a breath. Grab some water. You earned it.' : 'Your session has ended.'}</p>
         {projection.results.length > 0 && <ul className={own.resultList} aria-label="Block results">{projection.results.map(result => <li key={result.sectionId}><span>{plan.sections.find(item => item.id === result.sectionId)?.title ?? result.sectionId}</span><span>{resultText(result)}</span></li>)}</ul>}
       </div> : <>
-        <div className={styles.laneHeading}>{laneHeading}<span>{roundView && roundView.size > 1 ? `MOVEMENT ${roundView.position} / ${roundView.size}` : ''}</span></div>
+        {!timerOnly && <div className={styles.laneHeading}>{laneHeading}<span>{roundView && roundView.size > 1 ? `MOVEMENT ${roundView.position} / ${roundView.size}` : ''}</span></div>}
         <div className={own.stage}><StageBody station={station} look={look} live={stageLive} /></div>
-        <div className={styles.nextStrip} data-empty={!nextWork} data-kept={several || undefined}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next block, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B && nextWork.assignments.B.name !== nextWork.assignments.A.name ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>
+        {/* A quick AMRAP lists its rounds like a stopwatch its laps (UI-30): the latest on top, each with the time it took and the time it ended at. */}
+        {timerOnly && counter && <ol className={own.laps} aria-label="Rounds">{counter.laps.map((at, index, all) => {
+          const seconds = (ms: number) => Math.round(ms / 1000) * 1000;
+          const number = counter.rounds - all.length + index + 1;
+          return <li key={number}><span>Round {number}</span><strong>{displayTime(seconds(at) - seconds(index ? all[index - 1] : 0), 'floor')}</strong><small>{displayTime(seconds(at), 'floor')}</small></li>;
+        }).reverse()}</ol>}
+        {timerOnly ? <div className={styles.nextStrip} data-timer /> : <div className={styles.nextStrip} data-empty={!nextWork} data-kept={several || undefined}><span className={styles.nextLabel}>UP NEXT <Icon name="arrow" size={16} /></span><span>{nextWork ? `${nextWork.sectionIndex !== current.sectionIndex && section.transitionAfter === 'manualReady' ? 'Ready for next block, then ' : ''}${!isRest && projection.restBeforeNextMs ? `${displayTime(projection.restBeforeNextMs)} rest, then ` : ''}${nextWork.tasks ? `${FORMAT_LABELS[plan.sections[nextWork.sectionIndex].format]} block` : `${nextWork.assignments?.A.name}${nextWork.assignments?.B && nextWork.assignments.B.name !== nextWork.assignments.A.name ? ` / ${nextWork.assignments.B.name}` : ''}`}` : 'Finished · time to recover'}</span></div>}
       </>}
 
       {view === 'context' && <section className={styles.contextSection} aria-label="Workout context">
@@ -669,11 +681,11 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send(status === 'awaitingReady' ? 'ready' : 'resume', projection.occurrenceId)}><Icon name="play" />{status === 'awaitingReady' ? 'Start next block' : 'Resume'}</button></div>
       </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
-      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : ''}</span></div>
+      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? timerOnly ? 'Breathe.' : 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : ''}</span></div>
       {ruled && <StageRuler stations={stations} look={look} stack={rulerStack} />}
     </div>
 
-    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name="list" size={17} />Details</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a><button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button></div></div>
+    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name={timerOnly ? 'clock' : 'list'} size={17} />{timerOnly ? 'Timer settings' : 'Details'}</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a>{!timerOnly && <button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button>}</div></div>
 
     <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>Shift</span><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next block</li><li><span className={styles.kbd}>J</span><span className={styles.kbd}>L</span>Back or forward {nudgeSeconds} seconds on the clock</li><li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
     <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={`${styles.primaryButton} ${styles.dangerFill}`} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>

@@ -8,6 +8,7 @@ import { collectPrescriptions } from '../../packages/domain/src/library';
 import { seedMovements } from '../../packages/domain/src/movements';
 import { readFileSync } from 'node:fs';
 import type { Workout } from '../../packages/domain/src';
+import { DEFAULT_QUICK_TIMER, quickTimerWorkout } from '../../packages/domain/src/quick-timer';
 const partnerCircuit = bundledWorkout('partner-circuit');
 const partnerEmom16 = bundledWorkout('partner-emom-16');
 const partnerSprints = bundledWorkout('you-go-i-go-sprints');
@@ -421,4 +422,32 @@ it('AUD-10: the packs record exactly the names bundled workouts write differentl
   const keys = new Set(bundledWorkouts.flatMap(workout => collectPrescriptions(workout)).map(lane => audio.nameKey(lane)).filter(key => key.startsWith('text/')));
   expect([...keys].sort()).toEqual(Object.keys(phrases).map(slug => `text/${slug}`).sort());
   expect(Object.values(phrases)).toContain('Plank Rows');
+});
+
+it('names no movement in a quick timer: the lead words play alone, as speech and as clips (UI-30)', async () => {
+  const timer = quickTimerWorkout(DEFAULT_QUICK_TIMER);
+  // Without the flag the countdown names the placeholder movement.
+  const named = setup({ workout: timer, started: 1000 });
+  await named.audio.unlock();
+  named.audio.update(named.engine.project(), named.engine.readClocks());
+  vi.runOnlyPendingTimers();
+  expect(named.spoken).toEqual(['Get ready. Work.']);
+
+  const spoken = setup({ workout: timer, started: 1000 });
+  spoken.audio.nameless = true;
+  await spoken.audio.unlock();
+  spoken.audio.update(spoken.engine.project(), spoken.engine.readClocks());
+  // Into the first work slot and on to the first rest: Rest is said, and nothing after it.
+  spoken.advance(9000 + 20_000 + 1000);
+  spoken.audio.update(spoken.engine.project(), spoken.engine.readClocks());
+  vi.runOnlyPendingTimers();
+  expect(spoken.spoken).toEqual(['Get ready.', 'Rest.']);
+
+  const clips = setup({ clips: true, workout: timer, started: 1000 });
+  clips.audio.nameless = true;
+  await clips.audio.unlock(); await clips.audio.preload(); clips.sources.length = 0;
+  clips.audio.update(clips.engine.project(), clips.engine.readClocks());
+  vi.runOnlyPendingTimers();
+  expect(clips.sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'get-ready']);
+  expect(clips.spoken).toEqual([]);
 });

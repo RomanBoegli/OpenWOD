@@ -141,6 +141,13 @@ The interface calls a section a block, while the code and the file format keep `
 
 **LIB-08** Equipment names SHALL be shown in Title Case ("Pull-Up Bar", "Treadmill or Running Route") wherever they appear, whatever case a file, an earlier version or a keyboard wrote them in. A part with a capital of its own ("SkiErg", "GHD") SHALL stay as written. A stored workout keeps its text, a merge or rename SHALL store the Title Case spelling, and what a household ticked as its own equipment SHALL follow the name's loose identity, not its spelling.
 
+**LIB-09** The library SHALL offer a quick timer, its most prominent action: a plain clock of one of four kinds, set with a few numbers on a page of its own (`#/timer`).
+Tabata takes rounds, work and rest, EMOM an interval and its rounds, AMRAP a time, and For Time an optional cap, each with the countdown before it.
+The timer plays in the normal training view (UI-30) as an ordinary solo workout under the reserved id `quick-timer`, built from those numbers and never written to the library: no backend stores a workout of that id, and an imported workout that carries it gets another.
+The numbers last set are kept in the browser, each kind its own, so the page opens where it was left.
+A finished timer is logged like any session, under a title that carries its numbers ("Tabata: 8 × 0:20 / 0:10"), and Repeat in the Logbook plays it again.
+A reload of its player restores an interrupted timer (ENG-12), and Start on the timer's page plays the numbers just set instead.
+
 ## 5.2 Builder
 
 **BLD-01** The builder SHALL support add, edit, duplicate, delete, and reorder for sections, activities, and repeat blocks. Touch and keyboard buttons SHALL provide an alternative to drag-and-drop.
@@ -459,6 +466,12 @@ The game plan of the context view SHALL list a solo session's movements in one c
 In the editor a solo movement's target and load SHALL stand side by side from tablet width.
 The workout page shows one movement column for a solo workout.
 
+**UI-30** A quick timer (LIB-09) SHALL show the clock alone: no station, no block list, no game plan, no Up next and no second view, with the timer's title in the frame's top line and the clock in the middle of the room that leaves.
+An AMRAP keeps its round counter and Finish, a For Time timer the Done that stops its clock, and an EMOM has no Done.
+A Tabata's ring counts the rounds ("3/8"), there being one movement, and its rest is labelled "Rest".
+The rounds counted in a quick AMRAP SHALL be listed under the counter like a stopwatch's laps, the latest on top, each with the time it took and the block's time it ended at. The list is there from the first second and scrolls inside its room, so no round moves the clock, an undone round leaves the list, and a restored session keeps its rounds' times.
+The cues are a workout's own, without a movement name: the beeps, "Get ready", "Go" and "Rest".
+
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select the voice and its volume, with no speed option since 1.6.0. Choosing a voice or a beep tone SHALL play it. The beeps SHALL have their own volume and a choice of tones (version 1.11). The voice, the beeps and both together SHALL each be testable on their own. No microphone permission is needed.
@@ -727,11 +740,12 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-34 | Start a session on device A and play into round 1. Device B, already on the library, shows "Session running on A" after a focus event without a reload. Continue here on B: the player opens paused with "Continued from A", the block, round and clock of A, and Resume continues at that clock. A's next save makes it show "Continued on B." and ignore Space. B finishes: exactly one session in the logbook, no live row, and A offers nothing after a reload. Hide the app mid-session: the other devices read it as paused. End a session too short to count: no live row remains. Take a session back on A: it asks first and B steps aside. | ENG-15, ENG-12, ENG-14, DAT-03 |
 | AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Type romanian deadlifts and leave the field: it reads Romanian Deadlifts, and it did not change while it was typed. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-17, BLD-11 |
 | AT-36 | Play Fran at 1180 by 820: the station is headed "YOUR STATION", has no badge and no "Athlete A", and shows the target, the movement and the load in one row with the movement in the middle of the card. The context view's active row has three cells and the game plan no dash. At 390 by 844 the movement stands under the target. | UI-29, UI-04 |
+| AT-37 | From the library open the quick timer and set a Tabata of 2 rounds, 0:05 work and 0:05 rest: Start opens the player counting down, with no station, no Up next and no view switch, and the ring reads round 1 of 2, then 2 of 2. The Logbook lists "Tabata: 2 × 0:05 / 0:05", Repeat plays it again, and the library counts the workouts it counted before. An AMRAP timer lists two counted rounds with their times, the later on top, and loses the third when it is undone. A For Time timer stops on Done, and an EMOM shows no Done. A reload mid-timer restores it, and Start with other numbers plays those. | LIB-09, UI-30 |
 
 # 15 Where things stand
 
 Recorded 24 November 2026, plan version 1.22.
-All P0 requirements and the 36 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+All P0 requirements and the 37 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -741,6 +755,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 **Since 1.6.1** (not released):
 
 - Solo sessions have a layout of their own (UI-29, issue #6): a one-row station without badge or name, a one-column game plan, and a solo movement's target and load side by side in the editor.
+- The quick timer (LIB-09, UI-30, issue #11): Tabata, EMOM, AMRAP or For Time from a few numbers, played as the clock alone and never saved to the library. It is the library's primary action, and New workout a quiet one. A quick AMRAP lists its rounds with their times.
 
 **Schema and storage versions today.**
 
@@ -748,6 +763,8 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - SQLite schema version 4: migration 2 added household settings, migration 3 (`deleted sessions`) the `deleted_sessions` tombstone table, and migration 4 (`live sessions`) the `live_sessions` table of ENG-15.
 - IndexedDB version 3, which adds the `deletedSessions` store to version 2's `workouts`, `master` and `sessions`.
 - Editor drafts live in `localStorage` under `openwod.drafts.v2` since 1.5.3, moved once from `openwod.drafts.v1`.
+- The quick timer's numbers live in `localStorage` under `openwod.quick-timer.v1`, in this browser only.
+- A session's checkpoint keeps the block's time of each counted round (the laps of UI-30) as an optional field, so a checkpoint of an earlier build still restores.
 - An image of 1.5.x or older refuses a database migrated to version 4, so going back needs the pre-migration backup the server writes under `/data/backups/`.
 
 **Open gates on the user's side.**
@@ -780,7 +797,7 @@ Every other idea is a GitHub issue with the `enhancement` label (`gh issue list 
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-09, MOD-06, NFR-15, SHR-08, UI-30 and AT-37.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-31 and AT-38.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

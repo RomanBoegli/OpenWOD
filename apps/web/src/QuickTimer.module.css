@@ -1,0 +1,18 @@
+/* The quick timer's page (LIB-09): one card with the kind, its numbers and Start. */
+.page { min-height: 60vh; max-width: 720px; }
+.page h1 { font-size: clamp(27px, 3vw, 36px); font-weight: 650; letter-spacing: -1.2px; line-height: 1.15; margin: 12px 0 6px; }
+.card { margin-top: 20px; padding: 20px 22px; background: linear-gradient(150deg, var(--surface-2), var(--surface-1) 80%); border: 1px solid var(--line); border-radius: 18px; }
+.page .kinds { grid-template-columns: repeat(4, 1fr); }
+.hint { margin: 12px 2px 6px; color: var(--ink-3); font-size: 13px; line-height: 1.6; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 4px 12px; align-items: end; }
+.field { display: grid; gap: 6px; font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--ink-3); min-width: 0; margin: 8px 0; }
+.field input { width: 100%; min-width: 0; min-height: 52px; padding: 9px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--input-bg); color: var(--ink); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.field input[aria-invalid=true] { border-color: var(--phase-red); }
+.total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 14px 2px 18px; font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+.total span { color: var(--ink-3); font-size: 13px; font-weight: 400; letter-spacing: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions > a { flex: 1 1 220px; justify-content: center; text-decoration: none; min-height: 56px; }
+@media (max-width: 620px) {
+  .card { padding: 16px 14px; }
+  .page .kinds label { font-size: 12px; }
+}

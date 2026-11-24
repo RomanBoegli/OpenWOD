@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= resolve(import.meta.dirname, '../.cache/ms-playwright');
 
 const STATIC_URL = 'http://127.0.0.1:5175';
-const STATIC_SPECS = ['static/**/*.spec.ts', 'player.spec.ts', 'editor.spec.ts', 'settings.spec.ts', 'screens.spec.ts', 'tabs.spec.ts', 'library.spec.ts', 'recovery.spec.ts'];
+const STATIC_SPECS = ['static/**/*.spec.ts', 'player.spec.ts', 'editor.spec.ts', 'settings.spec.ts', 'screens.spec.ts', 'tabs.spec.ts', 'library.spec.ts', 'recovery.spec.ts', 'quick-timer.spec.ts'];
 
 export default defineConfig({
   testDir: './e2e',

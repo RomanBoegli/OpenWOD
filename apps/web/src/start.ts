@@ -51,6 +51,9 @@ export function useStart() {
 /** Resolves once a workout whose Start was just pressed can sound as chosen, and at once for any other: for a player that learns its workout late. */
 export function startReady(workout: Workout): Promise<void> { return pending(workout.id) ? sound.ready(workout) : Promise.resolve(); }
 
+/** Whether Start was just pressed for this workout, without using the intent up: for the route that decides what the player gets. */
+export const startPending = (workoutId: string): boolean => pending(workoutId);
+
 /** True once for the workout whose Start was just pressed. */
 export function takeStart(workoutId: string): boolean {
   const hit = pending(workoutId);

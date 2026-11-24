@@ -20,7 +20,7 @@ import { DifficultyChip, DifficultyFilterChip } from './DifficultyChip';
 import { AthletesChip, Chip } from './Chip';
 import { displayTime } from '../../../packages/engine/src';
 import { rankBySearch } from '../../../packages/domain/src/search';
-import { copyHref, draftHref, editHref, NEW_HREF, playHref, settingsHref, workoutHref } from './router';
+import { copyHref, draftHref, editHref, NEW_HREF, playHref, settingsHref, TIMER_HREF, workoutHref } from './router';
 import { useStart } from './start';
 import { workoutToBuilder } from '../../../packages/domain/src/builder';
 import { copySource, freeWorkoutId, NEW_DRAFT_ID, type StoredDraft } from './library-store';
@@ -237,7 +237,8 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
         <p className={shared.description}>Benchmarks, advanced pieces and the WODs you’ve built or imported, {mode === 'server' ? 'shared by every device in the household' : 'all on this device'}. Filter, then press Start.</p>
       </div>
       <div className={styles.headingActions}>
-        <a className={shared.primaryButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
+        <a className={shared.primaryButton} href={TIMER_HREF} title="Only the clock: Tabata, EMOM, AMRAP or For Time from a few numbers"><Icon name="clock" size={18} />Quick timer</a>
+        <a className={shared.quietButton} href={NEW_HREF}><Icon name="arrow" size={18} />New workout</a>
         <button className={shared.quietButton} onClick={() => setGuideOpen(true)} title="Write a workout with the AI assistant you use, then paste it here"><Icon name="spark" size={18} />Create with AI</button>
         <button className={shared.quietButton} onClick={() => fileInput.current?.click()}><Icon name="upload" size={18} />Import WOD</button>
         {entries.some(entry => entry.source === 'saved') && <button className={shared.quietButton} onClick={onExportLibrary} title="Every saved workout and your collections as one .wods.yaml pack"><Icon name="download" size={18} />Export library</button>}

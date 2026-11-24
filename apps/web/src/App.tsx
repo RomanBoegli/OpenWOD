@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workout } from '../../../packages/domain/src';
 import { bundledWorkouts } from '../../../packages/domain/src/bundled';
-import { authorOptions, collectPrescriptions } from '../../../packages/domain/src/library';
+import { authorOptions, collectPrescriptions, QUICK_TIMER_ID } from '../../../packages/domain/src/library';
+import { quickTimerWorkout } from '../../../packages/domain/src/quick-timer';
 import { WorkoutAudio } from './audio';
 import { Library, toEntry, type LibraryEntry } from './Library';
 import { exportPackFile, exportWorkoutFile } from './Player';
@@ -14,11 +15,13 @@ import { NotFound } from './NotFound';
 import { Editor } from './Editor';
 import { Settings } from './Settings';
 import { SnapshotPlayer } from './History';
+import { QuickTimerPage } from './QuickTimer';
+import { loadQuickTimer } from './quick-timer-store';
 import { builderToWorkout, emptyDraft, workoutToBuilder, type BuilderDraft } from '../../../packages/domain/src/builder';
 import { copyDraftId, copySource, freeWorkoutId, loadDrafts, NEW_DRAFT_ID, persistDrafts, SAVED_LIMIT, slugify, type StoredDraft } from './library-store';
 import { allCollections, authorRepertoire, authorSpelling, canonicalAuthor, canonicalEquipment, effectiveCatalogue, upsertMovement, type Movement } from './master-data';
 import { linkDraft } from './catalogue-link';
-import { draftHref, editHref, LOGBOOK_HREF, playHref, SETTINGS_HREF, useRoute, workoutHref } from './router';
+import { draftHref, editHref, LOGBOOK_HREF, playHref, SETTINGS_HREF, TIMER_HREF, useRoute, workoutHref } from './router';
 import { useTheme } from './theme';
 import { Icon } from './Icon';
 import { BrandMark } from './BrandMark';
@@ -31,7 +34,7 @@ import { listRecoveries, type Recovery } from './data/checkpoints';
 import type { SessionRecord } from '../../../packages/engine/src/records';
 import styles from './App.module.css';
 import { newId } from './ids';
-import { onStartSound } from './start';
+import { onStartSound, startPending } from './start';
 
 const BUNDLED_IDS = new Set(bundledWorkouts.map(workout => workout.id));
 /** The deployment shape in the footer, with a one-line explainer on hover or focus. */
@@ -73,7 +76,7 @@ export default function App() {
   // player it then opens begins at once, with everything it plays loaded (start.ts). Test builds have no sound to wait for.
   useEffect(() => onStartSound({
     unlock: () => { if (!__OPENWOD_TEST__) void audio.unlock(); },
-    ready: workout => __OPENWOD_TEST__ ? Promise.resolve() : audio.whenReady(workout ? collectPrescriptions(workout).map(item => audio.nameKey(item)) : []),
+    ready: workout => __OPENWOD_TEST__ ? Promise.resolve() : audio.whenReady(workout && workout.id !== QUICK_TIMER_ID ? collectPrescriptions(workout).map(item => audio.nameKey(item)) : []),
   }), [audio]);
   useEffect(() => installFeel(), []);
   useEffect(() => { if (route.name !== 'play' && route.name !== 'historyPlay') window.scrollTo(0, 0); }, [route]);
@@ -200,13 +203,23 @@ export default function App() {
   /** The workout whose handed-over session was latched just before its route opens, so the route's own look-up leaves it alone. */
   const adopted = useRef<string>(undefined);
   const findRecovery = useCallback(async (id: string) => { try { return (await listRecoveries()).find(item => item.checkpoint.workoutId === id); } catch { return undefined; } }, []);
+  const clearRecovery = useRef(data.clearRecovery);
+  clearRecovery.current = data.clearRecovery;
   useEffect(() => {
     if (playId === undefined) { setPlayed(undefined); return; }
     if (adopted.current === playId) { adopted.current = undefined; return; }
     let cancelled = false;
-    void findRecovery(playId).then(found => { if (!cancelled) setPlayed({ id: playId, recovery: found, turn: 0 }); });
+    void (async () => {
+      let found = await findRecovery(playId);
+      // Start on the quick timer's page plays the numbers just set (LIB-09): a timer interrupted earlier, of whatever numbers, is
+      // over. A reload or a link to the player still restores it.
+      for (let cleared = 0; found && playId === QUICK_TIMER_ID && startPending(playId) && cleared < 20; cleared++) { await clearRecovery.current(found.checkpoint.sessionId); found = await findRecovery(playId); }
+      if (!cancelled) setPlayed({ id: playId, recovery: found, turn: 0 });
+    })();
     return () => { cancelled = true; };
   }, [playId, findRecovery]);
+  // The quick timer is built from its stored numbers when its player opens, and is no entry of the library.
+  const quick = useMemo(() => playId === QUICK_TIMER_ID ? quickTimerWorkout(loadQuickTimer()) : undefined, [playId]);
   const recovery = played && played.id === playId ? played.recovery : undefined;
   /**
    * Continue here (ENG-15): claims a session another device runs and opens its player with it. The session arrives in
@@ -236,7 +249,7 @@ export default function App() {
   const lockKnown = recovery ? (lockState?.sessionId === recovery.checkpoint.sessionId ? lockState.state : 'checking') : 'free';
   // The tab that handed over wrote its last checkpoint on the way out: read it again before restoring here.
   const takeOver = async () => { if (!recovery || playId === undefined) return; await takeOverSession(recovery.checkpoint.sessionId); const found = await findRecovery(playId); setPlayed({ id: playId, recovery: found, turn: 0 }); void data.refreshRecoveries(); setLockState({ sessionId: recovery.checkpoint.sessionId, state: 'free' }); };
-  const current = route.name === 'copy' ? entries.find(entry => entry.workout.id === route.id) : route.name === 'library' || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
+  const current = route.name === 'copy' ? entries.find(entry => entry.workout.id === route.id) : route.name === 'library' || route.name === 'new' || route.name === 'timer' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' ? undefined : entries.find(entry => entry.workout.id === route.id);
   const importedDraft = route.name === 'draft' ? drafts.find(draft => draft.id === route.id) : undefined;
   // Editor inputs: a resumed draft wins; otherwise the workout itself, or a titled copy for Duplicate.
   const editing = route.name === 'new' ? { id: NEW_DRAFT_ID, mode: 'create' as const, initial: drafts.find(draft => draft.id === NEW_DRAFT_ID)?.draft ?? emptyDraft(2) }
@@ -257,7 +270,7 @@ export default function App() {
   const pendingCount = data.pendingIds.size;
   // The running server's version when known (that is what is deployed), else the version this bundle was built from.
   const appVersion = data.serverVersion ?? __OPENWOD_VERSION__;
-  const backTarget = current && (route.name === 'play' || route.name === 'edit' || route.name === 'copy') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
+  const backTarget = route.name === 'play' && route.id === QUICK_TIMER_ID ? { href: TIMER_HREF, label: 'Timer', aria: 'Back to the quick timer' } : current && (route.name === 'play' || route.name === 'edit' || route.name === 'copy') ? { href: workoutHref(current.workout.id), label: 'Overview', aria: 'Back to workout overview' } : current || route.name === 'new' || route.name === 'timer' || route.name === 'settings' || route.name === 'draft' || route.name === 'historyPlay' || route.name === 'notFound' || (route.name !== 'library' && data.loaded) ? { href: '#/', label: 'Library', aria: 'Back to library' } : undefined;
 
   return <div className={styles.app} data-performing={performing}>
     <header className={styles.header}>
@@ -278,8 +291,9 @@ export default function App() {
       {live.notice && route.name !== 'library' && <div className={styles.notice} role="alert" style={{ marginBottom: 18 }}>{live.notice} <button type="button" className={styles.quietButton} onClick={live.clearNotice}>Dismiss</button></div>}
       {route.name === 'play' && (played?.id !== route.id || lockKnown === 'checking') ? <p className={styles.headerNote}>Checking for an interrupted session…</p>
         : route.name === 'play' && recovery && lockKnown === 'held' ? <section className={styles.recovery} role="region" aria-label="Session in another tab"><div><strong>“{recovery.checkpoint.workout.title}” is running in another tab.</strong><p>Only one tab controls a session. Take it over here and the other tab pauses and hands over, or go back and use that tab.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href={workoutHref(recovery.checkpoint.workoutId)}>Back to overview</a><button className={styles.primaryButton} onClick={() => void takeOver()}><Icon name="play" />Take over here</button></div></section>
-        : route.name === 'play' && (recovery || current) ? <Player key={`${route.id}:${played?.turn ?? 0}`} workout={recovery ? recovery.checkpoint.workout : current!.workout} recovery={recovery} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
+        : route.name === 'play' && (recovery || current || quick) ? <Player key={`${route.id}:${played?.turn ?? 0}`} workout={recovery ? recovery.checkpoint.workout : (current?.workout ?? quick)!} recovery={recovery} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
         : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
+        : route.name === 'timer' ? <QuickTimerPage />
         : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} logbook={{ sessions, onCorrect: data.correctSession, onDelete: data.deleteSession, onLoadMore: data.loadMoreSessions, fetchSession: data.fetchSession }} />
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} authors={authors} authorSpelling={authorSpelling(masterData)} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
         : route.name === 'draft' ? <div className={styles.notice} role="status">That imported draft is no longer on this device. <a href="#/">Back to the library</a>.</div>

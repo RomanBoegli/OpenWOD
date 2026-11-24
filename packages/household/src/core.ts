@@ -1,6 +1,6 @@
 import { bundledWorkouts } from '../../domain/src/bundled';
 import { compileWorkout } from '../../domain/src/compiler';
-import { freeWorkoutId, slugify } from '../../domain/src/library';
+import { freeWorkoutId, QUICK_TIMER_ID, slugify } from '../../domain/src/library';
 import { emptyMasterData, isEmptyMasterData, mergeMasterData, sanitiseMasterData, type Collection, type MasterData } from '../../domain/src/master-data';
 import type { Workout } from '../../domain/src/schema';
 import { parseWorkout } from '../../domain/src/validate';
@@ -65,8 +65,8 @@ export class Household {
 
   getWorkout(id: string): StoredWorkout | undefined { return this.tables.getWorkout(id); }
 
-  /** All ids a new workout must avoid: stored (even archived) and bundled ones. */
-  takenIds(): Set<string> { return new Set([...bundledIds, ...this.tables.listWorkouts(true).map(row => row.id)]); }
+  /** All ids a new workout must avoid: stored (even archived) and bundled ones, and the quick timer's (LIB-09). */
+  takenIds(): Set<string> { return new Set([QUICK_TIMER_ID, ...bundledIds, ...this.tables.listWorkouts(true).map(row => row.id)]); }
 
   /**
    * Creates (expected revision 0 or absent, document revision ≥ 1) or updates (expected = stored revision, document
@@ -77,6 +77,7 @@ export class Household {
     const stamp = this.now().toISOString();
     const existing = this.getWorkout(document.id);
     if (!existing) {
+      if (document.id === QUICK_TIMER_ID) throw new HouseholdError(400, 'RESERVED_ID', `The id "${QUICK_TIMER_ID}" belongs to the quick timer, which is never saved.`, '/document/id');
       if (expectedRevision !== undefined && expectedRevision !== 0) throw new ConflictError(expectedRevision, { revision: 0 });
       this.tables.putWorkout({ id: document.id, revision: document.revision, origin, createdAt: stamp, updatedAt: stamp, document });
       return { created: true, revision: document.revision, updatedAt: stamp };
@@ -167,7 +168,7 @@ export class Household {
       const existing = this.getWorkout(workout.id);
       if (existing && canonicalWorkout(existing.document) === canonicalWorkout(workout)) { report.workouts.skipped++; moved.set(workout.id, existing.document); continue; }
       let id = workout.id;
-      if (existing || bundledIds.has(id)) { id = freeWorkoutId(workout.id, taken); if (!remap.has(workout.id)) remap.set(workout.id, id); report.workouts.renamed.push({ from: workout.id, to: id }); }
+      if (existing || bundledIds.has(id) || id === QUICK_TIMER_ID) { id = freeWorkoutId(workout.id, taken); if (!remap.has(workout.id)) remap.set(workout.id, id); report.workouts.renamed.push({ from: workout.id, to: id }); }
       const document: Workout = { ...workout, id, revision: Math.max(1, workout.revision) };
       this.putWorkout(document, 0, 'local');
       taken.add(id);

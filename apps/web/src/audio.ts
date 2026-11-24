@@ -79,6 +79,8 @@ export class WorkoutAudio {
   volume = .7;
   /** The beeps have their own level so they can cut through music while the voice stays conversational. */
   beepVolume = .7;
+  /** A quick timer has no movement to name (UI-30): the lead words play, and no name follows them. */
+  nameless = false;
   /** Oscillator amplitude for the beep slider: squared so the low end stays gentle, the top is close to full scale (about -6 dBFS). */
   private get beepGain() { return this.beepVolume * this.beepVolume * .5; }
   tone: BeepTone = 'classic';
@@ -383,6 +385,11 @@ export class WorkoutAudio {
    * Without a pack the device voice says everything, lead text included.
    */
   private announce(assignment: Assignment, leadText: string, leadClips: CueName[] = [], at = this.context?.currentTime ?? 0): 'clips' | 'mixed' | 'speech' {
+    if (this.nameless) {
+      if (this.useClips && this.clipsReady) { let time = at; for (const name of leadClips) time = this.play(this.clips.get(name)!, time) + .1; return 'clips'; }
+      if (leadText) this.speakAt(leadText, at);
+      return 'speech';
+    }
     if (this.useClips && this.clipsReady) {
       let time = at;
       for (const name of leadClips) time = this.play(this.clips.get(name)!, time) + .1;

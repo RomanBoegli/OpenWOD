@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import { QUICK_TIMER_ID } from '../../../packages/domain/src/library';
 
 export const SETTINGS_SECTIONS = ['general', 'player', 'equipment', 'movements', 'authors', 'collections', 'logbook'] as const;
 export type SettingsSection = typeof SETTINGS_SECTIONS[number];
-export type Route = { name: 'library' } | { name: 'new' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string } | { name: 'copy'; id: string } | { name: 'historyPlay'; id: string } | { name: 'notFound' };
+export type Route = { name: 'library' } | { name: 'new' } | { name: 'timer' } | { name: 'settings'; section: SettingsSection } | { name: 'draft'; id: string } | { name: 'workout'; id: string } | { name: 'play'; id: string } | { name: 'edit'; id: string } | { name: 'copy'; id: string } | { name: 'historyPlay'; id: string } | { name: 'notFound' };
 
 /** Hash routes keep the back button and reloads working on a static host without server rewrites. */
 export function parseRoute(hash: string): Route {
   if (/^#\/new\/?$/.test(hash)) return { name: 'new' };
+  // The quick timer (LIB-09) has a page for its numbers and plays as a session of its reserved id.
+  if (/^#\/timer\/?$/.test(hash)) return { name: 'timer' };
+  if (/^#\/timer\/play\/?$/.test(hash)) return { name: 'play', id: QUICK_TIMER_ID };
   // The History page became the Logbook under Settings (UI-22); old links and bookmarks open it there.
   if (/^#\/history\/?$/.test(hash)) return { name: 'settings', section: 'logbook' };
   const snapshot = /^#\/history\/([^/?#]+)\/play\/?$/.exec(hash);
@@ -17,11 +21,15 @@ export function parseRoute(hash: string): Route {
   if (draft) return { name: 'draft', id: decodeURIComponent(draft[1]) };
   const match = /^#\/wod\/([^/?#]+)(?:\/(play|edit|copy))?\/?$/.exec(hash);
   if (!match) return /^#?\/?$/.test(hash) ? { name: 'library' } : { name: 'notFound' };
+  // The quick timer is no library workout: its id has no page, no editor and no copy of its own.
+  if (decodeURIComponent(match[1]) === QUICK_TIMER_ID) return match[2] === 'play' ? { name: 'play', id: QUICK_TIMER_ID } : { name: 'timer' };
   return { name: match[2] === 'play' ? 'play' : match[2] === 'edit' ? 'edit' : match[2] === 'copy' ? 'copy' : 'workout', id: decodeURIComponent(match[1]) };
 }
 
-export const workoutHref = (id: string) => `#/wod/${encodeURIComponent(id)}`;
-export const playHref = (id: string) => `#/wod/${encodeURIComponent(id)}/play`;
+export const TIMER_HREF = '#/timer';
+/** A workout's page and its player. The quick timer's id leads to the timer's own two routes, so every link that follows a session finds them. */
+export const workoutHref = (id: string) => id === QUICK_TIMER_ID ? TIMER_HREF : `#/wod/${encodeURIComponent(id)}`;
+export const playHref = (id: string) => id === QUICK_TIMER_ID ? `${TIMER_HREF}/play` : `#/wod/${encodeURIComponent(id)}/play`;
 export const editHref = (id: string) => `#/wod/${encodeURIComponent(id)}/edit`;
 export const copyHref = (id: string) => `#/wod/${encodeURIComponent(id)}/copy`;
 export const NEW_HREF = '#/new';

@@ -60,6 +60,13 @@ div.ruler { position: absolute; inset: 0; z-index: 0; padding: 0; padding-inline
 .taskCell strong small { font-size: 12px; letter-spacing: 1px; color: var(--ink-3); font-weight: 600; margin-left: 4px; text-transform: uppercase; }
 .taskCell span { font-size: clamp(16px, 1.6vw, 22px); font-weight: 500; overflow-wrap: anywhere; }
 .taskCell[data-role=B] { color: var(--ink); }
+/* The rounds of a quick AMRAP (UI-30), the latest on top like a stopwatch's laps. The list is there from the first second and
+   takes the room under the counter, scrolling inside it, so no round moves the clock. */
+.laps { flex: 1 1 0; min-height: 0; overflow-y: auto; align-self: center; width: min(100%, 440px); margin: 0; padding: 0; list-style: none; }
+.laps li { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; align-items: baseline; gap: 16px; padding: 9px 4px; border-bottom: 1px solid var(--line); color: var(--ink-2); font-size: 15px; font-variant-numeric: tabular-nums; }
+.laps li:first-child { animation: rise var(--t-slow) var(--ease); }
+.laps strong { color: var(--ink); font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
+.laps small { color: var(--ink-3); font-size: 13px; text-align: right; }
 .taskHint { color: var(--ink-3); font-size: 11px; margin: 8px 0 0; text-align: center; letter-spacing: .5px; }
 .fitWarning { color: var(--notice-text); font-size: 11px; margin: 0 0 8px; text-align: center; }
 .resultList { margin: 14px auto 0; padding: 0; list-style: none; display: grid; gap: 6px; max-width: 520px; text-align: left; }

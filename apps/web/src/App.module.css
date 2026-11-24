@@ -106,6 +106,10 @@
   .soloSide { flex-direction: row; align-items: baseline; gap: 10px; }
 }
 .nextStrip { display: flex; align-items: center; justify-content: center; gap: 15px; text-align: center; min-height: 65px; color: var(--ink-2); font-size: 13px; padding: 15px 5px; }
+/* A quick timer (UI-30) has no Up next: the row stays, empty and without height, as the spring that keeps the transport controls
+   at the foot of the frame, and the clock stands in the middle of the room above them. */
+.nextStrip[data-timer], .screen[data-performing=true] .nextStrip[data-timer] { min-height: 0; padding: 0; }
+.screen[data-performing=true][data-view=focus] .player[data-timer] .clockBlock { margin-top: auto; }
 .nextLabel { display: flex; align-items: center; gap: 10px; font-size: 8px; letter-spacing: 1.7px; color: var(--ink-3); white-space: nowrap; }
 .controls { display: grid; grid-template-columns: 1fr auto 1fr; gap: 15px; align-items: center; border-top: 1px solid var(--line); padding-top: 20px; }
 .transport { display: flex; gap: 4px; }

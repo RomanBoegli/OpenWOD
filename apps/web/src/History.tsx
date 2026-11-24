@@ -14,6 +14,7 @@ import { Player } from './Player';
 import { sessionScore } from './session-log';
 import type { Preferences } from './preferences';
 import { LOGBOOK_HREF, playHref, snapshotPlayHref, workoutHref } from './router';
+import { QUICK_TIMER_ID } from '../../../packages/domain/src/library';
 import { startReady, useStart } from './start';
 import type { SessionView } from './data/use-library-data';
 import type { LiveOffers } from './data/use-live-sessions';
@@ -76,7 +77,7 @@ export function Logbook({ mode, sessions, entries, onCorrect, onDelete, onLoadMo
             <p className={styles.meta}><time dateTime={session.finishedAt}>{shortWhen(session.finishedAt)}</time> · {displayTime(session.activeMs, 'floor')}{score ? ` · ${score}` : ''}</p>
           </div>
           <div className={styles.actions}>
-            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} onClick={event => start(event, session.workoutId, entry?.workout, session.id)} aria-busy={starting === session.id || undefined} aria-label="Repeat" title={entry ? 'Repeat' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name={starting === session.id ? 'loading' : 'play'} size={16} /></a>
+            <a className={shared.iconButton} href={entry ? playHref(session.workoutId) : snapshotPlayHref(session.id)} onClick={event => start(event, session.workoutId, entry?.workout, session.id)} aria-busy={starting === session.id || undefined} aria-label="Repeat" title={entry ? 'Repeat' : session.workoutId === QUICK_TIMER_ID ? 'Repeat this timer' : 'Repeat the copy saved with the session: the workout is no longer in the library'}><Icon name={starting === session.id ? 'loading' : 'play'} size={16} /></a>
             {!session.pending && session.results.length > 0 && <button type="button" className={shared.iconButton} aria-label="Correct score" title="Correct score" onClick={() => setCorrecting(session)}><Icon name="edit" size={16} /></button>}
             <button type="button" className={shared.iconButton} aria-label="Delete" title="Delete" onClick={() => setDeleting(session)}><Icon name="trash" size={16} /></button>
           </div>

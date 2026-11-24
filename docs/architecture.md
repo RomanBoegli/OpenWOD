@@ -174,6 +174,9 @@ Relative URLs and hash routes let one build run at `https://romanboegli.ch/OpenW
 
 The app's screens sit behind hash routes: the library at `#/`, a workout's page at `#/wod/<id>` with the player at `/play` and the editor at `/edit` and `/copy`, a new workout at `#/new`, an imported draft at `#/draft/<id>`, the settings at `#/settings/<section>`, and a logged session's own copy of its workout at `#/history/<id>/play`.
 Hash routes need no server rewrites and keep reloads and the back button working.
+The quick timer has its page at `#/timer` and its player at `#/timer/play`.
+It is a solo workout that `packages/domain/src/quick-timer.ts` builds from the numbers stored under `openwod.quick-timer.v1`, with the reserved id `quick-timer` and one placeholder movement, so the player, the checkpoints and the Logbook take it as any session.
+`workoutHref` and `playHref` lead that id to the timer's routes, the household core refuses to store a workout under it, and the player shows such a session as the clock alone and names no movement in its cues.
 The library filters pure summaries from `packages/domain/src/library.ts`, computed once per entry.
 Colours are CSS custom properties on `:root`. `data-theme` on the root element selects the dark or light set.
 Auto follows `prefers-color-scheme` and reacts to live changes.

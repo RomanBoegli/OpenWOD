@@ -8,6 +8,8 @@ import type { Household } from '../../../packages/household/src/core';
 import { EXPORT_FORMAT, EXPORT_VERSION, parseExportDocument } from '../../../packages/household/src/export';
 import type { ExportDocument, RestoreReport } from '../../../packages/household/src/types';
 import { playedSession } from './session';
+import { QUICK_TIMER_ID } from '../../../packages/domain/src/library';
+import { DEFAULT_QUICK_TIMER, quickTimerWorkout } from '../../../packages/domain/src/quick-timer';
 
 type Methods = 'listWorkouts' | 'getWorkout' | 'putWorkout' | 'archiveWorkout' | 'getMasterData' | 'putMasterData' | 'putSession' | 'listSessions' | 'getSession' | 'correctSession' | 'deleteSession' | 'importDevice' | 'importPack';
 type Async<T> = { [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => Promise<Awaited<R>> : never };
@@ -58,6 +60,17 @@ export function describeHouseholdSemantics(name: string, open: OpenHousehold) {
       await expect(household.archiveWorkout('missing')).rejects.toMatchObject({ status: 404 });
       expect((await household.putWorkout(own('a', 3), 2)).created).toBe(false);
       expect((await household.getWorkout('a'))?.archivedAt).toBeUndefined();
+    }));
+
+    it('never stores the quick timer as a workout, logs its sessions, and renames an imported workout that carries its id (LIB-09)', () => using(open, async household => {
+      const timer = quickTimerWorkout(DEFAULT_QUICK_TIMER);
+      await expect(household.putWorkout(timer, undefined)).rejects.toMatchObject({ status: 400, code: 'RESERVED_ID', path: '/document/id' });
+      expect(await household.putSession(playedSession('t1', timer))).toBe('created');
+      expect((await household.listSessions({ limit: 50 })).map(item => [item.workoutId, item.title])).toEqual([[QUICK_TIMER_ID, 'Tabata: 8 × 0:20 / 0:10']]);
+      expect((await household.getSession('t1'))?.workout).toEqual(timer);
+      const report = await household.importPack({ workouts: [own(QUICK_TIMER_ID)], collections: [], decisions: {} });
+      expect(report.created).toEqual([{ from: QUICK_TIMER_ID, to: `${QUICK_TIMER_ID}-2` }]);
+      expect((await household.listWorkouts()).map(row => row.id)).toEqual([`${QUICK_TIMER_ID}-2`]);
     }));
 
     it('keeps one master-data document with a managed revision', () => using(open, async household => {

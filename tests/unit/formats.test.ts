@@ -55,15 +55,30 @@ describe('manual formats', () => {
     expect(command('count')).toBe(true);
     expect(command('count')).toBe(true);
     expect(command('count', { unit: 'rep', delta: 3 })).toBe(true);
-    expect(engine.project().counter).toEqual({ rounds: 2, reps: 3, canUndo: true });
+    // Both rounds were tapped a minute into the block: the laps are the block's time at each tap.
+    expect(engine.project().counter).toEqual({ rounds: 2, reps: 3, canUndo: true, laps: [60_000, 60_000] });
     expect(command('undoCount')).toBe(true);
-    expect(engine.project().counter).toEqual({ rounds: 2, reps: 0, canUndo: true });
+    expect(engine.project().counter).toEqual({ rounds: 2, reps: 0, canUndo: true, laps: [60_000, 60_000] });
     expect(engine.project().current).toBe(projection.current);
     at(1_210_000);
     expect(engine.project().status).toBe('completed');
     expect(engine.project().results[0]).toMatchObject({ outcome: 'capped', sectionMs: 1_200_000, counter: { rounds: 2, reps: 0 } });
     expect(command('count')).toBe(false);
     expect(engine.events.map(event => event.type).slice(-3)).toEqual(['capReached', 'sectionEnded', 'completed']);
+  });
+
+  it('keeps the time of every counted round: a pause is not counted, an undone round takes its lap with it, and a restored session keeps them', () => {
+    const { engine, at, command, clock } = fixture(cindy);
+    command('play');
+    at(10_000 + 45_000); command('count');
+    at(10_000 + 100_000); command('count');
+    command('pause'); at(10_000 + 400_000); command('resume');
+    at(10_000 + 430_000); command('count');
+    expect(engine.project().counter?.laps).toEqual([45_000, 100_000, 130_000]);
+    command('undoCount');
+    expect(engine.project().counter).toMatchObject({ rounds: 2, laps: [45_000, 100_000] });
+    const restored = WorkoutEngine.fromSnapshot(compileWorkout(cindy), engine.toJSON(), clock);
+    expect(restored.project().counter?.laps).toEqual([45_000, 100_000]);
   });
 
   it('AT-05: EMOM boundaries never move for an early Done, a missing Done is left unreported, and navigation is off', () => {

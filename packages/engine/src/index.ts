@@ -69,13 +69,15 @@ export interface Projection {
   controls: Control[];
   acks: Acks;
   tasks?: TaskItem[];
-  counter?: Counter & { canUndo: boolean };
+  /** `laps`: the block's time at each counted round, in the order they were counted. */
+  counter?: Counter & { canUndo: boolean; laps: number[] };
   turn?: TurnState & { roundsTarget?: number };
   interval?: { index: number; count: number };
   capMs?: number;
   results: SectionResult[];
 }
-interface CountStep { unit: 'round' | 'rep'; delta: number; previousReps: number }
+/** One tap on the counter, so it can be undone. A round also keeps the block's time at the tap, which gives the rounds their lap times; a session saved by an earlier build has none. */
+interface CountStep { unit: 'round' | 'rep'; delta: number; previousReps: number; sectionMs?: number }
 export interface EngineSnapshot {
   version: 1;
   sessionId: string;
@@ -483,7 +485,7 @@ export class WorkoutEngine {
       if (unit === 'rep' && this.section.amrap?.counter !== 'roundsAndReps') return false;
       this.freeze(at);
       if (unit === 'round') {
-        this.counter.history.push({ unit, delta: 1, previousReps: this.counter.reps });
+        this.counter.history.push({ unit, delta: 1, previousReps: this.counter.reps, sectionMs: this.sectionMs });
         this.counter.rounds++;
         this.counter.reps = 0;
       } else {
@@ -570,7 +572,7 @@ export class WorkoutEngine {
       results: this.plan.sections.map(item => this.results[item.id]).filter((item): item is SectionResult => Boolean(item)),
     };
     if (occurrence.tasks) projection.tasks = occurrence.tasks;
-    if (this.canCount) projection.counter = { rounds: this.counter.rounds, reps: this.counter.reps, canUndo: this.counter.history.length > 0 };
+    if (this.canCount) projection.counter = { rounds: this.counter.rounds, reps: this.counter.reps, canUndo: this.counter.history.length > 0, laps: this.counter.history.flatMap(step => step.unit === 'round' && step.sectionMs !== undefined ? [step.sectionMs] : []) };
     if (this.turn) projection.turn = { ...this.turn, roundsTarget: section.youGoIGo?.rounds };
     if (occurrence.interval) projection.interval = occurrence.interval;
     if (this.runningCapMs !== undefined) projection.capMs = this.runningCapMs;
