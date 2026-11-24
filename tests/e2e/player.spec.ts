@@ -424,24 +424,55 @@ test.describe('formats', () => {
 
   test('For time counts up, advances on Done, shows big targets with the chosen load level, and finishes', async ({ page }) => {
     await page.goto('/#/wod/fran/play'); await ready(page);
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('20 (15)');
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('30 (20)');
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('43 (29) kg');
+    await expect(page.getByRole('region', { name: 'Station' })).toContainText('20 (15)');
+    await expect(page.getByRole('region', { name: 'Station' })).toContainText('30 (20)');
+    await expect(page.getByRole('region', { name: 'Station' })).toContainText('43 (29) kg');
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 10_000);
     await expect(page.getByRole('status')).toHaveText('Work · tap Done');
     await expect(page.getByTestId('movement-A')).toHaveText('Thrusters');
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('21');
+    await expect(page.getByRole('region', { name: 'Station' })).toContainText('21');
     await advance(page, 5_000);
     await expect(page.getByTestId('primary-timer')).toHaveText('00:05');
     await expect(page.getByText('ELAPSED · CAP BELOW')).toBeVisible();
     await expect(page.getByText('CAP09:55')).toBeVisible();
     for (let step = 0; step < 5; step++) { await page.getByTestId('done').click(); await advance(page, 1_000); }
     await expect(page.getByTestId('movement-A')).toHaveText('Pull-Ups');
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('9');
+    await expect(page.getByRole('region', { name: 'Station' })).toContainText('9');
     await page.getByTestId('done').click();
     await expect(page.getByRole('status')).toHaveText('Workout complete');
     await expect(page.getByRole('list', { name: 'Block results' })).toContainText('completed');
+  });
+
+  test('UI-29: a solo session has a station of its own, one row with no badge and no athlete name, and a game plan without a second athlete', async ({ page }) => {
+    await page.setViewportSize({ width: 1180, height: 820 });
+    await page.goto('/#/wod/fran/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 10_000);
+    const station = page.getByRole('region', { name: 'Station' });
+    await expect(page.getByText('YOUR STATION')).toBeVisible();
+    await expect(page.getByText('YOUR STATIONS')).toHaveCount(0);
+    await expect(station).not.toContainText('Athlete A');
+    await expect(page.getByRole('region', { name: /Athlete . station/ })).toHaveCount(0);
+    // The target, the movement and the load stand beside each other, the movement in the middle of the card.
+    const row = await station.evaluate(card => {
+      const box = (node: Element) => { const { left, right, top, bottom } = node.getBoundingClientRect(); return { left, right, middle: (top + bottom) / 2, centre: (left + right) / 2 }; };
+      const [lead, name, side] = [...card.children].map(box);
+      return { lead, name, side, card: box(card) };
+    });
+    expect(row.lead.right).toBeLessThanOrEqual(row.name.left);
+    expect(row.name.right).toBeLessThanOrEqual(row.side.left);
+    expect(Math.abs(row.name.centre - row.card.centre)).toBeLessThan(2);
+    // The game plan lists the movements in one column, with no dash where a second athlete would stand.
+    await page.getByRole('button', { name: 'Switch to context view' }).click();
+    const plan = page.getByRole('region', { name: 'Workout context' });
+    await expect(plan.locator('[aria-current=step] > span')).toHaveCount(3);
+    await expect(plan).not.toContainText('—');
+    // On a phone the card stacks: the movement has a line of its own under the target and the load.
+    await page.getByRole('button', { name: 'Switch to focus view' }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const stacked = await station.evaluate(card => { const [lead, name] = [...card.children].map(node => node.getBoundingClientRect()); return name.top >= lead.bottom - 1; });
+    expect(stacked).toBe(true);
   });
 
   test('You go, I go hands over on Switch and ignores a rapid second tap', async ({ page }) => {

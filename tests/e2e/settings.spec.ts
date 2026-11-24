@@ -262,7 +262,7 @@ test.describe('workout view settings', () => {
     expect(rest).toMatch(/^#[0-9a-f]{6}$/);
     expect(['#a3cbf0', '#1d5fa8']).not.toContain(rest);
     expect(parseInt(rest.slice(1, 3), 16)).toBeGreaterThan(parseInt(rest.slice(3, 5), 16));
-    await expect(page.getByRole('region', { name: 'Athlete A station' })).toContainText('95 (65) lb');
+    await expect(page.getByRole('region', { name: 'Station' })).toContainText('95 (65) lb');
     // The pulse deepens as a timed slot drains: half-way through the first 40 s slot of the partner circuit.
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();

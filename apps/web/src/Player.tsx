@@ -177,6 +177,20 @@ function StageBody({ station, look, live }: { station: Station; look: StageLook;
     const item = station.assignments?.[role];
     const target = item && primaryTarget(item);
     const state = station.state[role];
+    // A solo station (UI-29) is one row across the stage: the target, or the seconds of a timed movement, then the movement, then
+    // its load. It carries no badge and no name, there being nobody to tell apart.
+    if (!pair) {
+      const text = item ? target || item.load ? item.notes ?? '' : prescriptionText(item) : 'You’re at the finish.';
+      return <section className={styles.lane} data-solo data-athlete={live && role} key={role} aria-label={live && 'Station'}>
+        <div className={styles.soloLead}>{target ? <div className={own.target}><strong>{target.amount}</strong><small>{target.unit}</small></div> : station.seconds !== undefined ? <div className={own.target} data-kind="time"><strong>{station.seconds}</strong><small>s</small></div> : null}</div>
+        <div className={styles.soloName}><h2 data-testid={live && `movement-${role}`}>{item?.shortName ?? item?.name ?? 'All done'}</h2>{text && <p>{text}</p>}</div>
+        <div className={styles.soloSide}>
+          {item?.load ? <span className={own.loadLine}><LoadLevels load={item.load} unit={loadUnit} sex={sex(role)} /></span> : null}
+          {target && station.seconds !== undefined && <span className={styles.laneTime}>{station.seconds}s</span>}
+          {state && <span className={own.laneState} data-state={state.state}>{state.state === 'waiting' ? <Icon name="check" size={14} /> : null}{state.label}</span>}
+        </div>
+      </section>;
+    }
     return <section className={`${styles.lane} ${own.lane}`} data-athlete={live && role} data-active={station.resting !== role} data-block={turns ? 'turns' : undefined} key={role} aria-label={live && `Athlete ${role} station`}>
       <div className={styles.athleteLabel}><span className={styles.athleteBadge}>{role}</span><span>{names[role]}</span>{station.seconds !== undefined && <span className={styles.laneTime}>{station.seconds}s</span>}</div>
       {turns ? <>
@@ -543,7 +557,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const blockLabel = plan.sections.length > 1 ? `BLOCK ${current.sectionIndex + 1} / ${plan.sections.length}` : '';
   const positionLabel = format === 'emom' && interval ? `INTERVAL ${interval.index} / ${interval.count}` : format === 'youGoIGo' && turn ? `TEAM ROUND ${turn.teamRound + 1}${turn.roundsTarget ? ` / ${turn.roundsTarget}` : ''} · TURN ${turn.number}` : round && !showDonut ? `${format === 'strength' ? 'SET' : 'ROUND'} ${roundNumber} / ${round.count}` : blockLabel;
   const caption = terminal ? 'ACTIVE SESSION TIME' : status === 'ready' || isPrep ? 'PREP COUNTDOWN' : status === 'awaitingReady' ? countUp ? section.capMs ? 'NEXT BLOCK · COUNTS UP TO THE CAP' : 'NEXT BLOCK · NO CAP' : clockScope === 'cap' ? 'NEXT BLOCK · TIME CAP' : clockScope === 'elapsed' ? 'NEXT BLOCK · NO CAP' : 'FIRST WORK INTERVAL' : isRest ? 'REST REMAINING' : countUp ? section.capMs ? 'ELAPSED · CAP BELOW' : 'ELAPSED · NO CAP' : CAPTIONS[clockScope];
-  const laneHeading = isRest ? 'COMING UP AFTER REST' : status === 'awaitingReady' ? 'YOUR NEXT BLOCK' : isBlock && format === 'amrap' ? 'ONE ROUND · REPEAT UNTIL THE CAP' : isBlock ? 'THE WORK UNIT' : 'YOUR STATIONS';
+  const laneHeading = isRest ? 'COMING UP AFTER REST' : status === 'awaitingReady' ? 'YOUR NEXT BLOCK' : isBlock && format === 'amrap' ? 'ONE ROUND · REPEAT UNTIL THE CAP' : isBlock ? 'THE WORK UNIT' : pair ? 'YOUR STATIONS' : 'YOUR STATION';
 
   const laneState = (role: Role): LaneState | undefined => {
     if (!active && status !== 'paused') return undefined;
@@ -611,8 +625,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
 
       {view === 'context' && <section className={styles.contextSection} aria-label="Workout context">
         <div className={styles.contextHeading}><div><span className={styles.eyebrow}>THE GAME PLAN</span><h2>{section.title}</h2></div><Switch compact checked={following} onChange={setFollowing} label="Stick to movement" /></div>
-        <div className={styles.contextList} ref={context} onWheel={() => setFollowing(false)} onTouchMove={() => setFollowing(false)}>
-          <div className={styles.contextColumns}><span>#</span><span>{pair ? names.A : 'MOVEMENT'}</span><span>{pair ? names.B : ''}</span><span>{isBlock ? 'TARGET' : 'WORK'}</span></div>
+        <div className={styles.contextList} ref={context} style={{ '--plan-lanes': pair ? 2 : 1 } as CSSProperties} onWheel={() => setFollowing(false)} onTouchMove={() => setFollowing(false)}>
+          <div className={styles.contextColumns}><span>#</span><span>{pair ? names.A : 'MOVEMENT'}</span>{pair && <span>{names.B}</span>}<span>{isBlock ? 'TARGET' : 'WORK'}</span></div>
           {contextRows.map((item, index) => {
             const selected = isBlock ? highlight === item.anchor : item.anchor === focusAnchor;
             // Everything the focus view shows for a lane: name, target, the load levels and the notes.
@@ -622,7 +636,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
               return <>{lanePrescription.name}{amount ? ` · ${amount.amount} ${amount.unit}` : ''}{(lanePrescription.load || lanePrescription.notes) && <span className={own.contextDetail}>{lanePrescription.load && <LoadLevels load={lanePrescription.load} unit={loadUnit} sex={loadSex(role)} />}{lanePrescription.notes && <span>{lanePrescription.notes}</span>}</span>}</>;
             };
             const done = !isBlock && !selected && (current.phase === 'roundRest' ? true : index + 1 < currentWorkNumber);
-            return <div key={item.anchor} ref={selected ? activeRow : undefined} className={styles.contextRow} data-active={selected} data-done={done || undefined} aria-current={selected ? 'step' : undefined}><span>{done ? <Icon name="check" size={12} /> : String(index + 1).padStart(2, '0')}</span><span>{cell('A', item.A)}</span><span>{pair ? cell('B', item.B) : '—'}</span><span>{item.durationMs !== undefined ? `${Math.round(item.durationMs / 1000)}s` : 'done'}</span></div>;
+            return <div key={item.anchor} ref={selected ? activeRow : undefined} className={styles.contextRow} data-active={selected} data-done={done || undefined} aria-current={selected ? 'step' : undefined}><span>{done ? <Icon name="check" size={12} /> : String(index + 1).padStart(2, '0')}</span><span>{cell('A', item.A)}</span>{pair && <span>{cell('B', item.B)}</span>}<span>{item.durationMs !== undefined ? `${Math.round(item.durationMs / 1000)}s` : 'done'}</span></div>;
           })}
         </div>
         <div className={styles.contextFootnote}>{isBlock ? 'The whole block, in order. The clock only knows the cap.' : 'Assignments follow the current round. Authored rests are included in the total.'}</div>

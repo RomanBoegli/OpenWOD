@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.21 · 16 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.22 · 24 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -362,7 +362,7 @@ The static shape has no hand-over.
 
 **UI-03** Context view SHALL automatically follow active anchors, including returning to the first row when a block repeats. User scrolling temporarily disables follow. A persistent Follow workout control restores it. Focus mode SHALL not move the main timer's position at each transition.
 
-**UI-04** A/B positions and labels SHALL remain stable. Task changes SHALL update content within the lanes, not swap the lanes. The lanes SHALL carry no colour of their own and no side caption: they are neutral glass over the pulse, and position, badge and name tell the athletes apart. Labels remain understandable without colour.
+**UI-04** A/B positions and labels SHALL remain stable. Task changes SHALL update content within the lanes, not swap the lanes. The lanes SHALL carry no colour of their own and no side caption: they are neutral glass over the pulse, and position, badge and name tell the athletes apart. Labels remain understandable without colour. A solo session has nobody to tell apart and carries neither badge nor name (UI-29).
 
 | Mode | Primary content | Next information and controls |
 | - | - | - |
@@ -451,6 +451,13 @@ Appearance has one row per theme with that theme's accent and background, and ev
 The parts of the overall progress (the bar, the percentage under it, the percentage beside the clock and the round donut) are switched independently with checkboxes: every combination fits, a part that is off leaves no gap, the clock takes the width the donut and the percentage give back, and the miniature shows the chosen parts.
 A choice between two or three named options (default view, sound) is a toggle, a longer list (the six voices, the beep tones) is a dropdown, and a stored setting of an older shape is carried over, also when it arrives from another device.
 A field with a visible label carries no example or hint inside it.
+
+**UI-29** A solo session SHALL have a layout made for one athlete, not the pair layout with one side left empty.
+In the training view its station is one row across the stage: the target on the left (or the seconds of a timed movement), the movement in the middle and its load on the right, with no badge and no athlete name, under the heading "YOUR STATION".
+On a phone the target and the load share the first line and the movement has the next one.
+The game plan of the context view SHALL list a solo session's movements in one column, with no column and no dash for a second athlete.
+In the editor a solo movement's target and load SHALL stand side by side from tablet width.
+The workout page shows one movement column for a solo workout.
 
 # 9 Audio and spoken cues
 
@@ -719,16 +726,21 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-33 | Import a workout whose Tabata block has a 10 s rest of its own after each movement and whose For time block has a timed stretch: its overview offers Edit and Duplicate, the editor shows the rests as rows and the stretch as timed, a changed rest and an added two-round group change the live summary by their exact time, and the saved workout reopens with both. Every bundled workout and 300 generated trees reopen and save with the same work, rounds and rests between works. | BLD-03/15, MOD-01 |
 | AT-34 | Start a session on device A and play into round 1. Device B, already on the library, shows "Session running on A" after a focus event without a reload. Continue here on B: the player opens paused with "Continued from A", the block, round and clock of A, and Resume continues at that clock. A's next save makes it show "Continued on B." and ignore Space. B finishes: exactly one session in the logbook, no live row, and A offers nothing after a reload. Hide the app mid-session: the other devices read it as paused. End a session too short to count: no live row remains. Take a session back on A: it asks first and B steps aside. | ENG-15, ENG-12, ENG-14, DAT-03 |
 | AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Type romanian deadlifts and leave the field: it reads Romanian Deadlifts, and it did not change while it was typed. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-17, BLD-11 |
+| AT-36 | Play Fran at 1180 by 820: the station is headed "YOUR STATION", has no badge and no "Athlete A", and shows the target, the movement and the load in one row with the movement in the middle of the card. The context view's active row has three cells and the game plan no dash. At 390 by 844 the movement stands under the target. | UI-29, UI-04 |
 
 # 15 Where things stand
 
-Recorded 16 November 2026, plan version 1.21.
-All P0 requirements and the 35 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+Recorded 24 November 2026, plan version 1.22.
+All P0 requirements and the 36 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
 Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.6.1.
 Two tags carry no image: `v1.0.0` failed in validation before any image was built, so 1.1.0 is the first published one, and the workflow of `v1.5.0` stopped in the production smoke test, so 1.5.1 publishes its changes.
+
+**Since 1.6.1** (not released):
+
+- Solo sessions have a layout of their own (UI-29, issue #6): a one-row station without badge or name, a one-column game plan, and a solo movement's target and load side by side in the editor.
 
 **Schema and storage versions today.**
 
@@ -768,7 +780,7 @@ Every other idea is a GitHub issue with the `enhancement` label (`gh issue list 
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-09, MOD-06, NFR-15, SHR-08, UI-29 and AT-36.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-09, MOD-06, NFR-15, SHR-08, UI-30 and AT-37.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

@@ -55,6 +55,8 @@
 /* One movement: picker on top, then a small labelled grid of target, load (a men/women table under it) and notes. */
 .laneGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 12px; margin-top: 8px; }
 @media (min-width: 1400px) { .laneGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+/* A solo movement has the row to itself (UI-29): its target and its load stand side by side from tablet width. */
+@media (min-width: 760px) { .laneCell[data-solo] .laneGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .group { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .full { grid-column: 1 / -1; }
 .caption { font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink-3); }

@@ -180,7 +180,7 @@ export function Editor({ mode, workoutId, initial, importedFrom, catalogue, diff
       const women = amount !== '' && parkedWomen.current?.at === at ? parkedWomen.current.amount : '';
       updateLane(s, path, i, role, current => { const next = withLoad(current, loadMode, true, { [level]: amount }); return women === '' ? next : withWomen(next, level, women); });
     };
-    return <td key={role} className={styles.laneCell}>
+    return <td key={role} className={styles.laneCell} data-solo={!pair || undefined}>
       <MovementPicker value={value} label={label} catalogue={catalogue} invalid={Boolean(issueFor(`${pathOf(s, path, i)}.${role}`))} onChange={change => updateLane(s, path, i, role, change)} onAdd={name => addToCatalogue([name])[0]} />
       <div className={styles.laneGrid}>
         <div className={styles.group}>
