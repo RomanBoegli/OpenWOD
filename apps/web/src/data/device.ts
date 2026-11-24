@@ -37,6 +37,12 @@ export function describeDevice({ userAgent, maxTouchPoints = 0, standalone = fal
   return `${device} · ${browser}`;
 }
 
+/**
+ * Whether the engine is WebKit: Safari, and every browser on an iPhone or iPad. The Just do it clip (UI-32) asks, because each
+ * engine plays the other's file without its transparency.
+ */
+export const isWebKit = (userAgent: string = navigator.userAgent): boolean => /AppleWebKit\//.test(userAgent) && !/Chrome\/|Chromium\/|Edg\/|OPR\/|Android/.test(userAgent);
+
 /** This device's name for the others. Read on every call: the display mode differs between a tab and the installed app. */
 export function deviceLabel(): string {
   try {

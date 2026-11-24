@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeDevice, deviceLabel } from '../../apps/web/src/data/device';
+import { describeDevice, deviceLabel, isWebKit } from '../../apps/web/src/data/device';
 
 const UA = {
   ipadSafari: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15',
@@ -59,6 +59,11 @@ describe('device label (ENG-15)', () => {
     expect(describeDevice({ userAgent: UA.linuxFirefox })).toBe('Linux PC · Firefox');
     expect(describeDevice({ userAgent: UA.chromebook })).toBe('Chromebook · Chrome');
     expect(describeDevice({ userAgent: '' })).toBe('Device · browser');
+  });
+
+  it('knows WebKit, which every browser on an iPhone or iPad is, from the engines that only carry its name (UI-32)', () => {
+    for (const agent of [UA.ipadSafari, UA.ipadHomeScreen, UA.ipadMobileSite, UA.ipadChrome, UA.iphoneSafari, UA.iphoneHomeScreen, UA.iphoneFirefox, UA.iphoneEdge, UA.macSafari]) expect(isWebKit(agent), agent).toBe(true);
+    for (const agent of [UA.macChrome, UA.macFirefox, UA.macEdge, UA.androidPhone, UA.androidTablet, UA.samsungPhone, UA.windowsEdge]) expect(isWebKit(agent), agent).toBe(false);
   });
 
   it('always answers with a short label the server accepts, even without a browser around', () => {

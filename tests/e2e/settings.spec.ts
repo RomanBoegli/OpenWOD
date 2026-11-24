@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { BUNDLED, partnerCircuit, bundledCount, PLAYER, ready, openFilters } from './helpers';
+import { advance, BUNDLED, partnerCircuit, bundledCount, PLAYER, ready, openFilters } from './helpers';
 import { serialiseWorkoutFile } from '../../packages/domain/src';
 
 test.describe('settings and log', () => {
@@ -298,6 +298,63 @@ test.describe('workout view settings', () => {
     // Every part alone, the percentage under the bar without its bar included: no part needs another.
     for (const part of parts) await expectParts({ ...none, [part]: true });
     await expectParts(none);
+  });
+
+  test('AT-38, AT-39: the fun buttons are off until switched on, load the horn and the clip at their first use, by tap or by key, and never touch the clock', async ({ page, browserName }) => {
+    const horn = page.getByRole('button', { name: 'Party horn' }), speech = page.getByRole('button', { name: 'Just do it' });
+    const timer = page.getByTestId('primary-timer');
+    const media: string[] = [];
+    // The files themselves: the dev server also serves each as a module that only names its address.
+    page.on('request', request => { const hit = /(dj-airhorn|just-do-it)[^/?]*\.(m4a|webm|mov)$/.exec(request.url()); if (hit) media.push(`${hit[1]}.${hit[2]}`); });
+    // Switched off, a running session shows neither. (Another workout than the one played below, so no interrupted session waits there.)
+    await page.goto('/#/wod/karen/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 12_000);
+    await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeVisible();
+    await expect(horn).toHaveCount(0);
+    await expect(speech).toHaveCount(0);
+    await settingsAt(page, '/#/settings/player');
+    await page.getByRole('switch', { name: 'Fun buttons' }).check();
+    await page.goto('/#/wod/partner-circuit/play'); await ready(page);
+    // Not before the session starts, and nothing of either is loaded with the page.
+    await expect(horn).toHaveCount(0);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 12_000);
+    await expect(horn).toBeVisible();
+    await expect(speech).toBeVisible();
+    expect(media).toEqual([]);
+    // H fires the horn: its recording is asked for once, however often it sounds.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('h');
+    await expect.poll(() => media).toEqual(['dj-airhorn.m4a']);
+    await horn.click();
+    await horn.click();
+    // The clip comes at its first tap, the file this engine shows transparent, and the other is never asked for.
+    const clip = `just-do-it.${browserName === 'webkit' ? 'mov' : 'webm'}`;
+    await speech.click();
+    await expect.poll(() => media).toContain(clip);
+    expect(media.filter(name => name.startsWith('just-do-it') && name !== clip)).toEqual([]);
+    expect(media.filter(name => name === 'dj-airhorn.m4a')).toHaveLength(1);
+    // He stands over the frame and takes no tap: the button under him still works, and the clock went on as it was.
+    await expect(timer).toHaveText('00:38');
+    expect(await page.locator('[data-wash] video').evaluate(video => getComputedStyle(video.parentElement!).pointerEvents)).toBe('none');
+    await advance(page, 8_000);
+    await expect(timer).toHaveText('00:30');
+    await page.getByRole('button', { name: 'Pause workout', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+    // With reduced motion the clip stays away and the horn stays. Silent mode has neither.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => window.__openwodTest!.flushCheckpoints());
+    await page.reload(); await ready(page);
+    await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+    await expect(horn).toBeVisible();
+    await expect(speech).toHaveCount(0);
+    await expect(page.locator('[data-wash] video')).toHaveCount(0);
+    await settingsAt(page, '/#/settings/player');
+    await page.getByRole('radiogroup', { name: 'Sound', exact: true }).getByRole('radio', { name: 'Silent' }).check();
+    await page.goto('/#/wod/partner-circuit/play'); await ready(page);
+    await expect(page.getByRole('button', { name: 'Resume workout', exact: true })).toBeVisible();
+    await expect(horn).toHaveCount(0);
   });
 
   test('sound is a toggle of three modes, and the voice is a list of every recorded voice and the device’s own, played when chosen', async ({ page }) => {

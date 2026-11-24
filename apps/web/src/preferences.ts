@@ -47,11 +47,13 @@ export interface Preferences {
   /** Equipment available at home; the library can hide anything that needs more. */
   myEquipment: string[];
   onlyMyEquipment: boolean;
+  /** The party horn and the Just do it clip, one tap away in the training view (UI-31, UI-32). Off unless someone wants them. */
+  funButtons: boolean;
   /** The knobs of the projected difficulty, so the ratings can be calibrated to the person reading them. */
   difficulty: DifficultyCalibration;
 }
 
-export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: { dark: '', light: '' }, second: { dark: '', light: '' } }, pauseColor: { dark: '', light: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: { bar: true, barPercent: true, clockPercent: false, donut: true }, nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, difficulty: DEFAULT_CALIBRATION };
+export const defaultPreferences: Preferences = { theme: 'auto', names: { A: 'Athlete A', B: 'Athlete B' }, soundMode: 'voice', cueSource: 'clips', volume: .7, beepVolume: .7, beepTone: 'classic', view: 'focus', wash: true, cuePack: '', loadsFor: { A: 'men', B: 'men' }, loadUnit: 'kg', perimeterWidth: 6, washGain: 30, amberMs: 10_000, redMs: 3000, markColors: { first: { dark: '', light: '' }, second: { dark: '', light: '' } }, pauseColor: { dark: '', light: '' }, accent: { dark: '', light: '' }, restColor: { dark: '', light: '' }, background: DEFAULT_BACKGROUND, progress: { bar: true, barPercent: true, clockPercent: false, donut: true }, nudgeSeconds: 10, myEquipment: [], onlyMyEquipment: false, funButtons: false, difficulty: DEFAULT_CALIBRATION };
 
 const KEY = 'openwod.preferences.v1';
 /** The theme is also stored on its own so index.html can apply it before the first paint. */
@@ -119,6 +121,7 @@ export function normalisePreferences(value: unknown): Preferences {
       nudgeSeconds: Math.round(clamp(stored.nudgeSeconds, 1, 60, defaultPreferences.nudgeSeconds)),
       myEquipment: Array.isArray(stored.myEquipment) ? stored.myEquipment.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 60).map(item => equipmentName(item.slice(0, 80))) : [],
       onlyMyEquipment: stored.onlyMyEquipment === true,
+      funButtons: stored.funButtons === true,
       difficulty: normaliseCalibration(stored.difficulty),
     };
   } catch { return structuredClone(defaultPreferences); }

@@ -69,6 +69,7 @@ export default function App() {
   audio.volume = preferences.volume;
   audio.beepVolume = preferences.beepVolume;
   audio.tone = preferences.beepTone;
+  audio.fun = preferences.funButtons;
 
   useTheme(preferences.theme, preferences.accent, preferences.restColor, preferences.background);
   useEffect(() => { void audio.listPacks(); }, [audio]);

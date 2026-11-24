@@ -60,6 +60,7 @@ export function TrainingSettings(props: SettingsProps) {
       </div>
       <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player, climbing to full strength just before each milestone and morphing into the next colour." />
       {preferences.wash && <label className={styles.field}>Pulse intensity · {preferences.washGain} %<input type="range" min="10" max="60" step="5" value={preferences.washGain} onChange={event => update({ washGain: Number(event.target.value) })} /></label>}
+      <Switch checked={preferences.funButtons} onChange={funButtons => update({ funButtons })} label="Fun buttons" hint="A party horn and a “Just do it” speech in the training view, one tap away (keys H and D). They never touch the clock, and stay away in Silent mode. The speech is from #INTRODUCTIONS by LaBeouf, Rönkkö & Turner (CC BY-NC-SA)." />
     </section>
     <SoundSettings {...props} />
   </>;

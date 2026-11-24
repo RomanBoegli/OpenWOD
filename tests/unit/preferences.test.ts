@@ -12,6 +12,12 @@ describe('preferences', () => {
     expect(normalisePreferences(null)).toEqual(defaultPreferences);
     expect(normalisePreferences(['dark'])).toEqual(defaultPreferences);
   });
+  it('keeps the fun buttons off unless they were switched on (UI-31)', () => {
+    expect(defaultPreferences.funButtons).toBe(false);
+    expect(normalisePreferences({}).funButtons).toBe(false);
+    expect(normalisePreferences({ funButtons: 'yes' }).funButtons).toBe(false);
+    expect(normalisePreferences({ funButtons: true }).funButtons).toBe(true);
+  });
   it('accepts every offered beep tone, both recorded horns included, and falls back on an unknown one', () => {
     for (const [tone] of BEEP_TONES) expect(normalisePreferences({ beepTone: tone }).beepTone).toBe(tone);
     // The truck horn keeps the value it was stored under before there was a second horn.

@@ -288,6 +288,7 @@ The benchmark workouts and station standards are those published by CrossFit and
 CrossFit® is a registered trademark of CrossFit, LLC, and HYROX® of Upsolut Sports AG.
 OpenWOD is an independent project with no affiliation to or endorsement by either.
 The cue voices are rendered with [Piper](https://github.com/OHF-Voice/piper1-gpl).
+The "Just do it" clip is a cut from *#INTRODUCTIONS* (2015) by LaBeouf, Rönkkö & Turner, under CC BY-NC-SA (see [the media credits](apps/web/src/assets/CREDITS.md)).
 
 If OpenWOD is useful in your work, cite it via the **Cite this repository** button on GitHub (it reads [CITATION.cff](CITATION.cff)) or with:
 

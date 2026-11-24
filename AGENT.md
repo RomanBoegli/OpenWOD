@@ -340,7 +340,7 @@ Use this document to test paired table/context layout, long movement names, mult
 
 **ENG-10** All user commands SHALL carry an occurrence ID and unique command ID. Duplicate commands and commands targeting a stale occurrence SHALL be rejected or ignored safely. Rapid double taps SHALL NOT skip two steps or create two scores.
 
-**ENG-11** An active session SHALL continue locally during server/network failure. Remote persistence SHALL not sit on the timing path. The app SHALL persist a full checkpoint on every command and every transition; while running it SHALL additionally write one small progress record holding the current clock offsets and the ID of the checkpoint it extends, with a target of one durable progress update per second. Recovery SHALL apply a progress record only to the checkpoint it names, so incompatible records are never combined. Between events the engine state is fully determined by the last checkpoint plus the monotonic offset, so nothing else needs writing. Derived cue events such as countdown numbers and spoken previews are not semantic events and SHALL NOT be persisted or uploaded. An explicit local-storage failure indicator SHALL appear when checkpoint or progress writes fail or fall behind the one-second target. Everything the player route needs after Play, including lazily loaded code and audio assets, SHALL be loaded before the session starts so a server outage or redeploy cannot interrupt a running session.
+**ENG-11** An active session SHALL continue locally during server/network failure. Remote persistence SHALL not sit on the timing path. The app SHALL persist a full checkpoint on every command and every transition; while running it SHALL additionally write one small progress record holding the current clock offsets and the ID of the checkpoint it extends, with a target of one durable progress update per second. Recovery SHALL apply a progress record only to the checkpoint it names, so incompatible records are never combined. Between events the engine state is fully determined by the last checkpoint plus the monotonic offset, so nothing else needs writing. Derived cue events such as countdown numbers and spoken previews are not semantic events and SHALL NOT be persisted or uploaded. An explicit local-storage failure indicator SHALL appear when checkpoint or progress writes fail or fall behind the one-second target. Everything the player route needs after Play, including lazily loaded code and audio assets, SHALL be loaded before the session starts so a server outage or redeploy cannot interrupt a running session. The one exception is the optional Just do it clip (UI-32), which loads at its first tap and whose absence changes nothing of the session.
 
 **ENG-12** After reload or process termination, the app SHALL recover paused from the last durable checkpoint, display its age, and mark the session interrupted. Unsaved time since that checkpoint may be lost; the app SHALL not infer completed physical tasks from elapsed wall time. Restore SHALL include round path, active athlete, acknowledgements, scores, and clock offsets.
 
@@ -472,6 +472,17 @@ A Tabata's ring counts the rounds ("3/8"), there being one movement, and its res
 The rounds counted in a quick AMRAP SHALL be listed under the counter like a stopwatch's laps, the latest on top, each with the time it took and the block's time it ended at. The list is there from the first second and scrolls inside its room, so no round moves the clock, an undone round leaves the list, and a restored session keeps its rounds' times.
 The cues are a workout's own, without a movement name: the beeps, "Get ready", "Go" and "Rest".
 
+**UI-31** The training view SHALL offer a party horn button to whoever switched on "Fun buttons" in Settings → Training view, which is off by default.
+The button stands in the frame's top line from the first second of a session to its finish screen, in a normal session and a quick timer alike, and the H key fires it too.
+It plays the horn of AUD-11 and changes nothing else: not the clock, not the cues, not the layout.
+Silent mode shows no fun button.
+
+**UI-32** The same switch SHALL bring a Just do it button beside the horn: a tap, or the D key, brings the speaker of that speech over the frame with his sound, and a second tap, the end of the clip or the end of the session sends him away.
+He stands on the frame's lower edge with a transparent background, takes no tap, moves nothing in the layout and never touches the clock or the cues.
+The clip's file is asked for at the first tap and never with the app (ENG-11), and by engine: WebKit gets the HEVC file with alpha and every other engine the VP9 one, because each plays the other's file without its transparency.
+Playback starts inside the tap. With reduced motion the button is not shown and nothing plays.
+The clip is a cut from #INTRODUCTIONS (2015) by LaBeouf, Rönkkö & Turner under CC BY-NC-SA, credited in `apps/web/src/assets/CREDITS.md`, the README and the switch's hint.
+
 # 9 Audio and spoken cues
 
 **AUD-01** Settings SHALL offer Voice plus beeps, Beeps only, and Silent. Users SHALL be able to test sound before starting and select the voice and its volume, with no speed option since 1.6.0. Choosing a voice or a beep tone SHALL play it. The beeps SHALL have their own volume and a choice of tones (version 1.11). The voice, the beeps and both together SHALL each be testable on their own. No microphone permission is needed.
@@ -496,6 +507,10 @@ With either horn the clock SHALL hold at each timed boundary for the length of t
 **AUD-09** Wake lock and sound readiness SHALL be checked in preflight. Screen Wake Lock requires a secure context and may be released by the platform, so the app SHALL detect release and reacquire when appropriate on return. Unavailable wake lock SHALL be explained before starting. [S3]
 
 **AUD-10** A movement SHALL be announced as written. A recorded name clip of a movement record SHALL play only when the written name, or its spoken name, is that record's own name or spoken name. The voice packs SHALL also record, under `names/text/`, every name the bundled workouts write differently from their record (`packages/domain/src/generated/cue-phrases.json`, written by the registry bundle). Any other name SHALL be read by the device voice.
+
+**AUD-11** The party horn (UI-31) SHALL play `dj-airhorn.m4a` on each tap at the level of a recorded beep tone, taps in a row overlapping.
+With the fun buttons switched on its recording SHALL be fetched and decoded with the session's sound, so the first tap sounds at once, and otherwise at the first tap.
+It is no cue: a pause, a new slot or a hidden page SHALL NOT cut it short, it holds no boundary, and Silent mode keeps it silent.
 
 # 10 Persistence and results
 
@@ -741,11 +756,13 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Type romanian deadlifts and leave the field: it reads Romanian Deadlifts, and it did not change while it was typed. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-17, BLD-11 |
 | AT-36 | Play Fran at 1180 by 820: the station is headed "YOUR STATION", has no badge and no "Athlete A", and shows the target, the movement and the load in one row with the movement in the middle of the card. The context view's active row has three cells and the game plan no dash. At 390 by 844 the movement stands under the target. | UI-29, UI-04 |
 | AT-37 | From the library open the quick timer and set a Tabata of 2 rounds, 0:05 work and 0:05 rest: Start opens the player counting down, with no station, no Up next and no view switch, and the ring reads round 1 of 2, then 2 of 2. The Logbook lists "Tabata: 2 × 0:05 / 0:05", Repeat plays it again, and the library counts the workouts it counted before. An AMRAP timer lists two counted rounds with their times, the later on top, and loses the third when it is undone. A For Time timer stops on Done, and an EMOM shows no Done. A reload mid-timer restores it, and Start with other numbers plays those. | LIB-09, UI-30 |
+| AT-38 | With the fun buttons off a running session shows no horn button. Switch them on: the button is there once the session runs, not on the ready screen, and nothing of the horn is loaded yet in a test build. H asks for `dj-airhorn.m4a` once, and further taps ask for nothing more. The clock reads what it read. In Silent mode the button is gone. | UI-31, AUD-11 |
+| AT-39 | With the fun buttons on, tap Just do it in a running session: the clip's file is asked for only then, `just-do-it.mov` in WebKit and `just-do-it.webm` elsewhere, and never the other. Its layer takes no pointer events, the clock runs on, and Pause under it still works. With reduced motion there is no Just do it button and no video element. | UI-32, ENG-11 |
 
 # 15 Where things stand
 
 Recorded 24 November 2026, plan version 1.22.
-All P0 requirements and the 37 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+All P0 requirements and the 39 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
@@ -756,6 +773,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 
 - Solo sessions have a layout of their own (UI-29, issue #6): a one-row station without badge or name, a one-column game plan, and a solo movement's target and load side by side in the editor.
 - The quick timer (LIB-09, UI-30, issue #11): Tabata, EMOM, AMRAP or For Time from a few numbers, played as the clock alone and never saved to the library. It is the library's primary action, and New workout a quiet one. A quick AMRAP lists its rounds with their times.
+- The fun buttons (UI-31, UI-32, AUD-11, issues #14 and #15): a party horn and the Just do it clip in the training view, behind one switch that is off by default.
 
 **Schema and storage versions today.**
 
@@ -779,7 +797,6 @@ The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.
 A faster browser suite is planned and not started: quick runs in WebKit alone, runs by area and by changed files, more local workers, and four parallel jobs in the Check workflow.
 Its design is in [docs/plans/faster-browser-suite.md](docs/plans/faster-browser-suite.md).
 Every other idea is a GitHub issue with the `enhancement` label (`gh issue list --label enhancement`).
-`apps/web/src/assets/dj-airhorn.m4a` and `just-do-it.webm` with `just-do-it.mov` wait for the buttons of issues #14 and #15: no code plays them yet, so a dead-code sweep leaves them, and the clip's licence is to settle before it ships.
 
 **Standing decisions and constraints.**
 
@@ -797,7 +814,7 @@ Every other idea is a GitHub issue with the `enhancement` label (`gh issue list 
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-11, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-31 and AT-38.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-12, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-19, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-33 and AT-40.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

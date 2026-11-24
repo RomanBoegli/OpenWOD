@@ -53,7 +53,7 @@ function setup({ clips = false, horn = false as boolean | 'undecodable', workout
   vi.stubGlobal('window', { speechSynthesis: { cancel() {}, getVoices: () => [], speak: (utterance: { text: string }) => spoken.push(utterance.text) } });
   vi.stubGlobal('SpeechSynthesisUtterance', class { constructor(public text: string) {} });
   // A horn's buffer is named after its tone: 'horn' for the truck horn, 'ship' for the ship horn.
-  const hornOf = (url: string) => url.includes('truck-horn') ? 'horn' : url.includes('ship-horn') ? 'ship' : undefined;
+  const hornOf = (url: string) => url.includes('truck-horn') ? 'horn' : url.includes('ship-horn') ? 'ship' : url.includes('dj-airhorn') ? 'party' : undefined;
   vi.stubGlobal('fetch', async (url: string) => { const tone = hornOf(url); if (tone) fetchedHorns.push(tone); return tone ? (horn ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(horn === true ? tone : 'noise').buffer } : { ok: false }) : !clips ? { ok: false } : url.endsWith('packs.json') ? { ok: true, json: async () => [{ id: 'british', label: 'British male (Alan)', names: 190 }, { id: 'american', label: 'American female (Amy)' }] } : url.includes('/british/') ? { ok: true, arrayBuffer: async () => new TextEncoder().encode(url.replace(/^.*\/(.*)\.mp3$/, '$1')).buffer } : { ok: false }; });
   let now = 0;
   const engine = new WorkoutEngine(compileWorkout(workout), () => now, 'audio-test');
@@ -450,4 +450,32 @@ it('names no movement in a quick timer: the lead words play alone, as speech and
   vi.runOnlyPendingTimers();
   expect(clips.sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'get-ready']);
   expect(clips.spoken).toEqual([]);
+});
+
+it('plays the party horn on a tap at the beep volume, apart from the cues: a pause does not cut it, and Silent mode keeps it silent (AUD-11)', async () => {
+  const { audio, sources, fetchedHorns, engine, command } = setup({ horn: true });
+  // Switched on, it loads with the session's sound, before the first tap.
+  audio.fun = true;
+  await audio.unlock();
+  await vi.waitFor(() => expect(fetchedHorns).toContain('party'));
+  sources.length = 0;
+  await audio.playPartyHorn();
+  await audio.playPartyHorn();
+  expect(sources.map(source => [source.kind, source.clip])).toEqual([['clip', 'party'], ['clip', 'party']]);
+  expect(fetchedHorns.filter(tone => tone === 'party')).toHaveLength(1);
+  audio.update(engine.project(), engine.readClocks());
+  command('pause');
+  audio.update(engine.project(), engine.readClocks());
+  expect(sources.filter(source => source.clip === 'party').some(source => source.cancelled || source.stopAt !== undefined)).toBe(false);
+  audio.mode = 'silent';
+  sources.length = 0;
+  await audio.playPartyHorn();
+  expect(sources).toEqual([]);
+
+  // Switched off, nothing asks for the file until a tap does.
+  const off = setup({ horn: true });
+  await off.audio.unlock();
+  expect(off.fetchedHorns).not.toContain('party');
+  await off.audio.playPartyHorn();
+  expect(off.fetchedHorns).toContain('party');
 });

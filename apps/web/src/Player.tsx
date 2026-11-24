@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { FILE_EXTENSION, serialiseWorkoutFile, type Workout } from '../../../packages/domain/src';
 import { bundledWorkouts } from '../../../packages/domain/src/bundled';
 import { prescriptionText } from '../../../packages/domain/src/prescription';
@@ -21,7 +21,9 @@ import { collectPrescriptions } from '../../../packages/domain/src/library';
 import { isQuickTimer } from '../../../packages/domain/src/quick-timer';
 import { countsAsDone, type SessionRecord } from './session-log';
 import { roundSessionTimes, sessionOutcome } from '../../../packages/engine/src/records';
-import { deviceId } from './data/device';
+import { deviceId, isWebKit } from './data/device';
+import justDoItWebm from './assets/just-do-it.webm';
+import justDoItMov from './assets/just-do-it.mov';
 import { DATA_MODE } from './data/mode';
 import { PACK_EXTENSION, serialisePackFile, type WorkoutPack } from '../../../packages/domain/src/pack';
 import { elapsedText, lastSaved, type Recovery } from './data/checkpoints';
@@ -273,6 +275,28 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   /** Pair lanes show their athlete's amount; solo workouts show the men's amount with the women's in brackets. */
   const loadSex = (role: 'A' | 'B') => workout.participants === 2 ? loadsFor[role] : undefined;
   const setView = (next: 'focus' | 'context') => onPreferencesChange(value => ({ ...value, view: next }));
+  // The fun buttons (UI-31, UI-32): a party horn and the Just do it clip, for whoever switched them on. Both are sound, so Silent
+  // mode has neither, and with reduced motion the clip stays away.
+  const fun = preferences.funButtons && preferences.soundMode !== 'silent';
+  const stillOnly = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cameoVideo = useRef<HTMLVideoElement>(null);
+  const [cameo, setCameo] = useState(false);
+  /**
+   * Brings the speaker on, or sends him away. The file is asked for at the first tap and never with the app (ENG-11), the one
+   * this engine shows transparent: WebKit the HEVC, every other the VP9. Playback starts inside the tap, which is what an
+   * iPhone asks of a video with sound.
+   */
+  const toggleCameo = useCallback(() => {
+    const video = cameoVideo.current;
+    if (!video) return;
+    if (!video.paused) { video.pause(); setCameo(false); return; }
+    if (!video.getAttribute('src')) video.src = isWebKit() ? justDoItMov : justDoItWebm;
+    try { video.currentTime = 0; } catch { /* Nothing loaded yet: it starts at the beginning anyway. */ }
+    video.volume = Math.min(1, Math.max(0, preferences.beepVolume));
+    setCameo(true);
+    void video.play().catch(() => setCameo(false));
+  }, [preferences.beepVolume]);
+  const partyHorn = useCallback(() => { void audio.playPartyHorn(); }, [audio]);
   const [following, setFollowing] = useState(true);
   const [highlight, setHighlight] = useState<string>();
   const stopDialog = useRef<HTMLDialogElement>(null);
@@ -312,6 +336,10 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const isRest = current.phase !== 'work' && !isPrep;
   const terminal = status === 'completed' || status === 'aborted';
   const editable = status === 'ready' || terminal;
+  /** The fun buttons show from the first second of a session to its finish screen. */
+  const funShown = fun && status !== 'ready';
+  const funNow = useRef({ horn: false, clip: false });
+  funNow.current = { horn: funShown, clip: funShown && !stillOnly };
   const active = ['running', 'preparing'].includes(status);
   const showing = isRest ? nextWork?.assignments : current.assignments;
   const round = (isRest ? nextWork : current)?.rounds.at(-1) ?? current.rounds.at(-1);
@@ -489,10 +517,12 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       else if (event.key === 'ArrowLeft' && controlsNow.includes('previous')) send('previous', id);
       else if ((event.key === 'l' || event.key === 'L') && controlsNow.includes('nudge')) send('nudge', id, { delta: nudgeMs });
       else if ((event.key === 'j' || event.key === 'J') && controlsNow.includes('nudge')) send('nudge', id, { delta: -nudgeMs });
+      else if ((event.key === 'h' || event.key === 'H') && funNow.current.horn) partyHorn();
+      else if ((event.key === 'd' || event.key === 'D') && funNow.current.clip) toggleCameo();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [engine, send, nudgeMs, takenOver]);
+  }, [engine, send, nudgeMs, takenOver, partyHorn, toggleCameo]);
 
   // For time and strength count up in the big clock (UI-04); a cap stays secondary and drives the perimeter.
   const countUp = (format === 'forTime' || format === 'strength') && timing === 'manual' && !isBlock;
@@ -608,7 +638,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       })() : intro !== undefined && intro === current.sectionIndex && !terminal ? <div key={`start-${intro}`} className={own.blockCard} data-kind="start" data-testid="block-card" aria-hidden="true">
         <span>BLOCK {intro + 1} OF {plan.sections.length}</span><strong>{section.title}</strong><small>{[FORMAT_LABELS[format], roundView && roundView.rounds > 1 ? `${roundView.rounds} rounds` : '', section.capMs ? `cap ${displayTime(section.capMs)}` : ''].filter(Boolean).join(' · ')}</small>
       </div> : null}
-      <div className={styles.playerTop}><span><span className={styles.liveDot} />{timerOnly ? workout.title : section.title}{!timerOnly && <span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span>}</span><span><span className={styles.position}>{positionLabel}</span>{!editable && !timerOnly && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
+      <div className={styles.playerTop}><span><span className={styles.liveDot} />{timerOnly ? workout.title : section.title}{!timerOnly && <span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span>}</span><span><span className={styles.position}>{positionLabel}</span>{funShown && <button className={styles.iconButton} aria-label="Party horn" title="Party horn (H)" onClick={partyHorn}><Icon name="horn" size={18} /></button>}{funShown && !stillOnly && <button className={styles.iconButton} aria-label="Just do it" title="Just do it (D)" aria-pressed={cameo} onClick={toggleCameo}><Icon name="bolt" size={18} /></button>}{!editable && !timerOnly && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
       {(shown.bar || shown.barPercent) && <div className={styles.overall} aria-label="Overall progress">{shown.bar && <span className={styles.overallTrack} data-testid="overall-progress">{plan.sections.map((item, index) => <span key={item.id} className={styles.overallSegment} data-segment={index} style={{ flexGrow: item.endIndex - item.startIndex + 1 }}><span ref={element => { segmentFills.current[index] = element; }} className={styles.overallFill} /></span>)}</span>}{shown.barPercent && <span ref={overallText} className={styles.overallText}>0 % DONE</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
@@ -682,12 +712,14 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
       <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? timerOnly ? 'Breathe.' : 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : ''}</span></div>
+      {/* The Just do it clip (UI-32) stands over the frame, takes no tap and moves nothing. Its element waits without a file until the first tap. */}
+      {fun && !stillOnly && <div className={own.cameo} data-on={cameo} aria-hidden="true"><video ref={cameoVideo} playsInline preload="none" onEnded={() => setCameo(false)} onError={() => setCameo(false)} /></div>}
       {ruled && <StageRuler stations={stations} look={look} stack={rulerStack} />}
     </div>
 
     <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name={timerOnly ? 'clock' : 'list'} size={17} />{timerOnly ? 'Timer settings' : 'Details'}</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a>{!timerOnly && <button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button>}</div></div>
 
-    <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>Shift</span><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next block</li><li><span className={styles.kbd}>J</span><span className={styles.kbd}>L</span>Back or forward {nudgeSeconds} seconds on the clock</li><li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
+    <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>Shift</span><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next block</li><li><span className={styles.kbd}>J</span><span className={styles.kbd}>L</span>Back or forward {nudgeSeconds} seconds on the clock</li>{fun && <li><span className={styles.kbd}>H</span>{!stillOnly && <span className={styles.kbd}>D</span>}Party horn{!stillOnly && ', or the Just do it speech'}</li>}<li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
     <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={`${styles.primaryButton} ${styles.dangerFill}`} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
   </div>;
 }

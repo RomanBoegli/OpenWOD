@@ -189,6 +189,11 @@ div.ruler { position: absolute; inset: 0; z-index: 0; padding: 0; padding-inline
   [data-performing=true] .actionBar { margin: 4px 0 6px; }
   [data-performing=true] .secondaryAction { min-height: 44px; }
 }
+/* The Just do it clip (UI-32): he stands on the frame's lower edge, over everything and in nobody's way. The frame is his
+   containing block, and like the other layers he is addressed as div. to outrank the frame's own child rule. */
+div.cameo { position: absolute; inset: 28% 0 0; z-index: 4; padding: 0; pointer-events: none; }
+div.cameo[data-on=false] { display: none; }
+.cameo video { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
 /* Block boundaries (UI-24): a card names the block as it starts and fades by itself; at the end it stays until Ready.
    It floats over the top rows, so neither the clock nor the stations move. */
 div.blockCard { position: absolute; z-index: 3; top: calc(var(--pad-top) + var(--ring-extra) - 8px); left: calc(var(--pad-x) + var(--ring-extra)); right: calc(var(--pad-x) + var(--ring-extra) + 60px); display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 10px 16px; border-radius: 14px; background: var(--accent-fill); color: var(--accent-ink); box-shadow: 0 12px 36px var(--shadow); pointer-events: none; animation: blockCardIn var(--t-slow) var(--ease) both; }

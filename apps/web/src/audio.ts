@@ -1,6 +1,7 @@
 import type { ClockValues, Projection } from '../../../packages/engine/src';
 import truckHornUrl from './assets/truck-horn.m4a';
 import shipHornUrl from './assets/ship-horn.m4a';
+import partyHornUrl from './assets/dj-airhorn.m4a';
 import { movementKey, movementSlug } from '../../../packages/domain/src/catalogue';
 import { seedMovements } from '../../../packages/domain/src/movements';
 
@@ -81,6 +82,10 @@ export class WorkoutAudio {
   beepVolume = .7;
   /** A quick timer has no movement to name (UI-30): the lead words play, and no name follows them. */
   nameless = false;
+  /** Whether the fun buttons are switched on (AUD-11): then the party horn loads with the session's sound, ready for its first tap. */
+  fun = false;
+  private party?: AudioBuffer;
+  private partyLoading?: Promise<void>;
   /** Oscillator amplitude for the beep slider: squared so the low end stays gentle, the top is close to full scale (about -6 dBFS). */
   private get beepGain() { return this.beepVolume * this.beepVolume * .5; }
   tone: BeepTone = 'classic';
@@ -208,6 +213,7 @@ export class WorkoutAudio {
       this.resuming = resumed.then(() => {}, () => {});
       void this.preload();
       void this.loadHorn();
+      if (this.fun) void this.loadPartyHorn();
       try { await resumed; } finally { this.unlockingSince = 0; }
       // A local oscillator unlocks the output from the user's explicit gesture, in the chosen tone (a horn's stand-in is classic).
       this.synth(context.currentTime, .035, 660, .05, TONES[isRecorded(this.tone) ? 'classic' : this.tone]);
@@ -255,6 +261,41 @@ export class WorkoutAudio {
       } catch { /* Missing or undecodable: classic beeps. */ }
       if (!this.horns[tone]) this.hornsLoading[tone] = undefined;
     })();
+  }
+
+  /** Fetches and decodes the party horn once. A failure is silent and the next tap tries again. */
+  loadPartyHorn(): Promise<void> {
+    return this.partyLoading ??= (async () => {
+      if (typeof fetch !== 'function') return;
+      try {
+        const context = this.ensureContext();
+        const response = await fetch(partyHornUrl);
+        if (response.ok) this.party = await context.decodeAudioData(await response.arrayBuffer());
+      } catch { /* Missing or undecodable: the button stays quiet. */ }
+      if (!this.party) this.partyLoading = undefined;
+    })();
+  }
+
+  /**
+   * The party horn (AUD-11): a DJ air horn on a tap, at the beep volume. It is no cue: it is kept off the list of scheduled
+   * sounds, so a pause, a new slot or a hidden page never cuts it short, and it touches neither the clock nor the cues. Taps in
+   * a row overlap, as on a DJ's desk. Silent mode keeps it silent.
+   */
+  async playPartyHorn(): Promise<void> {
+    if (this.mode === 'silent') return;
+    try {
+      const context = this.ensureContext();
+      // The tap is a gesture of its own: it may be the first sound of the page.
+      if (context.state !== 'running') void context.resume().catch(() => undefined);
+      await this.loadPartyHorn();
+      if (!this.party || context.state !== 'running') return;
+      const source = context.createBufferSource();
+      const volume = context.createGain();
+      source.buffer = this.party;
+      volume.gain.value = this.beepVolume * this.beepVolume * .7;
+      source.connect(volume).connect(context.destination);
+      source.start();
+    } catch { /* No sound output: the session goes on. */ }
   }
 
   /** Schedules one beep and returns the instant it has ended, so a recorded word can follow it. */
