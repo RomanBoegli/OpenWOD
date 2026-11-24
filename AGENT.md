@@ -768,15 +768,15 @@ All P0 requirements and the 39 acceptance scenarios are implemented with automat
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
-Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.6.1.
+Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.7.0.
 Two tags carry no image: `v1.0.0` failed in validation before any image was built, so 1.1.0 is the first published one, and the workflow of `v1.5.0` stopped in the production smoke test, so 1.5.1 publishes its changes.
 
-**Since 1.6.1** (not released):
+**New in 1.7.0:**
 
 - Solo sessions have a layout of their own (UI-29, issue #6): a one-row station without badge or name, a one-column game plan, and a solo movement's target and load side by side in the editor.
 - The quick timer (LIB-09, UI-30, issue #11): Tabata, EMOM, AMRAP or For Time from a few numbers, played as the clock alone and never saved to the library. It is the library's primary action, and New workout a quiet one. A quick AMRAP lists its rounds with their times.
 - The fun buttons (UI-31, UI-32, AUD-11, issues #14 and #15): a party horn and the Just do it clip in the training view, behind one switch that is off by default.
-- The release workflow also moves the image tag `latest` (DEP-19), from the next release on.
+- The release workflow also moves the image tag `latest` (DEP-19), from this release on.
 - Fixed: in the static shape a deleted session came back when the page was reloaded before the deletion was written (DAT-14).
 
 **Schema and storage versions today.**
@@ -795,7 +795,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for the release after 1.6.1: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for the release after 1.7.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 A faster browser suite is planned and not started: quick runs in WebKit alone, runs by area and by changed files, more local workers, and four parallel jobs in the Check workflow.

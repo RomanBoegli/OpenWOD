@@ -327,3 +327,18 @@ Version 1.6.1: Start waits until the sound has loaded (UI-25), so the first anno
 | Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.6.1, and the image builds with the check passing inside it (329 passed, 1 skipped) and reports 1.6.1. |
 
 Not recorded in this round: Chromium, which does not run headless on this machine (the Check on GitHub runs the browser scenarios in it, without sound), a session on a physical device, and the Start on an iPhone and an iPad.
+
+## Release 1.7.0, 24 November 2026
+
+Version 1.7.0: the quick timer (LIB-09, UI-30), a layout of their own for solo sessions (UI-29), the fun buttons (UI-31, UI-32, AUD-11), the image tag `latest` (DEP-19), and a deleted session that stays deleted in the static shape (DAT-14).
+
+| Check | Result |
+| --- | --- |
+| Unit tests and repository check | 345 passed in 38 files, with the type check, the schema check and the registry check. New: the quick timer's four kinds, titles and limits, its routes and its reserved id in the household, cues without names, the party horn, the laps of a counted round and the fun buttons preference. |
+| Browser scenarios | One full run of the four local projects (WebKit, Firefox, static WebKit, static Firefox), 890 tests: 552 passed, 338 skipped, none failed. New: the solo layout (AT-36), the quick timer with its Logbook entry, laps and restore (AT-37), and the fun buttons with the clip asked for only at the tap and no scrolling frame (AT-38, AT-39). |
+| The deleted session that came back | The Check on GitHub failed in static Chromium, twice in a row: a session deleted in the Logbook was back after a reload. The row left before the deletion was written. The Logbook test now writes the deletion 0.6 s late: without the fix it fails in static Firefox and static WebKit with the same message, with the fix it passes. |
+| Production smoke tests, the static site | Against `vite preview` of the static build in WebKit and Firefox: 6 passed, 2 skipped, 2 failed. The two failures are the voice-pack test in each engine, which wants five packs where the checkout holds one. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.7.0. The bundle holds the horn and both files of the clip, and `index.html` names neither file of the clip. |
+
+Not recorded in this round: the image, which was not built on this machine (Docker was not running, and the built server needs Node 24 where this machine has 23), so its check and its smoke tests run in the release workflow only.
+Also not recorded: Chromium, which does not run headless on this machine (the Check on GitHub runs the browser scenarios in it), how the horn and the clip sound in a production build, and a session on a physical device.
