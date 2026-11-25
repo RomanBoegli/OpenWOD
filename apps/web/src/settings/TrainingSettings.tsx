@@ -8,6 +8,7 @@ import styles from '../Settings.module.css';
 import shared from '../App.module.css';
 import { type SettingsProps } from './shared';
 import { ColorField, type ColorOptions } from './ColorField';
+import { stillOnly, useCameo } from '../cameo';
 import { BUILT_IN_COLORS, restTokens, useResolvedTheme, type Theme } from '../theme';
 
 /** Ready-made rest colours; the first is the built-in blue. Any other colour comes from the picker. */
@@ -17,7 +18,11 @@ const restShade = (value: string, theme: Theme) => value ? restTokens(value, the
 const asPicked = (builtIn: Record<Theme, string>) => (value: string, theme: Theme) => value || builtIn[theme];
 
 export function TrainingSettings(props: SettingsProps) {
-  const { preferences, onPreferencesChange } = props;
+  const { preferences, onPreferencesChange, audio } = props;
+  // The fun buttons can be tried where they are switched on: the same horn and the same clip as in the training view.
+  const cameo = useCameo(preferences.beepVolume);
+  const silent = preferences.soundMode === 'silent';
+  const still = stillOnly();
   const update = (patch: Partial<Preferences>) => onPreferencesChange(value => ({ ...value, ...patch }));
   const seconds = (ms: number) => `${Math.round(ms / 1000)} s`;
   const theme = useResolvedTheme(preferences.theme);
@@ -54,13 +59,20 @@ export function TrainingSettings(props: SettingsProps) {
             <span /><span className={styles.themeName}>Dark</span><span className={styles.themeName}>Light</span>
             {phases.map(phase => <Fragment key={phase.name}><span>{phase.name}</span>{(['dark', 'light'] as const).map(name => <ColorField key={name} label={`${phase.name} colour in the ${name} theme`} options={phase.options} value={phase.value[name]} shade={value => phase.shade(value, name)} onChange={value => phase.set({ ...phase.value, [name]: value })} />)}</Fragment>)}
           </div>
-          <p className={styles.hint}>Work changes colour at each marker this long before a slot ends; the markers sit on the ring above. Short slots cap them at a quarter and a tenth of their length, and the spoken countdown stays at three seconds. The skip buttons and the J and L keys move the clock by the chosen seconds. The percentage beside the clock reads as in 00:39 · 4 %, dimmer than the digits; the round donut counts the movements of a round and the rounds of a block.</p>
-          <p className={styles.hint}>Each theme keeps its own colours. Rest also covers transitions and the lane that waits for its partner, and is shown in the shade that theme will use. The work phase follows the accent under General.</p>
+          <p className={styles.hint}>Work changes colour at each marker, this long before a slot ends. A short slot moves its markers closer to the end. The skip buttons and the J and L keys move the clock by the chosen seconds.</p>
+          <p className={styles.hint}>Each theme keeps its own colours. Rest also covers transitions and a waiting lane. Work follows the accent under General.</p>
         </div>
       </div>
       <Switch checked={preferences.wash} onChange={wash => update({ wash })} label="Background pulse" hint="The phase colour tints the whole player, climbing to full strength just before each milestone and morphing into the next colour." />
       {preferences.wash && <label className={styles.field}>Pulse intensity · {preferences.washGain} %<input type="range" min="10" max="60" step="5" value={preferences.washGain} onChange={event => update({ washGain: Number(event.target.value) })} /></label>}
-      <Switch checked={preferences.funButtons} onChange={funButtons => update({ funButtons })} label="Fun buttons" hint="A party horn and a “Just do it” speech in the training view, one tap away (keys H and D). They never touch the clock, and stay away in Silent mode. The speech is from #INTRODUCTIONS by LaBeouf, Rönkkö & Turner (CC BY-NC-SA)." />
+      <Switch checked={preferences.funButtons} onChange={funButtons => update({ funButtons })} label="Fun buttons" hint="A party horn and a “Just do it” speech in the training view, one tap away (keys H and D). They never touch the clock, and stay away in Silent mode. Switch them off for a plain view. The speech is from #INTRODUCTIONS by LaBeouf, Rönkkö & Turner (CC BY-NC-SA)." />
+      {preferences.funButtons && <div className={styles.funTry}>
+        <div className={styles.buttonRow} role="group" aria-label="Try the fun buttons">
+          <button type="button" className={shared.quietButton} disabled={silent} onClick={() => void audio.playPartyHorn()}><Icon name="horn" />Party horn</button>
+          {!still && <button type="button" className={shared.quietButton} disabled={silent} aria-pressed={cameo.on} onClick={cameo.toggle}><Icon name="bolt" />Just do it</button>}
+        </div>
+        {!still && <div className={styles.funStage} data-on={cameo.on} aria-hidden="true"><video {...cameo.props} /></div>}
+      </div>}
     </section>
     <SoundSettings {...props} />
   </>;

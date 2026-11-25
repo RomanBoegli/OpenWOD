@@ -13,7 +13,7 @@ import { Logbook } from './History';
 
 const SECTION_LABELS: Record<SettingsSection, { title: string; blurb: string }> = {
   general: { title: 'General', blurb: 'Theme, the player’s look, and who trains here.' },
-  player: { title: 'Training view', blurb: 'Units, the look of the timer, and the sound.' },
+  player: { title: 'Training View', blurb: 'Units, the look of the timer, and the sound.' },
   equipment: { title: 'Equipment', blurb: 'What you own, and one spelling per item across the library.' },
   movements: { title: 'Movements', blurb: 'Every movement the library knows, with its variants and equipment.' },
   authors: { title: 'Authors', blurb: 'Who wrote your workouts, with one spelling per author across the library.' },

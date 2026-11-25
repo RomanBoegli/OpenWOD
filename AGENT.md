@@ -1,6 +1,6 @@
 # Home Workout Player System Requirements and Implementation Plan
 
-Version 1.22 · 24 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
+Version 1.23 · 25 November 2026 · Desktop-first development, portable workout sharing, and two deployment shapes
 
 Build a self-hosted responsive web application for collecting, composing, sharing, and performing home workouts, especially solo and partner CrossFit-style and HYROX-style sessions. Initial development and UX review take place in desktop Safari and Firefox, including a Safari window occupying approximately half a monitor. The same application adapts to iPad, iPhone, and other narrow viewports. A shared iPad placed approximately two metres away remains an intended workout display. The app combines a reusable workout library with an execution engine, a context-sensitive player, a perimeter timer, and spoken cues.
 
@@ -435,7 +435,7 @@ In the focus view the big clock SHALL stay in the same place from one slot to th
 **UI-23** A workout's page SHALL put the workout's chips in one row above the title, the title across the page, and the description beside a compact box of actions (Start workout, then Edit and Duplicate, then Export and Remove). Its facts at a glance SHALL be the total time, the active time, the rest time (every transition, round rest and block rest added up, so total is active plus rest), the blocks, the movements and the pieces of equipment. The editor's summary shows the same three times. A time is written plainly, which for capped work is its cap. Where open-ended work comes on top of what the clock knows, total and active carry a plus, and a workout the clock knows nothing of reads Open, as its library card does.
 
 **UI-24** The training view SHALL show where a block stands without repeating itself. A round donut beside the clock, opposite the percentage and standing on the same baseline, SHALL have one segment per movement of the round that fills movement by movement (a timed slot with its clock, manual work as a pulse), and one dot per round of the block below it. It never moves or pushes the clock (UI-20), steps aside where a narrow screen leaves no room, and leaves AMRAP and you-go-I-go blocks to the athletes (UI-06). The overall bar SHALL be split into one segment per block. The top line names the block, the stations heading counts the movement ("MOVEMENT 2 / 4"), and the state above the clock (Work, Rest, Get ready) SHALL be large enough to read across the room. A card SHALL name each block as its work begins and fade by itself, and a block that waits for Ready SHALL say it is done, with its result, in the frame's accent. When the next movement appears, the stations shown before SHALL slide out and the new ones slide in, which reduced motion suppresses (UI-10). The context view SHALL keep the movement under way in the middle of its list while its Stick to movement switch is on.
-Chips on a workout card and a workout's page SHALL state what holds for the whole workout: athletes, collection, difficulty and, once done, when it was last done.
+Chips on a workout card and a workout's page SHALL state what holds for the whole workout: athletes, collection and difficulty. A card's chips SHALL NOT change with what was played: how often and when a workout was last done shows on its page alone.
 A format belongs to a block, so it SHALL show as a chip on each block of the workout's page and never among the workout's chips, and the library's format filter SHALL read "Block format".
 A library card SHALL show, in this order, those chips, the title, the description cut to two lines, the duration, blocks and movements, the equipment, and Start and Details.
 The library's filters SHALL come in this order: athletes, collection, difficulty with the same chips as the cards, duration, block format, equipment.
@@ -472,7 +472,7 @@ A Tabata's ring counts the rounds ("3/8"), there being one movement, and its res
 The rounds counted in a quick AMRAP SHALL be listed under the counter like a stopwatch's laps, the latest on top, each with the time it took and the block's time it ended at. The list is there from the first second and scrolls inside its room, so no round moves the clock, an undone round leaves the list, and a restored session keeps its rounds' times.
 The cues are a workout's own, without a movement name: the beeps, "Get ready", "Go" and "Rest".
 
-**UI-31** The training view SHALL offer a party horn button to whoever switched on "Fun buttons" in Settings → Training view, which is off by default.
+**UI-31** The training view SHALL offer a party horn button unless "Fun buttons" in Settings → Training View is switched off. The switch is on by default since 1.7.1.
 The button stands in the frame's top line from the first second of a session to its finish screen, in a normal session and a quick timer alike, and the H key fires it too.
 It plays the horn of AUD-11 and changes nothing else: not the clock, not the cues, not the layout.
 Silent mode shows no fun button.
@@ -482,6 +482,15 @@ He stands on the frame's lower edge with a transparent background, takes no tap,
 The clip's file is asked for at the first tap and never with the app (ENG-11), and by engine: WebKit gets the HEVC file with alpha and every other engine the VP9 one, because each plays the other's file without its transparency.
 Playback starts inside the tap. With reduced motion the button is not shown and nothing plays.
 The clip is a cut from #INTRODUCTIONS (2015) by LaBeouf, Rönkkö & Turner under CC BY-NC-SA, credited in `apps/web/src/assets/CREDITS.md`, the README and the switch's hint.
+Under the switch, Settings → Training View SHALL offer both buttons to try, with the same horn and the same clip, loaded at the tap. Silent mode disables them, and they leave with the switch.
+
+**UI-33** The training view SHALL offer a zoom of what it shows of the work: a Zoom out and a Zoom in button in the frame's top line, and the - and + keys, walk six steps from 75 % to 150 %.
+In the focus view the zoom draws each station larger or smaller as a whole (movement, target, load, notes), and the clock takes the room the stage then leaves (UI-27). In the context view, which shows the game plan in place of the stations, it draws the plan's rows, inside the list that scrolls.
+The action bar, the transport and every other row keep their size.
+A step above 100 % that the frame cannot hold (it would scroll, or press a station) SHALL be taken back step by step at once, and again after a resize or a turn. What was asked for is kept, so a frame with the room shows it. A step of 100 % or less is never refused.
+The zoom is this browser's own (`openwod.stage-zoom.v1`) and never part of the settings a household shares, since a phone and a tablet want different sizes.
+There is none before the session starts, in a quick timer (UI-30) and on a phone (620 px or less), whose top line has no room for the buttons.
+The page footer SHALL carry a Shortcuts link on every page that opens the keyboard sheet (NFR-08). The app has one such sheet, which the training view also opens on the ? key and from its Keys button. The link is not shown on a touch-only device, and the training view, which has no footer, has none.
 
 # 9 Audio and spoken cues
 
@@ -758,17 +767,18 @@ Tests below define release gates at their applicable milestones. Unit tests use 
 | AT-35 | In the editor choose Metres and delete the amount: the kind and the field stay, and 25 saves as 25 m, while 1,5 km saves as 1.5 km. Delete and retype a men's level of a bundled levelled load, change kg to lb and switch Levels off: the women's amounts stay. Tap a movement suggestion: it is picked and the field keeps the focus. Type romanian deadlifts and leave the field: it reads Romanian Deadlifts, and it did not change while it was typed. Switch a pair draft to Solo and back: athlete B's movement returns. Leave the editor straight after an edit: the draft has it. | BLD-16, BLD-17, BLD-11 |
 | AT-36 | Play Fran at 1180 by 820: the station is headed "YOUR STATION", has no badge and no "Athlete A", and shows the target, the movement and the load in one row with the movement in the middle of the card. The context view's active row has three cells and the game plan no dash. At 390 by 844 the movement stands under the target. | UI-29, UI-04 |
 | AT-37 | From the library open the quick timer and set a Tabata of 2 rounds, 0:05 work and 0:05 rest: Start opens the player counting down, with no station, no Up next and no view switch, and the ring reads round 1 of 2, then 2 of 2. The Logbook lists "Tabata: 2 × 0:05 / 0:05", Repeat plays it again, and the library counts the workouts it counted before. An AMRAP timer lists two counted rounds with their times, the later on top, and loses the third when it is undone. A For Time timer stops on Done, and an EMOM shows no Done. A reload mid-timer restores it, and Start with other numbers plays those. | LIB-09, UI-30 |
-| AT-38 | With the fun buttons off a running session shows no horn button. Switch them on: the button is there once the session runs, not on the ready screen, and nothing of the horn is loaded yet in a test build. H asks for `dj-airhorn.m4a` once, and further taps ask for nothing more. The clock reads what it read. In Silent mode the button is gone. | UI-31, AUD-11 |
+| AT-38 | The fun buttons are on by default. Switched off, a running session shows no horn button. Switch them on again: the button is there once the session runs, not on the ready screen, and nothing of the horn is loaded yet in a test build. H asks for `dj-airhorn.m4a` once, and further taps ask for nothing more. The clock reads what it read. In Silent mode the button is gone. | UI-31, AUD-11 |
 | AT-39 | With the fun buttons on, tap Just do it in a running session: the clip's file is asked for only then, `just-do-it.mov` in WebKit and `just-do-it.webm` elsewhere, and never the other. Its layer takes no pointer events, the clock runs on, and Pause under it still works. With reduced motion there is no Just do it button and no video element. | UI-32, ENG-11 |
+| AT-40 | In a running pair session at 1180 by 796, Zoom in draws the stations at 115 %: the station is taller and nothing scrolls. The - key twice gives 85 % and a shorter station, + gives 100 % and the first height again, and Zoom out stops at 75 %. The step is kept under `openwod.stage-zoom.v1`, not among the preferences, and the next session opens with it. With 150 % stored, a frame 520 px high shows less than 150 % with Zoom in disabled and nothing scrolling, a frame 1400 px high shows 150 %, and the low frame takes it back again. In the context view the row under way grows. On a phone there are no zoom buttons and a stored step changes nothing. A quick timer has none. | UI-33 |
 
 # 15 Where things stand
 
-Recorded 24 November 2026, plan version 1.22.
-All P0 requirements and the 39 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
+Recorded 25 November 2026, plan version 1.23.
+All P0 requirements and the 40 acceptance scenarios are implemented with automated tests at their applicable layers, except login (NFR-09, deferred by decision).
 The detailed change history lives in the git log, the release notes under `docs/releases/` and `docs/validation.md`.
 
 **Releases.**
-Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.7.0.
+Every release has its notes in `docs/releases/v<version>.md`, and the current one is 1.7.1.
 Two tags carry no image: `v1.0.0` failed in validation before any image was built, so 1.1.0 is the first published one, and the workflow of `v1.5.0` stopped in the production smoke test, so 1.5.1 publishes its changes.
 
 **New in 1.7.0:**
@@ -779,6 +789,15 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - The release workflow also moves the image tag `latest` (DEP-19), from this release on.
 - Fixed: in the static shape a deleted session came back when the page was reloaded before the deletion was written (DAT-14).
 
+**New in 1.7.1:**
+
+- The stations' zoom (UI-33): Zoom out and Zoom in in the training view, with the - and + keys, kept per browser.
+- A Shortcuts link in the page footer opens the keyboard sheet from every page (UI-33, NFR-08).
+- The fun buttons are on by default and can be tried in the settings (UI-31, UI-32). A browser that ran 1.7.0 has the earlier default stored and keeps it.
+- A library card no longer shows when its workout was last done. Its page still does.
+- The settings section is titled Training View, its two long hints are shorter, and the count columns of the settings lists are centred.
+- Fixed: a quick timer started from the timer page named its placeholder movement in the device voice after Get ready. The flag that leaves the names out was set by an effect that ran after the first cue. It now comes with every update of the sound (UI-30).
+
 **Schema and storage versions today.**
 
 - Workout model `schemaVersion` 2, workout file `formatVersion` 3 (`openwod.workout`), pack `formatVersion` 1, JSON export `formatVersion` 1.
@@ -786,6 +805,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - IndexedDB version 3, which adds the `deletedSessions` store to version 2's `workouts`, `master` and `sessions`.
 - Editor drafts live in `localStorage` under `openwod.drafts.v2` since 1.5.3, moved once from `openwod.drafts.v1`.
 - The quick timer's numbers live in `localStorage` under `openwod.quick-timer.v1`, in this browser only.
+- The stations' zoom lives in `localStorage` under `openwod.stage-zoom.v1`, in this browser only (UI-33).
 - A session's checkpoint keeps the block's time of each counted round (the laps of UI-30) as an optional field, so a checkpoint of an earlier build still restores.
 - An image of 1.5.x or older refuses a database migrated to version 4, so going back needs the pre-migration backup the server writes under `/data/backups/`.
 
@@ -795,7 +815,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - The physical-device checklist (`docs/device-checklist.md`), AT-18 and the real-device parts of AT-13.
 
 **Next.**
-The workout generator, planned for the release after 1.7.0: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
+The workout generator, planned for the release after 1.7.1: a rule-based, deterministic and offline Generate button on the New workout page that fills the editor from the household's own movement catalogue.
 Its requirement will be **BLD-13**, appended after BLD-12 when the code starts, and "workout generation by AI" in section 2.2 stays deferred.
 The design is in [docs/plans/workout-generator.md](docs/plans/workout-generator.md).
 A faster browser suite is planned and not started: quick runs in WebKit alone, runs by area and by changed files, more local workers, and four parallel jobs in the Check workflow.
@@ -818,7 +838,7 @@ Every other idea is a GitHub issue with the `enhancement` label (`gh issue list 
 - Movement records carry no loads, and loads live on the prescriptions.
 - A session counts as done when it finishes or reaches 80 % of a timed or capped workout.
 - The working title is gone for good, and `npm run check` guards against its return.
-- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-12, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-20, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-33 and AT-40.
+- Requirement IDs are never renumbered. New ones are appended after the highest: the next free IDs are API-04, AUD-12, BLD-18 (BLD-13 reserved for the generator), DAT-15, DEP-20, ENG-16, LIB-10, MOD-06, NFR-15, SHR-08, UI-34 and AT-41.
 - Out of scope: teams of three or four athletes, celebrity or Australian voices, and default loads on movement records.
 - Markdown style: one sentence per line and no semicolons.
 

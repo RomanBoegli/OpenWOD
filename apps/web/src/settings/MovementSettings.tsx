@@ -93,7 +93,7 @@ export function MovementSettings({ masterData, onMasterDataChange, catalogue, en
         <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
       </div>}
       <MasterList label="Movements" selectable actionsWidth="124px" empty={`Nothing matches “${query}”.`}
-        columns={[{ key: 'name', caption: 'Movement', width: 'minmax(180px, 1.3fr)' }, { key: 'equipment', caption: 'Equipment', width: 'minmax(0, 1fr)' }, { key: 'usage', caption: 'Workouts', width: '80px', align: 'end' }]}
+        columns={[{ key: 'name', caption: 'Movement', width: 'minmax(200px, 2fr)' }, { key: 'equipment', caption: 'Equipment', width: 'minmax(0, 1fr)' }, { key: 'usage', caption: 'Workouts', width: '96px', align: 'center' }]}
         rows={rows.map(({ record, variant, muted }) => ({
           id: record.id, indent: variant, muted,
           cells: {

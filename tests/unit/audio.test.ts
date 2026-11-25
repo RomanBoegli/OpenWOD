@@ -433,20 +433,19 @@ it('names no movement in a quick timer: the lead words play alone, as speech and
   vi.runOnlyPendingTimers();
   expect(named.spoken).toEqual(['Get ready. Work.']);
 
+  // The flag comes with the update itself, so the first cue of a session started in the tap already has it.
   const spoken = setup({ workout: timer, started: 1000 });
-  spoken.audio.nameless = true;
   await spoken.audio.unlock();
-  spoken.audio.update(spoken.engine.project(), spoken.engine.readClocks());
+  spoken.audio.update(spoken.engine.project(), spoken.engine.readClocks(), true);
   // Into the first work slot and on to the first rest: Rest is said, and nothing after it.
   spoken.advance(9000 + 20_000 + 1000);
-  spoken.audio.update(spoken.engine.project(), spoken.engine.readClocks());
+  spoken.audio.update(spoken.engine.project(), spoken.engine.readClocks(), true);
   vi.runOnlyPendingTimers();
   expect(spoken.spoken).toEqual(['Get ready.', 'Rest.']);
 
   const clips = setup({ clips: true, workout: timer, started: 1000 });
-  clips.audio.nameless = true;
   await clips.audio.unlock(); await clips.audio.preload(); clips.sources.length = 0;
-  clips.audio.update(clips.engine.project(), clips.engine.readClocks());
+  clips.audio.update(clips.engine.project(), clips.engine.readClocks(), true);
   vi.runOnlyPendingTimers();
   expect(clips.sources.filter(source => source.kind === 'clip').map(source => source.clip)).toEqual(['three', 'two', 'one', 'go', 'get-ready']);
   expect(clips.spoken).toEqual([]);

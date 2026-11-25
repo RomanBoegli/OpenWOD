@@ -300,13 +300,39 @@ test.describe('workout view settings', () => {
     await expectParts(none);
   });
 
-  test('AT-38, AT-39: the fun buttons are off until switched on, load the horn and the clip at their first use, by tap or by key, and never touch the clock', async ({ page, browserName }) => {
+  test('the fun buttons can be tried where they are switched on: the horn and the clip load at the tap, and Silent mode keeps both still (UI-31, UI-32)', async ({ page, browserName }) => {
+    const media: string[] = [];
+    page.on('request', request => { const hit = /(dj-airhorn|just-do-it)[^/?]*\.(m4a|webm|mov)$/.exec(request.url()); if (hit) media.push(`${hit[1]}.${hit[2]}`); });
+    await settingsAt(page, '/#/settings/player');
+    const tryOut = page.getByRole('group', { name: 'Try the fun buttons' });
+    await expect(tryOut.getByRole('button', { name: 'Party horn' })).toBeEnabled();
+    await expect(tryOut.getByRole('button', { name: 'Just do it' })).toBeEnabled();
+    expect(media).toEqual([]);
+    await tryOut.getByRole('button', { name: 'Party horn' }).click();
+    await expect.poll(() => media).toEqual(['dj-airhorn.m4a']);
+    await tryOut.getByRole('button', { name: 'Just do it' }).click();
+    // The file this engine shows transparent, and never the other. An engine may ask for it in more than one piece.
+    const clip = `just-do-it.${browserName === 'webkit' ? 'mov' : 'webm'}`;
+    await expect.poll(() => [...new Set(media)]).toEqual(['dj-airhorn.m4a', clip]);
+    // Both are sound: Silent mode leaves the buttons there and takes their effect.
+    await page.getByRole('radiogroup', { name: 'Sound', exact: true }).getByRole('radio', { name: 'Silent' }).check();
+    await expect(tryOut.getByRole('button', { name: 'Party horn' })).toBeDisabled();
+    await expect(tryOut.getByRole('button', { name: 'Just do it' })).toBeDisabled();
+    // Switched off, the try-out leaves with them.
+    await page.getByRole('switch', { name: 'Fun buttons' }).uncheck();
+    await expect(tryOut).toHaveCount(0);
+  });
+
+  test('AT-38, AT-39: the fun buttons are there unless switched off, load the horn and the clip at their first use, by tap or by key, and never touch the clock', async ({ page, browserName }) => {
     const horn = page.getByRole('button', { name: 'Party horn' }), speech = page.getByRole('button', { name: 'Just do it' });
     const timer = page.getByTestId('primary-timer');
     const media: string[] = [];
     // The files themselves: the dev server also serves each as a module that only names its address.
     page.on('request', request => { const hit = /(dj-airhorn|just-do-it)[^/?]*\.(m4a|webm|mov)$/.exec(request.url()); if (hit) media.push(`${hit[1]}.${hit[2]}`); });
     // Switched off, a running session shows neither. (Another workout than the one played below, so no interrupted session waits there.)
+    await settingsAt(page, '/#/settings/player');
+    await expect(page.getByRole('switch', { name: 'Fun buttons' })).toBeChecked();
+    await page.getByRole('switch', { name: 'Fun buttons' }).uncheck();
     await page.goto('/#/wod/karen/play'); await ready(page);
     await page.getByRole('button', { name: 'Start workout', exact: true }).click();
     await advance(page, 12_000);

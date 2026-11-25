@@ -18,6 +18,11 @@
 .field input[type=search]::-webkit-search-cancel-button { appearance: none; }
 .twoUp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .buttonRow { display: flex; flex-wrap: wrap; gap: 8px; }
+/* The fun buttons' try-out: the clip plays in a box of its own under the two buttons, there only while it plays. */
+.funTry { display: grid; gap: 10px; margin: 2px 0 6px; }
+.funStage { height: 220px; border-radius: 12px; background: var(--surface-3); overflow: hidden; }
+.funStage[data-on=false] { display: none; }
+.funStage video { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
 .threeUp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .references { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .references li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; padding: 0 2px; border-bottom: 1px solid var(--line); }

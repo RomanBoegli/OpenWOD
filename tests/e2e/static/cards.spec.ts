@@ -1,7 +1,7 @@
 import { expect, test } from '../fixtures';
 
 // Chips on a card state what holds for the whole workout; formats belong to blocks and show on the workout page.
-test('a card shows athletes, collection, difficulty and when it was last done, and formats sit on the blocks', async ({ page }) => {
+test('a card shows athletes, collection and difficulty, never when it was last done, and formats sit on the blocks', async ({ page }) => {
   await page.goto('./#/');
   const card = page.getByRole('list', { name: 'Workouts' }).getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Karen', exact: true }) });
   await expect(card).toContainText('Solo');
@@ -15,8 +15,12 @@ test('a card shows athletes, collection, difficulty and when it was last done, a
   await page.goto('./#/wod/karen/play');
   await page.getByRole('button', { name: 'Start workout', exact: true }).click();
   await page.evaluate(() => window.__openwodTest!.advance(1_000_000));
+  // A played workout's card reads as before: when it was last done is on its page alone.
+  await page.goto('./#/wod/karen');
+  await expect(page.getByRole('main')).toContainText('Done once');
   await page.goto('./#/');
-  await expect(card).toContainText('today');
+  await expect(card).toContainText('Benchmarks');
+  await expect(card).not.toContainText(/today|Done once/);
 
   await page.goto('./#/wod/karen');
   await expect(page.getByRole('list', { name: 'Blocks' }).getByRole('listitem').first()).toContainText('For time');

@@ -343,3 +343,19 @@ Version 1.7.0: the quick timer (LIB-09, UI-30), a layout of their own for solo s
 
 Not recorded in this round: the image, which was not built on this machine (Docker was not running, and the built server needs Node 24 where this machine has 23), so its check and its smoke tests run in the release workflow only.
 Also not recorded: Chromium, which does not run headless on this machine (the Check on GitHub runs the browser scenarios in it), how the horn and the clip sound in a production build, and a session on a physical device.
+
+## Release 1.7.1, 25 November 2026
+
+Version 1.7.1: the stations' zoom (UI-33), a Shortcuts link in the page footer, the fun buttons on by default with a try-out in the settings (UI-31, UI-32), library cards without the last-done chip, tidier settings lists and hints, and a quick timer that no longer names its placeholder movement (UI-30).
+
+| Check | Result |
+| --- | --- |
+| The fault in 1.7.0 | A quick timer started from the timer page said Get ready in the chosen voice and then "Work" in the device voice. The flag that leaves the names out was set by an effect of the player, and the effect that starts the session ran before it, so the first cue went out with the names. The flag now comes with every update of the sound, and the unit test hands it over that way. It was not heard here: sound is not in the browser suite. |
+| Unit tests and repository check | 348 passed in 39 files, with the type check, the schema check and the registry check. New: the zoom's steps and its store. |
+| Browser scenarios | One full run of all six projects (Chromium, Firefox, WebKit and their static shapes) with six workers and no retries, 1371 tests: 864 passed, 507 skipped, none failed. Chromium runs headless on this machine again. New: the zoom by button and key, its fallback in a frame too low, the context view and the phone (AT-40), the footer's Shortcuts link, and the try-out of the fun buttons. Each new test passed three or four times in a row in the three engines before the full run. |
+| A test that failed once | In an earlier full run the same day, the test of master data from an older build failed once in WebKit: its route was still forwarding a request when the test ended. The test now takes its routes down before it ends. |
+| The zoom, by eye | WebKit screenshots at 1180 by 796, 820 by 1156 and 390 by 844 for a pair and a solo workout: larger stations with a smaller clock, smaller stations with the clock at its limit, the context view's rows, and a phone without the buttons. The largest step gives way in Fran at 820 by 1156 and in a frame 560 px high, and holds at 600 px. |
+| Production smoke tests, the static site | Against `vite preview` of the static build in Chromium, Firefox and WebKit: 9 passed, 3 skipped, 3 failed. The three failures are the voice-pack test in each engine, which wants five packs where the checkout holds one. |
+| Production builds | `npm run build` and `npm run build:static` pass their production checks and carry version 1.7.1. |
+
+Not recorded in this round: the image, which is built and smoke-tested by the release workflow, how the fix sounds in a real quick timer, the zoom on a physical iPad, and the Shortcuts link on a device with a keyboard and a touch screen.

@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './MasterList.module.css';
 
-export interface MasterColumn { key: string; caption: string; width?: string; align?: 'start' | 'end' }
+export interface MasterColumn { key: string; caption: string; width?: string; align?: 'start' | 'end' | 'center' }
 export interface MasterRow {
   id: string;
   cells: Record<string, ReactNode>;

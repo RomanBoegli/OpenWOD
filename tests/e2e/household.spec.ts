@@ -42,6 +42,8 @@ test.describe('household server', () => {
     await expect(page.getByRole('list', { name: 'Workouts' })).toContainText('Fran');
     await page.goto('/#/settings/authors');
     await expect(page.getByRole('list', { name: 'Authors in the library' }).getByRole('listitem')).toHaveCount(3);
+    // A request the route is still forwarding when the test ends would fail it: the routes are taken down first.
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
   });
 
   test('a saved workout reaches the server, shows on a fresh page, and an archive removes it', async ({ page, api }) => {

@@ -130,6 +130,7 @@ interface SnapshotPlayerProps {
   onPerformingChange: (performing: boolean) => void;
   onSessionEnd: (record: SessionRecord) => void;
   onSessionClear?: (sessionId: string) => void;
+  onShortcuts: () => void;
   /** Sessions on other devices (ENG-15), for the player's take-over and offer. */
   live?: LiveOffers;
 }

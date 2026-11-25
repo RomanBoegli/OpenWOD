@@ -28,6 +28,7 @@ import { BrandMark } from './BrandMark';
 import { installFeel } from './feel';
 import { useLibraryData, type SaveResult } from './data/use-library-data';
 import { useSharedPreferences } from './data/shared-preferences';
+import { ShortcutsDialog } from './Shortcuts';
 import { useLiveSessions } from './data/use-live-sessions';
 import { probeSessionLock, takeOverSession } from './data/session-lock';
 import { listRecoveries, type Recovery } from './data/checkpoints';
@@ -50,6 +51,9 @@ export default function App() {
   const [drafts, setDrafts] = useState(loadDrafts);
   const [storageError, setStorageError] = useState('');
   const [performing, setPerforming] = useState(false);
+  // The keyboard sheet (NFR-08): one for the app, opened from the footer on any page and by the player.
+  const shortcuts = useRef<HTMLDialogElement>(null);
+  const showShortcuts = useCallback(() => { shortcuts.current?.showModal(); }, []);
   const [clipsReady, setClipsReady] = useState<boolean>();
   const [packs, setPacks] = useState<{ id: string; label: string }[]>([]);
   const data = useLibraryData();
@@ -292,8 +296,8 @@ export default function App() {
       {live.notice && route.name !== 'library' && <div className={styles.notice} role="alert" style={{ marginBottom: 18 }}>{live.notice} <button type="button" className={styles.quietButton} onClick={live.clearNotice}>Dismiss</button></div>}
       {route.name === 'play' && (played?.id !== route.id || lockKnown === 'checking') ? <p className={styles.headerNote}>Checking for an interrupted session…</p>
         : route.name === 'play' && recovery && lockKnown === 'held' ? <section className={styles.recovery} role="region" aria-label="Session in another tab"><div><strong>“{recovery.checkpoint.workout.title}” is running in another tab.</strong><p>Only one tab controls a session. Take it over here and the other tab pauses and hands over, or go back and use that tab.</p></div><div className={styles.dialogActions}><a className={styles.quietButton} href={workoutHref(recovery.checkpoint.workoutId)}>Back to overview</a><button className={styles.primaryButton} onClick={() => void takeOver()}><Icon name="play" />Take over here</button></div></section>
-        : route.name === 'play' && (recovery || current || quick) ? <Player key={`${route.id}:${played?.turn ?? 0}`} workout={recovery ? recovery.checkpoint.workout : (current?.workout ?? quick)!} recovery={recovery} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
-        : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} />
+        : route.name === 'play' && (recovery || current || quick) ? <Player key={`${route.id}:${played?.turn ?? 0}`} workout={recovery ? recovery.checkpoint.workout : (current?.workout ?? quick)!} recovery={recovery} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} onShortcuts={showShortcuts} />
+        : route.name === 'historyPlay' ? <SnapshotPlayer sessionId={route.id} fetchSession={data.fetchSession} live={elsewhere} audio={audio} preferences={preferences} catalogue={catalogue} onPreferencesChange={setPreferences} onPerformingChange={setPerforming} onSessionEnd={recordSession} onSessionClear={clearSession} onShortcuts={showShortcuts} />
         : route.name === 'timer' ? <QuickTimerPage />
         : route.name === 'settings' ? <Settings section={route.section} preferences={preferences} onPreferencesChange={setPreferences} masterData={masterData} onMasterDataChange={updateMasterData} catalogue={catalogue} entries={entries} clipsReady={clipsReady} packs={packs} audio={audio} household={{ mode: data.mode, stats: data.stats, onRestore: data.restore, onExportAll: data.exportAll, connection: data.connection, schemaVersion: data.schemaVersion, serverVersion: data.serverVersion, pendingCount, legacy: data.legacy, migrating: data.migrating, onMigrate: data.migrateDevice, onRefresh: data.refresh, exportPack: requestPackExport }} logbook={{ sessions, onCorrect: data.correctSession, onDelete: data.deleteSession, onLoadMore: data.loadMoreSessions, fetchSession: data.fetchSession }} />
         : editing ? <Editor key={`${editing.id}:${editing.mode}`} mode={editing.mode} workoutId={editing.mode === 'replace' ? editing.id : undefined} initial={editing.initial} importedFrom={'importedFrom' in editing ? editing.importedFrom : undefined} catalogue={catalogue} difficulty={preferences.difficulty} onAddMovement={addMovement} authors={authors} authorSpelling={authorSpelling(masterData)} savedAt={editingDraft?.updatedAt} onAutosave={draft => autosaveDraft(editing.id, editing.mode, draft)} onSave={(draft, overwrite) => saveDraft(editing.id, editing.mode, draft, overwrite)} onDiscard={() => { discardDraft(editing.id); window.location.hash = editing.mode === 'replace' ? workoutHref(editing.id) : route.name === 'copy' ? workoutHref(route.id) : '#/'; }} />
@@ -308,7 +312,8 @@ export default function App() {
         <p>The file carries the workouts below with their attribution. Household names, results and settings stay here.</p>
         <ul className={styles.exportList}>{exportRequest?.workouts.map(workout => <li key={workout.id}><strong>{workout.title}</strong>{workout.attribution && <small>{[workout.attribution.author ? `by ${workout.attribution.author}` : '', workout.attribution.sourceUrl ?? '', workout.attribution.notes ?? ''].filter(Boolean).join(' · ')}</small>}</li>)}</ul>
       </ConfirmDialog>
-      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span className={styles.footerLinks}><span className={styles.footerMode} tabIndex={0} data-tip={SHAPE_TIPS[data.mode]} aria-label={`${SHAPE_LABELS[data.mode]}: ${SHAPE_TIPS[data.mode]}`}>{SHAPE_LABELS[data.mode]}</span><a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer" title="Source code on GitHub"><Icon name="github" size={15} />Source</a><a href={`${import.meta.env.BASE_URL}LICENSE`} target="_blank" rel="noreferrer" title="GNU General Public License, version 3">GPLv3</a></span></footer>
+      <footer className={styles.footer}><span>NOT BORN. <em className={styles.made}>MADE.</em></span><span className={styles.footerLinks}><span className={styles.footerMode} tabIndex={0} data-tip={SHAPE_TIPS[data.mode]} aria-label={`${SHAPE_LABELS[data.mode]}: ${SHAPE_TIPS[data.mode]}`}>{SHAPE_LABELS[data.mode]}</span><button type="button" className={styles.footerKeys} onClick={showShortcuts}>Shortcuts</button><a href={`${__OPENWOD_REPO__}/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" title="Release notes">v{appVersion}</a><a className={styles.footerRepo} href={__OPENWOD_REPO__} target="_blank" rel="noreferrer" title="Source code on GitHub"><Icon name="github" size={15} />Source</a><a href={`${import.meta.env.BASE_URL}LICENSE`} target="_blank" rel="noreferrer" title="GNU General Public License, version 3">GPLv3</a></span></footer>
+      <ShortcutsDialog dialog={shortcuts} preferences={preferences} />
     </main>
   </div>;
 }

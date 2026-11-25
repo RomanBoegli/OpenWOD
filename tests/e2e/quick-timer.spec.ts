@@ -30,6 +30,7 @@ test.describe('quick timer (LIB-09, UI-30)', () => {
     await expect(page.getByText('UP NEXT')).toHaveCount(0);
     await expect(page.getByText('YOUR STATION')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Switch to (context|focus) view/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Zoom (in|out)$/ })).toHaveCount(0);
     await expect(page.getByTestId('done')).toHaveCount(0);
     // The ring counts the rounds, there being one movement.
     await expect(page.getByTestId('round-donut')).toHaveAccessibleName(/^Round 1 of 2/);

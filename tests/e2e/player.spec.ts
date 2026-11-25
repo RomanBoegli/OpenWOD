@@ -150,7 +150,7 @@ test.describe('player', () => {
   test('persists athlete names, sound and view preferences across a reload', async ({ page }) => {
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.getByRole('textbox', { name: 'Athlete A' }).fill('Mia');
-    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Training view' }).click();
+    await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'Training View' }).click();
     await page.getByRole('radiogroup', { name: 'Sound' }).getByRole('radio', { name: 'Beeps only' }).check();
     await page.goto(PLAYER); await ready(page);
     await page.getByRole('button', { name: 'Context', exact: true }).click();
@@ -340,6 +340,126 @@ test.describe('the clock takes the room a workout leaves (UI-27)', () => {
     // Tab walks the frame's own buttons and never lands in the ruler.
     for (let step = 0; step < 14; step++) { await page.keyboard.press('Tab'); expect(await page.evaluate(() => Boolean(document.activeElement?.closest('[inert]')))).toBe(false); }
   });
+});
+
+test.describe('the stations’ zoom (UI-33)', () => {
+  const zoomIn = (page: Page) => page.getByRole('button', { name: 'Zoom in', exact: true }), zoomOut = (page: Page) => page.getByRole('button', { name: 'Zoom out', exact: true });
+  /** The zoom the frame draws its stations at, and what this browser keeps of the choice. */
+  const zoomOf = (page: Page) => page.locator('[data-performing=true] [data-wash]').evaluate(player => Number((player as HTMLElement).style.getPropertyValue('--stage-zoom')));
+  const stored = (page: Page) => page.evaluate(() => localStorage.getItem('openwod.stage-zoom.v1'));
+  const height = (page: Page, selector: string) => page.locator(selector).first().evaluate(element => element.getBoundingClientRect().height);
+  const begin = async (page: Page, id: string, [width, height]: readonly [number, number], zoom?: string) => {
+    await page.setViewportSize({ width, height });
+    // The player reads the stored step when it opens, so the step is put there from the library first.
+    await page.goto('/#/'); await page.getByRole('heading', { level: 1, name: 'Pick your next session' }).waitFor();
+    if (zoom) await page.evaluate(value => localStorage.setItem('openwod.stage-zoom.v1', value), zoom);
+    await page.goto(`/#/wod/${id}/play`); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 12_000);
+  };
+
+  test('AT-40: the buttons and the + and - keys draw the stations larger or smaller, nothing scrolls, and the choice stays in this browser', async ({ page }) => {
+    await page.setViewportSize({ width: 1180, height: 796 });
+    await page.goto(PLAYER); await ready(page);
+    // Before the session there is nothing to zoom.
+    await expect(zoomIn(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 12_000);
+    await expect.poll(() => zoomOf(page)).toBe(1);
+    const station = 'section[data-athlete=A]', base = await height(page, station);
+    await zoomIn(page).click();
+    await expect.poll(() => zoomOf(page)).toBe(1.15);
+    await expect.poll(() => height(page, station)).toBeGreaterThan(base * 1.1);
+    await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+    // The keys do the same, from wherever the focus is not on a button.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('-'); await page.keyboard.press('-');
+    await expect.poll(() => zoomOf(page)).toBe(.85);
+    await expect.poll(() => height(page, station)).toBeLessThan(base * .9);
+    await page.keyboard.press('+');
+    await expect.poll(() => zoomOf(page)).toBe(1);
+    await expect.poll(() => height(page, station)).toBe(base);
+    // Down to the smallest step, where the button has nothing left to do.
+    await zoomOut(page).click(); await zoomOut(page).click();
+    await expect.poll(() => zoomOf(page)).toBe(.75);
+    await expect(zoomOut(page)).toBeDisabled();
+    await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+    // It is this browser's own: under its own key, not among the settings the household shares, and the next session has it.
+    await expect.poll(() => stored(page)).toBe('0.75');
+    expect(await page.evaluate(() => localStorage.getItem('openwod.preferences.v1') ?? '')).not.toMatch(/zoom/i);
+    await page.goto('/#/wod/fran/play'); await ready(page);
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await advance(page, 12_000);
+    await expect.poll(() => zoomOf(page)).toBe(.75);
+    // The keyboard sheet lists the two keys. In the training view it opens on the ? key.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('?');
+    await expect(page.getByRole('dialog', { name: 'Keyboard' })).toContainText('Larger or smaller stations');
+  });
+
+  test('a step the frame cannot hold is taken back, and comes back when the frame has the room', async ({ page }) => {
+    // The largest step is asked for in a frame too low for it by some 80 px, in every engine.
+    await begin(page, 'full-body-partner', [1180, 520], '1.5');
+    await expect.poll(() => zoomOf(page)).toBeLessThan(1.5);
+    await expect.poll(() => zoomOf(page)).toBeGreaterThanOrEqual(1);
+    await expect(zoomIn(page)).toBeDisabled();
+    await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+    // What was asked for is kept, so a taller frame shows it, and the low one takes it back again.
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('openwod.stage-zoom.v1'))).toBe('1.5');
+    await page.setViewportSize({ width: 1180, height: 1400 });
+    await expect.poll(() => zoomOf(page)).toBe(1.5);
+    await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+    await page.setViewportSize({ width: 1180, height: 520 });
+    await expect.poll(() => zoomOf(page)).toBeLessThan(1.5);
+    await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+    // A smaller step is never refused.
+    for (let step = 0; step < 5; step++) if (await zoomOut(page).isEnabled()) await zoomOut(page).click();
+    await expect.poll(() => zoomOf(page)).toBe(.75);
+  });
+
+  test('the context view, which shows the game plan in place of the stations, zooms its rows', async ({ page }) => {
+    await begin(page, 'partner-circuit', [1180, 796]);
+    await page.getByRole('button', { name: 'Switch to context view' }).click();
+    const row = '[aria-current=step]';
+    await expect(page.locator(row)).toBeVisible();
+    const base = await height(page, row);
+    await zoomIn(page).click(); await zoomIn(page).click();
+    await expect.poll(() => zoomOf(page)).toBe(1.3);
+    await expect.poll(() => height(page, row)).toBeGreaterThan(base * 1.2);
+    await expect.poll(() => frame(page)).toMatchObject({ scroll: 0 });
+    // The row under way stays inside the list that scrolls.
+    await expect(page.locator(row)).toBeInViewport({ ratio: 1 });
+  });
+
+  test('a phone has no zoom: its top row has no room for the buttons, and a stored step changes nothing', async ({ page }) => {
+    await begin(page, 'partner-circuit', [390, 844]);
+    await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeVisible();
+    await expect(zoomIn(page)).toBeHidden();
+    await expect(zoomOut(page)).toBeHidden();
+    const plain = await height(page, 'section[data-athlete=A]');
+    await page.getByRole('button', { name: 'End session', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'End session' }).click();
+    await begin(page, 'partner-circuit', [390, 844], '1.5');
+    await expect.poll(() => height(page, 'section[data-athlete=A]')).toBe(plain);
+    await expect.poll(() => frame(page)).toEqual({ scroll: 0, squeezed: 0, overlap: 0, lanes: 0 });
+  });
+});
+
+test('the footer’s Shortcuts link opens the keyboard sheet from any page, and the training view has no such link', async ({ page }) => {
+  for (const path of ['/#/', '/#/settings', '/#/wod/fran']) {
+    await page.goto(path);
+    await page.locator('footer').getByRole('button', { name: 'Shortcuts', exact: true }).click();
+    const sheet = page.getByRole('dialog', { name: 'Keyboard' });
+    await expect(sheet).toContainText('These keys work in the training view.');
+    await expect(sheet).toContainText('Start, pause, resume, or Ready');
+    await sheet.getByRole('button', { name: 'Close keyboard help' }).click();
+    await expect(sheet).toBeHidden();
+  }
+  await page.goto(PLAYER); await ready(page);
+  await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+  await advance(page, 12_000);
+  await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Shortcuts', exact: true })).toBeHidden();
 });
 
 test.describe('overview', () => {

@@ -465,6 +465,7 @@ export class WorkoutAudio {
 
   /** The sample announcement in the chosen voice, from `at` on the audio clock. */
   private saySample(at: number) {
+    this.nameless = false; // The sample always names its stations, also right after a quick timer.
     const result = this.announce(WorkoutAudio.sample, 'Ready to train.', ['get-ready'], at);
     if (result === 'mixed') this.onError?.('The movement names were read by the device voice: their recordings could not be loaded. Reload the page and try again, or pick another voice.');
   }
@@ -501,7 +502,9 @@ export class WorkoutAudio {
   private lastAcks = '';
   private lastEnded?: { occurrenceId: string; manual: boolean; status: string };
 
-  update(projection: Projection, clocks: ClockValues) {
+  /** `nameless` comes with every update, so the very first cue of a quick timer already leaves the names out (UI-30). */
+  update(projection: Projection, clocks: ClockValues, nameless = false) {
+    this.nameless = nameless;
     const token = `${projection.sessionId}:${projection.occurrenceId}:${projection.status}:${projection.clockScope}:${projection.nudges}`;
     // Start dispatches in the same gesture as the unlock, before the context has resumed: scheduling then would fall back to the
     // device voice for "Get ready" and skip the prep countdown. The next frame after the resume schedules everything on the clips.

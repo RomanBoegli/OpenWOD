@@ -58,7 +58,7 @@ export function EquipmentSettings({ preferences, onPreferencesChange, masterData
         <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
       </div>}
       <MasterList label="Equipment in the library" selectable actionsWidth="110px" empty={`Nothing matches “${query}”.`}
-        columns={[{ key: 'name', caption: 'Name' }, { key: 'usage', caption: 'Workouts', width: '90px', align: 'end' }, { key: 'owned', caption: 'I have it', width: '80px' }]}
+        columns={[{ key: 'name', caption: 'Name' }, { key: 'usage', caption: 'Workouts', width: '96px', align: 'center' }, { key: 'owned', caption: 'I have it', width: '96px', align: 'center' }]}
         rows={visible.map(name => ({
           id: name,
           cells: { name: <strong>{name}</strong>, usage: usage.get(equipmentKey(name)) ?? 0, owned: <input type="checkbox" checked={owned(name)} aria-label={`I have ${name}`} onChange={event => setOwned(name, event.target.checked)} /> },

@@ -21,9 +21,8 @@ import { collectPrescriptions } from '../../../packages/domain/src/library';
 import { isQuickTimer } from '../../../packages/domain/src/quick-timer';
 import { countsAsDone, type SessionRecord } from './session-log';
 import { roundSessionTimes, sessionOutcome } from '../../../packages/engine/src/records';
-import { deviceId, isWebKit } from './data/device';
-import justDoItWebm from './assets/just-do-it.webm';
-import justDoItMov from './assets/just-do-it.mov';
+import { deviceId } from './data/device';
+import { stillOnly as reducedMotion, useCameo } from './cameo';
 import { DATA_MODE } from './data/mode';
 import { PACK_EXTENSION, serialisePackFile, type WorkoutPack } from '../../../packages/domain/src/pack';
 import { elapsedText, lastSaved, type Recovery } from './data/checkpoints';
@@ -33,6 +32,7 @@ import type { LiveOffers } from './data/use-live-sessions';
 import { rateDifficulty } from '../../../packages/domain/src/difficulty';
 import { roundProgress, type RoundProgress } from '../../../packages/domain/src/outline';
 import { RoundDonut, type RoundView } from './RoundDonut';
+import { loadStageZoom, saveStageZoom, STAGE_ZOOMS, stepStageZoom } from './stage-zoom';
 import { takeStart } from './start';
 import { useResolvedTheme } from './theme';
 import styles from './App.module.css';
@@ -253,13 +253,15 @@ interface PlayerProps {
   onSessionEnd: (record: SessionRecord) => void;
   /** A session that ended without a record to keep still clears its checkpoint. */
   onSessionClear?: (sessionId: string) => void;
+  /** Opens the app's keyboard sheet (Shortcuts.tsx). */
+  onShortcuts: () => void;
   /** Restore this checkpoint instead of starting fresh (ENG-12). */
   recovery?: Recovery;
   /** Sessions running on other devices of the household (ENG-15): this one steps aside when it is among them, and before Start one of this workout is offered. */
   live?: LiveOffers;
 }
 
-export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, recovery, live }: PlayerProps) {
+export function Player({ workout: workoutProp, audio, preferences, catalogue, onPreferencesChange, onPerformingChange, onSessionEnd, onSessionClear, onShortcuts, recovery, live }: PlayerProps) {
   // The session plays the workout it started with; an edit in the library never changes a running session (AT-14).
   const [workout] = useState(workoutProp);
   const { names, loadsFor, loadUnit, perimeterWidth, washGain, amberMs, redMs, markColors, pauseColor, nudgeSeconds } = preferences;
@@ -278,29 +280,12 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   // The fun buttons (UI-31, UI-32): a party horn and the Just do it clip, for whoever switched them on. Both are sound, so Silent
   // mode has neither, and with reduced motion the clip stays away.
   const fun = preferences.funButtons && preferences.soundMode !== 'silent';
-  const stillOnly = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const cameoVideo = useRef<HTMLVideoElement>(null);
-  const [cameo, setCameo] = useState(false);
-  /**
-   * Brings the speaker on, or sends him away. The file is asked for at the first tap and never with the app (ENG-11), the one
-   * this engine shows transparent: WebKit the HEVC, every other the VP9. Playback starts inside the tap, which is what an
-   * iPhone asks of a video with sound.
-   */
-  const toggleCameo = useCallback(() => {
-    const video = cameoVideo.current;
-    if (!video) return;
-    if (!video.paused) { video.pause(); setCameo(false); return; }
-    if (!video.getAttribute('src')) video.src = isWebKit() ? justDoItMov : justDoItWebm;
-    try { video.currentTime = 0; } catch { /* Nothing loaded yet: it starts at the beginning anyway. */ }
-    video.volume = Math.min(1, Math.max(0, preferences.beepVolume));
-    setCameo(true);
-    void video.play().catch(() => setCameo(false));
-  }, [preferences.beepVolume]);
+  const stillOnly = reducedMotion();
+  const { on: cameo, toggle: toggleCameo, props: cameoProps } = useCameo(preferences.beepVolume);
   const partyHorn = useCallback(() => { void audio.playPartyHorn(); }, [audio]);
   const [following, setFollowing] = useState(true);
   const [highlight, setHighlight] = useState<string>();
   const stopDialog = useRef<HTMLDialogElement>(null);
-  const helpDialog = useRef<HTMLDialogElement>(null);
   const context = useRef<HTMLDivElement>(null);
   const activeRow = useRef<HTMLDivElement>(null);
   const timer = useRef<HTMLDivElement>(null);
@@ -338,6 +323,9 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const editable = status === 'ready' || terminal;
   /** The fun buttons show from the first second of a session to its finish screen. */
   const funShown = fun && status !== 'ready';
+  // The stations' zoom (UI-33), this browser's own: what was asked for, and what the frame shows of it.
+  const [zoomWish, setZoomWish] = useState(loadStageZoom);
+  const [zoom, setZoom] = useState(zoomWish);
   const funNow = useRef({ horn: false, clip: false });
   funNow.current = { horn: funShown, clip: funShown && !stillOnly };
   const active = ['running', 'preparing'].includes(status);
@@ -408,23 +396,45 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   const several = useMemo(() => plan.occurrences.filter(item => item.phase === 'work').length > 1, [plan]);
   const look = useMemo<StageLook>(() => ({ names, loadUnit, loadsFor: workout.participants === 2 ? loadsFor : undefined, pair: workout.participants === 2, plain: timerOnly }), [names, loadUnit, loadsFor, workout.participants, timerOnly]);
   const ruled = !editable && view === 'focus';
+  // The zoom (UI-33) is applied here too, where the room is measured, because what was asked for is not always what the frame
+  // can hold: a step above 100 % that makes the frame scroll or presses a station is taken back step by step, at once and
+  // again after a resize or a turn. A step of 100 % or less is never refused.
+  const zoomable = !editable && !timerOnly;
   useLayoutEffect(() => {
-    const frame = player.current, stack = rulerStack.current;
-    if (!ruled || !frame || !stack) return;
+    const frame = player.current, stack = ruled ? rulerStack.current : null;
+    if (!frame || editable) return;
     let seen = 0, size = '';
     const measure = () => {
+      if (!stack) return;
       const now = `${window.innerWidth}x${window.innerHeight}`;
       if (now !== size) { size = now; seen = 0; }
       seen = Math.max(seen, stageBody.current?.getBoundingClientRect().height ?? 0);
       const room = `${Math.ceil(Math.max(stack.getBoundingClientRect().height, seen))}px`;
       if (frame.style.getPropertyValue('--stage-room') !== room) frame.style.setProperty('--stage-room', room);
     };
-    measure();
+    const holds = () => frame.scrollHeight <= frame.clientHeight + 1 && ![...frame.querySelectorAll('section[data-athlete]')].some(lane => lane.scrollHeight > lane.clientHeight + 1);
+    const fit = () => {
+      let index = zoomable ? Math.max(0, (STAGE_ZOOMS as readonly number[]).indexOf(zoomWish)) : STAGE_ZOOMS.indexOf(1);
+      for (;; index--) {
+        frame.style.setProperty('--stage-zoom', String(STAGE_ZOOMS[index]));
+        seen = 0;
+        measure();
+        if (STAGE_ZOOMS[index] <= 1 || holds()) break;
+      }
+      setZoom(STAGE_ZOOMS[index]);
+    };
+    fit();
     const observer = new ResizeObserver(measure);
-    observer.observe(stack);
-    if (stageBody.current) observer.observe(stageBody.current);
-    return () => { observer.disconnect(); frame.style.removeProperty('--stage-room'); };
-  }, [ruled]);
+    if (stack) observer.observe(stack);
+    if (stack && stageBody.current) observer.observe(stageBody.current);
+    window.addEventListener('resize', fit);
+    return () => { observer.disconnect(); window.removeEventListener('resize', fit); frame.style.removeProperty('--stage-room'); frame.style.removeProperty('--stage-zoom'); };
+  }, [ruled, editable, zoomable, zoomWish]);
+  const canZoom = { out: zoomable && zoom > STAGE_ZOOMS[0], in: zoomable && zoom < STAGE_ZOOMS[STAGE_ZOOMS.length - 1] && zoom >= zoomWish };
+  /** A step from what the frame shows, which is what the buttons are read against. */
+  const stepZoom = (by: 1 | -1) => { if (by === 1 ? !canZoom.in : !canZoom.out) return; const next = stepStageZoom(zoom, by); saveStageZoom(next); setZoomWish(next); };
+  const zoomNow = useRef(stepZoom);
+  zoomNow.current = stepZoom;
   // The CAP or TURN line under the clock keeps its row for the whole session once any block of the plan shows one, so its coming and going between blocks never moves the digits.
   const secondaryLine = useMemo(() => plan.occurrences.some(item => {
     if (item.phase !== 'work') return false;
@@ -474,7 +484,6 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
   }, [continuedOn, editable, takenOver, detach, engine, onSessionClear]);
   // Clips and this workout's recorded movement names are decoded before Play so a session never waits on the network.
   useEffect(() => { void audio.preload(); if (!timerOnly) void audio.prepareNames(collectPrescriptions(workout).map(item => audio.nameKey(item))); }, [audio, workout, catalogue, timerOnly]);
-  useEffect(() => { audio.nameless = timerOnly; return () => { audio.nameless = false; }; }, [audio, timerOnly]);
   useEffect(() => () => onPerformingChange(false), [onPerformingChange]);
 
   // Log the session once when it ends: completed always, an ended session when it covered enough of the plan.
@@ -508,7 +517,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       if (document.querySelector('dialog[open]')) return;
       const id = engine.occurrenceId;
       const controlsNow = engine.project().controls;
-      if (event.key === '?') { helpDialog.current?.showModal(); return; }
+      if (event.key === '?') { onShortcuts(); return; }
       if (event.key === ' ') { event.preventDefault(); for (const control of ['pause', 'resume', 'ready', 'play'] as const) if (controlsNow.includes(control)) { send(control, id); return; } }
       else if (event.key === 'Enter') { event.preventDefault(); if (controlsNow.includes('done')) send('done', id); else if (controlsNow.includes('switch')) send('switch', id); }
       else if (event.key === 'ArrowRight' && event.shiftKey && controlsNow.includes('nextSection')) send('nextSection', id);
@@ -519,6 +528,8 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       else if ((event.key === 'j' || event.key === 'J') && controlsNow.includes('nudge')) send('nudge', id, { delta: -nudgeMs });
       else if ((event.key === 'h' || event.key === 'H') && funNow.current.horn) partyHorn();
       else if ((event.key === 'd' || event.key === 'D') && funNow.current.clip) toggleCameo();
+      else if (event.key === '+' || event.key === '=') zoomNow.current(1);
+      else if (event.key === '-' || event.key === '_') zoomNow.current(-1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -573,18 +584,21 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
     }
   }), [subscribeClock, status, terminal, workout.prepMs, firstDisplayMs, clockScope, countUp, amberMs, redMs, isRest, isPrep]);
 
-  // The context list keeps the movement under way in its middle; the row's offset is already measured from the list.
+  // The context list keeps the movement under way in its middle. The row is placed by what it measures on screen against
+  // the list, which holds for a zoomed row too (UI-33).
   // The observer also re-centres when the list or the enlarged active row change size, and it fires once on its own.
   useEffect(() => {
     const list = context.current, row = activeRow.current;
     if (!following || view !== 'context' || !list || !row) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const observer = new ResizeObserver(() => list.scrollTo({ top: Math.max(0, row.offsetTop - (list.clientHeight - row.offsetHeight) / 2), behavior: reduced ? 'instant' : 'smooth' }));
+    const observer = new ResizeObserver(() => { const box = list.getBoundingClientRect(), at = row.getBoundingClientRect(); list.scrollTo({ top: Math.max(0, list.scrollTop + at.top - box.top - (list.clientHeight - at.height) / 2), behavior: reduced ? 'instant' : 'smooth' }); });
     observer.observe(list); observer.observe(row);
     return () => observer.disconnect();
   }, [projection.occurrenceId, highlight, following, view]);
 
   const capLine = projection.capMs !== undefined && (clockScope !== 'cap' || countUp);
+  /** What the last line of the frame says beside the elapsed time. */
+  const sessionHint = status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? timerOnly ? 'Breathe.' : 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : '';
   const turnLine = isBlock && format === 'youGoIGo' && clockScope !== 'turn';
   const restLabel = timerOnly ? 'Rest' : current.phase === 'roundRest' ? 'Round rest' : current.phase === 'transition' ? 'Transition' : 'Block rest';
   const phaseLabel = status === 'ready' ? 'Ready when you are' : status === 'paused' ? projection.pauseReason === 'hidden' ? 'Paused · app was hidden' : projection.pauseReason === 'recovered' ? 'Recovered · paused' : 'Workout paused' : status === 'awaitingReady' ? 'Next block · ready?' : status === 'completed' ? 'Workout complete' : status === 'aborted' ? 'Workout ended' : isPrep ? 'Get ready' : isRest ? restLabel : format === 'amrap' ? 'AMRAP' : format === 'emom' ? 'Interval' : format === 'youGoIGo' ? `${turn?.athlete === 'B' ? names.B : names.A} works` : format === 'strength' ? 'Set' : timing === 'manual' ? 'Work · tap Done' : 'Work';
@@ -638,7 +652,7 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
       })() : intro !== undefined && intro === current.sectionIndex && !terminal ? <div key={`start-${intro}`} className={own.blockCard} data-kind="start" data-testid="block-card" aria-hidden="true">
         <span>BLOCK {intro + 1} OF {plan.sections.length}</span><strong>{section.title}</strong><small>{[FORMAT_LABELS[format], roundView && roundView.rounds > 1 ? `${roundView.rounds} rounds` : '', section.capMs ? `cap ${displayTime(section.capMs)}` : ''].filter(Boolean).join(' · ')}</small>
       </div> : null}
-      <div className={styles.playerTop}><span><span className={styles.liveDot} />{timerOnly ? workout.title : section.title}{!timerOnly && <span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span>}</span><span><span className={styles.position}>{positionLabel}</span>{funShown && <button className={styles.iconButton} aria-label="Party horn" title="Party horn (H)" onClick={partyHorn}><Icon name="horn" size={18} /></button>}{funShown && !stillOnly && <button className={styles.iconButton} aria-label="Just do it" title="Just do it (D)" aria-pressed={cameo} onClick={toggleCameo}><Icon name="bolt" size={18} /></button>}{!editable && !timerOnly && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
+      <div className={styles.playerTop}><span><span className={styles.liveDot} />{timerOnly ? workout.title : section.title}{!timerOnly && <span className={own.keyHint}>{FORMAT_LABELS[format].toUpperCase()}</span>}</span><span><span className={styles.position}>{positionLabel}</span>{zoomable && <><button className={styles.iconButton} data-zoom aria-label="Zoom out" title="Smaller stations (-)" disabled={!canZoom.out} onClick={() => stepZoom(-1)}><Icon name="minus" size={18} /></button><button className={styles.iconButton} data-zoom aria-label="Zoom in" title="Larger stations (+)" disabled={!canZoom.in} onClick={() => stepZoom(1)}><Icon name="plus" size={18} /></button></>}{funShown && <button className={styles.iconButton} aria-label="Party horn" title="Party horn (H)" onClick={partyHorn}><Icon name="horn" size={18} /></button>}{funShown && !stillOnly && <button className={styles.iconButton} aria-label="Just do it" title="Just do it (D)" aria-pressed={cameo} onClick={toggleCameo}><Icon name="bolt" size={18} /></button>}{!editable && !timerOnly && <button className={styles.iconButton} aria-label={view === 'focus' ? 'Switch to context view' : 'Switch to focus view'} onClick={() => setView(view === 'focus' ? 'context' : 'focus')}><Icon name={view === 'focus' ? 'list' : 'focus'} size={18} /></button>}</span></div>
       {(shown.bar || shown.barPercent) && <div className={styles.overall} aria-label="Overall progress">{shown.bar && <span className={styles.overallTrack} data-testid="overall-progress">{plan.sections.map((item, index) => <span key={item.id} className={styles.overallSegment} data-segment={index} style={{ flexGrow: item.endIndex - item.startIndex + 1 }}><span ref={element => { segmentFills.current[index] = element; }} className={styles.overallFill} /></span>)}</span>}{shown.barPercent && <span ref={overallText} className={styles.overallText}>0 % DONE</span>}</div>}
       <div className={styles.clockBlock}>
         <div className={styles.phase} role="status" aria-live="polite">{phaseLabel}</div>
@@ -711,15 +725,14 @@ export function Player({ workout: workoutProp, audio, preferences, catalogue, on
         <div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => send('stop', projection.occurrenceId)}><Icon name="close" size={16} />End session</button><button className={styles.primaryButton} onClick={() => send(status === 'awaitingReady' ? 'ready' : 'resume', projection.occurrenceId)}><Icon name="play" />{status === 'awaitingReady' ? 'Start next block' : 'Resume'}</button></div>
       </section>}
       {soundError && <p className={styles.notice} role="status">{soundError}</p>}
-      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{status === 'ready' ? workout.prepMs ? `${Math.round(workout.prepMs / 1000)}-second prep. Find your rhythm.` : 'Start when you’re ready.' : isPrep ? 'Find your rhythm.' : isRest ? timerOnly ? 'Breathe.' : 'Breathe. Your next stations are above.' : timing === 'manual' && !isBlock ? 'Tap Done when the work is finished.' : format === 'emom' ? 'The next interval starts on the clock.' : ''}</span></div>
+      <div className={styles.sessionLine}><span>ELAPSED <span ref={elapsed}>00:00</span>{projection.modified && <span className={styles.modified}> · MODIFIED</span>}{checkpointStatus === 'failed' && <span className={styles.warnText}> · <Icon name="alert" size={11} />NOT SAVING PROGRESS ON THIS DEVICE</span>}</span><span>{sessionHint}</span></div>
       {/* The Just do it clip (UI-32) stands over the frame, takes no tap and moves nothing. Its element waits without a file until the first tap. */}
-      {fun && !stillOnly && <div className={own.cameo} data-on={cameo} aria-hidden="true"><video ref={cameoVideo} playsInline preload="none" onEnded={() => setCameo(false)} onError={() => setCameo(false)} /></div>}
+      {fun && !stillOnly && <div className={own.cameo} data-on={cameo} aria-hidden="true"><video {...cameoProps} /></div>}
       {ruled && <StageRuler stations={stations} look={look} stack={rulerStack} />}
     </div>
 
-    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={() => helpDialog.current?.showModal()}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name={timerOnly ? 'clock' : 'list'} size={17} />{timerOnly ? 'Timer settings' : 'Details'}</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a>{!timerOnly && <button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button>}</div></div>
+    <div className={styles.bottomBar}><div className={styles.readiness}><span className={styles.smallDot} /><span>{preferences.soundMode === 'silent' ? 'Silent mode' : preferences.soundMode === 'voice' ? 'Voice + beeps' : 'Beeps only'}</span><span className={styles.readinessDivider}>·</span><span>{wakeStatus}</span><span className={styles.readinessDivider}>·</span><button className={`${styles.quietButton} ${styles.keysButton}`} onClick={onShortcuts}><span className={styles.kbd}>?</span>Keys</button></div><div className={styles.sharing}><a className={styles.quietButton} href={workoutHref(workout.id)}><Icon name={timerOnly ? 'clock' : 'list'} size={17} />{timerOnly ? 'Timer settings' : 'Details'}</a><a className={styles.quietButton} href="#/"><Icon name="grid" size={17} />All workouts</a>{!timerOnly && <button className={styles.quietButton} onClick={() => exportWorkoutFile(workout)}><Icon name="download" size={17} />Export WOD</button>}</div></div>
 
-    <dialog ref={helpDialog} className={styles.dialog} aria-labelledby="help-title"><div className={styles.dialogHeading}><h2 id="help-title">Keyboard</h2><button className={styles.iconButton} aria-label="Close keyboard help" onClick={() => helpDialog.current?.close()}><Icon name="close" /></button></div><ul className={styles.shortcuts}><li><span className={styles.kbd}>Space</span>Start, pause, resume, or Ready</li><li><span className={styles.kbd}>Enter</span>Done, or Switch in you-go-I-go</li><li><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next interval</li><li><span className={styles.kbd}>Shift</span><span className={styles.kbd}>←</span><span className={styles.kbd}>→</span>Previous or next block</li><li><span className={styles.kbd}>J</span><span className={styles.kbd}>L</span>Back or forward {nudgeSeconds} seconds on the clock</li>{fun && <li><span className={styles.kbd}>H</span>{!stillOnly && <span className={styles.kbd}>D</span>}Party horn{!stillOnly && ', or the Just do it speech'}</li>}<li><span className={styles.kbd}>?</span>This sheet</li></ul></dialog>
     <dialog ref={stopDialog} className={styles.dialog} aria-labelledby="stop-title"><h2 id="stop-title">End this session?</h2><p>The timer will stop. You can start a new session whenever you’re ready.</p><div className={styles.dialogActions}><button className={styles.quietButton} onClick={() => stopDialog.current?.close()}>Keep training</button><button className={`${styles.primaryButton} ${styles.dangerFill}`} onClick={() => { send('stop', engine.occurrenceId); stopDialog.current?.close(); }}>End session</button></div></dialog>
   </div>;
 }

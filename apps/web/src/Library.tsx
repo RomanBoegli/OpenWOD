@@ -8,7 +8,7 @@ import { DIFFICULTY_LABELS, type DifficultyLevel } from '../../../packages/domai
 import { FORMAT_LABELS, SECTION_FORMATS, type SectionFormat } from '../../../packages/domain/src/schema';
 import type { Preferences } from './preferences';
 import { collectionOf, type Collection } from './master-data';
-import { agoText, lastDone, timesDone } from './session-log';
+import { lastDone } from './session-log';
 import type { Connection, LegacyData, SessionView } from './data/use-library-data';
 import type { DataMode } from './data/mode';
 import type { OutboxItem } from './data/outbox';
@@ -289,13 +289,11 @@ export function Library({ mode, entries, collections, sessions, onImportPack, on
 
     {visible.length === 0 ? <div className={styles.empty}><Travolta /><h2>Nothing matches yet</h2><p>Try a broader search, or import a .wod.yaml file.</p></div> : <ul ref={grid} className={styles.grid} aria-label="Workouts">
       {visible.map(({ workout, summary, source, pending }) => {
-        const last = lastDone(sessions, workout.id);
-        const count = timesDone(sessions, workout.id);
         // The whole tile opens the workout; its own links, buttons and a text selection keep their meaning.
         const open = (event: React.MouseEvent<HTMLLIElement>) => { if ((event.target as HTMLElement).closest('a, button') || window.getSelection()?.toString()) return; window.location.hash = workoutHref(workout.id).replace(/^#/, ''); };
         return <li key={workout.id} className={styles.card} data-source={source} data-ripple data-tilt onClick={open}>
-          {/* Chips state what holds for the whole workout; formats belong to its blocks and show on the workout page. */}
-          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} />{collectionOf(collections, workout.id) && <Chip kind="collection" title="Collection">{collectionOf(collections, workout.id)!.title}</Chip>}<DifficultyChip difficulty={summary.difficulty} />{last && <Chip kind="done" icon="check" title={`${count === 1 ? 'Done once' : `Done ${count}×`}, last on ${new Date(last.finishedAt).toLocaleString()}`}>{agoText(last.finishedAt)}</Chip>}{pending && <Chip kind="neutral" icon="upload" title="Saved on this device; it reaches the household server when the server is back">Not yet on the server</Chip>}</span></div>
+          {/* Chips state what holds for the whole workout and never change with what was played: formats belong to its blocks, and when it was last done to its page. */}
+          <div className={styles.cardTop}><span className={styles.badges}><AthletesChip participants={summary.participants} />{collectionOf(collections, workout.id) && <Chip kind="collection" title="Collection">{collectionOf(collections, workout.id)!.title}</Chip>}<DifficultyChip difficulty={summary.difficulty} />{pending && <Chip kind="neutral" icon="upload" title="Saved on this device; it reaches the household server when the server is back">Not yet on the server</Chip>}</span></div>
           <h2><a href={workoutHref(workout.id)}>{summary.title}</a></h2>
           {summary.description && <p className={styles.cardDescription}>{summary.description}</p>}
           <dl className={styles.facts}>

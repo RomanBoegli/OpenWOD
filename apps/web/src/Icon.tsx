@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type IconName = 'github' | 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'sectionNext' | 'sectionPrevious' | 'rewind' | 'fastForward' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'spark' | 'edit' | 'copy' | 'dice' | 'filter' | 'loading' | 'horn' | 'bolt';
+export type IconName = 'github' | 'play' | 'pause' | 'sound' | 'settings' | 'next' | 'previous' | 'sectionNext' | 'sectionPrevious' | 'rewind' | 'fastForward' | 'arrow' | 'back' | 'check' | 'close' | 'download' | 'upload' | 'clock' | 'users' | 'user' | 'list' | 'focus' | 'search' | 'trash' | 'sun' | 'moon' | 'auto' | 'grid' | 'switch' | 'undo' | 'plus' | 'flag' | 'skip' | 'alert' | 'spark' | 'edit' | 'copy' | 'dice' | 'filter' | 'loading' | 'horn' | 'bolt' | 'minus';
 
 const paths: Record<IconName, ReactNode> = {
   play: <path d="m9 5 11 7-11 7z" />,
@@ -40,6 +40,7 @@ const paths: Record<IconName, ReactNode> = {
   switch: <path d="M4 8h13m-4-4 4 4-4 4M20 16H7m4-4-4 4 4 4" />,
   undo: <path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  minus: <path d="M5 12h14" />,
   flag: <path d="M5 21V4h12l-2 4 2 4H5" />,
   skip: <path d="m5 5 9 7-9 7zM17 5v14" />,
   alert: <><path d="M12 3 2 20h20zM12 10v4" /><circle cx="12" cy="17" r=".6" /></>,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { compileWorkout } from '../../../packages/domain/src/compiler';
 import type { Workout } from '../../../packages/domain/src';
+import { isQuickTimer } from '../../../packages/domain/src/quick-timer';
 import { WorkoutEngine, type ClockValues, type Command, type CommandType, type Status } from '../../../packages/engine/src';
 import type { WorkoutAudio } from './audio';
 import { newId } from './ids';
@@ -26,6 +27,8 @@ const UPLINK_INTERVAL_MS = 3000;
 export function useWorkout(workout: Workout, audio: WorkoutAudio, options: WorkoutOptions = {}) {
   // The recovery applies to the first engine only; later renders may drop it without restarting the session.
   const [recovery] = useState(options.recovery);
+  /** A quick timer's cues name no movement (UI-30). Handed to the audio with every update, so no cue can come before it. */
+  const nameless = isQuickTimer(workout);
   const clockOffset = useRef(0);
   const [session, setSession] = useState(0);
   const [checkpointStatus, setCheckpointStatus] = useState<CheckpointStatus>('unknown');
@@ -114,9 +117,9 @@ export function useWorkout(workout: Workout, audio: WorkoutAudio, options: Worko
       if (lastCheckpoint.current?.revision === engine.revision && now() - lastUplink.current >= UPLINK_INTERVAL_MS) { lastUplink.current = now(); uplink.push({ checkpoint: lastCheckpoint.current, progress }); }
     }
     const clocks = engine.readClocks();
-    if (!__OPENWOD_TEST__) audio.update(next, clocks);
+    if (!__OPENWOD_TEST__) audio.update(next, clocks, nameless);
     for (const listener of listeners.current) listener(clocks);
-  }, [engine, audio, queues, uplink, save, now]);
+  }, [engine, audio, queues, uplink, save, now, nameless]);
 
   useEffect(() => {
     let frame = 0;

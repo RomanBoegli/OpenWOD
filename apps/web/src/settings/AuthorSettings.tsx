@@ -68,7 +68,7 @@ export function AuthorSettings({ masterData, onMasterDataChange, entries }: Sett
         <button type="button" className={shared.quietButton} onClick={() => setSelection([])}>Clear</button>
       </div>}
       <MasterList label="Authors in the library" selectable actionsWidth="220px" empty={query.trim() ? `Nothing matches “${query}”.` : 'No workout names an author yet.'}
-        columns={[{ key: 'name', caption: 'Name' }, { key: 'usage', caption: 'Workouts', width: '90px', align: 'end' }]}
+        columns={[{ key: 'name', caption: 'Name' }, { key: 'usage', caption: 'Workouts', width: '96px', align: 'center' }]}
         rows={visible.map(name => ({
           id: name,
           cells: { name: <strong>{name}</strong>, usage: used(name) },

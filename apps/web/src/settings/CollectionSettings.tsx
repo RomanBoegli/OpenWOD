@@ -35,7 +35,7 @@ export function CollectionSettings({ masterData, onMasterDataChange, entries, ho
       <p className={styles.hint}>Named lists of workouts, shown in the corner of each card and as a filter. A workout belongs to one collection at a time; adding it to another moves it. The collections that come with the app can be edited but not removed; make your own beside them.</p>
       <div className={styles.listTop}><span /><button type="button" className={shared.primaryButton} onClick={() => open()}><Icon name="plus" size={16} />New collection</button></div>
       <MasterList label="Collections" actionsWidth="172px" empty="No collections yet."
-        columns={[{ key: 'title', caption: 'Collection' }, { key: 'count', caption: 'Workouts', width: '90px', align: 'end' }]}
+        columns={[{ key: 'title', caption: 'Collection' }, { key: 'count', caption: 'Workouts', width: '96px', align: 'center' }]}
         rows={collections.map(collection => ({
           id: collection.id,
           cells: { title: <><strong>{collection.title}</strong>{collection.description && <small>{collection.description}</small>}</>, count: collection.workoutIds.length },

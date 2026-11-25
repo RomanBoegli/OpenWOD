@@ -12,11 +12,12 @@ describe('preferences', () => {
     expect(normalisePreferences(null)).toEqual(defaultPreferences);
     expect(normalisePreferences(['dark'])).toEqual(defaultPreferences);
   });
-  it('keeps the fun buttons off unless they were switched on (UI-31)', () => {
-    expect(defaultPreferences.funButtons).toBe(false);
-    expect(normalisePreferences({}).funButtons).toBe(false);
-    expect(normalisePreferences({ funButtons: 'yes' }).funButtons).toBe(false);
+  it('keeps the fun buttons on unless they were switched off (UI-31)', () => {
+    expect(defaultPreferences.funButtons).toBe(true);
+    expect(normalisePreferences({}).funButtons).toBe(true);
+    expect(normalisePreferences({ funButtons: 'no' }).funButtons).toBe(true);
     expect(normalisePreferences({ funButtons: true }).funButtons).toBe(true);
+    expect(normalisePreferences({ funButtons: false }).funButtons).toBe(false);
   });
   it('accepts every offered beep tone, both recorded horns included, and falls back on an unknown one', () => {
     for (const [tone] of BEEP_TONES) expect(normalisePreferences({ beepTone: tone }).beepTone).toBe(tone);

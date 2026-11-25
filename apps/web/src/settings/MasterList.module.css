@@ -2,6 +2,8 @@
 .head, .list li { display: grid; grid-template-columns: var(--columns); align-items: center; gap: 12px; padding: 0 12px; }
 .head { min-height: 34px; background: var(--surface-3); border-bottom: 1px solid var(--line); font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-3); }
 .head span[data-align=end], .cell[data-align=end] { text-align: right; justify-self: end; }
+/* A short value under its caption, as a count beside a tick: both centred in columns of one width. */
+.head span[data-align=center], .cell[data-align=center] { text-align: center; justify-self: center; justify-content: center; }
 .list ul { list-style: none; margin: 0; padding: 0; display: grid; }
 .list li { min-height: 48px; padding-top: 7px; padding-bottom: 7px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .list li:last-child { border-bottom: 0; }
@@ -28,6 +30,6 @@
   .list li .cell:first-of-type { grid-row: 1; }
   .list li .select { grid-column: 1; grid-row: 1; }
   .list li .actions { grid-column: 3; grid-row: 1 / span 6; }
-  .list li .cell[data-align=end] { justify-self: start; text-align: left; }
+  .list li .cell[data-align=end], .list li .cell[data-align=center] { justify-self: start; text-align: left; justify-content: start; }
   .list li .cell:not(:first-of-type)::before { content: attr(data-caption) ' · '; font-size: 11px; color: var(--ink-3); }
 }

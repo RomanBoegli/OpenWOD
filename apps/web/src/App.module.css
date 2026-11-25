@@ -140,6 +140,9 @@
 .footer a { color: var(--ink); text-underline-offset: 3px; }
 .footerRepo { display: inline-flex; align-items: center; gap: 6px; vertical-align: -3px; font-weight: 600; }
 .footer > span:last-child { text-align: right; line-height: 1.8; }
+/* Opens the keyboard sheet from any page. It reads as one of the footer's links, and is away where there is no keyboard. */
+.footerKeys { all: unset; cursor: pointer; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.footerKeys:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 .footerLinks { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px 18px; }
 .footerMode { position: relative; padding: 2px 9px; border: 1px solid var(--line-2); border-radius: 999px; color: var(--ink); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 10px; line-height: 1.6; cursor: help; outline-offset: 3px; }
 .footerMode::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); right: 0; width: max-content; max-width: min(280px, 80vw); padding: 8px 11px; border-radius: 9px; background: var(--surface-3); border: 1px solid var(--line-2); color: var(--ink); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; line-height: 1.45; text-align: left; box-shadow: 0 8px 24px rgb(0 0 0 / .18); opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity .15s, transform .15s, visibility .15s; pointer-events: none; z-index: 5; }
@@ -246,6 +249,13 @@
    takes no more (--clock-rest is what the block holds besides the digits: its padding, the phase, the caption, and the CAP
    or TURN line as its fourth child), and what is then left of the frame stays above Up next, under the action bar. */
 .screen[data-performing=true] .player { container-type: inline-size; }
+/* The zoom (UI-33): each station is drawn larger or smaller as a whole, in the stage, in the ruler's copies and in the
+   stations that slide out, while their row keeps its own measure. The clock has what the stage then leaves. */
+.screen[data-performing=true] .player .lane { zoom: var(--stage-zoom, 1); }
+/* The context view shows the game plan in place of the stations, so there its rows take the zoom, inside the list that scrolls. */
+.screen[data-performing=true][data-view=context] .contextRow { zoom: var(--stage-zoom, 1); }
+/* A phone's top row has no room for two more buttons, and its stations already take the frame's width: no zoom there. */
+@media (max-width: 620px) { .screen[data-performing=true] .player .lane, .screen[data-performing=true][data-view=context] .contextRow { zoom: 1; } .playerTop [data-zoom] { display: none; } }
 .screen[data-performing=true][data-view=focus] .player { --clock-min: 84px; --clock-wide: 24cqw; --clock-pad: 11px; --clock-rest: 72px; --clock-line: 25px; }
 .screen[data-performing=true][data-view=focus] .player[data-clock-percent=true] { --clock-wide: 21cqw; }
 .screen[data-performing=true][data-view=focus] .player[data-donut=false] { --clock-wide: 30cqw; }
@@ -376,7 +386,7 @@
 @media (display-mode: standalone) { .footer { padding-bottom: env(safe-area-inset-bottom); } }
 
 /* Keyboard help is for keyboards: touch screens without a pointer that hovers leave it out. */
-@media (hover: none) and (pointer: coarse) { .keysButton, .readinessDivider:has(+ .keysButton) { display: none; } }
+@media (hover: none) and (pointer: coarse) { .keysButton, .readinessDivider:has(+ .keysButton), .footerKeys { display: none; } }
 
 /* A phone before the start: the same pieces, tighter. The clock makes room for the percentage beside it, and the page actions share one row. */
 @media (max-width: 620px) {

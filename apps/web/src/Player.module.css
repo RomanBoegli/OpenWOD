@@ -20,6 +20,7 @@
 .stage, .stageBody { display: contents; }
 [data-performing=true] .stage, [data-performing=true] .stageBody { display: flex; flex-direction: column; }
 [data-performing=true] .stageBody { flex: none; }
+[data-performing=true] .taskList { zoom: var(--stage-zoom, 1); }
 [data-performing=true][data-view=focus] .stage { flex-basis: var(--stage-room, auto); }
 /* The ruler (Player.tsx): every station of the plan, unseen, one on top of the other at the stage's own width (the frame's
    padding is inherited), so the stack is as tall as the tallest of them. It never adds to what the frame can scroll. */
@@ -77,6 +78,7 @@ div.ruler { position: absolute; inset: 0; z-index: 0; padding: 0; padding-inline
   /* On a phone a frame too short for its rows still presses the stations together, as before the stage held them. */
   [data-performing=true] .stage, [data-performing=true] .stageBody { min-height: 0; }
   [data-performing=true] .stageBody { flex: 0 1 auto; }
+  [data-performing=true] .taskList { zoom: 1; }
   .target { margin-top: 10px; }
   .target strong { font-size: 44px; letter-spacing: -2px; }
   .target small { font-size: 13px; }
