@@ -59,6 +59,8 @@
 .playerTop { display: flex; justify-content: space-between; gap: 15px; font-size: 11px; color: var(--ink-2); font-weight: 600; letter-spacing: .35px; }
 .playerTop > span { display: flex; align-items: center; gap: 9px; }
 .playerTop > span:last-child { font-size: 10px; letter-spacing: 1.5px; color: var(--ink-3); }
+.topTitle { display: flex; align-items: center; gap: 9px; min-width: 0; max-width: 100%; }
+.topTitle > span:last-child { min-width: 0; }
 .position { display: inline; }
 .liveDot { width: 6px; height: 6px; border-radius: 50%; background: var(--phase-color); }
 .clockBlock { text-align: center; padding: 29px 0 28px; }
@@ -236,6 +238,13 @@
 /* The top row is as tall as its view switch and hands the difference back as margin, so it takes 40 px of the column. */
 .screen[data-performing=true] .playerTop { min-height: 48px; margin: -4px 0; flex-shrink: 0; }
 .screen[data-performing=true] .playerTop .iconButton { margin: 0 -6px 0 8px; }
+/* The buttons on the right keep their place on any width: the title shortens with an ellipsis, and the format label gives way
+   first (it wraps to a second line, which the one-line label does not show). */
+.screen[data-performing=true] .playerTop > span:first-child { flex: 1 1 0; min-width: 0; align-self: center; flex-wrap: wrap; align-content: flex-start; height: 1.6em; line-height: 1.6; overflow: hidden; }
+.screen[data-performing=true] .playerTop > span:first-child > span:last-child:not(:first-child) { flex: none; white-space: nowrap; }
+.screen[data-performing=true] .playerTop > span:last-child { flex: none; }
+.screen[data-performing=true] .topTitle > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.screen[data-performing=true] .topTitle .liveDot { flex: none; }
 .screen[data-performing=true] .clockBlock { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; padding: 12px 0 20px; }
 .screen[data-performing=true] .timer { font-size: clamp(112px, 19svh, 180px); }
 /* The focus view (UI-27): the clock takes the room this workout leaves. Every other row has a height of its own, and the

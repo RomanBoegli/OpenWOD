@@ -115,11 +115,30 @@ test.describe('player', () => {
       await expect(pause).toBeInViewport({ ratio: 1 });
       await expect(page.getByTestId('movement-A')).toBeInViewport({ ratio: 1 });
       await expect(page.getByTestId('movement-B')).toBeInViewport({ ratio: 1 });
+      // The top row holds its buttons on any font: the title gives way, and the page never scrolls sideways.
+      await expect.poll(() => page.getByTestId('player-top').evaluate(row => row.scrollWidth <= row.clientWidth && document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await expect(page.getByTestId('player-top')).toContainText('Conditioning');
       if (testInfo.project.name === 'webkit' && [1024, 390].includes(width)) await page.screenshot({ path: testInfo.outputPath(`training-${width}.png`), fullPage: true });
     }
     await page.getByRole('button', { name: 'Switch to context view' }).click();
     await expect(page.getByRole('region', { name: 'Workout context' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Pause workout', exact: true })).toBeInViewport({ ratio: 1 });
+  });
+
+  test('the top row keeps its buttons inside the frame with glyphs wider than any system font', async ({ page }) => {
+    // Fonts differ per system (the Linux runner's are wider than a Mac's), so the row must hold whatever the text measures.
+    await page.addStyleTag({ content: '* { font-family: "Courier New", monospace !important; letter-spacing: 2px !important; }' });
+    await page.getByRole('button', { name: 'Start workout', exact: true }).click();
+    await page.evaluate(() => window.__openwodTest!.advance(10_000));
+    const toggle = page.getByRole('button', { name: 'Switch to context view' });
+    for (const [width, height] of [[1024, 768], [768, 900], [390, 844], [320, 740]]) {
+      await page.setViewportSize({ width, height });
+      await expect.poll(() => page.getByTestId('player-top').evaluate(row => row.scrollWidth <= row.clientWidth && document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      await expect(toggle).toBeInViewport({ ratio: 1 });
+    }
+    await toggle.click();
+    await expect(page.getByRole('region', { name: 'Workout context' })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.scrollX)).toBe(0);
   });
 
   test('keeps a loaded workout running with the network disabled', async ({ page, context }) => {

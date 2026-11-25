@@ -473,6 +473,7 @@ The rounds counted in a quick AMRAP SHALL be listed under the counter like a sto
 The cues are a workout's own, without a movement name: the beeps, "Get ready", "Go" and "Rest".
 
 **UI-31** The training view SHALL offer a party horn button unless "Fun buttons" in Settings → Training View is switched off. The switch is on by default since 1.7.1.
+The buttons of the training view's top row SHALL stay inside the frame on any width and with any font: the title shortens with an ellipsis, and the format label gives way first.
 The button stands in the frame's top line from the first second of a session to its finish screen, in a normal session and a quick timer alike, and the H key fires it too.
 It plays the horn of AUD-11 and changes nothing else: not the clock, not the cues, not the layout.
 Silent mode shows no fun button.
@@ -794,6 +795,7 @@ Two tags carry no image: `v1.0.0` failed in validation before any image was buil
 - The stations' zoom (UI-33): Zoom out and Zoom in in the training view, with the - and + keys, kept per browser.
 - A Shortcuts link in the page footer opens the keyboard sheet from every page (UI-33, NFR-08).
 - The fun buttons are on by default and can be tried in the settings (UI-31, UI-32). A browser that ran 1.7.0 has the earlier default stored and keeps it.
+- The top row of the training view holds its buttons on a narrow phone: the title shortens and the format label gives way (UI-31).
 - A library card no longer shows when its workout was last done. Its page still does.
 - The settings section is titled Training View, its two long hints are shorter, and the count columns of the settings lists are centred.
 - Fixed: a quick timer started from the timer page named its placeholder movement in the device voice after Get ready. The flag that leaves the names out was set by an effect that ran after the first cue. It now comes with every update of the sound (UI-30).
